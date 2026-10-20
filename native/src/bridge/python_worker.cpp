@@ -323,7 +323,11 @@ bool PythonWorker::start(QString* error) {
             &PythonWorker::onReadyReadStandardOutput);
     connect(process_, &QProcess::readyReadStandardError, this,
             &PythonWorker::onReadyReadStandardError);
-    connect(process_, &QProcess::finished, this, &PythonWorker::onProcessFinished);
+    // Named explicitly because Qt 5 has two `finished` signals and Qt 6 one; the
+    // two-argument form is the one both provide.
+    connect(process_,
+            QOverload<int, QProcess::ExitStatus>::of(&QProcess::finished), this,
+            &PythonWorker::onProcessFinished);
     // Qt 6 still emits this alongside `finished`; wiring it means a process that
     // cannot start at all is reported at the moment it happens rather than at the
     // next read.

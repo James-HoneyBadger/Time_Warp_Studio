@@ -416,11 +416,11 @@ void RetroComputerSettingsDialog::buildUi() {
     connect(buttons, &QDialogButtonBox::rejected, this, &QDialog::reject);
     layout->addWidget(buttons);
 
-    connect(boot_language_, &QComboBox::currentIndexChanged, this, [this] { publish(); });
-    connect(boot_screen_, &QComboBox::currentIndexChanged, this, [this] { publish(); });
-    connect(boot_banner_, &QComboBox::currentIndexChanged, this, [this] { publish(); });
-    connect(phosphor_, &QComboBox::currentIndexChanged, this, [this] { publish(); });
-    connect(history_depth_, &QComboBox::currentIndexChanged, this, [this] { publish(); });
+    connect(boot_language_, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [this] { publish(); });
+    connect(boot_screen_, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [this] { publish(); });
+    connect(boot_banner_, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [this] { publish(); });
+    connect(phosphor_, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [this] { publish(); });
+    connect(history_depth_, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [this] { publish(); });
     connect(remember_programs_, &QCheckBox::toggled, this, [this] { publish(); });
     connect(switch_to_split_, &QCheckBox::toggled, this, [this] { publish(); });
 }

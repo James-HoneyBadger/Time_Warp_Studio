@@ -478,7 +478,7 @@ FunctionKeyBar::FunctionKeyBar(QWidget* parent) : QFrame(parent) {
         deckIds_.append({text, QString::fromUtf8(id)});
     }
     decks_->addItems(labels);
-    connect(decks_, &QComboBox::currentIndexChanged, this, [this](int index) {
+    connect(decks_, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [this](int index) {
         if (index >= 0 && index < deckIds_.size()) {
             emit deckSelected(deckIds_.at(index).second);
         }
@@ -902,7 +902,7 @@ LessonPanel::LessonPanel(QWidget* parent) : QFrame(parent) {
     progress_->setFixedHeight(14);
     layout->addWidget(progress_);
 
-    connect(lessons_, &QComboBox::currentIndexChanged, this, &LessonPanel::onLessonChanged);
+    connect(lessons_, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &LessonPanel::onLessonChanged);
     connect(checkpoints_, &QListWidget::currentRowChanged, this,
             &LessonPanel::onCheckpointChanged);
     connect(open_, &QPushButton::clicked, this, [this] {

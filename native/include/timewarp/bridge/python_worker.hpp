@@ -28,6 +28,8 @@
 
 #include <cstdint>
 
+#include "timewarp/core/qt_compat.hpp"
+
 #include <QByteArray>
 #include <QList>
 #include <QMetaType>
@@ -78,7 +80,9 @@ struct LessonSummary {
     QStringList prerequisites;
     QList<LessonCheckpoint> checkpoints;
 
-    [[nodiscard]] int checkpointCount() const { return static_cast<int>(checkpoints.size()); }
+    [[nodiscard]] int checkpointCount() const {
+        return timewarp::core::intLength(checkpoints.size());
+    }
 };
 
 /// Where a learner has got to in one lesson.

@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: MIT
 
+#include "timewarp/core/qt_compat.hpp"
 #include "timewarp/ui/language.hpp"
 
 #include <array>
@@ -94,12 +95,12 @@ QByteArray romTextToBytes(const QString& text) {
 
 QString displayName(Language language) {
     const LanguageInfo* info = find(language);
-    return info != nullptr ? QString::fromUtf8(info->display) : QStringLiteral("—");
+    return info != nullptr ? timewarp::core::fromUtf8(info->display) : QStringLiteral("—");
 }
 
 QString settingsKey(Language language) {
     const LanguageInfo* info = find(language);
-    return info != nullptr ? QString::fromUtf8(info->key) : QStringLiteral("unknown");
+    return info != nullptr ? timewarp::core::fromUtf8(info->key) : QStringLiteral("unknown");
 }
 
 QStringList extensions(Language language) {
@@ -107,13 +108,13 @@ QStringList extensions(Language language) {
     if (info == nullptr) {
         return {};
     }
-    QStringList result{QString::fromUtf8(info->extension1)};
+    QStringList result{timewarp::core::fromUtf8(info->extension1)};
     if (!info->extension2.empty()) {
-        result << QString::fromUtf8(info->extension2);
+        result << timewarp::core::fromUtf8(info->extension2);
     }
     if (language == Language::Scheme) {
         for (const std::string_view extra : kSchemeExtraExtensions) {
-            result << QString::fromUtf8(extra);
+            result << timewarp::core::fromUtf8(extra);
         }
     }
     return result;
@@ -129,7 +130,7 @@ QList<Language> allLanguages() {
 
 Language languageFromKey(const QString& key) {
     for (const LanguageInfo& info : kLanguages) {
-        if (key == QString::fromUtf8(info.key)) {
+        if (key == timewarp::core::fromUtf8(info.key)) {
             return info.language;
         }
     }
@@ -147,15 +148,15 @@ Language languageForFile(const QString& fileNameOrPath) {
         return Language::Unknown;
     }
     for (const LanguageInfo& info : kLanguages) {
-        if (suffix == QString::fromUtf8(info.extension1)) {
+        if (suffix == timewarp::core::fromUtf8(info.extension1)) {
             return info.language;
         }
-        if (!info.extension2.empty() && suffix == QString::fromUtf8(info.extension2)) {
+        if (!info.extension2.empty() && suffix == timewarp::core::fromUtf8(info.extension2)) {
             return info.language;
         }
     }
     for (const std::string_view extra : kSchemeExtraExtensions) {
-        if (suffix == QString::fromUtf8(extra)) {
+        if (suffix == timewarp::core::fromUtf8(extra)) {
             return Language::Scheme;
         }
     }

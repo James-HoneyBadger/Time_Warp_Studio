@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: MIT
 
+#include "timewarp/core/qt_gui_compat.hpp"
 #include "timewarp/ui/main_window.hpp"
 
 #include "timewarp/lang/executor.hpp"
@@ -1001,11 +1002,11 @@ void MainWindow::buildMenuBar() {
     add(file, tr("Save &As..."), QKeySequence::SaveAs, [this] { saveCurrentFileAs(); });
     // Ctrl+Alt+V, the shortcut the removed implementation used, and one no other
     // action here claims.
-    add(file, tr("&Version History..."), QKeySequence{Qt::CTRL | Qt::ALT | Qt::Key_V},
+    add(file, tr("&Version History..."), timewarp::core::keySequence(Qt::CTRL | Qt::ALT, Qt::Key_V),
         [this] { showVersionHistory(); })
         ->setObjectName(QStringLiteral("versionHistoryAction"));
     file->addSeparator();
-    add(file, tr("&Export Drawing..."), QKeySequence{Qt::CTRL | Qt::Key_E},
+    add(file, tr("&Export Drawing..."), timewarp::core::keySequence(Qt::CTRL, Qt::Key_E),
         [this] { exportDrawingDialog(); });
     // Qt Gui carries QPdfWriter, so the PDF needs no component beyond the ones
     // this application already requires.
@@ -1040,13 +1041,13 @@ void MainWindow::buildMenuBar() {
         ->setObjectName(QStringLiteral("exportLessonPdfAction"));
     file->addSeparator();
     // The split: one document each side, rather than two views of one buffer.
-    add(file, tr("Split Editor &Right"), QKeySequence{Qt::CTRL | Qt::Key_Backslash},
+    add(file, tr("Split Editor &Right"), timewarp::core::keySequence(Qt::CTRL, Qt::Key_Backslash),
         [this] { splitEditor(); })
         ->setObjectName(QStringLiteral("splitEditorAction"));
-    add(file, tr("Close S&plit"), QKeySequence{Qt::CTRL | Qt::SHIFT | Qt::Key_Backslash},
+    add(file, tr("Close S&plit"), timewarp::core::keySequence(Qt::CTRL | Qt::SHIFT, Qt::Key_Backslash),
         [this] { closeSplit(); })
         ->setObjectName(QStringLiteral("closeSplitAction"));
-    add(file, tr("&Move Tab to Other Pane"), QKeySequence{Qt::CTRL | Qt::ALT | Qt::Key_M},
+    add(file, tr("&Move Tab to Other Pane"), timewarp::core::keySequence(Qt::CTRL | Qt::ALT, Qt::Key_M),
         [this] { moveTabToOtherPane(); })
         ->setObjectName(QStringLiteral("moveTabAction"));
     file->addSeparator();
@@ -1063,10 +1064,10 @@ void MainWindow::buildMenuBar() {
     QMenu* project_menu = bar->addMenu(tr("&Project"));
     project_menu->setObjectName(QStringLiteral("projectMenu"));
     add(project_menu, tr("&New Project..."),
-        QKeySequence{Qt::CTRL | Qt::SHIFT | Qt::Key_N}, [this] { newProjectDialog(); })
+        timewarp::core::keySequence(Qt::CTRL | Qt::SHIFT, Qt::Key_N), [this] { newProjectDialog(); })
         ->setObjectName(QStringLiteral("newProjectAction"));
     add(project_menu, tr("&Open Project..."),
-        QKeySequence{Qt::CTRL | Qt::SHIFT | Qt::Key_O}, [this] { openProjectDialog(); })
+        timewarp::core::keySequence(Qt::CTRL | Qt::SHIFT, Qt::Key_O), [this] { openProjectDialog(); })
         ->setObjectName(QStringLiteral("openProjectAction"));
     recent_projects_menu_ = project_menu->addMenu(tr("Open &Recent Project"));
     recent_projects_menu_->setObjectName(QStringLiteral("recentProjectsMenu"));
@@ -1118,7 +1119,7 @@ void MainWindow::buildMenuBar() {
         [this] { addFolderToProject(); })
         ->setObjectName(QStringLiteral("addFolderToProjectAction"));
     project_menu->addSeparator();
-    add(project_menu, tr("New &Group..."), QKeySequence{Qt::CTRL | Qt::SHIFT | Qt::Key_G},
+    add(project_menu, tr("New &Group..."), timewarp::core::keySequence(Qt::CTRL | Qt::SHIFT, Qt::Key_G),
         [this] { addGroupToProject(); })
         ->setObjectName(QStringLiteral("newProjectGroupAction"));
     add(project_menu, tr("Rename Project..."), QKeySequence{},
@@ -1155,7 +1156,7 @@ void MainWindow::buildMenuBar() {
     edit->addSeparator();
     // The drawing is not text, so it has its own copy rather than borrowing
     // Ctrl+C from the editor -- which is why it is Ctrl+Shift+C.
-    add(edit, tr("&Copy Drawing"), QKeySequence{Qt::CTRL | Qt::SHIFT | Qt::Key_C},
+    add(edit, tr("&Copy Drawing"), timewarp::core::keySequence(Qt::CTRL | Qt::SHIFT, Qt::Key_C),
         [this] { copyDrawingToClipboard(); });
     edit->addSeparator();
     add(edit, tr("&Find..."), QKeySequence::Find, [this] { showFindBar(false); });
@@ -1165,29 +1166,29 @@ void MainWindow::buildMenuBar() {
     // would only re-open and re-focus the field.
     add(edit, tr("Find &Next"), QKeySequence{Qt::Key_F3},
         [this] { findNextMatch(false); });
-    add(edit, tr("Find Pre&vious"), QKeySequence{Qt::SHIFT | Qt::Key_F3},
+    add(edit, tr("Find Pre&vious"), timewarp::core::keySequence(Qt::SHIFT, Qt::Key_F3),
         [this] { findNextMatch(true); });
     // The repository-wide search the removed implementation had and this one did
     // not. Ctrl+Shift+F, which no other action uses.
-    add(edit, tr("Find in F&iles..."), QKeySequence{Qt::CTRL | Qt::SHIFT | Qt::Key_F},
+    add(edit, tr("Find in F&iles..."), timewarp::core::keySequence(Qt::CTRL | Qt::SHIFT, Qt::Key_F),
         [this] { showFindInFiles(); })
         ->setObjectName(QStringLiteral("findInFilesAction"));
     // Ctrl+Shift+I, which no other action claims.
-    add(edit, tr("Insert &Snippet..."), QKeySequence{Qt::CTRL | Qt::SHIFT | Qt::Key_I},
+    add(edit, tr("Insert &Snippet..."), timewarp::core::keySequence(Qt::CTRL | Qt::SHIFT, Qt::Key_I),
         [this] { insertSnippet(); })
         ->setObjectName(QStringLiteral("insertSnippetAction"));
     edit->addSeparator();
     // Ctrl+L, not Ctrl+G: the grid on the canvas already owns Ctrl+G, and two
     // actions on one key is an ambiguous shortcut that Qt resolves by guessing.
-    add(edit, tr("&Go to Line..."), QKeySequence{Qt::CTRL | Qt::Key_L},
+    add(edit, tr("&Go to Line..."), timewarp::core::keySequence(Qt::CTRL, Qt::Key_L),
         [this] { goToLinePrompt(); });
     // Ctrl+I, which no other action claims. There was no Format Code at all
     // before this; the removed implementation had one under Edit.
-    add(edit, tr("&Format Code"), QKeySequence{Qt::CTRL | Qt::Key_I},
+    add(edit, tr("&Format Code"), timewarp::core::keySequence(Qt::CTRL, Qt::Key_I),
         [this] { formatCurrentDocument(); })
         ->setObjectName(QStringLiteral("formatCodeAction"));
     edit->addSeparator();
-    add(edit, tr("&Preferences..."), QKeySequence{Qt::CTRL | Qt::Key_Comma},
+    add(edit, tr("&Preferences..."), timewarp::core::keySequence(Qt::CTRL, Qt::Key_Comma),
         [this] { showPreferences(); })
         ->setObjectName(QStringLiteral("preferencesMenuAction"));
 
@@ -1199,21 +1200,21 @@ void MainWindow::buildMenuBar() {
     // warning about an ambiguous shortcut and firing whichever it prefers, so one
     // owner is not tidiness, it is the difference between working and not.
     add(run, tr("&Run"), QKeySequence{Qt::Key_F9}, [this] { runCurrentDocument(); });
-    add(run, tr("Run &Selection"), QKeySequence{Qt::CTRL | Qt::Key_F9},
+    add(run, tr("Run &Selection"), timewarp::core::keySequence(Qt::CTRL, Qt::Key_F9),
         [this] { runSelection(); })
         ->setObjectName(QStringLiteral("runSelectionAction"));
-    add(run, tr("&Stop"), QKeySequence{Qt::SHIFT | Qt::Key_F9},
+    add(run, tr("&Stop"), timewarp::core::keySequence(Qt::SHIFT, Qt::Key_F9),
         [this] { stopRunningDocument(); });
     // A comparison, not a race: both programs run headless, one after the other,
     // and the table attributes every number to the program that produced it.
-    add(run, tr("Run &Both Panes"), QKeySequence{Qt::CTRL | Qt::ALT | Qt::Key_B},
+    add(run, tr("Run &Both Panes"), timewarp::core::keySequence(Qt::CTRL | Qt::ALT, Qt::Key_B),
         [this] { runBothPanes(); })
         ->setObjectName(QStringLiteral("runBothPanesAction"));
     run->addSeparator();
     // Reset is not Stop: Stop ends a program that is still running, Reset puts
     // the screen back to how it looked before a program that has already ended
     // -- which is the thing a learner presses after a drawing they want to redo.
-    add(run, tr("&Reset Program"), QKeySequence{Qt::CTRL | Qt::SHIFT | Qt::Key_F9},
+    add(run, tr("&Reset Program"), timewarp::core::keySequence(Qt::CTRL | Qt::SHIFT, Qt::Key_F9),
         [this] { resetProgram(); })
         ->setObjectName(QStringLiteral("resetProgramAction"));
     run->addSeparator();
@@ -1227,13 +1228,13 @@ void MainWindow::buildMenuBar() {
     QMenu* tools = bar->addMenu(tr("&Tools"));
     tools->setObjectName(QStringLiteral("toolsMenu"));
     add(tools, tr("CHIP-8 &Emulator..."),
-        QKeySequence{Qt::CTRL | Qt::SHIFT | Qt::Key_M}, [this] { openChip8Emulator(); })
+        timewarp::core::keySequence(Qt::CTRL | Qt::SHIFT, Qt::Key_M), [this] { openChip8Emulator(); })
         ->setObjectName(QStringLiteral("chip8EmulatorAction"));
     // The machine the languages share. Ctrl+Alt+W is unclaimed and is the
     // chord the machine has always been documented with, so renaming it to the
     // HB-1 does not move it out from under anyone's fingers.
     add(tools, tr("&HB-1 Computer..."),
-        QKeySequence{Qt::CTRL | Qt::ALT | Qt::Key_W}, [this] { openRetroComputer(); })
+        timewarp::core::keySequence(Qt::CTRL | Qt::ALT, Qt::Key_W), [this] { openRetroComputer(); })
         ->setObjectName(QStringLiteral("retroComputerAction"));
 
     // -- View -------------------------------------------------------------
@@ -1252,7 +1253,7 @@ void MainWindow::buildMenuBar() {
             turtle_canvas_->setZoom(turtle_canvas_->zoom() / kZoomStep);
         }
     });
-    add(view, tr("&Fit Drawing"), QKeySequence{Qt::CTRL | Qt::Key_0}, [this] {
+    add(view, tr("&Fit Drawing"), timewarp::core::keySequence(Qt::CTRL, Qt::Key_0), [this] {
         if (turtle_canvas_ != nullptr) {
             turtle_canvas_->fitToContent();
         }
@@ -1264,7 +1265,7 @@ void MainWindow::buildMenuBar() {
     QAction* grid = view->addAction(tr("Show &Grid"));
     grid->setCheckable(true);
     grid->setChecked(turtle_canvas_ != nullptr && turtle_canvas_->gridVisible());
-    grid->setShortcut(QKeySequence{Qt::CTRL | Qt::Key_G});
+    grid->setShortcut(timewarp::core::keySequence(Qt::CTRL, Qt::Key_G));
     connect(grid, &QAction::toggled, this, [this](bool visible) {
         if (turtle_canvas_ != nullptr) {
             turtle_canvas_->setGridVisible(visible);
@@ -1334,7 +1335,7 @@ void MainWindow::buildMenuBar() {
     high_contrast_action_ = view->addAction(tr("High &Contrast"));
     high_contrast_action_->setObjectName(QStringLiteral("highContrastAction"));
     high_contrast_action_->setCheckable(true);
-    high_contrast_action_->setShortcut(QKeySequence{Qt::CTRL | Qt::ALT | Qt::Key_H});
+    high_contrast_action_->setShortcut(timewarp::core::keySequence(Qt::CTRL | Qt::ALT, Qt::Key_H));
     high_contrast_action_->setChecked(high_contrast_);
     connect(high_contrast_action_, &QAction::toggled, this,
             [this](bool on) { setHighContrast(on); });
@@ -1361,7 +1362,7 @@ void MainWindow::buildMenuBar() {
     presentation_action_ = view->addAction(tr("&Presentation Mode"));
     presentation_action_->setObjectName(QStringLiteral("presentationModeAction"));
     presentation_action_->setCheckable(true);
-    presentation_action_->setShortcut(QKeySequence{Qt::SHIFT | Qt::Key_F11});
+    presentation_action_->setShortcut(timewarp::core::keySequence(Qt::SHIFT, Qt::Key_F11));
     connect(presentation_action_, &QAction::toggled, this,
             [this](bool on) { setPresentationMode(on); });
     presentation_shortcut_ = new QShortcut{QKeySequence{Qt::Key_Escape}, this};
@@ -1375,7 +1376,7 @@ void MainWindow::buildMenuBar() {
     // Ctrl+Shift+E, the key every editor's file explorer answers to. The dock
     // starts visible, so this is the way back after it is closed.
     add(view, tr("&Project Panel"),
-        QKeySequence{Qt::CTRL | Qt::SHIFT | Qt::Key_E},
+        timewarp::core::keySequence(Qt::CTRL | Qt::SHIFT, Qt::Key_E),
         [this] {
             if (project_dock_ == nullptr) {
                 return;
@@ -1389,7 +1390,7 @@ void MainWindow::buildMenuBar() {
     // F10 is on the function-key bar; Ctrl+Shift+P is the convention everybody
     // already has in their fingers.
     add(view, tr("Command &Palette..."),
-        QKeySequence{Qt::CTRL | Qt::SHIFT | Qt::Key_P},
+        timewarp::core::keySequence(Qt::CTRL | Qt::SHIFT, Qt::Key_P),
         [this] { showCommandPalette(); })
         ->setObjectName(QStringLiteral("commandPaletteAction"));
     buildThemeMenu(view);
@@ -1400,7 +1401,7 @@ void MainWindow::buildMenuBar() {
     add(help, tr("&Context Help"), QKeySequence{Qt::Key_F1},
         [this] { showContextHelp(); })
         ->setObjectName(QStringLiteral("contextHelpAction"));
-    add(help, tr("&Keyword Inspector..."), QKeySequence{Qt::CTRL | Qt::Key_F1},
+    add(help, tr("&Keyword Inspector..."), timewarp::core::keySequence(Qt::CTRL, Qt::Key_F1),
         [this] { showKeywordInspector(); })
         ->setObjectName(QStringLiteral("keywordInspectorAction"));
     help->addSeparator();
@@ -1457,7 +1458,7 @@ void MainWindow::buildThemeMenu(QMenu* view) {
     theme_menu_->addSeparator();
     QAction* next = theme_menu_->addAction(tr("&Next Theme"));
     next->setObjectName(QStringLiteral("nextThemeAction"));
-    next->setShortcut(QKeySequence{Qt::SHIFT | Qt::Key_F10});
+    next->setShortcut(timewarp::core::keySequence(Qt::SHIFT, Qt::Key_F10));
     connect(next, &QAction::triggered, this, [this] { cycleTheme(); });
 }
 
@@ -3139,7 +3140,7 @@ void MainWindow::buildToolBar() {
     // A deliberate choice is recorded as an override on the document, so that
     // selecting REXX for a file called `thing.txt` is not undone the next time
     // the badges refresh and derive the language from the name again.
-    connect(language_combo_, &QComboBox::currentIndexChanged, this,
+    connect(language_combo_, QOverload<int>::of(&QComboBox::currentIndexChanged), this,
             [this](int index) {
                 if (index < 0) {
                     return;
@@ -3243,7 +3244,7 @@ void MainWindow::buildToolBar() {
     QAction* font_scale = tool_bar_secondary_->addAction(tr("\u267F A+"));
     font_scale->setObjectName(QStringLiteral("fontScaleAction"));
     font_scale->setToolTip(tr("Bigger text: 100%, 125%, 150% (Ctrl+Alt+A)"));
-    font_scale->setShortcut(QKeySequence{Qt::CTRL | Qt::ALT | Qt::Key_A});
+    font_scale->setShortcut(timewarp::core::keySequence(Qt::CTRL | Qt::ALT, Qt::Key_A));
     connect(font_scale, &QAction::triggered, this, [this] { cycleFontScale(); });
 
     tool_bar_secondary_->addSeparator();
@@ -5155,7 +5156,12 @@ void MainWindow::runSource(CodeEditor* editor, const QString& source) {
     // The breakpoints already in the panel are the ones this run honours, which
     // is why the set is applied here rather than only when it changes.
     if (debug_panel_ != nullptr) {
-        runner->set_breakpoints(debug_panel_->breakpoints());
+        // `QList` and `QVector` are one type in Qt 6 and two in Qt 5, so the
+        // panel's list is converted rather than passed through. The intermediate
+        // is named on purpose: `breakpoints()` builds a new list on every call,
+        // so asking for it twice would give one iterator to each of two lists.
+        const QList<int> lines = debug_panel_->breakpoints();
+        runner->set_breakpoints(QVector<int>{lines.begin(), lines.end()});
         runner->set_data_breakpoints(debug_panel_->dataBreakpoints());
     }
 
@@ -5895,7 +5901,7 @@ void MainWindow::connectDebugPanel() {
     connect(debug_panel_, &DebugPanel::breakpointsChanged, this,
             [this](const QList<int>& lines) {
                 if (runner_ != nullptr) {
-                    runner_->set_breakpoints(lines);
+                    runner_->set_breakpoints(QVector<int>{lines.begin(), lines.end()});
                 }
                 if (native_runner_ != nullptr) {
                     // The panel holds 1-based lines; the editor's gutter set,

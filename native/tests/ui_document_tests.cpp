@@ -23,6 +23,7 @@
 #include <cstdio>
 #include <functional>
 
+#include <QAction>
 #include <QApplication>
 #include <QComboBox>
 #include <QCoreApplication>

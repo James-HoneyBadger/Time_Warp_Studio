@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: MIT
 
+#include "timewarp/core/qt_gui_compat.hpp"
 #include "timewarp/ui/chip8_window.hpp"
 
 #include "timewarp/ui/chip8_library.hpp"
@@ -150,7 +151,7 @@ void Chip8Window::buildToolbar() {
     assemble_action_ = toolbar->addAction(tr("Assemble && Load"), this,
                                           &Chip8Window::assembleListing);
     assemble_action_->setObjectName(QStringLiteral("chip8AssembleAction"));
-    assemble_action_->setShortcut(QKeySequence{Qt::CTRL | Qt::Key_Return});
+    assemble_action_->setShortcut(timewarp::core::keySequence(Qt::CTRL, Qt::Key_Return));
 
     toolbar->addSeparator();
     toolbar->addAction(tr("&Open ROM..."), this, &Chip8Window::openRomDialog);
@@ -166,7 +167,7 @@ void Chip8Window::buildToolbar() {
     speed_->setValue(emulator_->speed());
     speed_->setSuffix(tr(" opcodes/frame"));
     speed_->setToolTip(tr("Opcodes executed per 60 Hz frame. Ten is the original pace."));
-    connect(speed_, &QSpinBox::valueChanged, this,
+    connect(speed_, QOverload<int>::of(&QSpinBox::valueChanged), this,
             [this](int value) { emulator_->setSpeed(value); });
     toolbar->addWidget(speed_);
 

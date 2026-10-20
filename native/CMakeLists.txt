@@ -53,6 +53,7 @@ endif()
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 option(TIME_WARP_EXPR_WERROR "Treat compiler warnings as errors" ON)
+option(TIME_WARP_QT5 "Build against Qt 5.15 (the Windows 7 build) rather than Qt 6" OFF)
 option(TIME_WARP_EXPR_BUILD_TESTS "Build the test suites" ON)
 
 # ---------------------------------------------------------------------------
@@ -111,7 +112,12 @@ endif()
 # image. They are named once here rather than nine times below, so a compiler
 # that does not know them simply does not get them.
 if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
-    set(TIME_WARP_GNU_WARNING_FLAGS -Wuseless-cast -Wlogical-op)
+    set(TIME_WARP_GNU_WARNING_FLAGS -Wlogical-op)
+    if(NOT TIME_WARP_QT5)
+        # Qt 5.15's moc emits `static_cast<_t>(...)` that GCC calls useless, so
+        # the flag is kept for the Qt 6 build and dropped for the Windows 7 one.
+        list(APPEND TIME_WARP_GNU_WARNING_FLAGS -Wuseless-cast)
+    endif()
 else()
     set(TIME_WARP_GNU_WARNING_FLAGS "")
 endif()
@@ -413,16 +419,31 @@ if(NOT MSVC)
 endif()
 
 # ---------------------------------------------------------------------------
-# Qt6 bridge (optional)
-#
-# Built only when Qt6 is present.  The core queue above never depends on this,
-# so a machine without Qt still builds and tests everything else.
+# Qt: version 6, or 5.15
 # ---------------------------------------------------------------------------
+# Qt 6 is what the releases ship and what every gate builds. Qt 5.15 is the
+# Windows 7 build: Qt 6 requires Windows 10, and 5.15 is the last Qt that runs on
+# 7 SP1. The two are source-compatible here apart from a handful of names, which
+# `timewarp/core/qt_compat.hpp` supplies, so the choice is a configure option
+# rather than a fork.
+if(TIME_WARP_QT5)
+    find_package(Qt5 5.15 QUIET COMPONENTS Core)
+    set(TIME_WARP_QT Qt5)
+else()
+    find_package(Qt6 QUIET COMPONENTS Core)
+    set(TIME_WARP_QT Qt6)
+endif()
+set(TIME_WARP_QT_FOUND "${${TIME_WARP_QT}_FOUND}")
+set(TIME_WARP_QT_CORE_VERSION "${${TIME_WARP_QT}Core_VERSION}")
 
-find_package(Qt6 QUIET COMPONENTS Core)
+# ---------------------------------------------------------------------------
+# Qt bridge (optional)
+#
+# Built only when Qt is present.  The core queue above never depends on this,
+# so a machine without Qt still builds and tests everything else.
 
-if(Qt6_FOUND)
-    message(STATUS "Qt6 ${Qt6Core_VERSION} found: building the canvas bridge")
+if(TIME_WARP_QT_FOUND)
+    message(STATUS "${TIME_WARP_QT} ${TIME_WARP_QT_CORE_VERSION} found: building the canvas bridge")
 
     add_library(timewarp_canvas_qt
         src/canvas/qt_bridge.cpp
@@ -432,7 +453,7 @@ if(Qt6_FOUND)
     )
     add_library(timewarp::canvas_qt ALIAS timewarp_canvas_qt)
 
-    target_link_libraries(timewarp_canvas_qt PUBLIC timewarp::canvas Qt6::Core)
+    target_link_libraries(timewarp_canvas_qt PUBLIC timewarp::canvas ${TIME_WARP_QT}::Core)
     set_target_properties(timewarp_canvas_qt PROPERTIES AUTOMOC ON)
 
     if(MSVC)
@@ -459,7 +480,7 @@ if(Qt6_FOUND)
         add_test(NAME canvas_bridge_tests COMMAND canvas_bridge_tests)
     endif()
 else()
-    message(STATUS "Qt6 not found: skipping the canvas bridge (core queue still builds)")
+    message(STATUS "Qt not found: skipping the canvas bridge (core queue still builds)")
 endif()
 
 # ---------------------------------------------------------------------------
@@ -486,11 +507,11 @@ endif()
 # Background debugger runner (Qt)
 #
 # A QThread whose run() *is* the interpreter loop, driven by an atomic command
-# channel.  Built only where Qt6 exists.
+# channel.  Built only where Qt exists.
 # ---------------------------------------------------------------------------
 
-if(Qt6_FOUND)
-    message(STATUS "Qt6 ${Qt6Core_VERSION} found: building the debugger runner")
+if(TIME_WARP_QT_FOUND)
+    message(STATUS "${TIME_WARP_QT} ${TIME_WARP_QT_CORE_VERSION} found: building the debugger runner")
 
     add_library(timewarp_debugger
         src/debugger/debugger_runner.cpp
@@ -500,7 +521,7 @@ if(Qt6_FOUND)
     )
     add_library(timewarp::debugger ALIAS timewarp_debugger)
 
-    target_link_libraries(timewarp_debugger PUBLIC timewarp::scheme Qt6::Core)
+    target_link_libraries(timewarp_debugger PUBLIC timewarp::scheme ${TIME_WARP_QT}::Core)
     set_target_properties(timewarp_debugger PROPERTIES AUTOMOC ON)
 
     if(MSVC)
@@ -527,7 +548,7 @@ if(Qt6_FOUND)
         add_test(NAME debugger_runner_tests COMMAND debugger_runner_tests)
     endif()
 else()
-    message(STATUS "Qt6 not found: skipping the debugger runner")
+    message(STATUS "Qt not found: skipping the debugger runner")
 endif()
 
 # ---------------------------------------------------------------------------
@@ -539,7 +560,7 @@ endif()
 # documented feature.
 # ---------------------------------------------------------------------------
 
-if(Qt6_FOUND)
+if(TIME_WARP_QT_FOUND)
     find_package(SQLite3 REQUIRED)
     # FindSQLite3 called its imported target SQLite::SQLite3 until CMake 4.3,
     # when SQLite3::SQLite3 arrived and the old spelling was deprecated. Follow
@@ -561,7 +582,7 @@ if(Qt6_FOUND)
         PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
     )
     target_compile_features(timewarp_sql PUBLIC cxx_std_20)
-    target_link_libraries(timewarp_sql PUBLIC Qt6::Core ${TIME_WARP_SQLITE_TARGET})
+    target_link_libraries(timewarp_sql PUBLIC ${TIME_WARP_QT}::Core ${TIME_WARP_SQLITE_TARGET})
 
     if(MSVC)
         target_compile_options(timewarp_sql PRIVATE /W4 /permissive-)
@@ -597,7 +618,7 @@ endif()
 # dependency. The panel that draws one lives in timewarp_ui.
 # ---------------------------------------------------------------------------
 
-if(Qt6_FOUND)
+if(TIME_WARP_QT_FOUND)
     add_library(timewarp_project
         src/project/project.cpp
         include/timewarp/project/project.hpp
@@ -608,7 +629,7 @@ if(Qt6_FOUND)
         PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
     )
     target_compile_features(timewarp_project PUBLIC cxx_std_20)
-    target_link_libraries(timewarp_project PUBLIC Qt6::Core)
+    target_link_libraries(timewarp_project PUBLIC ${TIME_WARP_QT}::Core)
 
     if(MSVC)
         target_compile_options(timewarp_project PRIVATE /W4 /permissive-)
@@ -635,7 +656,7 @@ if(Qt6_FOUND)
         add_test(NAME project_tests COMMAND project_tests)
     endif()
 else()
-    message(STATUS "Qt6 not found: skipping the project model")
+    message(STATUS "Qt not found: skipping the project model")
 endif()
 
 # ---------------------------------------------------------------------------
@@ -646,7 +667,7 @@ endif()
 # is what lets the IDE, a plugin and a test share one implementation.
 # ---------------------------------------------------------------------------
 
-if(Qt6_FOUND AND TARGET timewarp::sql)
+if(TIME_WARP_QT_FOUND AND TARGET timewarp::sql)
     add_library(timewarp_api
         src/api/server.cpp
         src/api/debug.cpp
@@ -660,7 +681,7 @@ if(Qt6_FOUND AND TARGET timewarp::sql)
     )
     target_compile_features(timewarp_api PUBLIC cxx_std_20)
     target_link_libraries(timewarp_api PUBLIC
-        Qt6::Core timewarp::lang timewarp::scheme timewarp::sql timewarp::project
+        ${TIME_WARP_QT}::Core timewarp::lang timewarp::scheme timewarp::sql timewarp::project
     )
     # The debugger API drives the same Scheme runner the IDE's Debug panel does.
     if(TARGET timewarp::debugger)
@@ -714,13 +735,13 @@ endif()
 # Python bridge (Qt)
 #
 # Runs the Python implementations of the languages that have no C++ interpreter
-# yet, in a child process, and turns what it draws into canvas commands. Qt6Core
+# yet, in a child process, and turns what it draws into canvas commands. QtCore
 # only: it is a pipe and a JSON parser, and the UI is one of its callers rather
 # than its owner.
 # ---------------------------------------------------------------------------
 
-if(Qt6_FOUND)
-    message(STATUS "Qt6 ${Qt6Core_VERSION} found: building the Python bridge")
+if(TIME_WARP_QT_FOUND)
+    message(STATUS "${TIME_WARP_QT} ${TIME_WARP_QT_CORE_VERSION} found: building the Python bridge")
 
     add_library(timewarp_bridge
         src/bridge/python_worker.cpp
@@ -732,7 +753,7 @@ if(Qt6_FOUND)
     target_include_directories(timewarp_bridge
         PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
     )
-    target_link_libraries(timewarp_bridge PUBLIC timewarp::canvas Qt6::Core)
+    target_link_libraries(timewarp_bridge PUBLIC timewarp::canvas ${TIME_WARP_QT}::Core)
     set_target_properties(timewarp_bridge PROPERTIES AUTOMOC ON)
 
     if(MSVC)
@@ -766,29 +787,29 @@ if(Qt6_FOUND)
         )
     endif()
 else()
-    message(STATUS "Qt6 not found: skipping the Python bridge")
+    message(STATUS "Qt not found: skipping the Python bridge")
 endif()
 
 # ---------------------------------------------------------------------------
 # Desktop UI (Qt Widgets)
 #
 # The main-window layout. Separate from the debugger runner because it needs
-# Widgets rather than just Core: a machine with Qt6Core but no Qt6Widgets (a
+# Widgets rather than just Core: a machine with QtCore but no QtWidgets (a
 # headless build host) still gets everything else.
 # ---------------------------------------------------------------------------
 
-if(Qt6_FOUND)
-    find_package(Qt6 QUIET COMPONENTS Widgets)
+if(TIME_WARP_QT_FOUND)
+    find_package(${TIME_WARP_QT} QUIET COMPONENTS Widgets)
 
-    if(Qt6Widgets_FOUND)
-        message(STATUS "Qt6 ${Qt6Widgets_VERSION} found: building the widget UI")
+    if(${TIME_WARP_QT}Widgets_FOUND)
+        message(STATUS "${TIME_WARP_QT} ${${TIME_WARP_QT}Widgets_VERSION} found: building the widget UI")
 
         # Two components are wanted but not required. `Svg` is QSvgGenerator, for
         # vector export; `PrintSupport` is QPrinter and QPrintDialog, for the two
         # Print entries. A build without either still runs: the format and the
         # entries are absent rather than broken, and the save dialog and the
         # `--export` help do not name what the build cannot do.
-        find_package(Qt6 QUIET COMPONENTS Svg PrintSupport)
+        find_package(${TIME_WARP_QT} QUIET COMPONENTS Svg PrintSupport)
 
         # Some distributions ship Qt built for one configuration only -- Arch's
         # qt6-base 6.12 provides RelWithDebInfo. An imported target with no
@@ -796,19 +817,19 @@ if(Qt6_FOUND)
         # step fail with "IMPORTED_LOCATION or IMPORTED_IMPLIB not set" before
         # anything is compiled. Map the requested configuration to one the
         # package provides rather than making the user change build type.
-        get_target_property(_qt_imported_configs Qt6::Gui IMPORTED_CONFIGURATIONS)
+        get_target_property(_qt_imported_configs ${TIME_WARP_QT}::Gui IMPORTED_CONFIGURATIONS)
         if(_qt_imported_configs AND CMAKE_BUILD_TYPE)
             string(TOUPPER "${CMAKE_BUILD_TYPE}" _qt_wanted_config)
             if(NOT _qt_wanted_config IN_LIST _qt_imported_configs)
                 list(GET _qt_imported_configs 0 _qt_fallback_config)
-                foreach(_qt_target Qt6::Core Qt6::Gui Qt6::Widgets)
+                foreach(_qt_target ${TIME_WARP_QT}::Core ${TIME_WARP_QT}::Gui ${TIME_WARP_QT}::Widgets)
                     if(TARGET ${_qt_target})
                         set_property(TARGET ${_qt_target} PROPERTY
                             MAP_IMPORTED_CONFIG_${_qt_wanted_config} ${_qt_fallback_config})
                     endif()
                 endforeach()
                 message(STATUS
-                    "Qt6 has no ${CMAKE_BUILD_TYPE} configuration; using ${_qt_fallback_config}")
+                    "${TIME_WARP_QT} has no ${CMAKE_BUILD_TYPE} configuration; using ${_qt_fallback_config}")
             endif()
         endif()
 
@@ -905,7 +926,7 @@ if(Qt6_FOUND)
             PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
         )
         target_compile_features(timewarp_ui PUBLIC cxx_std_20)
-        target_link_libraries(timewarp_ui PUBLIC Qt6::Widgets)
+        target_link_libraries(timewarp_ui PUBLIC ${TIME_WARP_QT}::Widgets)
         # The window owns the execution pipeline: the interpreter runs on a
         # `DebuggerRunner` thread, pushes turtle commands into the canvas queue,
         # and `CanvasBridge` drains them on the GUI thread. Guarded because the
@@ -934,21 +955,21 @@ if(Qt6_FOUND)
         # Public because the save-dialog filter and the `--export` help text live
         # in the executable and the tests, and they must not offer a format this
         # build cannot write.
-        if(Qt6Svg_FOUND)
-            target_link_libraries(timewarp_ui PUBLIC Qt6::Svg)
+        if(${TIME_WARP_QT}Svg_FOUND)
+            target_link_libraries(timewarp_ui PUBLIC ${TIME_WARP_QT}::Svg)
             target_compile_definitions(timewarp_ui PUBLIC TIME_WARP_HAVE_SVG=1)
-            message(STATUS "Qt6 Svg ${Qt6Svg_VERSION} found: SVG drawing export enabled")
+            message(STATUS "Qt Svg ${${TIME_WARP_QT}Svg_VERSION} found: SVG drawing export enabled")
         else()
-            message(STATUS "Qt6 Svg not found: SVG drawing export disabled")
+            message(STATUS "Qt Svg not found: SVG drawing export disabled")
         endif()
         # Public for the same reason as Svg: the menu entries and the tests both
         # have to know whether this build can print.
-        if(Qt6PrintSupport_FOUND)
-            target_link_libraries(timewarp_ui PUBLIC Qt6::PrintSupport)
+        if(${TIME_WARP_QT}PrintSupport_FOUND)
+            target_link_libraries(timewarp_ui PUBLIC ${TIME_WARP_QT}::PrintSupport)
             target_compile_definitions(timewarp_ui PUBLIC TIME_WARP_HAVE_PRINT=1)
-            message(STATUS "Qt6 PrintSupport ${Qt6PrintSupport_VERSION} found: printing enabled")
+            message(STATUS "Qt PrintSupport ${${TIME_WARP_QT}PrintSupport_VERSION} found: printing enabled")
         else()
-            message(STATUS "Qt6 PrintSupport not found: printing disabled")
+            message(STATUS "Qt PrintSupport not found: printing disabled")
         endif()
         set_target_properties(timewarp_ui PROPERTIES AUTOMOC ON)
 
@@ -980,6 +1001,11 @@ if(Qt6_FOUND)
             add_executable(time_warp_ide tools/time_warp_ide.cpp)
         endif()
         target_link_libraries(time_warp_ide PRIVATE timewarp::ui)
+        # Qt 5 provides the WinMain that a WIN32-subsystem executable needs to
+        # reach `main`; Qt 6 folded it into Qt6::EntryPoint and links it itself.
+        if(TARGET ${TIME_WARP_QT}::WinMain)
+            target_link_libraries(time_warp_ide PRIVATE ${TIME_WARP_QT}::WinMain)
+        endif()
         if(NOT MSVC)
             target_compile_options(time_warp_ide PRIVATE -Wall -Wextra -Wpedantic -Wshadow)
             if(TIME_WARP_EXPR_WERROR)
@@ -1124,8 +1150,8 @@ if(Qt6_FOUND)
         # means `make install` on a development machine produces the same tree
         # that CPack packages -- a package that differs from a local install is
         # a package nobody tested.
-        if(TARGET Qt6::qmake)
-            get_target_property(_time_warp_qmake Qt6::qmake IMPORTED_LOCATION)
+        if(TARGET ${TIME_WARP_QT}::qmake)
+            get_target_property(_time_warp_qmake ${TIME_WARP_QT}::qmake IMPORTED_LOCATION)
             get_filename_component(_time_warp_qt_bin "${_time_warp_qmake}" DIRECTORY)
         endif()
         if(WIN32)
@@ -1320,7 +1346,7 @@ if(Qt6_FOUND)
             add_test(NAME retro_computer_tests COMMAND retro_computer_tests)
         endif()
     else()
-        message(STATUS "Qt6 Widgets not found: skipping the widget UI")
+        message(STATUS "${TIME_WARP_QT} Widgets not found: skipping the widget UI")
     endif()
 endif()
 
@@ -1370,10 +1396,10 @@ set(CPACK_DEBIAN_PACKAGE_DEPENDS
 # Only when this build was made with it: a package that names a library the
 # binary does not link is a needless install, and one that omits a library the
 # binary does link fails to start.
-if(Qt6Svg_FOUND)
+if(${TIME_WARP_QT}Svg_FOUND)
     string(APPEND CPACK_DEBIAN_PACKAGE_DEPENDS ", libqt6svg6")
 endif()
-if(Qt6PrintSupport_FOUND)
+if(${TIME_WARP_QT}PrintSupport_FOUND)
     string(APPEND CPACK_DEBIAN_PACKAGE_DEPENDS ", libqt6printsupport6")
     # The RPM needs nothing extra: Fedora ships libQt6PrintSupport in
     # qt6-qtbase-gui, which CPACK_RPM_PACKAGE_REQUIRES already names.
@@ -1391,7 +1417,7 @@ endif()
 set(CPACK_RPM_PACKAGE_LICENSE "MIT")
 set(CPACK_RPM_PACKAGE_GROUP "Education")
 set(CPACK_RPM_PACKAGE_REQUIRES "qt6-qtbase-gui, python3, sqlite-libs")
-if(Qt6Svg_FOUND)
+if(${TIME_WARP_QT}Svg_FOUND)
     string(APPEND CPACK_RPM_PACKAGE_REQUIRES ", qt6-qtsvg")
 endif()
 # The same pin as the DEB's, for a sharper reason: CPackRPM asks rpmbuild for

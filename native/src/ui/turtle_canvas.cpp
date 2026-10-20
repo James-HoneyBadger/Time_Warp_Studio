@@ -1,5 +1,7 @@
 // SPDX-License-Identifier: MIT
 
+#include "timewarp/core/qt_gui_compat.hpp"
+#include "timewarp/core/qt_compat.hpp"
 #include "timewarp/ui/turtle_canvas.hpp"
 
 #include <algorithm>
@@ -547,7 +549,7 @@ void TurtleCanvas::wheelEvent(QWheelEvent* event) {
     if (steps == 0) {
         return;
     }
-    const QPointF cursor = event->position();
+    const QPointF cursor = timewarp::core::eventPosition(event);
     // Keep the world point under the cursor under the cursor. Zooming towards
     // the middle instead makes whatever you were looking at slide away.
     const QPointF anchor = toWorld(cursor);
@@ -579,7 +581,7 @@ void TurtleCanvas::mousePressEvent(QMouseEvent* event) {
         return;
     }
     dragging_ = true;
-    drag_from_ = event->position();
+    drag_from_ = timewarp::core::eventPosition(event);
     setCursor(Qt::ClosedHandCursor);
     event->accept();
 }
@@ -589,8 +591,8 @@ void TurtleCanvas::mouseMoveEvent(QMouseEvent* event) {
         QWidget::mouseMoveEvent(event);
         return;
     }
-    pan_pixels_ += event->position() - drag_from_;
-    drag_from_ = event->position();
+    pan_pixels_ += timewarp::core::eventPosition(event) - drag_from_;
+    drag_from_ = timewarp::core::eventPosition(event);
     update();
     event->accept();
 }

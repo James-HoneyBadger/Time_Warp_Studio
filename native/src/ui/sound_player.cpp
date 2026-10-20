@@ -1,10 +1,12 @@
 // SPDX-License-Identifier: MIT
 
+#include "timewarp/core/qt_compat.hpp"
 #include "timewarp/ui/sound_player.hpp"
 
 #include <QDir>
 #include <QFile>
 #include <QFileInfo>
+#include <QDateTime>
 #include <QProcess>
 #include <QStandardPaths>
 #include <QTemporaryDir>
@@ -62,7 +64,7 @@ SoundPlayer::~SoundPlayer() { stop(); }
 QByteArray SoundPlayer::wavFor(const std::vector<timewarp::audio::Tone>& tones) {
     const std::vector<std::int16_t> pcm = timewarp::audio::render(tones);
     const std::string bytes = timewarp::audio::wav(pcm, timewarp::audio::kDefaultSampleRate);
-    return QByteArray{bytes.data(), static_cast<qsizetype>(bytes.size())};
+    return QByteArray{bytes.data(), timewarp::core::intLength(bytes.size())};
 }
 
 void SoundPlayer::note(double frequency, int milliseconds,

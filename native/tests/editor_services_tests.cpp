@@ -769,7 +769,7 @@ void test_rom_bytes_survive_a_document() {
     session.language = QStringLiteral("BASIC");
     session.status = QStringLiteral("in_progress");
     session.current = 1;
-    session.objectives = {QStringLiteral("Use PRINT"), QStringLiteral("Run a program")};
+    session.objectives = QStringList{QStringLiteral("Use PRINT"), QStringLiteral("Run a program")};
     session.checkpoints = {
         LessonSessionCheckpoint{QStringLiteral("Say hello"), QStringLiteral("Print one line."),
                                 true, true, QStringLiteral("You printed the line.")},

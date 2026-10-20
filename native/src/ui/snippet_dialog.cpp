@@ -77,7 +77,7 @@ SnippetDialog::SnippetDialog(QWidget* parent) : QDialog{parent} {
     layout->addLayout(columns, 1);
     layout->addLayout(buttons);
 
-    connect(language_, &QComboBox::currentIndexChanged, this, [this] { fillList(); });
+    connect(language_, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [this] { fillList(); });
     connect(filter_, &QLineEdit::textChanged, this, [this] { fillList(); });
     connect(list_, &QListWidget::currentRowChanged, this, [this] { showSelected(); });
     connect(list_, &QListWidget::itemActivated, this, [this] { accept(); });

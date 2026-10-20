@@ -1,5 +1,7 @@
 // SPDX-License-Identifier: MIT
 
+#include "timewarp/core/qt_gui_compat.hpp"
+#include "timewarp/core/qt_compat.hpp"
 #include "timewarp/ui/code_editor.hpp"
 
 #include <algorithm>
@@ -113,7 +115,7 @@ void LineNumberArea::paintEvent(QPaintEvent* event) { editor_->paintLineNumbers(
 
 void LineNumberArea::mousePressEvent(QMouseEvent* event) {
     if (event->button() == Qt::LeftButton) {
-        editor_->toggleBreakpoint(editor_->lineAt(static_cast<int>(event->position().y())));
+        editor_->toggleBreakpoint(editor_->lineAt(static_cast<int>(timewarp::core::eventPosition(event).y())));
         event->accept();
         return;
     }

@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: MIT
 
+#include "timewarp/core/qt_gui_compat.hpp"
 #include "timewarp/ui/retro_computer.hpp"
 
 #include <algorithm>
@@ -333,13 +334,13 @@ void RetroComputerWindow::buildUi() {
     auto* run = new QShortcut{QKeySequence{Qt::Key_F9}, this};
     run->setContext(Qt::WindowShortcut);
     connect(run, &QShortcut::activated, this, &RetroComputerWindow::runProgram);
-    auto* stop = new QShortcut{QKeySequence{Qt::SHIFT | Qt::Key_F9}, this};
+    auto* stop = new QShortcut{timewarp::core::keySequence(Qt::SHIFT, Qt::Key_F9), this};
     stop->setContext(Qt::WindowShortcut);
     connect(stop, &QShortcut::activated, this, &RetroComputerWindow::stopProgram);
-    auto* cls = new QShortcut{QKeySequence{Qt::CTRL | Qt::Key_L}, this};
+    auto* cls = new QShortcut{timewarp::core::keySequence(Qt::CTRL, Qt::Key_L), this};
     cls->setContext(Qt::WindowShortcut);
     connect(cls, &QShortcut::activated, this, &RetroComputerWindow::clearScreenAndCanvas);
-    auto* configure = new QShortcut{QKeySequence{Qt::CTRL | Qt::Key_Comma}, this};
+    auto* configure = new QShortcut{timewarp::core::keySequence(Qt::CTRL, Qt::Key_Comma), this};
     configure->setContext(Qt::WindowShortcut);
     connect(configure, &QShortcut::activated, this,
             [this] { openSettings(); });
@@ -409,7 +410,7 @@ void RetroComputerWindow::buildHeader(QVBoxLayout* column) {
 
     column->addWidget(header);
 
-    connect(language_selector_, &QComboBox::currentIndexChanged, this, [this](int index) {
+    connect(language_selector_, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [this](int index) {
         if (!prepared_ || index < 0) {
             return;
         }
@@ -417,7 +418,7 @@ void RetroComputerWindow::buildHeader(QVBoxLayout* column) {
             static_cast<Language>(language_selector_->itemData(index).toInt());
         setLanguage(language);
     });
-    connect(mode_selector_, &QComboBox::currentIndexChanged, this, [this](int index) {
+    connect(mode_selector_, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [this](int index) {
         if (!prepared_ || index < 0) {
             return;
         }

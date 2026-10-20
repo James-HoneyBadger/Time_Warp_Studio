@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: MIT
 
+#include "timewarp/core/qt_compat.hpp"
 #include "timewarp/ui/help_browser.hpp"
 
 #include <algorithm>

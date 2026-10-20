@@ -60,6 +60,7 @@
 #include <QVBoxLayout>
 #include <QWidgetAction>
 
+#include "timewarp/core/qt_gui_compat.hpp"
 #include "check.hpp"
 #include "timewarp/canvas/command.hpp"
 #include "timewarp/ui/autosave.hpp"
@@ -449,7 +450,7 @@ void test_lesson_panel_records_the_session() {
     lesson.title = QStringLiteral("First Steps in BASIC");
     lesson.language = QStringLiteral("BASIC");
     lesson.description = QStringLiteral("Print something.");
-    lesson.objectives = {QStringLiteral("Use PRINT")};
+    lesson.objectives = QStringList{QStringLiteral("Use PRINT")};
     for (int index = 0; index < 3; ++index) {
         timewarp::bridge::LessonCheckpoint checkpoint;
         checkpoint.title = QStringLiteral("Checkpoint %1").arg(index + 1);
@@ -1336,7 +1337,7 @@ void test_high_contrast_toggles_and_restores_the_palette() {
         return;
     }
     TW_CHECK(action->isCheckable());
-    TW_CHECK_EQ(action->shortcut(), QKeySequence{Qt::CTRL | Qt::ALT | Qt::Key_H});
+    TW_CHECK_EQ(action->shortcut(), timewarp::core::keySequence(Qt::CTRL | Qt::ALT, Qt::Key_H));
     TW_CHECK(!window->highContrast());
 
     // This test changes the theme, and the theme is a persisted setting.
@@ -1384,7 +1385,7 @@ void test_font_scale_ladder() {
     // Start from the bottom step whatever an earlier test left behind.
     window->setFontScale(100);
     TW_CHECK_EQ(window->fontScale(), 100);
-    TW_CHECK_EQ(action->shortcut(), QKeySequence{Qt::CTRL | Qt::ALT | Qt::Key_A});
+    TW_CHECK_EQ(action->shortcut(), timewarp::core::keySequence(Qt::CTRL | Qt::ALT, Qt::Key_A));
 
     QWidget* console = window->outputSubTabs()->findChild<QPlainTextEdit*>(
         QStringLiteral("consoleOutput"));
@@ -1501,7 +1502,7 @@ void test_presentation_mode_is_focus_mode_for_a_room() {
     TW_CHECK(action->isCheckable());
     // Next to F11, which already means "give the editor the window": this one is
     // the same idea with an audience.
-    TW_CHECK_EQ(action->shortcut(), QKeySequence{Qt::SHIFT | Qt::Key_F11});
+    TW_CHECK_EQ(action->shortcut(), timewarp::core::keySequence(Qt::SHIFT, Qt::Key_F11));
     TW_CHECK(!window->presentationMode());
 
     auto* escape = window->findChild<QShortcut*>(QStringLiteral("presentationModeEscape"));
@@ -3316,7 +3317,7 @@ void test_sql_panel_runs_and_shows_results() {
     }
 
     timewarp::sql::QueryResult result;
-    result.columns = {QStringLiteral("name"), QStringLiteral("score")};
+    result.columns = QStringList{QStringLiteral("name"), QStringLiteral("score")};
     result.rows = {{QStringLiteral("Ada"), QStringLiteral("42")}};
     panel->setResult(result);
     TW_CHECK_EQ(panel->resultRowCount(), 1);

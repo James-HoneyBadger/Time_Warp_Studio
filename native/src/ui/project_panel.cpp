@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: MIT
 
+#include "timewarp/core/qt_gui_compat.hpp"
 #include "timewarp/ui/project_panel.hpp"
 
 #include <QAbstractItemView>
@@ -54,7 +55,12 @@ public:
     void setDropHandler(DropHandler handler) { handler_ = std::move(handler); }
 
 protected:
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
     QMimeData* mimeData(const QList<QTreeWidgetItem*>& items) const override {
+#else
+    // Qt 5 takes the list by value; Qt 6 by const reference.
+    QMimeData* mimeData(const QList<QTreeWidgetItem*> items) const override {
+#endif
         QJsonArray paths;
         for (const QTreeWidgetItem* item : items) {
             if (item->data(0, kKindRole).toInt() != static_cast<int>(ItemKind::File)) {
@@ -83,7 +89,7 @@ protected:
 
     void dropEvent(QDropEvent* event) override {
         if (handler_) {
-            handler_(itemAt(event->position().toPoint()), event);
+            handler_(itemAt(timewarp::core::eventPosition(event).toPoint()), event);
         }
         if (!event->isAccepted()) {
             event->ignore();

@@ -176,8 +176,8 @@ void PreferencesDialog::buildUi(const EditorSettings& settings) {
         changed();
     });
     connect(font_family_, &QFontComboBox::currentFontChanged, this, [changed] { changed(); });
-    connect(font_size_, &QSpinBox::valueChanged, this, [changed] { changed(); });
-    connect(tab_width_, &QSpinBox::valueChanged, this, [changed] { changed(); });
+    connect(font_size_, QOverload<int>::of(&QSpinBox::valueChanged), this, [changed] { changed(); });
+    connect(tab_width_, QOverload<int>::of(&QSpinBox::valueChanged), this, [changed] { changed(); });
     for (QCheckBox* box : {line_numbers_, current_line_, word_wrap_, auto_indent_,
                            completion_, lint_, whitespace_, minimap_, autosave_}) {
         connect(box, &QCheckBox::toggled, this, [changed] { changed(); });

@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: MIT
 
+#include "timewarp/core/qt_gui_compat.hpp"
 #include "timewarp/ui/sql_panel.hpp"
 
 #include <QDir>
@@ -129,7 +130,7 @@ void SqlPanel::buildUi() {
     run_row->setSpacing(4);
     run_ = new QPushButton{tr("Run")};
     run_->setObjectName(QStringLiteral("sqlRun"));
-    run_->setShortcut(QKeySequence{Qt::CTRL | Qt::Key_Return});
+    run_->setShortcut(timewarp::core::keySequence(Qt::CTRL, Qt::Key_Return));
     run_row->addWidget(run_);
     run_row->addStretch(1);
     right_layout->addLayout(run_row);
