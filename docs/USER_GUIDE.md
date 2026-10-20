@@ -1,8 +1,9 @@
 # Time Warp Studio — User Guide
 
-This is the manual for the Qt application: how to open it, organise work, try
-commands without writing a program, debug, use SQL, and drive the Studio from a
-script or a terminal. The per-language command reference is
+This is the manual for the Qt application: how to open it, organise work, meet the
+Time Warp home computer, try commands without writing a program, debug, use SQL,
+and drive the Studio from a script or a terminal. The per-language command
+reference is
 [LANGUAGE_GUIDE.md](LANGUAGE_GUIDE.md), and the tutorials start at
 [tutorials/](tutorials/).
 
@@ -19,6 +20,7 @@ script or a terminal. The per-language command reference is
 ./run.sh --run Examples/basic/hello.bas       # open and run it
 ./run.sh --screenshot window.png --run file   # render the window and exit
 ./run.sh --compile program.bas --output hello # build a standalone artifact
+./run.sh --computer                           # open the Time Warp
 ```
 
 `run.sh` builds incrementally with CMake and then replaces itself with the IDE, so
@@ -147,7 +149,142 @@ Practical notes:
 
 ---
 
-## 4. Debugging
+## 4. The Time Warp computer
+
+Tools > **Time Warp Computer…** (`Ctrl+Alt+W`, or `./run.sh --computer`)
+opens a self-contained home computer: one CRT with text and graphics, a boot
+message at the top, and a prompt underneath. It is the machine the ten languages
+share, presented the way a 1980s learner would have met them.
+
+**The ROM socket.** The **ROM** selector cold-boots the machine into any of the ten
+languages. The machine name, prompt and boot message change with it:
+
+| ROM | Prompt | Program memory |
+| --- | --- | --- |
+| BASIC | `READY.` | numbered program lines |
+| Logo | `?` | the editor contents |
+| Scheme | `>` | the editor contents |
+| FOCAL | `*` | the editor contents |
+| PILOT | `PILOT:` | the editor contents |
+| COMAL | `]` | the editor contents |
+| REXX | `REXX>` | the editor contents |
+| APL | `APL>` | the editor contents |
+| Smalltalk | `ST>` | the editor contents |
+| CHIP-8 | `CHIP8>` | the editor contents |
+
+Each ROM keeps its own program. Switching away and back restores what that ROM
+was holding, and the selected ROM, screen mode and all ten program buffers persist
+in QSettings between sessions.
+
+**The screen.** **SCREEN** selects **TEXT**, **SPLIT** (the default) or
+**GRAPHICS**. In SPLIT the text screen is on the left and the turtle canvas on the
+right; a drawing that arrives while TEXT is selected switches to SPLIT once so it
+cannot be drawn out of sight. The text side has two pages:
+
+- **PROGRAM** is a real `CodeEditor`: line numbers, syntax colouring, checking,
+  undo, cursor movement and selection, exactly as in the main editor.
+- **OUTPUT** is the machine's screen: the boot banner, prompt echoes, program output
+  and errors.
+
+The prompt is below the screen. **Up** and **Down** recall earlier entries.
+
+**Prompt commands.** These are the machine's own words; everything else goes to
+the selected language's persistent REPL session.
+
+| Command | Effect |
+| --- | --- |
+| `RUN` | Run the program on the PROGRAM page. F9 does the same. `RUN "NAME"` loads a file from the disk and runs it |
+| `LIST` | Print the program to OUTPUT |
+| `NEW` | Erase the program and reset the REPL bindings |
+| `EDIT` | Move to the PROGRAM page |
+| `TEXT`, `GRAPHICS`/`GFX`, `SPLIT` | Change the screen mode |
+| `CLS`/`CLEAR` | Clear OUTPUT and the drawing (Ctrl+L) |
+| `HELP` or a bare `?` | Print the machine's command list |
+| `ROMS` | List the installed language ROMs |
+| `CONFIG`/`SETUP` | Open the machine's settings screen (Ctrl+, or **CONFIG**) |
+| `Shift+F9` | Stop a running program |
+
+**BASIC direct mode.** In the BASIC ROM a numbered line typed at the prompt is
+stored on the PROGRAM page in numeric order; a later line with the same number
+replaces it, and a bare number deletes it. `?` is shorthand for `PRINT`, so
+`? 6 * 7` prints 42. A line such as `2 + 2` is still an expression, not line 2.
+
+**HB DOS.** The machine has a disk — **HB DOS 1.0**, one 512-sector volume called
+`HBWARP`, in the manner of the DOS a 1980s learner met. It is where a program goes
+when it has to outlive the afternoon; the PROGRAM page itself is only memory.
+
+| Command | What it does | Apple DOS 3.3's word |
+| --- | --- | --- |
+| `CATALOG` (or `CAT`) | List the disk: lock marker, ROM, sectors, name | `CATALOG` |
+| `SAVE "NAME"` | Save the program on the PROGRAM page | `SAVE` |
+| `LOAD "NAME"` | Load a file into memory | `LOAD` |
+| `RUN "NAME"` | Load a file and run it | `RUN` |
+| `DELETE "NAME"` (or `ERA`) | Erase a file; a locked file refuses | `DELETE` |
+| `RENAME "OLD","NEW"` | Rename a file | `RENAME` |
+| `LOCK`/`UNLOCK "NAME"` | Write-protect a file: the disk's version of the tab | `LOCK`/`UNLOCK` |
+| `VERIFY "NAME"` | Compare the file with the program in memory | `VERIFY` |
+| `TYPE "NAME"` | Print a file to OUTPUT | — |
+| `STATUS` | Volume, sectors used and free, the image's path | — |
+| `INIT` | Erase the whole disk; it says so again before it does | `INIT` |
+
+Names are upper-cased and last 30 characters; `SAVE HELLO` and `SAVE "HELLO"` are
+the same request. A program is measured in the 256-byte sectors the catalogue
+counts in, and a file that would not fit is refused rather than truncated
+(`?DISK FULL`). `SAVE` over an unlocked file replaces it. A catalogue looks like
+this:
+
+```text
+DISK VOLUME 254   HBWARP   512 SECTORS
+
+ BASIC      001  HELLO
+*LOGO       001  SQUARE
+
+2 FILES   2 SECTORS USED   510 FREE
+```
+
+The `*` is the lock. A file remembers the ROM that can run it, so `LOAD "SQUARE"`
+cold-boots the machine into Logo before the program arrives. The volume is one
+image file, `~/.time_warp/disks/HBWARP.dsk` (`TIME_WARP_DATA_DIR` moves it), so a
+program saved in one lesson is there in the next, and a teacher can copy the image
+to another machine. The status line shows how many files the disk holds.
+
+The computer's REPL sessions are its own: they do not share bindings with the
+REPL bar in the editor. Running a program stops the prompt session, exactly as
+Run does in the main window, so a program never starts inside a previous
+command's variables.
+
+**Settings.** **CONFIG** in the header, `Ctrl+,`, or `CONFIG` at the prompt
+opens the machine's configuration screen. It has three pages, and everything on
+it except the boot settings takes effect at once and is remembered:
+
+| Page | Setting | Effect |
+| --- | --- | --- |
+| Machine | Boot ROM | The ROM to power on into, or `Last used ROM` |
+| Machine | Boot screen | TEXT, SPLIT, GRAPHICS, or `Last used screen` |
+| Machine | Start-up message | Full (name, ROM, copyright, `SYSTEM READY`), Short (name and ROM), or none |
+| Machine | Prompt history | How many lines Up and Down recall: Off, 25, 50, 100, 250 or 500 |
+| Machine | Remember each ROM's program | Keep all ten program buffers between sessions |
+| Machine | Switch to SPLIT when a program draws | Turn off to let a program draw unseen in TEXT mode |
+| Screen | Monitor | Green, Amber, White or Ice phosphor; the whole machine recolours |
+| Screen | Screen text size | Point size of OUTPUT and the prompt line |
+| Screen | Program text size | Point size of the PROGRAM page, independent of the screen |
+| Glass | Scanlines, Vignette, Curvature, Flicker, Phosphor glow | The CRT glass over the screen, 0–100 % each; zero is off |
+
+**Apply**/**OK** keeps the settings; **Cancel** puts the machine back as it was.
+The boot ROM and boot screen apply at the next power-on rather than switching the
+machine immediately, so a settings change never discards the program being typed.
+The phosphor is a palette rather than a filter: the header, the screen, the
+program editor, the drawing surface and the glass all change colour together.
+
+**From a terminal.** `./run.sh --computer` opens the machine, booted into the
+first file's language if one is named; `--run` then runs its program.
+`--screenshot` photographs the machine and `--export` saves the drawing on its
+canvas rather than the editor's, so a lesson handout or an automation script sees
+the machine.
+
+---
+
+## 5. Debugging
 
 ### Breakpoints
 
@@ -193,7 +330,7 @@ BASIC's memory window, and the IDE's wall clock and delivered ink. Use it to tel
 
 ---
 
-## 5. SQL and the Database tab
+## 6. SQL and the Database tab
 
 The Studio embeds SQLite. The 🗄 **Database** tab opens or
 creates a database file, lists its tables, shows a table's `CREATE` statement, and
@@ -226,12 +363,13 @@ produced by `twc` link it too and accept `--db FILE`.
 
 ---
 
-## 6. Terminal tools
+## 7. Terminal tools
 
 ### `./run.sh`
 
 Builds if necessary and launches the IDE. Arguments pass through, so
-`./run.sh --run program.bas`, `--screenshot`, `--export` and `--compile` all work.
+`./run.sh --run program.bas`, `--screenshot`, `--export`, `--compile` and
+`--computer` all work.
 
 ### `./twc` — a small standalone executable
 
@@ -266,7 +404,7 @@ It needs the same Qt runtime as the IDE; `twc` is the smaller alternative.
 
 ---
 
-## 7. Automation
+## 8. Automation
 
 `./api` starts a JSON-RPC 2.0 service on stdin/stdout: one JSON object per line,
 one response per line, notifications get no response, and batches are arrays. The
@@ -297,7 +435,7 @@ an `ostream`, which is how the tests drive it without a process.
 
 ---
 
-## 8. Lessons, classroom and appearance
+## 9. Lessons, classroom and appearance
 
 - **Lessons** — the 🎓 Lessons tab lists the curriculum and checks the document in
   front against the current checkpoint. Progress lives in
@@ -319,7 +457,7 @@ whole directory, which is how tests avoid touching a real learner's files.
 
 ---
 
-## 9. Where to go next
+## 10. Where to go next
 
 | Need | Document |
 | --- | --- |

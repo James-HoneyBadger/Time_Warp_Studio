@@ -2,6 +2,35 @@
 
 ## [Unreleased]
 
+### Added
+
+- **The Time Warp.** Tools > Time Warp Computer… (`Ctrl+Alt+W`, or
+  `./run.sh --computer`) opens a self-contained home computer: a boot intro at the
+  top of one CRT, a prompt below it, a selectable language ROM for all ten
+  languages, and TEXT/SPLIT/GRAPHICS screen modes. The text side is a real code
+  editor on its PROGRAM page and the machine's boot/output screen on OUTPUT; the
+  graphics side is the same turtle canvas and the same native engines the IDE
+  runs. Each ROM keeps its own program, all ten buffers, the selected ROM and the
+  screen mode persist between sessions, the prompt has history, and BASIC direct
+  mode (numbered lines, `LIST`, `RUN`, `NEW`, `?`) works at the machine keyboard.
+  The screen is covered by the existing CRT glass without intercepting input.
+  **CONFIG** (`Ctrl+,`) opens a settings screen for the machine: boot ROM, boot
+  screen and start-up message, prompt-history depth, whether each ROM's program is
+  remembered, whether drawing switches a text screen to SPLIT, four phosphors
+  (green, amber, white, ice) that recolour the whole machine, independent screen
+  and program text sizes, and the five glass strengths. Changes preview live,
+  Cancel puts the machine back, and the settings persist.
+  **HB DOS 1.0** gives the machine a disk: one 512-sector volume with `CATALOG`,
+  `SAVE`, `LOAD`, `RUN "name"`, `DELETE`, `RENAME`, `LOCK`/`UNLOCK`, `VERIFY`,
+  `TYPE`, `STATUS` and a two-step `INIT`, catalogued in the style of Apple DOS 3.3
+  in 256-byte sectors. A locked file refuses to be overwritten or deleted, a file
+  that will not fit is refused rather than truncated, and each file remembers the
+  ROM that can run it. The volume is one JSON image under the application's data
+  directory, so programs survive a restart and a teacher can copy the disk.
+  With `--computer`, `--run`, `--screenshot` and `--export` act on the machine
+  rather than the editor, so a script captures the boot screen and the drawing the
+  program made on the machine's canvas.
+
 ### Fixed
 
 - The command and REPL matrices accept the documented “not available” refusal

@@ -78,6 +78,7 @@
 #include "timewarp/ui/preferences.hpp"
 #include "timewarp/ui/profile_report.hpp"
 #include "timewarp/ui/project_panel.hpp"
+#include "timewarp/ui/retro_computer.hpp"
 #include "timewarp/ui/repl_runner.hpp"
 #include "timewarp/ui/sql_panel.hpp"
 #include "timewarp/sql/database.hpp"
@@ -1213,6 +1214,11 @@ void MainWindow::buildMenuBar() {
     add(tools, tr("CHIP-8 &Emulator..."),
         QKeySequence{Qt::CTRL | Qt::SHIFT | Qt::Key_M}, [this] { openChip8Emulator(); })
         ->setObjectName(QStringLiteral("chip8EmulatorAction"));
+    // The machine the languages share. Ctrl+Alt+W is unclaimed and is the
+    // machine's initial.
+    add(tools, tr("Time &Warp Computer..."),
+        QKeySequence{Qt::CTRL | Qt::ALT | Qt::Key_W}, [this] { openRetroComputer(); })
+        ->setObjectName(QStringLiteral("retroComputerAction"));
 
     // -- View -------------------------------------------------------------
     QMenu* view = bar->addMenu(tr("&View"));
@@ -2639,6 +2645,33 @@ void MainWindow::openChip8Emulator() {
         return;
     }
     chip8_window_->loadBundledProgram();
+}
+
+void MainWindow::openRetroComputer() {
+    const bool created = retro_computer_window_ == nullptr;
+    if (created) {
+        auto* window = new RetroComputerWindow{this};
+        // Closing the machine alone must end it; the QPointer then goes null, so
+        // the next invocation builds a fresh one rather than raising a dead
+        // window. A live machine is never rebuilt, because its RAM is the point.
+        window->setAttribute(Qt::WA_DeleteOnClose);
+        retro_computer_window_ = window;
+
+        CodeEditor* editor = currentEditor();
+        if (editor != nullptr) {
+            const Language language = languageOf(editor);
+            if (language != Language::Unknown) {
+                retro_computer_window_->setLanguage(language);
+            }
+            if (!editor->toPlainText().isEmpty()) {
+                retro_computer_window_->loadProgram(editor->toPlainText());
+                retro_computer_window_->showProgramPage();
+            }
+        }
+    }
+    retro_computer_window_->show();
+    retro_computer_window_->raise();
+    retro_computer_window_->activateWindow();
 }
 
 void MainWindow::goToLine(int line) {

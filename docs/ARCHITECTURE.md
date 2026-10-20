@@ -314,6 +314,55 @@ arrive. `Chip8Screen` paints the 64x32 framebuffer with an integer scale,
 and reused; closing it alone ends the run, and the next invocation builds a
 fresh machine rather than touching a dead one.
 
+### The Time Warp
+
+`RetroComputerWindow` is the second top-level machine window, alongside the
+CHIP-8 emulator. It is deliberately self-contained: its own `CanvasCommandQueue`
+and `CanvasBridge`, its own persistent `ReplRunner`, and its own `NativeRunner`
+for a whole-program `RUN`. Nothing in it shares state with the editor's REPL bar,
+so a program started from the computer cannot inherit a binding from a command
+typed in the IDE.
+
+The ROM selector is a `Language`; `romFor()` supplies the version, prompt and boot
+note, and `setLanguage()` performs a cold boot -- stop both engines, swap the
+program buffer, clear the tube, print the banner. Each language's source is held
+in `programs_`, keyed by the enum value and persisted in QSettings, which is why
+switching ROMs and returning restores that ROM's memory. The screen is a
+`QSplitter` whose two children are a `QTabWidget` (a real `CodeEditor` on the
+PROGRAM page and the boot/output console on OUTPUT) and the `TurtleCanvas`; the
+mode selector shows one or both. A `CrtOverlay` covers the frame as glass rather
+than as a second surface, so it is transparent to input.
+
+`RetroComputerSettings` (`retro_settings.hpp`) is the machine's configuration: the
+boot ROM and boot screen, the start-up message, the prompt-history budget, whether
+programs are remembered, whether drawing switches to SPLIT, the phosphor, the two
+text sizes and the five glass strengths. It is persisted under
+`retroComputer/config` by the dialog and by nothing else — the window's own
+`saveSettings()` writes session state (geometry, ROM, screen, program buffers), so
+cancelling a preview cannot leave a configuration the user did not choose.
+`retroPalette()` is the one table of monitor colours; the stylesheet, the program
+editor's palette, the canvas surface and the CRT overlay all derive from it, which
+is why choosing Amber changes the whole machine rather than tinting one widget.
+
+`HbDos` (`hb_dos.{hpp,cpp}`) is the machine's disk: one volume of named programs,
+each with the ROM that runs it, a lock bit, and a size counted in 256-byte sectors
+against a 512-sector volume. It is a plain class with no widgets, so the same code
+serves the prompt and the tests; it persists as one JSON image in the application's
+data directory (`disks/HBWARP.dsk`), and every change is committed immediately and
+rolled back in memory when the write fails. The window's DOS words are thin: parse
+the arguments, call `HbDos`, print what happened in the machine's voice. `INIT` is
+the one destructive word, and the window makes it be said twice, with any other
+line in between cancelling it.
+
+The prompt has two paths. The machine's own words (`RUN`, `LIST`, `NEW`, `EDIT`,
+`TEXT`, `GFX`, `SPLIT`, `CLS`, `HELP`, `ROMS`, `CONFIG`, and the DOS words
+`CATALOG`, `STATUS`, `SAVE`, `LOAD`, `DELETE`, `RENAME`, `LOCK`, `UNLOCK`,
+`VERIFY`, `TYPE`, `INIT`) are handled in the window; in the BASIC ROM, a numbered
+line is inserted into the editor in numeric order and a bare number deletes it. Everything else is submitted to the `ReplRunner` for the
+selected ROM, which keeps bindings between entries. `RUN` stops that session and
+starts a `NativeRunner`, the same engine the editor's Run uses, so the two cannot
+both draw into the tube.
+
 ### The guided tour
 
 `tour.cpp` owns a first-run overlay and the one-time hints built on the same
@@ -698,12 +747,12 @@ function-key layers are all live, and no menu or toolbar entry is a disabled pro
 
 ## Tests and gates
 
-Seventeen C++ suites run by `ctest`, plus the engine's own pytest suite, three parity
+Twenty-one C++ suites run by `ctest`, plus the engine's own pytest suite, three parity
 gates and a command matrix. All of them must stay green, in every build tree.
 
 | Gate | Command | What it protects |
 | --- | --- | --- |
-| C++ suites (17) | `make -C native test` | Lexer, evaluator, Scheme, native languages, canvas queue, canvas bridge, debug, debugger runner, UI layout, UI documents, turtle canvas, syntax highlighter, Python bridge, media, editor services, help browser, CHIP-8 emulator |
+| C++ suites (21) | `make -C native test` | Lexer, evaluator, Scheme, native languages, canvas queue, canvas bridge, debug, debugger runner, UI layout, UI documents, turtle canvas, syntax highlighter, Python bridge, media, editor services, help browser, CHIP-8 emulator, retro computer |
 | Debug tree | `make -C native test-debug` | Keeps `Q_ASSERT` and standard-library hardening live; a suite green in Release can crash here |
 | Sanitisers | `make -C native asan` | Reads and writes of memory that is no longer valid, which no assertion can see. `ASAN=undefined` for UBSan |
 | Engine tests | `make engine-test` | The bridge engine: the ten executors, the evaluator, the validators, the lesson curriculum and the classroom |

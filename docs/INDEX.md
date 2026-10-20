@@ -14,7 +14,7 @@ languages, with an integrated turtle graphics canvas. This page is the map.
 | --- | --- |
 | [INSTALLATION.md](INSTALLATION.md) | Requirements, building, running, troubleshooting a build |
 | [ARCHITECTURE.md](ARCHITECTURE.md) | How the IDE, the engines and the bridge fit together |
-| [USER_GUIDE.md](USER_GUIDE.md) | The IDE manual: projects, REPL, debugging, SQL, terminal tools and automation |
+| [USER_GUIDE.md](USER_GUIDE.md) | The IDE manual: projects, the REPL, the Time Warp computer, debugging, SQL, terminal tools and automation |
 | [LANGUAGE_GUIDE.md](LANGUAGE_GUIDE.md) | Command reference for all ten languages |
 | [lessons/](lessons/README.md) | The guided lessons: the curriculum, and the student and teacher guides |
 | [README_TESTING.md](README_TESTING.md) | The suites, the example gate and the parity harnesses |
@@ -52,7 +52,7 @@ One per active language, each written to be worked through:
 | --- | --- |
 | Build and run the IDE | [README](../README.md) |
 | Fix a build or Qt problem | [INSTALLATION.md](INSTALLATION.md) |
-| Use projects, the REPL, debugging, SQL or the API | [USER_GUIDE.md](USER_GUIDE.md) |
+| Use projects, the REPL, the Time Warp computer, debugging, SQL or the API | [USER_GUIDE.md](USER_GUIDE.md) |
 | Learn a language's commands | [LANGUAGE_GUIDE.md](LANGUAGE_GUIDE.md) |
 | Understand the design | [ARCHITECTURE.md](ARCHITECTURE.md) |
 | See what the old application had and this one does not | [PORTING_PLAN.md](PORTING_PLAN.md) |

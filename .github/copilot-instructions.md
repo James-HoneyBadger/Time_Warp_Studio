@@ -80,6 +80,7 @@ cmake --build native/build -j
 ./native/build/time_warp_ide Examples/logo/mandala.logo
 ./native/build/time_warp_ide --run Examples/logo/mandala.logo
 ./native/build/time_warp_ide --run Examples/logo/mandala.logo --export mandala.png
+./native/build/time_warp_ide --computer      # the Time Warp screen
 ./native/build/time_warp_ide --help          # all options
 
 # Or through the Makefile
@@ -95,7 +96,7 @@ make -C native run
 ### Testing Strategy
 
 ```bash
-# The Qt suites (20 of them)
+# The Qt suites (21 of them)
 ctest --test-dir native/build --output-on-failure
 make -C native test-debug     # Debug tree
 make -C native asan           # AddressSanitizer; ASAN=undefined for UBSan
@@ -124,10 +125,10 @@ make lint-md
 
 **Test Organization:**
 
-- `native/tests/*_tests.cpp` = the 20 C++ suites (lexer, evaluator, scheme, native
+- `native/tests/*_tests.cpp` = the 21 C++ suites (lexer, evaluator, scheme, native
   languages, canvas queue, canvas bridge, debug, debugger runner, ui layout, ui
   document, turtle canvas, syntax highlighter, python bridge, media, editor
-  services, help browser, chip8 emulator, project, sql, api)
+  services, help browser, chip8 emulator, retro computer, project, sql, api)
 - `native/tools/example_smoke.py` = every `Examples/**` program through the reference
   engine; the 30 that must draw are listed in `DRAWING_EXAMPLES`
 - `native/bridge/time_warp/tests/` = the bridge engine's tests (the 10 language executors,
@@ -281,6 +282,19 @@ Scripts/                       - audit_interpreters.py, generate_icon.py,
 - **CodeEditor**: `native/src/ui/code_editor.cpp` — gutter, current line, tab stops,
   syntax colouring and the search that `FindBar` drives
 - **Language table**: `native/src/ui/language.cpp` — names, settings keys, extensions
+- **Time Warp**: `native/src/ui/retro_computer.cpp` — a self-contained home
+  computer whose ROM socket is the `Language` enum. It owns its own canvas queue,
+  bridge, `ReplRunner` and `NativeRunner`, so nothing started there shares state with
+  the editor's REPL bar; per-ROM programs, the ROM and the screen mode persist in
+  QSettings. Its configuration screen (`retro_settings.cpp`) owns the boot ROM and
+  boot screen, the start-up message, the prompt-history budget, program memory, the
+  phosphor palette (`retroPalette`), the two text sizes and the CRT strengths, stored
+  under `retroComputer/config` and written only when the dialog is accepted. Its
+  disk is `hb_dos.{hpp,cpp}` (`HbDos`): one volume of named programs with a lock
+  bit and 256-byte sector accounting, persisted as a JSON image under
+  `~/.time_warp/disks`; the window's `CATALOG`/`SAVE`/`LOAD`/`RUN "name"`/`DELETE`/
+  `RENAME`/`LOCK`/`UNLOCK`/`VERIFY`/`TYPE`/`STATUS`/`INIT` words are thin calls
+  into it, and `INIT` must be said twice
 - **The bridge**: `native/bridge/worker.py` + `native/src/bridge/python_worker.cpp` —
   runs programs *and* checks lessons, so a learner's verdict and a teacher's mark are
   one function's answer

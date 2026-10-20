@@ -761,6 +761,7 @@ if(Qt6_FOUND)
             src/ui/find_in_files.cpp
             src/ui/formatter.cpp
             src/ui/gif_encoder.cpp
+            src/ui/hb_dos.cpp
             src/ui/help_browser.cpp
             src/ui/lint.cpp
             src/ui/language.cpp
@@ -773,6 +774,8 @@ if(Qt6_FOUND)
             src/ui/project_panel.cpp
             src/ui/repl_runner.cpp
             src/ui/resizable_tab_widget.cpp
+            src/ui/retro_computer.cpp
+            src/ui/retro_settings.cpp
             src/ui/scrubber.cpp
             src/ui/snippet_dialog.cpp
             src/ui/snippets.cpp
@@ -799,6 +802,7 @@ if(Qt6_FOUND)
             include/timewarp/ui/export.hpp
             include/timewarp/ui/find_bar.hpp
             include/timewarp/ui/find_in_files.hpp
+            include/timewarp/ui/hb_dos.hpp
             include/timewarp/ui/help_browser.hpp
             include/timewarp/ui/lint.hpp
             include/timewarp/ui/snippet_dialog.hpp
@@ -810,6 +814,8 @@ if(Qt6_FOUND)
             include/timewarp/ui/project_panel.hpp
             include/timewarp/ui/repl_runner.hpp
             include/timewarp/ui/resizable_tab_widget.hpp
+            include/timewarp/ui/retro_computer.hpp
+            include/timewarp/ui/retro_settings.hpp
             include/timewarp/ui/scrubber.hpp
             include/timewarp/ui/sound_player.hpp
             include/timewarp/ui/sql_panel.hpp
@@ -1070,6 +1076,21 @@ if(Qt6_FOUND)
                 endif()
             endif()
             add_test(NAME help_browser_tests COMMAND help_browser_tests)
+
+            # The Time Warp is a whole little machine: ROM socket, screen
+            # modes, the prompt's direct mode and the same native engines the
+            # editor runs. It gets its own binary because a failure should name
+            # the machine, not the IDE layout around it.
+            add_executable(retro_computer_tests tests/retro_computer_tests.cpp)
+            target_link_libraries(retro_computer_tests PRIVATE timewarp::ui)
+            target_include_directories(retro_computer_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/tests)
+            if(NOT MSVC)
+                target_compile_options(retro_computer_tests PRIVATE -Wall -Wextra -Wpedantic -Wshadow)
+                if(TIME_WARP_EXPR_WERROR)
+                    target_compile_options(retro_computer_tests PRIVATE -Werror)
+                endif()
+            endif()
+            add_test(NAME retro_computer_tests COMMAND retro_computer_tests)
         endif()
     else()
         message(STATUS "Qt6 Widgets not found: skipping the widget UI")

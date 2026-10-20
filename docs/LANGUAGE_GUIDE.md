@@ -15,6 +15,11 @@ BASIC, APL, Logo, PILOT, FOCAL, Scheme, CHIP-8, COMAL, REXX, and Smalltalk.
 > [lessons](lessons/README.md) have two per language, each with a plan, hints and
 > a worked answer.
 
+**Tools > Time Warp Computer** (`Ctrl+Alt+W`) boots all ten languages in one
+home-computer screen: a ROM selector, a prompt, and the same turtle canvas. It is
+the shortest way to try a command from these tables without opening a file — see
+[the user guide](USER_GUIDE.md#4-the-time-warp-computer).
+
 ---
 
 ## Table of Contents

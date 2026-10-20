@@ -30,6 +30,7 @@
 
 #include "timewarp/ui/app.hpp"
 #include "timewarp/ui/main_window.hpp"
+#include "timewarp/ui/retro_computer.hpp"
 #include "timewarp/ui/standalone.hpp"
 #include "timewarp/ui/turtle_canvas.hpp"
 
@@ -140,6 +141,13 @@ int main(int argc, char* argv[]) {
         QStringLiteral("run"),
         QStringLiteral("Run the first file as soon as the window is up.")};
     parser.addOption(runOption);
+
+    const QCommandLineOption computerOption{
+        QStringLiteral("computer"),
+        QStringLiteral("Open the Time Warp computer, booted into the first "
+                       "file's language (or BASIC), and raise it. With --run, "
+                       "run the computer's program.")};
+    parser.addOption(computerOption);
 
     const QCommandLineOption compileOption{
         QStringLiteral("compile"),
@@ -262,6 +270,26 @@ int main(int argc, char* argv[]) {
     openArguments(&window, arguments);
     window.show();
 
+    if (parser.isSet(computerOption)) {
+        window.openRetroComputer();
+    }
+
+    // A screenshot without --computer photographs the IDE. With it, the picture
+    // is of the machine, which is what a script demonstrating the boot screen
+    // wants; grabbing the parent would show the editor with a small window on
+    // top of it.
+    QWidget* screenshot_target = &window;
+    timewarp::ui::RetroComputerWindow* computer_window = nullptr;
+    if (parser.isSet(computerOption)) {
+        computer_window = window.findChild<timewarp::ui::RetroComputerWindow*>();
+        if (computer_window != nullptr) {
+            if (!screenshotPath.isEmpty()) {
+                computer_window->resize(screenshotSize);
+            }
+            screenshot_target = computer_window;
+        }
+    }
+
     // A first run only: the guide stores "seen" in QSettings and refuses a second
     // time. A file argument, a screenshot, an export, a named panel or a player
     // artifact is not somebody starting from scratch, so none of them show it.
@@ -276,7 +304,11 @@ int main(int argc, char* argv[]) {
         // a fit computed against a 0x0 widget would be recomputed on the first
         // resize anyway, but the run would also start before the window is
         // usable, which makes the interactive case feel broken.
-        window.runCurrentDocument();
+        if (computer_window != nullptr) {
+            computer_window->runProgram();
+        } else {
+            window.runCurrentDocument();
+        }
     }
 
     if (!screenshotPath.isEmpty() || !exportPath.isEmpty()) {
@@ -296,9 +328,11 @@ int main(int argc, char* argv[]) {
         if (enginePanel) {
             delay = std::max(delay, 6000);
         }
-        QTimer::singleShot(delay, &application, [&window, screenshotPath, exportPath] {
+        QTimer::singleShot(delay, &application,
+                           [&window, screenshot_target, computer_window, screenshotPath,
+                            exportPath] {
             if (!screenshotPath.isEmpty()) {
-                const QPixmap shot = window.grab();
+                const QPixmap shot = screenshot_target->grab();
                 if (!shot.save(screenshotPath)) {
                     std::fprintf(stderr, "time_warp_ide: could not write %s\n",
                                  qPrintable(screenshotPath));
@@ -310,9 +344,13 @@ int main(int argc, char* argv[]) {
             }
             if (!exportPath.isEmpty()) {
                 // The same call the File menu makes, so what a teacher renders from
-                // a script is what a teacher would have saved by hand.
+                // a script is what a teacher would have saved by hand. With
+                // --computer the program ran on the machine's canvas, so that is
+                // the one holding the ink.
                 QString error;
-                timewarp::ui::TurtleCanvas* canvas = window.turtleCanvas();
+                timewarp::ui::TurtleCanvas* canvas = computer_window != nullptr
+                                                         ? computer_window->graphicsCanvas()
+                                                         : window.turtleCanvas();
                 // `frameCount` counts shapes as well as strokes: a CHIP-8 screen
                 // is all rectangles, and "nothing was drawn" about it would be a
                 // lie.

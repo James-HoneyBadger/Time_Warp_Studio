@@ -118,7 +118,7 @@ the IDE and opens in player mode. The full guide is [USER_GUIDE.md](USER_GUIDE.m
 ## 4. Verify the build
 
 ```bash
-ctest --test-dir native/build --output-on-failure     # 20 suites
+ctest --test-dir native/build --output-on-failure     # 21 suites
 python3 native/tools/example_smoke.py                 # all 60 examples
 python3 native/tools/command_matrix.py                # every command-table row
 python3 native/tools/repl_matrix.py                   # every row through the REPL

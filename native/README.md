@@ -98,7 +98,7 @@ small standalone executables, with its C++ support files beside it in
 ```bash
 # The short way: native/Makefile drives the CMake build below.
 make -C native                # release build
-make -C native test           # build, then all 20 suites
+make -C native test           # build, then all 21 suites
 make -C native test-debug     # unoptimised, with Q_ASSERT and hardening live
 make -C native asan           # under AddressSanitizer, in a third tree
 make -C native asan ASAN=undefined SAN_DIR=build-ubsan \
@@ -1108,7 +1108,9 @@ page next to a 60x40 page must still report a 100x100 minimum.
   File > Export Drawing makes, so a script and a teacher get the same picture — and
   renders the whole window to a PNG with `--screenshot <path>`, so the
   result can be looked at without a display -- add `--run` to execute the file
-  first. That is how the findings below were caught; a structural test would have
+  first. `--computer` points all three at the Time Warp window, so the boot
+  screen and the machine's own drawing are what a script captures. That is how the
+  findings below were caught; a structural test would have
   passed either way, and the status bar painting a message on top of the document
   path was visible in exactly one place and nowhere else.
 
@@ -1310,6 +1312,18 @@ strokes a circle costs.
   `Machine`), with drawing on the same canvas queue as a normal run. BASIC has a
   direct mode on top: numbered lines are stored in the editor in numeric order,
   `LIST`/`RUN`/`NEW` operate on the document, and `?` is PRINT.
+* **The Time Warp** is `RetroComputerWindow`: one CRT with a boot intro, a
+  prompt, a ROM selector for all ten languages, TEXT/SPLIT/GRAPHICS modes, a real
+  `CodeEditor` on its PROGRAM page and a `TurtleCanvas` beside it. It owns its own
+  queue, bridge, `ReplRunner` and `NativeRunner`; per-ROM programs, the ROM and the
+  mode persist in QSettings. `retro_settings.{hpp,cpp}` holds its configuration —
+  boot ROM and screen, start-up message, history depth, program memory, the SPLIT
+  rule, the phosphor palette, two text sizes and the CRT strengths — and the dialog
+  that edits it, reached from the header's CONFIG button, `Ctrl+,` or the `CONFIG`
+  command. `hb_dos.{hpp,cpp}` is **HB DOS 1.0**, the machine's disk: one volume of
+  named programs in the style of Apple DOS 3.3, with `CATALOG`/`SAVE`/`LOAD`/`RUN`/
+  `DELETE`/`RENAME`/`LOCK`/`UNLOCK`/`VERIFY`/`TYPE`/`STATUS`/`INIT`, sizes in
+  256-byte sectors and a JSON image under `~/.time_warp/disks`.
 * **The Database tab** is `SqlPanel` over `timewarp_sql`, sharing its connection with
   every program's `SQL` statement.
 * **Automation** is `time_warp_api` (`api::Server`) and the linkable libraries behind
@@ -1334,4 +1348,5 @@ Landed since this file was first written: the runner bridge (`worker.py` behind
 `bridge::PythonWorker`), the real output console and turtle canvas on top of
 `CanvasCommandQueue`, the two-row toolbar, `native/` under the repository Makefile and
 CI, the function-key row, the lesson and classroom panels, projects, the REPL bar,
-watch expressions and data breakpoints, SQL, the JSON-RPC API and the `twc` compiler.
+watch expressions and data breakpoints, SQL, the JSON-RPC API, the `twc` compiler and
+the Time Warp computer.
