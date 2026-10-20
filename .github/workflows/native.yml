@@ -299,33 +299,29 @@ jobs:
         run: ctest --test-dir native/build --timeout 180 --output-on-failure
 
       # The bridge is the only part of the product that runs Python, and it is what
-      # a lesson check uses. This drives it directly -- one run request on stdin,
-      # the JSON lines back -- so a platform where it cannot answer shows its
-      # traceback here instead of as a row of test timeouts that say only "no
-      # reply". Closing stdin is the documented one-shot use.
-      # On failure only: the link line as CMake actually wrote it, which says
-      # whether the AGL flag is the literal Qt's FindWrapOpenGL emits or a path
-      # baked into an imported target.
-      - name: Show the link line (macOS)
-        if: failure() && runner.os == 'macOS'
-        run: |
-          for f in native/build/CMakeFiles/*.dir/link.txt; do
-            if grep -q AGL "$f"; then
-              echo "=== $f ==="
-              tr ' ' '\n' < "$f" | grep -n -B2 -A2 AGL | head -20
-            fi
-          done
-
-      - name: The bridge worker answers a run (Windows)
-        if: runner.os == 'Windows'
+      # a lesson check uses. This drives it directly -- requests on stdin, the JSON
+      # lines back -- so a platform where it cannot answer shows its traceback here
+      # instead of as a row of test timeouts that say only "no reply". Closing
+      # stdin is the documented one-shot use, and `always()` so it runs after the
+      # failing test step rather than instead of it.
+      - name: The bridge worker answers (Windows)
+        if: always() && runner.os == 'Windows'
         timeout-minutes: 3
         run: |
           $env:PYTHONPATH = Join-Path $PWD "native/bridge"
-          $request = '{"t":"run","language":"basic","source":"10 PRINT ""HI""\n20 END\n","name":"hello.bas"}'
-          $output = $request | & python native/bridge/worker.py 2>&1 | Out-String
+          # Both requests the failed tests wait on: the curriculum, which is a
+          # file read, and a run, which starts an interpreter.
+          $requests = @(
+            '{"t":"lessons"}',
+            '{"t":"run","language":"basic","source":"10 PRINT ""HI""\n20 END\n","name":"hello.bas"}'
+          )
+          $output = $requests | & python native/bridge/worker.py 2>&1 | Out-String
           Write-Host $output
-          if ($output -notmatch '"t":"done"') {
-            Write-Error "the worker did not answer a run on Windows"
+          $missing = @()
+          if ($output -notmatch '"t":"lessons"') { $missing += "lessons" }
+          if ($output -notmatch '"t":"done"') { $missing += "run" }
+          if ($missing.Count -gt 0) {
+            Write-Error ("the worker never answered: " + ($missing -join ", "))
             exit 1
           }
 
