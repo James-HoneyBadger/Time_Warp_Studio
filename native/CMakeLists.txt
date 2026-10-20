@@ -602,6 +602,7 @@ if(Qt6_FOUND)
             src/ui/outline.cpp
             src/ui/panels.cpp
             src/ui/preferences.cpp
+            src/ui/profile_report.cpp
             src/ui/resizable_tab_widget.cpp
             src/ui/scrubber.cpp
             src/ui/snippet_dialog.cpp
@@ -634,6 +635,7 @@ if(Qt6_FOUND)
             include/timewarp/ui/native_runner.hpp
             include/timewarp/ui/panels.hpp
             include/timewarp/ui/preferences.hpp
+            include/timewarp/ui/profile_report.hpp
             include/timewarp/ui/resizable_tab_widget.hpp
             include/timewarp/ui/scrubber.hpp
             include/timewarp/ui/sound_player.hpp

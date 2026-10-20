@@ -286,6 +286,17 @@ Run the program as usual (F9) and press **Pause** in the Debug tab, or set a bre
 
 Yes, in two places. The 🔍 **Variables** tab lists every binding the engine can see with its type and value, filtered by name — after a run as well as while paused, because a run that never paused still leaves bindings behind. The Debug tab shows the bindings of the frame you are stopped in.
 
+### Can I profile a program?
+
+Yes, for the line-by-line languages (BASIC, FOCAL, PILOT, COMAL, APL and REXX).
+Tick **View → Profile Run** and run the program: each statement is timed, and
+when the run ends a report lists the lines longest first with their hit count,
+total time, share of the run and source text. It is off at every launch on
+purpose — a clock read around every statement costs, and a remembered "on" would
+make every later run pay for a report nobody asked to see. Whole-program
+languages (Logo, Scheme, Smalltalk, CHIP-8) have no statement loop to time, so
+the console says so instead.
+
 ### Can I go back in time?
 
 No. The engine records nothing per step, and reverse execution is not planned.

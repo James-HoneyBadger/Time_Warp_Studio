@@ -31,6 +31,7 @@ derived rather than remembered.
 | Bridged engines | None — every language runs in process. `native/bridge/` remains as the reference the parity gates and the lesson check use |
 | Native executors | All ten — BASIC, FOCAL, PILOT, COMAL, APL and REXX line-by-line; CHIP-8, Logo, Smalltalk and Scheme whole-program |
 | Printing | File > Print Code (Ctrl+P) and Print Drawing, through the optional Qt6 PrintSupport |
+| Profiling | View > Profile Run times every statement in the line-by-line languages and ends with a per-line report, longest first |
 | Packaging | `make install` with the desktop entry and icon; `DESTDIR` staging |
 | Quality gates | 17 CTest suites in 4 build configurations, 3 parity gates, 560 engine tests, 446 command rows, 472 parity programs |
 

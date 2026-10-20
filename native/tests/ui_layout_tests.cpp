@@ -13,6 +13,7 @@
 
 #include <cmath>
 #include <cstddef>
+#include <cstdint>
 #include <cstdio>
 #include <memory>
 #include <string>
@@ -64,7 +65,9 @@
 #include "timewarp/ui/main_window.hpp"
 #include "timewarp/ui/panels.hpp"
 #include "timewarp/ui/preferences.hpp"
+#include "timewarp/ui/profile_report.hpp"
 #include "timewarp/ui/scrubber.hpp"
+
 #include "timewarp/ui/snippet_dialog.hpp"
 #include "timewarp/ui/snippets.hpp"
 #include "timewarp/ui/standalone.hpp"
@@ -2471,6 +2474,39 @@ void test_view_menu_zoom_scales_the_canvas() {
     TW_CHECK_EQ(canvas->zoom(), 1.0);
 }
 
+/// View > Profile Run is per-session and off at launch: timing every statement
+/// is work, and a remembered "on" would make every later run pay for a report
+/// nobody asked to see.
+void test_profile_run_is_opt_in() {
+    announce("View menu: Profile Run is opt-in");
+    MainWindow window;
+    QAction* profile = entryContaining(menuNamed(window, QStringLiteral("&View")),
+                                       QStringLiteral("Profile Run"));
+    TW_CHECK(profile != nullptr);
+    if (profile == nullptr) {
+        return;
+    }
+    TW_CHECK(profile->isCheckable());
+    TW_CHECK(!profile->isChecked());
+    profile->setChecked(true);
+    TW_CHECK(profile->isChecked());
+}
+
+/// The report shows what the engine measured, in the order the engine sorted it:
+/// the dialog must not re-sort or drop rows.
+void test_profile_report_lists_the_measurements() {
+    announce("profile report rows");
+    const QList<timewarp::ui::ProfileEntry> entries{
+        {20, QStringLiteral("  PRINT I"), 10, 12.5},
+        {10, QStringLiteral("FOR I = 1 TO 10"), 1, 0.5},
+    };
+    timewarp::ui::ProfileReportDialog dialog{QStringLiteral("loop.bas"), entries, 13.0};
+    TW_CHECK_EQ(dialog.rowCount(), 2);
+    TW_CHECK_EQ(dialog.lineAt(0), 20);
+    TW_CHECK_EQ(dialog.lineAt(1), 10);
+    TW_CHECK_EQ(dialog.hitsAt(0), std::uint64_t{10});
+}
+
 void test_edit_menu_acts_on_whatever_has_focus() {
     announce("Edit > Undo follows focus");
     MainWindow window;
@@ -3090,6 +3126,8 @@ int main(int argc, char** argv) {
     test_tab_close_button_closes_the_tab();
     test_view_menu_grid_drives_the_canvas();
     test_view_menu_zoom_scales_the_canvas();
+    test_profile_run_is_opt_in();
+    test_profile_report_lists_the_measurements();
     test_run_menu_clear_output_empties_the_console();
     test_edit_menu_acts_on_whatever_has_focus();
     test_run_button_popup_is_not_empty();

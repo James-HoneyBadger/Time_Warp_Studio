@@ -194,6 +194,7 @@ void Interpreter::run() {
     // which also makes a resumed run keep the output it has already produced.
     if (current_line == 0) {
         output_.clear();
+        profile_.clear();
     }
     error_.clear();
     timed_out_ = false;
@@ -260,7 +261,22 @@ void Interpreter::run() {
                 break;
             }
         }
+        // The clock starts after the pause: time spent waiting for the user to
+        // press Continue is not the statement's cost.
+        const auto statement_started = profiling_
+                                           ? std::chrono::steady_clock::now()
+                                           : std::chrono::steady_clock::time_point{};
         (void)execute_statement(command);
+        if (profiling_) {
+            LineProfile& row = profile_[physical_index];
+            row.index = physical_index;
+            row.line = program_lines_[physical_index].number.value_or(
+                static_cast<int>(physical_index) + 1);
+            ++row.hits;
+            row.elapsed_ms += std::chrono::duration<double, std::milli>(
+                                  std::chrono::steady_clock::now() - statement_started)
+                                  .count();
+        }
 
         if (!running) {
             break;
@@ -550,6 +566,21 @@ double Interpreter::elapsed_ms() const noexcept {
             .count();
     }
     return elapsed_ms_;
+}
+
+std::vector<LineProfile> Interpreter::line_profiles() const {
+    std::vector<LineProfile> rows;
+    rows.reserve(profile_.size());
+    for (const auto& entry : profile_) {
+        rows.push_back(entry.second);
+    }
+    std::sort(rows.begin(), rows.end(), [](const LineProfile& left, const LineProfile& right) {
+        if (left.elapsed_ms != right.elapsed_ms) {
+            return left.elapsed_ms > right.elapsed_ms;
+        }
+        return left.line < right.line;
+    });
+    return rows;
 }
 
 int Interpreter::source_line(std::size_t index) const {

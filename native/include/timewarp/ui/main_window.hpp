@@ -774,6 +774,10 @@ private:
     /// The View menu's High Contrast entry, kept so `setHighContrast` can move the
     /// tick when something other than the menu asks for the change.
     QAction* high_contrast_action_ = nullptr;
+    /// View > Profile Run. Deliberately not persisted: profiling costs a clock
+    /// read per statement, so it is opt-in per session rather than a setting that
+    /// follows the user into the next launch without them remembering it.
+    QAction* profile_action_ = nullptr;
     /// Session state, not a setting: the old implementation's toggle reset on
     /// restart, and a window that opens in high contrast without the user asking
     /// again is a window that forgot why.

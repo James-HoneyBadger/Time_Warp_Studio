@@ -71,6 +71,7 @@
 #include "timewarp/ui/help_browser.hpp"
 #include "timewarp/ui/panels.hpp"
 #include "timewarp/ui/preferences.hpp"
+#include "timewarp/ui/profile_report.hpp"
 #include "timewarp/ui/resizable_tab_widget.hpp"
 #include "timewarp/ui/scrubber.hpp"
 #include "timewarp/ui/snippet_dialog.hpp"
@@ -1059,6 +1060,18 @@ void MainWindow::buildMenuBar() {
     // display setting.
     add(view, tr("CRT Se&ttings..."), QKeySequence{}, [this] { showCrtSettings(); })
         ->setObjectName(QStringLiteral("crtSettingsAction"));
+
+    // Off every launch on purpose: timing every statement is work, and a setting
+    // that remembered "on" would make every later run pay for a report nobody
+    // asked to see.
+    profile_action_ = view->addAction(tr("&Profile Run"));
+    profile_action_->setObjectName(QStringLiteral("profileRunAction"));
+    profile_action_->setCheckable(true);
+    profile_action_->setChecked(false);
+    connect(profile_action_, &QAction::toggled, this, [this](bool on) {
+        setExecutionState(tr("ready"),
+                          on ? tr("Profiling the next run") : tr("Profiling off"));
+    });
 
     // The old Monitor styles, as one action each: a theme and the CRT values that
     // belong with it, so "Amber monitor" is one click rather than a hunt through
@@ -4146,6 +4159,17 @@ void MainWindow::runNatively(CodeEditor* editor, timewarp::lang::Language langua
                                 static_cast<std::uint8_t>(surface.green()),
                                 static_cast<std::uint8_t>(surface.blue())});
     }
+    // Profiling is a per-run choice: the flag travels with this runner, and the
+    // report is built from this run's own numbers.
+    const bool profiling = profile_action_ != nullptr && profile_action_->isChecked();
+    runner->set_profiling(profiling);
+    const QString profile_title = nameOf(editor);
+    QStringList profile_source;
+    if (profiling) {
+        // The engine's statement indices are source-line indices (the loader
+        // keeps blanks), so the report can quote the line the index names.
+        profile_source = editor->toPlainText().split(QLatin1Char('\n'));
+    }
     runner->load_program(source);
     // The editor's breakpoints are zero-based lines and the loader keeps every
     // line -- blank ones included -- so an editor line is a statement index. That
@@ -4180,7 +4204,8 @@ void MainWindow::runNatively(CodeEditor* editor, timewarp::lang::Language langua
                 runner->answerInput(accepted ? answer : QString{});
             });
     connect(runner, &NativeRunner::run_finished, this,
-            [this, runner, language](bool completed, const QString& error) {
+            [this, runner, language, profiling, profile_title,
+             profile_source](bool completed, const QString& error) {
                 if (native_runner_ != runner) {
                     return;
                 }
@@ -4213,6 +4238,33 @@ void MainWindow::runNatively(CodeEditor* editor, timewarp::lang::Language langua
                 }
                 setExecutionState(completed ? tr("ready") : tr("stopped"),
                                   completed ? tr("Finished") : tr("Stopped"));
+
+                if (profiling) {
+                    const auto profile_rows = runner->profile();
+                    if (profile_rows.empty()) {
+                        // A whole-program language has no statement loop to time;
+                        // saying so is better than a report with no rows.
+                        const std::string_view name = timewarp::lang::display_name(language);
+                        appendOutput(tr("No per-line profile: %1 runs as a whole program.\n")
+                                         .arg(QString::fromLatin1(
+                                             name.data(), static_cast<int>(name.size()))));
+                    } else {
+                        QList<ProfileEntry> entries;
+                        entries.reserve(static_cast<int>(profile_rows.size()));
+                        for (const timewarp::lang::LineProfile& row : profile_rows) {
+                            const auto index = static_cast<int>(row.index);
+                            entries.append(
+                                {row.line,
+                                 index >= 0 && index < profile_source.size()
+                                     ? profile_source.at(index)
+                                     : QString{},
+                                 row.hits, row.elapsed_ms});
+                        }
+                        ProfileReportDialog dialog{profile_title, entries, runner->elapsedMs(),
+                                                   this};
+                        dialog.exec();
+                    }
+                }
             });
 
     connect(runner, &NativeRunner::paused, this, [this, runner](int line) {

@@ -593,6 +593,13 @@ were filled in:
   ink actually reached the canvas (`strokeCount`/`totalStrokeLength`). The engine's
   counters and the IDE's are shown side by side rather than merged, so a drawing that
   never arrived is visible as two rows that disagree.
+- **The profiler** uses the same line loop the debugger pauses in.
+  `Interpreter::set_profiling` wraps each statement in a clock and keeps a hit and
+  time total per program line; `NativeRunner` copies the report out when the run
+  ends (the interpreter does not outlive it), and `ProfileReportDialog` shows it
+  longest first. The clock starts after a debug pause, so waiting for Continue is
+  not charged to the statement. A whole-program language has no such loop and
+  reports nothing rather than zeros.
 
 Only Scheme can be stepped: the native executors run to completion and have no
 pause protocol yet. `DebugPanel` therefore

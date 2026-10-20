@@ -1637,6 +1637,62 @@ void test_basic_say_refuses_without_a_backend() {
     TW_CHECK_EQ(run.output.at(1), std::string{"❌ [line 3] Speech synthesis not available"});
 }
 
+/// Profiling is measurement around the shared line loop: hits per line, time per
+/// line, and a report ordered by that time.
+void test_profiling_counts_each_line() {
+    std::printf("-- profiler: per-line hits and time\n");
+    RecordingHost host;
+    Interpreter interpreter{Language::Basic, host};
+    interpreter.set_profiling(true);
+    interpreter.load_program("10 FOR I = 1 TO 10\n20 PRINT I\n30 NEXT I\n");
+    interpreter.run();
+
+    TW_CHECK_EQ(interpreter.output().size(), std::size_t{10});
+    const std::vector<timewarp::lang::LineProfile> report = interpreter.line_profiles();
+    // Only the lines that ran are in the report; all three of these did.
+    TW_CHECK_EQ(report.size(), std::size_t{3});
+    const auto body = std::find_if(report.begin(), report.end(),
+                                   [](const timewarp::lang::LineProfile& row) {
+                                       return row.line == 20;
+                                   });
+    TW_CHECK(body != report.end());
+    if (body != report.end()) {
+        TW_CHECK_EQ(body->hits, std::uint64_t{10});
+    }
+    // Longest first, with the line number breaking ties so two runs that measure
+    // the same times print the same order.
+    TW_CHECK(std::is_sorted(
+        report.begin(), report.end(),
+        [](const timewarp::lang::LineProfile& left, const timewarp::lang::LineProfile& right) {
+            if (left.elapsed_ms != right.elapsed_ms) {
+                return left.elapsed_ms > right.elapsed_ms;
+            }
+            return left.line < right.line;
+        }));
+}
+
+void test_profiling_is_off_unless_asked() {
+    std::printf("-- profiler: off unless asked\n");
+    RecordingHost host;
+    Interpreter plain{Language::Basic, host};
+    plain.load_program("10 PRINT \"hi\"\n20 PRINT \"there\"\n");
+    plain.run();
+    TW_CHECK(!plain.profiling());
+    TW_CHECK(plain.line_profiles().empty());
+
+    RecordingHost profiled_host;
+    Interpreter profiled{Language::Basic, profiled_host};
+    profiled.set_profiling(true);
+    profiled.load_program("10 PRINT \"hi\"\n20 PRINT \"there\"\n");
+    profiled.run();
+    // Measurement, not a change of execution: same steps, same output. If a
+    // clock read changed the run, the telemetry would stop being comparable
+    // between a profiled run and an ordinary one.
+    TW_CHECK_EQ(profiled.steps_used(), plain.steps_used());
+    TW_CHECK(profiled.output() == plain.output());
+    TW_CHECK_EQ(profiled.line_profiles().size(), std::size_t{2});
+}
+
 void test_basic_loops_and_subroutines_run() {
     const BasicRun run = run_basic(
         "10 TOTAL = 0\n20 FOR I = 1 TO 3\n30 GOSUB 100\n40 NEXT I\n50 PRINT TOTAL\n"
@@ -1775,5 +1831,7 @@ int main() {
     test_basic_unknown_word_is_still_an_error();
     test_basic_say_refuses_without_a_backend();
     test_basic_loops_and_subroutines_run();
+    test_profiling_counts_each_line();
+    test_profiling_is_off_unless_asked();
     return tw::test::summary("lang_tests");
 }

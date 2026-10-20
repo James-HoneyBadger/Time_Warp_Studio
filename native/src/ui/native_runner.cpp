@@ -497,6 +497,11 @@ std::vector<NativeRunner::VariableRow> NativeRunner::variables() const {
     return variables_;
 }
 
+std::vector<timewarp::lang::LineProfile> NativeRunner::profile() const {
+    const std::lock_guard<std::mutex> lock{snapshot_mutex_};
+    return profile_;
+}
+
 std::uint64_t NativeRunner::steps() const noexcept {
     const std::lock_guard<std::mutex> lock{snapshot_mutex_};
     return steps_;
@@ -553,6 +558,7 @@ void NativeRunner::run() {
     });
     engine->set_input_callback(
         [this](const std::string& prompt) { return read_input(prompt); });
+    engine->set_profiling(profiling_);
 
     // A binary ROM was decoded through the codec that preserves every byte
     // (including 0x0D, which a QTextDocument would normalise); a listing is
@@ -576,6 +582,9 @@ void NativeRunner::run() {
         }
         steps_ = engine->steps_used();
         elapsed_ms_ = engine->elapsed_ms();
+        // Copied, not referenced: the interpreter dies with this run, and the
+        // report outlives it.
+        profile_ = engine->line_profiles();
     }
 
     const bool completed = !stop_requested_.load(std::memory_order_acquire) &&

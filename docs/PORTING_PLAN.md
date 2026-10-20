@@ -64,7 +64,7 @@ nothing about that layer is missing a user-facing behaviour.
 | 3 | Help and learnability | documentation browser ✅, F1 ✅, keyword inspector ✅, guided tour ✅ | M | 0 |
 | 4 | Canvas time travel | scrubber ✅, GIF recording ✅, SVG export ✅ | M | — |
 | 5 | Export and print | PDF ✅, print ✅, session HTML ✅ | M | — |
-| 6 | Debugging breadth | breakpoints everywhere ✅, pause/step for line-by-line languages ✅, profiler | L | 0, best after 1 |
+| 6 | Debugging breadth | breakpoints everywhere ✅, pause/step for line-by-line languages ✅, profiler ✅ | L | 0, best after 1 |
 | 7 | Workspace | document outline ✅, terminal, split editor ✅, run both panes ✅ | M | 7.3 needs 1.5 |
 | 8 | Accessibility and display | high contrast ✅, font scale ✅, focus mode ✅, CRT settings ✅, screen presets ✅ | S–M | 0 |
 | 9 | Classroom | roster panel ✅, presentation mode ✅, lesson session export ✅, bundles ✅ | M | — |
@@ -558,7 +558,7 @@ CHIP-8 pauses between frames, Smalltalk between message sends, Logo between
 statements (its loader already streams them). Each is a separate small change once
 6.2's session exists; none of them needs the machine rewritten.
 
-### 6.4 Profiler (M)
+### 6.4 Profiler (M) ✅
 
 Old: `utils/profiler.py` plus a toggle and a report dialog ("N lines executed").
 
@@ -569,6 +569,30 @@ Old: `utils/profiler.py` plus a toggle and a report dialog ("N lines executed").
 
 **Tests:** a loop of ten iterations reports ten hits on its body line; profiling
 off changes nothing in the telemetry; the report is sorted.
+
+**Done.** `lang::Interpreter` gained `set_profiling`, which wraps the shared line
+loop's statement execution in a clock and keeps a `std::map` from program-line
+index to `LineProfile` (index, readable line, hits, elapsed). The clock starts
+*after* the debug session's pause, so time spent waiting for Continue is not
+charged to the statement. `line_profiles()` returns the rows longest first, with
+the line number breaking ties, and lines that never ran are absent. A
+whole-program language runs its own loop, so its profile is empty and the IDE says
+so rather than showing an empty table.
+
+`NativeRunner` arms the interpreter with the flag and copies the report out
+before the interpreter dies; the window captures the document's text when the run
+starts, so each row can quote its source line. Unlike the other view toggles,
+View > Profile Run is deliberately **not persisted**: it is off at every launch,
+because a remembered "on" would make every later run pay for timing nobody asked
+for. When the ticked run ends, `ProfileReportDialog`
+(`ui/profile_report.{hpp,cpp}`) lists line, hits, time, share and the source
+text, in the engine's order.
+
+**Tests:** `lang_tests` runs a ten-iteration BASIC loop and asserts ten hits on
+the body line, the sorted order, and that a profiled run takes the same steps and
+prints the same output as an unprofiled one; `ui_layout_tests` asserts the
+toggle is checkable and starts off, and that the report keeps the rows and order
+it was given.
 
 ---
 

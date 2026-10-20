@@ -27,6 +27,16 @@ Porting the features the removed PySide6 application had. The sequenced plan is
   `QPrinter` writing PDF, with no print system or dialog. `printCode` has no
   error result on purpose: `QTextDocument::print` reports an unusable device only
   by printing nothing, and probing it first costs a blank page.
+- **Per-line profiling.** View > Profile Run times every statement of a
+  line-by-line program and, when the run ends, a report lists the lines longest
+  first with hits, time, share and the source text. The clock starts after a
+  debug pause, so waiting for Continue is not charged to the statement; the
+  toggle is off at every launch because a clock read around every statement
+  costs, and a remembered "on" would make every later run pay for a report
+  nobody asked to see. A whole-program language (Logo, Scheme, Smalltalk,
+  CHIP-8) has no statement loop to time, and the console says so rather than
+  showing an empty table. A profiled run takes the same steps and prints the
+  same output as an unprofiled one.
 - **CHIP-8 runs SuperChip hi-res.** The machine and the Python reference both
   implement the SuperChip 1.1 core: 00FE/00FF select 64x32 or 128x64 (clearing the
   screen), 00Cn/00FB/00FC scroll, 00FD exits, DXY0 draws a 16x16 sprite in hi-res

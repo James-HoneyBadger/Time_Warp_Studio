@@ -180,6 +180,10 @@ public:
     // the session blocks the loop at a breakpoint or after a step, and these
     // calls release it. Whole-program languages run their own loop and ignore it.
 
+    /// Records per-line hits and time for this run. Set before `start()`. Off by
+    /// default because it costs a clock read around every statement.
+    void set_profiling(bool on) noexcept { profiling_ = on; }
+
     /// Zero-based statement indices this run may pause on. Set before `start()`.
     void set_breakpoints(const std::set<std::size_t>& lines);
     void request_continue();
@@ -205,6 +209,9 @@ public:
     void set_wakeup(std::function<void()> wakeup);
 
     [[nodiscard]] std::vector<VariableRow> variables() const;
+    /// Per-line totals from the last run, longest first; empty when the run was
+    /// not profiled or the language runs as a whole program.
+    [[nodiscard]] std::vector<timewarp::lang::LineProfile> profile() const;
     [[nodiscard]] std::uint64_t steps() const noexcept;
     [[nodiscard]] double elapsedMs() const noexcept;
     [[nodiscard]] std::uint64_t drawingCommands() const noexcept;
@@ -239,8 +246,10 @@ private:
 
     mutable std::mutex snapshot_mutex_;
     std::vector<VariableRow> variables_;
+    std::vector<timewarp::lang::LineProfile> profile_;
     std::uint64_t steps_ = 0;
     double elapsed_ms_ = 0.0;
+    bool profiling_ = false;
 
     std::mutex input_mutex_;
     std::condition_variable input_ready_;

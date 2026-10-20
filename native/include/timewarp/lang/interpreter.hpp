@@ -54,6 +54,18 @@ struct ProgramLine {
     std::string text;
 };
 
+/// One line's share of a profiled run.
+///
+/// `index` is the program-line index, which is what the executor jumps to;
+/// `line` is the number a person reads -- a BASIC line number, or the 1-based
+/// position for a language without them.
+struct LineProfile {
+    std::size_t index = 0;
+    int line = 0;
+    std::uint64_t hits = 0;
+    double elapsed_ms = 0.0;
+};
+
 /// An error an executor reports to the learner. The message is rendered with
 /// the ❌ prefix by the loop, so an executor never has to know how the IDE
 /// decorates it.
@@ -221,6 +233,25 @@ public:
     [[nodiscard]] std::uint64_t steps_used() const noexcept { return steps_used_; }
     [[nodiscard]] std::uint64_t max_steps() const noexcept { return kMaxSteps; }
     [[nodiscard]] double elapsed_ms() const noexcept;
+
+    /// Turns per-line timing on for the next run. Off by default: reading a
+    /// clock around every statement costs, and a run that is not being profiled
+    /// should not pay for it.
+    ///
+    /// Only the shared line loop records anything. A whole-program language
+    /// (Logo, Scheme, Smalltalk, CHIP-8) runs its own loop and reports an empty
+    /// profile, which the UI says rather than showing an empty table.
+    void set_profiling(bool on) noexcept { profiling_ = on; }
+    [[nodiscard]] bool profiling() const noexcept { return profiling_; }
+
+    /// Per-line totals for the last profiled run, longest first. Lines that
+    /// never ran are left out; ties are ordered by source line so the report is
+    /// stable between runs that measure the same times.
+    ///
+    /// The time is wall clock around the statement, so a program that waits for
+    /// input shows that wait against the statement that asked. A debug pause is
+    /// not included: it happens before the clock starts.
+    [[nodiscard]] std::vector<LineProfile> line_profiles() const;
     [[nodiscard]] bool timed_out() const noexcept { return timed_out_; }
     [[nodiscard]] bool iteration_capped() const noexcept { return iteration_capped_; }
     /// The line the run stopped on, as a person reads it.
@@ -257,6 +288,8 @@ private:
     std::chrono::steady_clock::time_point started_{};
     std::uint64_t steps_used_ = 0;
     double elapsed_ms_ = 0.0;
+    bool profiling_ = false;
+    std::map<std::size_t, LineProfile> profile_;
     bool timed_out_ = false;
     bool iteration_capped_ = false;
     std::string error_;
