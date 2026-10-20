@@ -104,7 +104,7 @@ PYTHONPATH=native/bridge python3 -m pytest -q
 # Parity gates against the Python reference (0 unexpected mismatches)
 python3 native/tools/differential_check.py native/build/expr_cli
 cd native/tools && python3 scheme_differential_check.py
-python3 native/tools/lang_differential_check.py   # all nine bridged-once languages, 472 programs
+python3 native/tools/lang_differential_check.py   # all nine bridged-once languages, 473 programs
 
 # The documentation gates, which .github/workflows/docs.yml runs on every docs
 # change; the teach.py write-plans output is then checked with git diff --exit-code
@@ -119,7 +119,7 @@ make lint-md
   document, turtle canvas, syntax highlighter, python bridge, media, editor
   services, help browser, chip8 emulator)
 - `native/tools/example_smoke.py` = every `Examples/**` program through the reference
-  engine; the 19 that must draw are listed in `DRAWING_EXAMPLES`
+  engine; the 20 that must draw are listed in `DRAWING_EXAMPLES`
 - `native/bridge/time_warp/tests/` = the bridge engine's tests (the 10 language executors,
   the expression evaluator, validators)
 
@@ -149,7 +149,12 @@ make lint-md
    - Add `Language.MY_LANG` in `native/bridge/time_warp/core/interpreter.py`
    - Add the extension in `Language.from_extension()` and in `core/language_registry.py`
 
-3. Register it in the Qt side so the IDE knows the name and the extensions:
+3. Implement the native executor in `native/src/lang/` and register it in
+   `executor_for` (`native/src/lang/language.cpp`). Every language runs in C++ in
+   the application; the bridge executor is the reference the parity gate compares
+   the native one against, not a fallback.
+
+4. Register it in the Qt side so the IDE knows the name and the extensions:
    `native/src/ui/language.cpp` (display name, settings key, file extensions)
 
    The display name is what the lesson documents and panels show, and it comes from
@@ -158,14 +163,14 @@ make lint-md
    `CHIP8`, the display name is `CHIP-8`, and using one where the other belongs is a
    wrong name in the one place it is written down.
 
-4. Add an example under `Examples/my_lang/` and a row to
+5. Add an example under `Examples/my_lang/` and a row to
    `native/bridge/time_warp/tests/command_table.py` so every new command is covered
    by `native/tools/command_matrix.py`. A row's `language` string is the protocol key
    (`Language[key.upper()]`), so CHIP-8's rows read `CHIP8`; a row labelled with prose
    needs `also=(...)` naming the command the inventory knows, or it is reported as
    untested forever.
 
-5. Add at least one lesson to `native/bridge/time_warp/features/lessons.json`
+6. Add at least one lesson to `native/bridge/time_warp/features/lessons.json`
    (`native/tools/teach.py new <id> --language NAME` prints a skeleton the loader
    accepts) and run `teach.py validate` until it is silent. The lessons panel and
    `learn.py` both read that one file, so nothing else needs registering.
@@ -206,9 +211,11 @@ result = evaluator.evaluate("2 + 3 * X")  # Returns 17
 
 ### Theme System
 
-`native/src/ui/ui_style.cpp` owns the Qt styling. It does not yet carry the 33 themes
-of the removed PySide6 implementation: that is tracked as pending work in
-`docs/ROADMAP.md`. Do not describe themes as ported until they are.
+`native/src/ui/ui_style.cpp` owns the Qt styling and `native/src/ui/themes.cpp` applies
+the 33 themes carried as data in `native/src/ui/theme_table.inc` — the same schemes the
+removed PySide6 implementation had. View > Theme selects one, View > Next Theme
+(`Shift+F10`) cycles, and the choice persists in QSettings. High Contrast derives a
+maximum-contrast variant of the active theme; it does not replace it.
 
 ## Common Pitfalls
 
@@ -244,7 +251,7 @@ native/                        - the Qt application (the product)
       graphics/turtle_state.py - turtle state
       utils/                   - expression_evaluator.py, error_hints.py, validators.py
       tests/                   - the engine's own tests
-Examples/                      - 49 example programs across the 10 active languages
+Examples/                      - 50 example programs across the 10 active languages
 docs/                          - language guide + per-language tutorials
 Scripts/                       - audit_interpreters.py, generate_icon.py,
                                  version_sync.py
@@ -274,10 +281,11 @@ Scripts/                       - audit_interpreters.py, generate_icon.py,
   `PythonWorker` re-emits them as `variablesReported`/`telemetryReported` *before*
   `finished`. Scheme has no bridge payload, so its tables come from
   `DebuggerRunner::snapshot()` — including the final snapshot taken when a run ends
-  without pausing. `DebugPanel`'s buttons all forward to the current runner and
-  are disabled for every language but Scheme, because no other engine has a pause
-  protocol. Only the terminal tab and the outline dock are still
-  `PlaceholderPanel`s
+  without pausing. `DebugPanel`'s buttons forward to whichever runner is paused:
+  Scheme through `DebuggerRunner`, every other language through `NativeRunner` and the
+  shared `DebugSession` (a statement, a Logo top-level statement, a Smalltalk message
+  send, a CHIP-8 instruction). The terminal is a real opt-in `TerminalWidget`, and the
+  outline dock is a real `OutlinePanel`; nothing in the window is a `PlaceholderPanel`.
 - **Engine (reference)**: `time_warp/core/interpreter.py` dispatches; the 10
   executors in `time_warp/languages/` are stateless functions
 - **Expression evaluator**: native C++ (`timewarp_expr`) and, in the bridge, the
@@ -287,6 +295,8 @@ Scripts/                       - audit_interpreters.py, generate_icon.py,
 ## Dependencies
 
 The Qt application: Qt6 (Widgets, Core, Gui), CMake 3.20+, a C++20 compiler.
+`Svg` and `PrintSupport` are optional components: they enable SVG drawing export and
+the two Print entries, and the build hides those features when they are absent.
 
 The Python reference engine (needed by the parity gates, the command matrix and
 the lesson check, not by a Run): Python 3.10+, standard library only. Optional
@@ -319,10 +329,11 @@ All interpreter errors are returned as strings with emoji prefixes:
 
 ### Theme Development
 
-Themes are not ported yet. The removed implementation's 33 themes (including the
-retro CRT sets: Amber, Green, C64, Apple II) are the target, to be carried as data
-and applied through QSS plus a palette in `native/src/ui/ui_style.cpp`. See
-`docs/ROADMAP.md`; do not describe a theme as available until it is.
+The 33 themes — including the retro CRT sets (Amber, Green, C64, Apple II) — are
+carried as data in `native/src/ui/theme_table.inc` and applied through
+`native/src/ui/themes.cpp` plus the QSS in `native/src/ui/ui_style.cpp`. Add a theme
+by adding its record to the table and, if it needs one, a high-contrast variant;
+`ui_layout_tests` pins the count and the required colour roles.
 
 ## Critical Integration Points
 

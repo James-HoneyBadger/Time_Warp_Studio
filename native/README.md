@@ -379,7 +379,7 @@ left; adding an executor is still the whole change a new language needs.
 The port is checked against the reference, not against a description of it:
 
 ```bash
-python3 native/tools/lang_differential_check.py   # 472 programs, 0 differences
+python3 native/tools/lang_differential_check.py   # 473 programs, 0 differences
 ```
 
 That harness runs every command-table row and every example through both
@@ -924,7 +924,7 @@ definition, so the naive lookup points at line 1 of a multi-line `define`.
 
 ### Verification
 
-* **192 checks** in `debug_tests` (Qt-free): line tracking through comments,
+* **194 checks** in `debug_tests` (Qt-free): line tracking through comments,
   multi-line forms and multi-line strings; form spans including nested ones; the
   optional-map path; quanta of 1, 7 and 1000 converging on the same output *and*
   the same step count as a single run; suspending at every opportunity changing
@@ -1055,7 +1055,7 @@ page next to a 60x40 page must still report a 100x100 minimum.
 
 ### Verification
 
-* **994 checks** in `ui_layout_tests`, run offscreen so they need no display and
+* **1371 checks** in `ui_layout_tests`, run offscreen so they need no display and
   belong in the normal CTest set. They assert the tree shape, parent/child
   identity at every splitter index, the collapsible and handle-width flags, the
   stretch factors (read back from the child's size policy, since `QSplitter` has
@@ -1075,7 +1075,7 @@ page next to a 60x40 page must still report a 100x100 minimum.
   cancelled-save paths are **not** tested, deliberately: both end in a modal dialog,
   so a test that triggered one would hang rather than fail. Both failures now go
   through a silent mode that returns a value, and that path is tested.
-* **130 checks** in `turtle_canvas_tests` cover the state mirror, the projection
+* **147 checks** in `turtle_canvas_tests` cover the state mirror, the projection
   and scrubbing, with no window involved. The projection gets the most attention
   because it is the one part a picture cannot verify: a canvas that draws a
   mirrored or quarter-turned version of a program produces something that looks
@@ -1155,7 +1155,7 @@ wrong name.
 **All ten languages run.** Scheme goes through the C++ interpreter on a
 background thread; the other nine run in process through `timewarp_lang`. No
 program is sent to the Python engine any more -- it stays as the reference the
-gates and the lesson check use. Every one of the 49 examples in `Examples/`
+gates and the lesson check use. Every one of the 50 examples in `Examples/`
 executes, and the 18 that draw produce drawing -- checked by
 `tools/example_smoke.py` through the reference, and by
 `lang_differential_check.py` on both sides.
@@ -1266,13 +1266,13 @@ strokes a circle costs.
 
 ### Known gaps, stated plainly
 
-* The terminal panel is still a `PlaceholderPanel` naming the Python module it
-  stands for. The layout is real; its contents are not. The variables,
-  telemetry and debug pages used to be on this list and no longer are: they are
-  `VariablesPanel`, `TelemetryPanel` and `DebugPanel`, fed by the reference
-  worker's `done` payload when a lesson check runs and by
-  `DebuggerRunner::snapshot()` for Scheme. The **outline dock** is real too:
-  `OutlinePanel` over `outline.{hpp,cpp}`.
+* Nothing in the window is a placeholder any more. The **terminal** is a real,
+  opt-in shell (`TerminalWidget`: off until Settings > Workspace enables it, stopped
+  and removed in presentation and player modes). The variables, telemetry and debug
+  pages are `VariablesPanel`, `TelemetryPanel` and `DebugPanel`, fed by the reference
+  worker's `done` payload when a lesson check runs and by `DebuggerRunner::snapshot()`
+  for Scheme, with native runs publishing their bindings at a pause. The **outline
+  dock** is `OutlinePanel` over `outline.{hpp,cpp}`.
 * The editor colours source per language, finds and replaces, has a minimap,
   find-in-files, a formatter, breakpoint markers in the gutter and a document
   outline.
@@ -1280,11 +1280,13 @@ strokes a circle costs.
   View > CRT Settings sets the five and View > Screen Mode pairs them with a theme.
 * `FunctionKeyBar` reproduces the normal, Shift and Ctrl layers of F1-F10 plus the
   deck selector; every key dispatches to an action that exists.
-* Debug, Continue and Trace are wired: a line-by-line program stops before a
-  breakpointed statement, and the three actions start a run, resume it and step one
-  statement. Scheme keeps its own debugger and panel.
-* A bridged program's input prompts appear as a dialog, which is the one modal
-  dialog in the program -- and the one place a scripted run could block. Nothing in
+* Debug, Continue and Trace are wired for every language: a run stops at a gutter
+  breakpoint and the three actions start a run, resume it and step one unit. The unit
+  is a statement for the line-loop languages, a top-level statement for Logo, a
+  message send for Smalltalk and an instruction for CHIP-8. Scheme keeps its own
+  debugger and panel.
+* A bridged program's input prompts appear as a dialog. No language takes the bridge
+  path today, so this is dormant machinery rather than a live modal step; nothing in
   the tests or in CI reaches it.
 
 ## Where this is going
@@ -1295,15 +1297,7 @@ application rather than to the engines.
 1. Every language runs natively, and `native/bridge/` remains as the one reference the
    parity gates, the command matrix and the lesson check compare against. That is the
    part that goes away once lesson checking runs natively.
-2. The right column's last placeholder is the terminal page. It needs the policy
-   decision recorded in phase 7.2 of `docs/PORTING_PLAN.md`: build it, default it off,
-   and disable it in classroom and player modes -- or delete the tab.
-3. The **Debug panel's** own buttons still drive only the Scheme runner. The toolbar's
-   Debug, Continue and Trace already drive the line-by-line engines, so what is left is
-   pointing the panel's buttons at whichever runner is active.
-4. Whole-program languages (Scheme, Logo, Smalltalk, CHIP-8) have no statement boundary
-   to pause at: phase 6.3 of the plan.
-5. A `CompiledExpression` handle (interned identifiers + owned RPN) and a Scheme
+2. A `CompiledExpression` handle (interned identifiers + owned RPN) and a Scheme
    `Procedure` cache, so a program is compiled once at load time rather than re-read per
    call.
 

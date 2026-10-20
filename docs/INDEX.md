@@ -18,7 +18,7 @@ languages, with an integrated turtle graphics canvas. This page is the map.
 | [lessons/](lessons/README.md) | The guided lessons: the curriculum, and the student and teacher guides |
 | [README_TESTING.md](README_TESTING.md) | The suites, the example gate and the parity harnesses |
 | [ROADMAP.md](ROADMAP.md) | What is built, what is next, what was deliberately deferred |
-| [PORTING_PLAN.md](PORTING_PLAN.md) | The features the removed PySide6 application had, and the plan to port them |
+| [PORTING_PLAN.md](PORTING_PLAN.md) | The completed porting plan: what the removed PySide6 application had, how each feature was ported, and the test that proves it |
 | [FAQ.md](FAQ.md) | Short answers to common questions |
 | [`native/README.md`](../native/README.md) | The application itself: design notes, decisions, tests |
 | [`native/bridge/`](../native/bridge/) | The Python reference engine the parity gates and the lesson check compare against |
@@ -71,6 +71,6 @@ lesson check run in; every language runs in C++.
 Documentation describing that application's interface — the user guide, the
 progressive how-to guides, the keyboard-shortcut reference, the debugger guide and
 the troubleshooting guide — was removed with it rather than left to mislead.
-`native/README.md` documents the Qt interface, [ROADMAP.md](ROADMAP.md) lists the
-features that have not been ported yet, and [PORTING_PLAN.md](PORTING_PLAN.md) is
-the plan for porting them.
+`native/README.md` documents the Qt interface, [ROADMAP.md](ROADMAP.md) lists what
+is still deliberately unbuilt, and [PORTING_PLAN.md](PORTING_PLAN.md) is the
+completed record of the port.

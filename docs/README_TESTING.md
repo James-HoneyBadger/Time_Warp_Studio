@@ -43,7 +43,7 @@ draws nothing, which is what a user reports as "the graphics don't show up".
 python3 native/tools/example_smoke.py
 ```
 
-The 19 programs that must produce ink are listed in `DRAWING_EXAMPLES` inside that
+The 20 programs that must produce ink are listed in `DRAWING_EXAMPLES` inside that
 script; a program that is expected to draw and does not fails the run.
 
 ## The bridge engine's own tests
@@ -67,7 +67,7 @@ both sides seed from the OS, so they cannot agree by construction.
 ```bash
 python3 native/tools/differential_check.py native/build/expr_cli
 cd native/tools && python3 scheme_differential_check.py
-python3 native/tools/lang_differential_check.py   # 472 programs, 0 differences
+python3 native/tools/lang_differential_check.py   # 473 programs, 0 differences
 ```
 
 ## Lint

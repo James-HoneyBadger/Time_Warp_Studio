@@ -9,6 +9,10 @@ It is a **plan**, not a promise: every phase names a test and a gate, and a phas
 that cannot meet its own test does not ship. `docs/ROADMAP.md` records what is
 actually built; this records what is intended and why.
 
+**The plan is complete.** Every phase below is marked ✅ and landed with its test;
+the sections are kept as the record of what was ported, in what order, and why each
+decision was made.
+
 ---
 
 ## What this plan is not
@@ -58,7 +62,7 @@ nothing about that layer is missing a user-facing behaviour.
 
 | # | Phase | Features | Size | Depends on |
 | --- | --- | --- | --- | --- |
-| 0 | Foundations | data dir, panel registration, test fixtures | S | — |
+| 0 | Foundations | data dir, panel registration, test fixtures ✅ | S | — |
 | 1 | Editor completion | Find in Files ✅, Format Code ✅, Snippets ✅, whitespace ✅, minimap ✅, run history ✅, run selection ✅, reset ✅ | M | 0 |
 | 2 | Data safety | autosave ✅, version history ✅ | M | 0 |
 | 3 | Help and learnability | documentation browser ✅, F1 ✅, keyword inspector ✅, guided tour ✅ | M | 0 |
@@ -492,9 +496,12 @@ no drawing says so in words rather than emitting a broken `<img>`.
 
 ## Phase 6 — Debugging breadth (the long pole)
 
-Today a Scheme run can pause because `DebuggerRunner` drives an explicit-stack
-machine. The other nine languages run in `NativeRunner` with no pause protocol at
-all, and the Debug/Continue/Trace buttons are disabled for that reason.
+When this phase was written a Scheme run could pause because `DebuggerRunner` drives
+an explicit-stack machine; the other nine languages ran in `NativeRunner` with no
+pause protocol, and the Debug/Continue/Trace buttons were disabled for that reason.
+The sections below record how that changed: breakpoints everywhere (6.1), pause and
+step for the line-loop languages (6.2), the same for the whole-program languages
+(6.3) and the profiler (6.4).
 
 ### 6.1 Breakpoints everywhere (M)
 
@@ -981,10 +988,10 @@ Every phase must leave all of these green, in this order:
 
 ```bash
 cmake --build native/build -j
-ctest --test-dir native/build --output-on-failure        # 15 suites, and the new one
+ctest --test-dir native/build --output-on-failure        # 17 suites
 python3 native/tools/differential_check.py native/build/expr_cli
-python3 native/tools/lang_differential_check.py          # 461/0/9
-python3 native/tools/example_smoke.py                   # 49 programs
+python3 native/tools/lang_differential_check.py          # 464/0/9
+python3 native/tools/example_smoke.py                   # 50 programs
 python3 native/tools/command_matrix.py                   # no new untested rows
 PYTHONPATH=native/bridge python3 -m pytest -q
 python3 native/tools/teach.py validate

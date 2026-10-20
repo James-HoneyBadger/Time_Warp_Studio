@@ -19,10 +19,10 @@ Found a bug? Use the
 It asks for the four things needed to reproduce a problem, because a prose issue
 usually leaves one of them out:
 
-1. **Check [docs/ROADMAP.md](docs/ROADMAP.md) first.** Themes, find/replace,
-   auto-completion, the examples browser and the debugger panels are deliberately
-   not built yet, so a missing feature from that list is a feature request rather
-   than a regression.
+1. **Check [docs/ROADMAP.md](docs/ROADMAP.md) first.** The REPL bar's interpreter
+   wiring, a project panel, watch expressions, an automatic update check and
+   Flatpak/Snap or Windows/macOS packaging are deliberately not built yet, so a
+   missing feature from that list is a feature request rather than a regression.
 2. **Check existing issues** — it may already be reported.
 3. **Fill in the form.** The environment it asks for (built from source or
    installed, and the platform) changes where to look: the two take different
@@ -153,7 +153,7 @@ Optional extras for those languages are not required: `pyttsx3` (BASIC `SAY`),
 # Build and run the IDE
 make -C native run
 
-# The 13 C++ suites
+# The 17 C++ suites
 make test
 ```
 
@@ -296,7 +296,7 @@ make test
 # Check code style
 make lint
 
-# Every example program, through the real bridge
+# Every example program, through the reference engine
 make smoke
 
 # One C++ suite by name
@@ -305,7 +305,7 @@ ctest --test-dir native/build -R turtle_canvas_tests --output-on-failure
 
 All must pass before submitting a PR. CI (`native.yml`) builds the application and
 runs the suites in Release, Debug, AddressSanitizer and UndefinedBehaviorSanitizer
-configurations, both differential gates, the example corpus, and the engine's
+configurations, the differential gates, the example corpus, and the engine's
 own tests.
 
 ### 4. Push to Your Fork
@@ -364,7 +364,7 @@ Requested by Issue #42 - BASIC language completeness.
 ### Run Test Suite
 
 ```bash
-# The 13 C++ suites
+# The 17 C++ suites
 make test
 
 # One suite, by name
@@ -377,7 +377,7 @@ make asan
 # The bridge engine's own tests
 make engine-test
 
-# Every example program, through the real bridge
+# Every example program, through the reference engine
 make smoke
 
 # All of the above, plus lint
@@ -622,12 +622,13 @@ Time_Warp_Studio/
 ├── native/                       # THE APPLICATION (C++20 / Qt6)
 │   ├── CMakeLists.txt
 │   ├── include/ src/             # ui/, canvas/, scheme/, lang/, debugger/, bridge/
-│   ├── tests/                    # 13 CTest suites
+│   ├── tests/                    # 17 CTest suites
 │   ├── tools/                    # time_warp_ide.cpp and the gates:
 │   │                             #   learn.py, teach.py, command_matrix.py,
 │   │                             #   example_smoke.py, differential_check.py
-│   └── bridge/                   # TEMPORARY Python engine (BASIC, REXX, APL, Smalltalk)
-│       ├── worker.py             #   the JSON-lines worker the IDE spawns
+│   └── bridge/                   # The Python reference engine: parity gates, command
+│       │                         #   matrix and lesson checks; no language runs in it
+│       ├── worker.py             #   the JSON-lines worker the Lessons panel spawns
 │       └── time_warp/            #   the engine itself
 │           ├── core/             #     interpreter.py, language_registry.py
 │           ├── languages/        #     one stateless function per language
@@ -635,7 +636,7 @@ Time_Warp_Studio/
 │           │                     #     classroom_mode.py (the teacher's side)
 │           ├── graphics/         #     turtle_state.py
 │           └── tests/            #     the engine's pytest suite
-├── Examples/                     # 48 example programs across the 10 languages
+├── Examples/                     # 50 example programs across the 10 languages
 ├── docs/                         # the guides
 │   ├── tutorials/                #   one tutorial per language
 │   └── lessons/                  #   the curriculum, both guides and the plans

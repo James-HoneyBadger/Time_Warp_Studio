@@ -456,7 +456,7 @@ PRINT "Hello"
 - Modify them slightly
 - Create your own programs
 - Explore [Logo](logo.md) for graphics
-- Learn [Python](python.md) for modern programming
+- Learn [Smalltalk](smalltalk.md) for objects and messages
 
 ---
 

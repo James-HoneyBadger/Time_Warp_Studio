@@ -237,9 +237,9 @@ $ python3 native/tools/teach.py present 24
 ✅ presentation size 24, fullscreen True
 ```
 
-Sets the size a lesson is projected at, from 12 to 48. The IDE's lesson panel
-reads it when it loads the curriculum, so the panel a teacher opens is at the size
-they chose rather than at whatever the panel thought was sensible.
+Sets the size a lesson is projected at, in points. The IDE's lesson panel reads it
+when it loads the curriculum, so the panel a teacher opens is at the size they chose
+rather than at whatever the panel thought was sensible.
 
 `present 24 --windowed` keeps the IDE a window instead of taking the whole screen,
 for a machine driving a projector from a desktop that is also in use.

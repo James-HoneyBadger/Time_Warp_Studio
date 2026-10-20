@@ -58,7 +58,8 @@ No. The core features work offline.
 ### What do I need to run it?
 
 - A C++20 compiler, CMake 3.20+, and Qt6 (Widgets, Core, Gui; Svg is optional
-  and adds SVG drawing export)
+  and adds SVG drawing export, PrintSupport is optional and adds the two Print
+  entries)
 - Python 3.10 or newer **only** for the lesson-check engine (and the test
   harnesses). Running a program needs no Python at all, whatever the language.
 
@@ -123,11 +124,16 @@ same pages are in `docs/` in the repository.
 
 ### How do I see all keyboard shortcuts?
 
-The menus show every command's shortcut. There is no separate shortcut reference page.
+**Help → Keyboard Shortcuts** (`Shift+F1`) lists every key by layer, and the menus
+show each command's own shortcut. `F1` is context help for the word under the cursor,
+and `F10` opens the command palette.
 
 ### Can I split the editor?
 
-No. The editor is one pane per tab. Splitting is on the roadmap.
+Yes. **File → Split Editor Right** (`Ctrl+\`) shows a second pane; **Close Split**
+(`Ctrl+Shift+\`) merges back, and **Move Tab to Other Pane** (`Ctrl+Alt+M`) sends the
+current document across. The split is remembered with the session, and each pane keeps
+its own documents.
 
 ### Is there a terminal?
 
@@ -144,14 +150,16 @@ script work; `vim` and `top` do not.
 
 ### Can I find and replace text?
 
-Yes, in the current document. `Ctrl+F` finds, `Ctrl+H` replaces, `F3` and
-`Shift+F3` find the next and previous match with the bar closed, and `Ctrl+L`
-goes to a line. Searching across files, a minimap and auto-completion are not
-built yet — see [ROADMAP.md](ROADMAP.md).
+Yes. `Ctrl+F` finds in the current document, `Ctrl+H` replaces, `F3` and `Shift+F3`
+find the next and previous match with the bar closed, `Ctrl+Shift+F` searches every
+file, and `Ctrl+L` goes to a line. The editor also suggests words as you type
+(`Ctrl+Space` asks anyway), and Settings can show a minimap and render whitespace.
 
 ### How do I insert a code snippet?
 
-You cannot yet: the Snippets toolbar button is disabled and says why.
+**Edit → Insert Snippet...** (`Ctrl+Shift+I`) or the Snippets toolbar button opens the
+picker, filtered to the current language. Choosing one inserts it at the cursor as a
+single undo step, resolving `$CURSOR$` and `$SELECTION$`.
 
 ### Can I work with several files in one project?
 
@@ -184,9 +192,10 @@ Use the input command of your language: `INPUT` in BASIC, `INPUT` in COMAL, `A:`
 ### Why does my program run forever?
 
 It may contain an endless loop, such as a `GOTO` with no exit condition or a
-`while` loop whose condition never becomes false. The engine stops a runaway
-run on its own budget (2,000,000 steps or 10 seconds, whichever comes first) and
-says so; the Stop button ends it sooner.
+`while` loop whose condition never becomes false. The line-by-line engine stops a
+runaway run on its own budget (2,000,000 steps or 10 seconds, whichever comes first)
+and says so; CHIP-8 has its own opcode and frame limits. The Stop button ends either
+sooner, at the next statement or instruction.
 
 ### Can I run a program from a lesson or example directly?
 
@@ -395,14 +404,17 @@ The `Examples/` folder has sample programs for each language. The [examples cata
 
 ### How many themes are there?
 
-One, the built-in dark surface. The 33 themes of the removed implementation —
-Dracula, Monokai, Catppuccin Mocha, Gruvbox, Nord, Solarized, the retro CRT sets
-and the rest — are on the roadmap and are not available yet.
+There are 33. **View → Theme** lists them — Dracula, Monokai, Catppuccin Mocha,
+Gruvbox, Nord, Solarized, the retro CRT sets and the rest — and **View → Next Theme**
+cycles through them. **View → High Contrast** (`Ctrl+Alt+H`) applies a maximum-contrast variant of
+whichever theme is active, and **View → Screen Mode** pairs the CRT settings with the
+amber, green and white-phosphor looks.
 
 ### Can I change the font size?
 
-Not yet. The editor and console fonts are set by the application's style sheet;
-font selection is on the roadmap.
+Yes. The **A+** button in the toolbar (or `Ctrl+Alt+A`) steps the interface text
+through 100%, 125% and 150%. **Settings** sets the editor's font family, point size and
+tab width, and the change is previewed live before it is applied.
 
 ---
 

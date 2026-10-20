@@ -1169,9 +1169,11 @@ void test_function_keys_are_wired() {
     // Decks are wired too: the debugger deck raises the Debug panel.
     window.selectDeck(QStringLiteral("debugger_deck"));
     TW_CHECK_EQ(window.rightTabs()->currentIndex(), 3);
-    // The unbuilt one reports rather than doing nothing.
+    // The split deck toggles the second pane, the same state the File menu owns.
     window.selectDeck(QStringLiteral("split_lab"));
-    TW_CHECK(window.statusBar()->currentMessage().contains(QStringLiteral("not built")));
+    TW_CHECK(window.editorSplit());
+    window.selectDeck(QStringLiteral("split_lab"));
+    TW_CHECK(!window.editorSplit());
 }
 
 void test_themes() {

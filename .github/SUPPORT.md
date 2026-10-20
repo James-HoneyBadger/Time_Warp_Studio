@@ -25,9 +25,10 @@ one I would type:
 - **[docs/INSTALLATION.md](../docs/INSTALLATION.md)** — requirements, building
   from source, and what a failure at each step usually means.
 - **[docs/ROADMAP.md](../docs/ROADMAP.md)** — what is deliberately not built
-  yet. Printing, session export, font selection and the accessibility presets
-  are on this list. A missing feature from it is not a bug, and reporting one as
-  a regression costs a round trip.
+  yet. The REPL bar's interpreter wiring, a project panel, watch expressions, an
+  automatic update check and Flatpak/Snap or Windows/macOS packaging are on this
+  list. A missing feature from it is not a bug, and reporting one as a regression
+  costs a round trip.
 - **[docs/FAQ.md](../docs/FAQ.md)** — the questions that come up most.
 - **[docs/LANGUAGE_GUIDE.md](../docs/LANGUAGE_GUIDE.md)** — the reference for all
   ten languages, including what each one is *not* able to do.
@@ -57,9 +58,10 @@ lesson that cannot be finished, or whose starter already passes, is a bug;
 
 ## What is not
 
-- **Packages and installers.** There are none. `make -C native install` installs
-  the binary, the bridge, a desktop entry and an icon, and that is the whole of
-  it. `.deb`, `.rpm`, Flatpak, AppImage and Windows installers are on the roadmap.
+- **Packages and installers for every platform.** A tagged release builds a
+  `.deb`, an `.rpm`, a tarball, an AppImage (x86_64) and a container image, and
+  `make -C native install` installs the binary, the bridge, a desktop entry and
+  an icon. Flatpak, Snap, a Windows installer and a macOS bundle are not built.
 - **Moving lesson checking into C++.** The Lessons panel asks the Python engine
   for a verdict; that is the remaining use of the bridge, and it is queued work
   without a date.

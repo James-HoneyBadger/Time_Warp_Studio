@@ -26,7 +26,7 @@ derived rather than remembered.
 | Canvas | Live drawing, zoom, pan, grid, auto-fit, turtle marker, scrubber playback, animated GIF recording, raster and SVG export |
 | Display | 33 themes, high contrast, A+ text sizes (100/125/150%), focus mode, CRT settings, four Monitor presets |
 | Execution | Run (F9) and Stop; one program at a time; unsaved-change prompts |
-| Languages | 10 languages, 49 verified example programs |
+| Languages | 10 languages, 50 verified example programs |
 | Native engines | Expression evaluator (`timewarp_expr`) and Scheme (`timewarp_scheme`) |
 | Bridged engines | None — every language runs in process. `native/bridge/` remains as the reference the parity gates and the lesson check use |
 | Native executors | All ten — BASIC, FOCAL, PILOT, COMAL, APL and REXX line-by-line; CHIP-8, Logo, Smalltalk and Scheme whole-program |
@@ -34,8 +34,8 @@ derived rather than remembered.
 | Profiling | View > Profile Run times every statement in the line-by-line languages and ends with a per-line report, longest first |
 | Terminal | Opt-in in Settings > Workspace: an embedded shell in the document's folder, absent in presentation and player modes |
 | Debugging | Breakpoints, Pause, Continue and Trace in all ten languages; Scheme adds a stack and frame bindings |
-| Packaging | `make install` with the desktop entry and icon; `DESTDIR` staging |
-| Quality gates | 17 CTest suites in 4 build configurations, 3 parity gates, 560 engine tests, 446 command rows, 472 parity programs |
+| Packaging | `make install`; tagged releases build `.deb`, `.rpm`, AppImage, tarball and container artifacts |
+| Quality gates | 17 CTest suites in 4 build configurations, 3 parity gates, 571 engine tests, 446 command rows, 473 parity programs |
 
 ---
 
@@ -161,9 +161,8 @@ positions.
 
 `docs/ARCHITECTURE.md` has been **rewritten** around the Qt application and the engine.
 It no longer describes the removed PySide6 implementation, and it names what is not
-wired up rather than assuming it: the expression evaluator that does not participate in
-a Run, the REPL whose plumbing is absent, and the debugger's missing depth (watch
-expressions). It is now the system-level
+wired up rather than assuming it: the REPL whose plumbing is absent, and the debugger's
+missing depth (watch expressions). It is now the system-level
 description; `native/README.md` remains the detail on the C++ libraries.
 
 ---
@@ -173,7 +172,8 @@ description; `native/README.md` remains the detail on the C++ libraries.
 **APL, FOCAL, CHIP-8 and Smalltalk** arrived after the original six. Each now has
 everything the others have:
 
-- an **executor** and a **test module** in `native/bridge/time_warp/`,
+- a native **executor** in `native/src/lang/`, and the reference executor and test
+  module in `native/bridge/time_warp/` that the parity gate compares it with,
 - a **worked example** under `Examples/` that `example_smoke.py` runs and checks for
   ink (all four draw),
 - a **command reference** in `docs/LANGUAGE_GUIDE.md` and a **tutorial** in
@@ -209,9 +209,10 @@ Four limits are recorded rather than left to be discovered:
   engine logs each statement's output separately, so a trailing newline is added by
   the logger rather than by the statement. This is an engine-level constraint, not a
   gap in the executor.
-- **CHIP-8 has no interactive keypad.** A whole-program language runs to completion
-  inside one call and never yields control, so `LD Vx, K` reads the first key held
-  according to the listing's `; keys` directive, or 0.
+- **CHIP-8 run as a program has no interactive keypad.** The whole-program
+  executor runs to completion inside one call and never yields control, so `LD Vx, K`
+  reads the first key held according to the listing's `; keys` directive, or 0. The
+  Tools > CHIP-8 Emulator window is the interactive path, with a live keypad.
 - **APL's turtle position is `TX`, `TY` and `THETA`.** Deliberately two letters:
   `X`, `Y` and `H` are ordinary APL variables, and taking them would break the most
   natural line anyone writes.
@@ -348,8 +349,8 @@ shared variable bus. The **terminal** is built as an opt-in: Settings > Workspac
 turns on a shell in the document's folder, and presentation and player modes remove
 it. There is no project panel yet.
 
-**Also unbuilt** — font *family* selection and the REPL bar's interpreter wiring
-(the bar is laid out and its signal exists; nothing is connected to it). Printing
+**Also unbuilt** — the REPL bar's interpreter wiring (the bar is laid out and its
+signal exists; nothing is connected to it). Printing
 (File > Print Code, Ctrl+P, and File > Print Drawing), code PDF export, session
 HTML and lesson-session export as Markdown or PDF are built, as are the
 accessibility controls: View > High Contrast (Ctrl+Alt+H), the A+ text-size ladder,
@@ -382,16 +383,15 @@ left those at the platform's values paints light-theme borders on a dark window,
 which is the failure mode that makes a "ported" theme look half finished.
 
 **CRT effects** — the overlay (`CrtOverlay`, `native/src/ui/panels.cpp`) draws
-scanlines and is now switchable (View > CRT Scanlines, Shift+F7). Curvature,
-vignette, glow and flicker are not drawn, and there is no intensity control in the
-UI.
+scanlines, vignette, curvature, flicker and a phosphor tint. View > CRT Scanlines
+(Shift+F7) switches it, View > CRT Settings sets the five intensities, and the four
+Screen Mode presets pair a theme with them.
 
 **The function-key bar is built**, with the Python's three modifier layers, a badge
 that cycles them, and a dispatcher behind every key; **the command palette** is
-built too (F10, Ctrl+Shift+P). What remains from that list: the workspace decks —
-the deck selector offers four, and
-`2:SPLIT` answers that the split workspace is not built (the second editor pane
-exists in the layout but nothing creates a tab in it).
+built too (F10, Ctrl+Shift+P). The workspace decks are live: the deck selector
+offers four, and the split-workspace deck (`2:SPLIT`) toggles the second editor
+pane, which holds documents of its own and is saved with the session.
 
 **Turtle showpiece** — exporting the drawing and copying it to the clipboard are
 built: File > Export Drawing (or **Ctrl+E**), Edit > Copy Drawing, and
@@ -436,9 +436,9 @@ Limits, stated rather than discovered:
 
 ## Packaging
 
-Built, from a tag, by `release.yml`: a **`.deb`**, an **`.rpm`**, an **AppImage**
-and a **tarball** for x86_64 and arm64, each with a checksum, attached to the
-GitHub Release; and a **container image** on `ghcr.io`. `cpack` produces the
+Built, from a tag, by `release.yml`: a **`.deb`**, an **`.rpm`** and a **tarball**
+for x86_64 and arm64, plus an **AppImage** for x86_64, each with a checksum,
+attached to the GitHub Release; and a **container image** on `ghcr.io`. `cpack` produces the
 packages from the same `install()` rules the desktop entry and icon already used,
 so a package cannot contain a different set of files from a local install.
 

@@ -2038,11 +2038,11 @@ void MainWindow::performAction(const QString& action) {
         return;
     }
 
-    // -- named, and not built ----------------------------------------------
+    // -- workspace keys ----------------------------------------------------
     //
-    // These keep their places on the bar because a learner reading the old
-    // documentation should find the key where it says it is, but the key says so
-    // out loud rather than doing nothing. A dead key is the fault this replaced.
+    // Ids the function-key table names. Every one does something now: the rule is
+    // that a key is bound when its action exists, and a key with no action is
+    // absent rather than inert.
     if (id == QLatin1String("split_editor")) {
         if (editorSplit()) {
             closeSplit();
@@ -2087,11 +2087,13 @@ void MainWindow::selectDeck(const QString& deckId) {
         return;
     }
     if (id == QLatin1String("split_lab")) {
-        // Honest rather than silent: the second editor pane exists in the layout
-        // (`editor_tabs_secondary_`) but nothing creates a tab in it yet.
-        setExecutionState(tr("ready"),
-                          tr("The split workspace is not built yet \u2014 see "
-                             "docs/ROADMAP.md"));
+        // The deck is the split's own toggle, so the key and File > Split Editor
+        // Right cannot disagree about whether the second pane is showing.
+        if (editor_split_) {
+            closeSplit();
+        } else {
+            splitEditor();
+        }
         return;
     }
     setExecutionState(tr("ready"), tr("Unknown deck \u201C%1\u201D").arg(deckId));

@@ -348,9 +348,12 @@ including the output sub-tabs nested inside a page of the widget being styled. C
 roles are written with Qt's `palette(...)` function, so the sheet follows the active
 palette.
 
-**The theme system is not ported.** The removed implementation's 33 themes are the
-target, to be carried as data and applied as QSS plus a palette here. Do not describe a
-theme as available until it is.
+**The theme system is built.** `native/src/ui/theme_table.inc` carries the removed
+implementation's 33 themes as data — name, background, foreground, editor colours and
+the `dark`/`mid`/`shadow` roles this sheet reads — and `themes.cpp` resolves the
+optional fields, applies the palette and composes the QSS. View > Theme selects one,
+View > Next Theme cycles, and View > High Contrast derives a maximum-contrast variant
+of the active theme rather than replacing it.
 
 ---
 
@@ -369,8 +372,9 @@ nothing; symbols are interned; frames are a `std::variant` of about eighteen
 continuation types. A frame is popped before its handler runs and pushed back only when
 there is more work, which is what yields proper tail calls.
 
-Scheme is the one language that runs in-process, through `DebuggerRunner` on its own
-thread.
+Scheme keeps its own runner (`DebuggerRunner`) on its own thread, which is what gives
+it the call stack and frame bindings the other engines do not keep. Every other
+language runs in-process through `NativeRunner`, one run at a time.
 
 ### `timewarp_expr` — the expression evaluator
 
@@ -381,13 +385,17 @@ builtin table with a switch rather than a table of `std::function`. Three phases
 exposed separately — `tokenize`, `to_rpn`, `evaluate_rpn` — so a caller can compile once
 and execute many times, with `evaluate()` as the memoising convenience path.
 
-As noted at the top, **nothing in the application links it yet.**
+Every language's arithmetic goes through it: the executors call
+`Interpreter::evaluate_expression`, which is this evaluator, and the parity gate
+(`differential_check.py`) compares it against the Python reference.
 
 ### Parity as the acceptance test
 
 Both engines are compared against their Python originals on a fixed corpus by
-`native/tools/differential_check.py` and `native/tools/scheme_differential_check.py`.
-Both must report **0 unexpected mismatches**; the divergences that are accepted are
+`native/tools/differential_check.py` and `native/tools/scheme_differential_check.py`,
+and the language port by `native/tools/lang_differential_check.py` over the
+command-table rows and every example. All three must report **0 unexpected
+mismatches**; the divergences that are accepted are
 printed and listed, each with a reason. That is what makes "did the port stay faithful?"
 a measurable question rather than a matter of opinion.
 
@@ -484,11 +492,11 @@ def execute_logo(interpreter: Interpreter, source: str, turtle: TurtleState) -> 
     """Execute the source and return the text to display."""
 ```
 
-- **Whole-program executors** receive the entire source. Scheme is the only one, and it
-  is dispatched through `_WHOLE_PROGRAM_EXECUTORS` in `core/interpreter.py`.
+- **Whole-program executors** receive the entire source. Scheme, CHIP-8 and Smalltalk
+  are dispatched through `_WHOLE_PROGRAM_EXECUTORS` in `core/interpreter.py`.
 - **Line-by-line executors** are called once per logical line/command: BASIC, PILOT,
-  Logo, COMAL and REXX. Logo names the parameter `command` for that reason, and splits
-  multiple commands on one line itself.
+  Logo, COMAL, REXX, FOCAL and APL. Logo names the parameter `command` for that
+  reason, and splits multiple commands on one line itself.
 
 The contract:
 
@@ -602,10 +610,11 @@ were filled in:
   not charged to the statement. A whole-program language has no such loop and
   reports nothing rather than zeros.
 
-Only Scheme can be stepped: the native executors run to completion and have no
-pause protocol yet. `DebugPanel` therefore
-disables itself, with a sentence saying why, rather than offering buttons that do
-nothing.
+Every language can be stepped. The six line-loop languages stop at a statement through
+`DebugSession::note_line`; Logo stops at a top-level statement, Smalltalk at a message
+send and CHIP-8 before an instruction through `note_source_line`. Scheme is the only
+one that also reports a call stack and frame bindings, because it is the only machine
+that keeps them. `DebugPanel`'s buttons drive whichever runner is paused.
 
 **The lesson panel was never a placeholder.** `LessonPanel` is fully implemented. It holds no curriculum and runs no program: it
 asks the bridge for the lesson list, displays the checkpoint, and sends the learner's
@@ -619,23 +628,24 @@ decides where the code goes, because a panel has no business knowing about tabs.
 The curriculum is loaded when the tab is first looked at, not when the window is built: a
 user who never opens the lesson panel should not pay for a Python process at start-up.
 
-Three widgets are partial rather than stubs, and their headers say so:
+One widget is deliberately partial, and its header says so; two more are worth
+knowing about because what they cover is easy to underestimate:
 
 - `ImmediateModePanel` is a REPL prompt and entry line with the layout contract the Python
   sets (a 44px floor). **The interpreter plumbing behind it is not implemented**, and
-  nothing is connected to its `commandSubmitted` signal.
-- `FunctionKeyBar` reproduces the normal modifier layer and the deck selector, because the
-  layout needs the fixed 30px height and its two signals. The other two layers are not
-  invented — inventing them would mean inventing actions that do not exist yet.
-- `CrtOverlay` implements scanlines only. It is included at all for the *geometry
-  tracking*: it installs itself as an event filter on the widget it covers, rather than
-  reaching into `parent().rect()` from a resize handler as the Python version did, which
-  silently stops working the moment the overlay is reparented.
+  nothing is connected to its `commandSubmitted` signal. It is the one control in the
+  window that is deliberately inert.
+- `FunctionKeyBar` reproduces all three modifier layers (normal, Shift, Ctrl) over F1-F10,
+  plus the deck selector, and every key dispatches to an action that exists.
+- `CrtOverlay` draws scanlines, vignette, curvature, flicker and a phosphor tint; View >
+  CRT Settings sets the five and View > Screen Mode pairs them with a theme. It installs
+  itself as an event filter on the widget it covers rather than reaching into
+  `parent().rect()` from a resize handler, which would silently stop working the moment
+  the overlay was reparented.
 
-Actions whose feature is not built — **Debug**, **Continue**, **Trace**, **Snippets**,
-**A+** — are present in the menu and toolbar but **marked not-ported and disabled**, with
-the reason attached, so that a greyed control and a missing control stay
-distinguishable.
+The rule that replaced the old placeholder controls is that **an entry is added when it
+works**: Debug, Continue, Trace, Snippets, A+, find-in-files, the theme menu and the
+function-key layers are all live, and no menu or toolbar entry is a disabled promise.
 
 ---
 
@@ -650,7 +660,7 @@ gates and a command matrix. All of them must stay green, in every build tree.
 | Debug tree | `make -C native test-debug` | Keeps `Q_ASSERT` and standard-library hardening live; a suite green in Release can crash here |
 | Sanitisers | `make -C native asan` | Reads and writes of memory that is no longer valid, which no assertion can see. `ASAN=undefined` for UBSan |
 | Engine tests | `make engine-test` | The bridge engine: the ten executors, the evaluator, the validators, the lesson curriculum and the classroom |
-| Example corpus | `make smoke` | Every `Examples/**` program, through the reference engine, including the 19 that must produce ink |
+| Example corpus | `make smoke` | Every `Examples/**` program, through the reference engine, including the 20 that must produce ink |
 | Parity gates | `differential_check.py`, `scheme_differential_check.py`, `lang_differential_check.py` | The ported engines against the Python reference: 0 unexpected mismatches |
 | Command matrix | `native/tools/command_matrix.py` | One row per documented command, through the real bridge |
 | Lesson curriculum | `teach.py validate` (and `test_lessons.py` on every build) | That every checkpoint's own solution passes, that no starter already passes, and that every language has a lesson |
@@ -701,10 +711,10 @@ state the user cannot drag their way out of.
 
 User *content* is the opposite case and gets the opposite answer. Content belongs to the
 user rather than to an implementation, so a program written in one build must open in the
-other; only settings are private. Carrying preferences across is a *migration* — read the
-Python settings once, translate the theme name and recent files, write this build's own
-keys — and it lands with the theme system, which is the first thing with anything worth
-migrating.
+other; only settings are private. Carrying preferences across would be a *migration* —
+read the Python settings once, translate the theme name and recent files, write this
+build's own keys — and it is **not built**: the two identities are separate, so a user
+coming from the Python application starts from this build's defaults.
 
 ---
 
@@ -721,20 +731,22 @@ migrating.
   languages that do not keep one.
 - **The editor** has syntax colouring, find/replace, find-in-files, a minimap, a
   formatter, language-specific checking as you type (squiggles, gutter markers,
-  hover text), optional completion, auto-indent and a full settings dialog with a
-  live preview. Still missing: breakpoint markers in the gutter and a document
-  outline.
+  hover text), optional completion, auto-indent, breakpoint markers in the gutter,
+  a document outline and a full settings dialog with a live preview. What it lacks
+  is multi-cursor editing.
 - **The console** has no clickable line links, no error-only filter and no
   save-to-file. The **Terminal** is a real shell but no terminal emulator: without a
   PTY there are no prompts, job control or full-screen programs, which is deliberate.
 - **Files and sessions** have autosave and version history — `AutosaveStore`
   keeps bounded snapshots under the data directory and the version-history dialog
-  reopens one in a new tab — but no project panel or split view.
+  reopens one in a new tab — and the split editor: two panes that each hold their
+  own documents, persisted with the session. There is no project tree.
 - **Help** is a documentation browser (`native/src/ui/help_browser.cpp`) over the
   installed `docs/`, with its contents tree read from `INDEX.md` rather than
   written a second time. F1 opens the current language's tutorial at the word
   under the cursor, Ctrl+F1 the filterable keyword inspector, and Shift+F1 the
-  function-key reference. The guided tour is not built.
+  function-key reference. The guided tour and its one-time coach marks are built,
+  and re-armable from Settings.
 - **Themes and fonts are in**: 33 schemes, applied through the palette plus a
   theme block, and the editor's font, size and tab width are user settings.
 - **Printing and the code/session/lesson exports are in.** File > Print Code and
@@ -742,8 +754,10 @@ migrating.
   without it hides both entries rather than showing dead ones. The program and
   the lesson session export as PDF, the session as HTML and the lesson session as
   Markdown; the drawing exports as an image or, with Qt6::Svg, as vectors.
-- **Packaging stops at `make install`**: a desktop entry and an icon. No distro packages,
-  no installers.
+- **Packaging** has `make install` with a desktop entry and an icon, and a tagged
+  release builds `.deb`, `.rpm` and tarball artifacts for x86_64 and arm64, an
+  AppImage for x86_64, and a container image from the same install rules. Flatpak,
+  Snap, a Windows installer and a macOS bundle are not built.
 - **Lesson checking still runs in the Python engine**, which is what keeps
   `native/bridge/` and the `python_worker` target in the build.
 - **No pixel framebuffer.** Graphics are a display list of strokes and shapes

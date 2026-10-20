@@ -10,14 +10,15 @@ time.
 
 | Requirement | Minimum | Notes |
 | --- | --- | --- |
-| C++ compiler | C++20 | GCC 13+, Clang 16+, or MSVC 19.3+ |
+| C++ compiler | C++20 | GCC 11+, Clang 14+, or MSVC 19.30+ |
 | CMake | 3.20 | |
 | Qt6 | 6.2 | Widgets, Core and Gui modules must be installed; the Svg and PrintSupport modules are optional and enable SVG drawing export and printing |
-| Python | 3.10 | *Optional* — only for BASIC |
+| Python | 3.10 | *Optional* — only for the reference engine (parity gates, command matrix and lesson checks); running a language needs no Python |
 
-Scheme and the shared expression engine are native C++ and need **no Python at
-all**. FOCAL, PILOT, COMAL, CHIP-8, Logo, APL and REXX run in process through `timewarp_lang`;
-the other four run through a small bundled engine process; see §6.
+All ten languages run in C++ inside the application, so running a program needs
+**no Python at all**. The bundled Python engine in `native/bridge/` remains the
+reference the parity gates and the command matrix compare against, and the engine a
+lesson check runs in; see §6.
 
 ### Installing the toolchain
 
@@ -88,7 +89,7 @@ make help            # what the root Makefile offers
 
 ```bash
 ctest --test-dir native/build --output-on-failure     # 17 suites
-python3 native/tools/example_smoke.py                 # all 49 examples
+python3 native/tools/example_smoke.py                 # all 50 examples
 ```
 
 Both must pass. See [README_TESTING.md](README_TESTING.md) for the full set,
@@ -163,27 +164,29 @@ make -C native uninstall               # removes what install wrote
 make -C native install DESTDIR=/tmp/stage PREFIX=/usr
 ```
 
-That installs five things, and they have to stay together:
+That installs seven things, and they have to stay together:
 
 | Path | What |
 | --- | --- |
 | `<prefix>/bin/time_warp_ide` | the application |
-| `<prefix>/share/time_warp/` | the language bridge — `worker.py` and the engine |
+| `<prefix>/share/time_warp/` | the reference engine — `worker.py` and the Python package |
+| `<prefix>/share/time-warp-studio/snippets.json` | the snippet catalogue Insert Snippet reads |
+| `<prefix>/share/time-warp-studio/examples/` | the programs File > Open Example lists |
 | `<prefix>/share/doc/time-warp-studio/` | the documentation Help > Documentation reads |
 | `<prefix>/share/applications/time-warp-studio.desktop` | the desktop entry |
 | `<prefix>/share/icons/hicolor/256x256/apps/time-warp-studio.png` | the icon |
 
 The bridge goes in `share/time_warp` because that is where the application looks
 for it (`../share/time_warp` relative to the binary), so an installed build needs
-no path configuration. It still needs `python3` on `PATH` for the bridged
-languages.
+no path configuration. It still needs `python3` on `PATH` for lesson checks; no
+language's Run uses it.
 
 ### What is not packaged yet
 
-Distro packages (`.deb`, `.rpm`, Flatpak or Snap), an AppImage and Windows/macOS
-installers do not exist: the ones in this repository packaged the removed PySide6
-application and were deleted with it. What a release *does* ship is the tarball
-`release.yml` builds and a container image, both described next.
+Flatpak, Snap, a Windows installer and a macOS bundle are not built: `release.yml`
+produces Linux artifacts only. What a release *does* ship is described next — a
+`.deb` and an `.rpm` for x86_64 and arm64, an AppImage for x86_64, a tarball for both
+architectures, and a container image.
 
 ### 8. A release without building anything
 

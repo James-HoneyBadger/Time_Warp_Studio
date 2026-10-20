@@ -62,7 +62,7 @@ supported and is what `native/README.md` describes.
 - **Documents** — tabs, per-file language detection, unsaved-change prompts, new/open/save/save-as, a recent-files menu, and the files from the last session reopened at launch
 - **Run controls** — Run (F9) and Stop, with a status bar showing language, cursor position and execution state
 - **Inspection** — a 🔍 **Variables** panel listing every binding with its type and value, filtered by name, and a ⚡ **Telemetry** HUD showing what the run cost and did: steps used, engine time, steps per second, last line, recursion depth, call stack, output lines, drawing commands, BASIC's memory window, and — beside the engine's own counters — the IDE's wall clock and the ink that actually reached the canvas
-- **Debugging (Scheme)** — a 🐞 **Debug** panel driving the native runner: Continue, Pause, Step In/Over/Out, Stop and breakpoints, with the call stack and the frame's bindings shown while paused. Every other language runs to completion without a pause protocol, so the panel says so instead of offering dead buttons
+- **Debugging** — gutter breakpoints and a 🐞 **Debug** panel (Continue, Pause, Step In/Over/Out, Stop) plus Debug/Continue/Trace on the toolbar, working in all ten languages: at a statement, a Logo top-level statement, a Smalltalk message send or a CHIP-8 instruction. Scheme additionally shows the call stack and the paused frame's bindings; for a native run the Variables panel shows the bindings the pause stopped in
 - **Native engines** — every language runs in-process in C++ with no Python at
   all. Scheme (`timewarp_scheme`) and CHIP-8, Logo and Smalltalk are
   whole-program; BASIC, FOCAL, PILOT, COMAL, APL and REXX are line-by-line on
@@ -73,12 +73,14 @@ supported and is what `native/README.md` describes.
 
 ### What is still being built
 
-The Qt IDE is the product; the PySide6 application that preceded it has been removed.
-Features of that application that have **not** been ported yet — themes and the CRT
-effects, the examples browser, find-in-files, auto-completion, the console's clickable
-line links, the toolbar's Debug/Continue/Trace actions, and the function-key bar's Shift
-and Ctrl layers — are tracked in [docs/ROADMAP.md](docs/ROADMAP.md).
-Please read that list before reporting one of them as a regression.
+The Qt IDE is the product; the PySide6 application that preceded it has been removed,
+and the port is complete: every phase of
+[PORTING_PLAN.md](docs/PORTING_PLAN.md) is implemented and has a test. What remains
+unbuilt is a shorter list — the REPL bar's interpreter wiring, a project panel, watch
+expressions and data breakpoints, a dedicated player target, an automatic update check,
+and Flatpak/Snap or Windows/macOS packaging. It is tracked in
+[docs/ROADMAP.md](docs/ROADMAP.md); please read that list before reporting a missing
+feature as a regression.
 
 ### Turtle Graphics
 
@@ -115,7 +117,7 @@ See [docs/lessons/](docs/lessons/README.md) for the guides.
 
 ### Educational Content
 
-- **48 curated example programs** across all 10 active languages, under `Examples/`
+- **50 curated example programs** across all 10 active languages, under `Examples/`
 - **Error hints** — syntax suggestions alongside interpreter error messages
 - **Ten language tutorials** — one per language, under `docs/tutorials/`
 - **Lesson plans** — one document per language, generated from the curriculum, under `docs/lessons/plans/`
@@ -187,7 +189,7 @@ teaching-tools
 - **[CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md)** — the standard expected here
 - **[CHANGELOG.md](CHANGELOG.md)** — what changed, release by release
 
-Releases carry packages, an AppImage and a tarball for x86_64 and arm64 (see
-**Install it** above). Building from source is still the way to work on the
+Releases carry `.deb`, `.rpm` and tarball packages for x86_64 and arm64, and an
+AppImage for x86_64 (see **Install it** above). Building from source is still the way to work on the
 application, and [docs/INSTALLATION.md](docs/INSTALLATION.md) is the whole
 procedure for both.
