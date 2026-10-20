@@ -1,9 +1,14 @@
 # Changelog
 
-## [Unreleased]
+## [16.1.0] - 2026-10-19
 
-Porting the features the removed PySide6 application had. The sequenced plan is
-`docs/PORTING_PLAN.md`; each entry here lands with its test.
+The port is finished: every feature the removed PySide6 application had is back,
+each landed with the test that proves it, and `docs/PORTING_PLAN.md` records the
+phases in the order they landed. The canvas can be scrubbed, recorded as a GIF,
+printed and exported as vectors; a program can be profiled line by line, paused in
+any of the ten languages, and handed to a class as a bundle, a lesson session or a
+presentation. Nothing is removed and no promise changes, so this is a minor
+release.
 
 ### Added
 
