@@ -475,6 +475,16 @@ endif()
 
 if(Qt6_FOUND)
     find_package(SQLite3 REQUIRED)
+    # FindSQLite3 called its imported target SQLite::SQLite3 until CMake 4.3,
+    # when SQLite3::SQLite3 arrived and the old spelling was deprecated. Follow
+    # whichever this CMake provides: 3.20 (the project's floor) has only the
+    # first, and a 4.4 build should not print an author warning on every
+    # configure for a name we chose years ago.
+    if(TARGET SQLite3::SQLite3)
+        set(TIME_WARP_SQLITE_TARGET SQLite3::SQLite3)
+    else()
+        set(TIME_WARP_SQLITE_TARGET SQLite::SQLite3)
+    endif()
     add_library(timewarp_sql
         src/sql/database.cpp
         include/timewarp/sql/database.hpp
@@ -485,7 +495,7 @@ if(Qt6_FOUND)
         PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
     )
     target_compile_features(timewarp_sql PUBLIC cxx_std_20)
-    target_link_libraries(timewarp_sql PUBLIC Qt6::Core SQLite::SQLite3)
+    target_link_libraries(timewarp_sql PUBLIC Qt6::Core ${TIME_WARP_SQLITE_TARGET})
 
     if(MSVC)
         target_compile_options(timewarp_sql PRIVATE /W4 /permissive-)
