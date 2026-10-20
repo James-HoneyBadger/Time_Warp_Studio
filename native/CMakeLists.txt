@@ -1478,13 +1478,17 @@ if(WIN32)
     set(CPACK_NSIS_DISPLAY_NAME "Time Warp Studio")
     set(CPACK_NSIS_PACKAGE_NAME "Time Warp Studio")
     set(CPACK_NSIS_INSTALL_ROOT "$PROGRAMFILES64")
-    # NSIS runs its own resource compiler over this file, so the path is
-    # Windows-shaped rather than CMake-shaped.
-    file(TO_NATIVE_PATH
+    # Forward slashes, deliberately. These two values are written into
+    # `CPackConfig.cmake` as CMake strings without being re-escaped, so a native
+    # Windows path is a parse error the moment it contains a `\a` or a `\t` --
+    # which is exactly what a checkout under `D:\a\...` produces, and how the
+    # first release attempt died with "Invalid character escape '\a'". NSIS
+    # accepts both separators, so nothing is lost by the CMake-shaped path.
+    file(TO_CMAKE_PATH
         "${CMAKE_CURRENT_SOURCE_DIR}/../packaging/windows/time-warp-studio.ico"
         _time_warp_nsis_icon)
     set(CPACK_NSIS_MUI_ICON "${_time_warp_nsis_icon}")
-    set(CPACK_NSIS_INSTALLED_ICON_NAME "bin\\time_warp_ide.exe")
+    set(CPACK_NSIS_INSTALLED_ICON_NAME "bin/time_warp_ide.exe")
     # One Start Menu entry and one desktop shortcut, both named after the
     # application rather than after the executable.
     set(CPACK_PACKAGE_EXECUTABLES "time_warp_ide" "Time Warp Studio")

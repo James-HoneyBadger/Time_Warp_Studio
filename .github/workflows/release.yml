@@ -317,6 +317,26 @@ jobs:
           New-Item -ItemType Directory -Force -Path dist | Out-Null
           Get-ChildItem native/build -Filter *.exe | Where-Object { $_.Name -like "time-warp-studio-*" } | Move-Item -Destination dist
           Get-ChildItem native/build -Filter *.zip | Where-Object { $_.Name -like "time-warp-studio-*" } | Move-Item -Destination dist
+          # An installer that builds is not an installer that works. The ZIP is
+          # the same tree the installer lays down, so it is opened and checked:
+          # the executable, and the Qt runtime `windeployqt` was meant to copy.
+          $zip = (Get-ChildItem dist -Filter *.zip | Select-Object -First 1).FullName
+          if (-not $zip) { Write-Error "no ZIP was produced"; exit 1 }
+          $unpacked = Join-Path $env:RUNNER_TEMP "unzipped"
+          Remove-Item -Recurse -Force $unpacked -ErrorAction SilentlyContinue
+          Expand-Archive -Path $zip -DestinationPath $unpacked
+          $binary = Get-ChildItem $unpacked -Recurse -Filter time_warp_ide.exe | Select-Object -First 1
+          if (-not $binary) { Write-Error "the ZIP has no time_warp_ide.exe"; exit 1 }
+          if (-not (Get-ChildItem $binary.Directory -Filter "Qt6Core.dll")) {
+            Write-Error "the ZIP carries no Qt runtime, so it will not start without Qt installed"
+            exit 1
+          }
+          if (-not (Get-ChildItem $unpacked -Recurse -Directory -Filter "platforms")) {
+            Write-Error "the ZIP carries no Qt platform plugin"
+            exit 1
+          }
+          $version = Start-Process -FilePath $binary.FullName -ArgumentList "--version" -NoNewWindow -Wait -PassThru
+          if ($version.ExitCode -ne 0) { Write-Error "the packaged executable does not start"; exit $version.ExitCode }
           Get-ChildItem dist | ForEach-Object {
             $hash = (Get-FileHash $_.FullName -Algorithm SHA256).Hash.ToLower()
             "$hash  $($_.Name)" | Set-Content -Encoding ascii "$($_.FullName).sha256"
@@ -440,6 +460,26 @@ jobs:
             Write-Error "the installer is not named for Windows 7"
             exit 1
           }
+          # The ZIP is the same tree the installer lays down, so it is opened and
+          # checked: the executable, and the Qt 5 runtime windeployqt copies --
+          # Qt 5, not Qt 6, or this is the wrong build wearing the right name.
+          $zip = (Get-ChildItem dist -Filter *.zip | Select-Object -First 1).FullName
+          if (-not $zip) { Write-Error "no ZIP was produced"; exit 1 }
+          $unpacked = Join-Path $env:RUNNER_TEMP "unzipped"
+          Remove-Item -Recurse -Force $unpacked -ErrorAction SilentlyContinue
+          Expand-Archive -Path $zip -DestinationPath $unpacked
+          $binary = Get-ChildItem $unpacked -Recurse -Filter time_warp_ide.exe | Select-Object -First 1
+          if (-not $binary) { Write-Error "the ZIP has no time_warp_ide.exe"; exit 1 }
+          if (-not (Get-ChildItem $binary.Directory -Filter "Qt5Core.dll")) {
+            Write-Error "the ZIP carries no Qt 5 runtime, so it will not start without Qt installed"
+            exit 1
+          }
+          if (Get-ChildItem $binary.Directory -Filter "Qt6Core.dll") {
+            Write-Error "the Windows 7 ZIP carries a Qt 6 runtime"
+            exit 1
+          }
+          $version = Start-Process -FilePath $binary.FullName -ArgumentList "--version" -NoNewWindow -Wait -PassThru
+          if ($version.ExitCode -ne 0) { Write-Error "the packaged executable does not start"; exit $version.ExitCode }
           Get-ChildItem dist | ForEach-Object {
             $hash = (Get-FileHash $_.FullName -Algorithm SHA256).Hash.ToLower()
             "$hash  $($_.Name)" | Set-Content -Encoding ascii "$($_.FullName).sha256"
@@ -502,13 +542,8 @@ jobs:
           # Windows jobs make.
           "$app" --screenshot "${RUNNER_TEMP:-/tmp}/window.png"
           test -s "${RUNNER_TEMP:-/tmp}/window.png"
-          # The bundle is only useful if what it needs is inside it: the icon,
-          # the bridge, the examples, the snippets and the help pages.
+          # The icon is a build-tree resource, so it can be checked here.
           test -f "$bundle/Contents/Resources/time-warp-studio.icns"
-          test -f "$bundle/Contents/Resources/share/time_warp/worker.py"
-          test -d "$bundle/Contents/Resources/share/time-warp-studio/examples"
-          test -f "$bundle/Contents/Resources/share/doc/time-warp-studio/INDEX.md"
-          test -f "$bundle/Contents/Resources/share/time-warp-studio/snippets.json"
 
       - name: Package
         run: |
@@ -516,6 +551,25 @@ jobs:
           # the disk image is built from a staged install rather than from the
           # build tree: what CPack packages is exactly what `cmake --install`
           # produces.
+          #
+          # The bridge, the examples, the snippets and the help pages are
+          # install() rules too, which is why they are checked in the staged tree
+          # and not in `native/build`: the build-tree bundle has the icon and the
+          # binary, and nothing else until it is installed.
+          staging="${RUNNER_TEMP:-/tmp}/stage"
+          rm -rf "$staging"
+          cmake --install native/build --prefix "$staging"
+          installed="$staging/Time Warp Studio.app"
+          test -d "$installed"
+          test -f "$installed/Contents/Resources/share/time_warp/worker.py"
+          test -d "$installed/Contents/Resources/share/time-warp-studio/examples"
+          test -f "$installed/Contents/Resources/share/doc/time-warp-studio/INDEX.md"
+          test -f "$installed/Contents/Resources/share/time-warp-studio/snippets.json"
+          # The frameworks travel inside the bundle or the image is a broken
+          # download for anybody without Qt.
+          test -d "$installed/Contents/Frameworks"
+          "$installed/Contents/MacOS/time_warp_ide" --version
+
           cd native/build
           cpack -G DragNDrop
           # CPack signs nothing; the bundle it staged is the one install(CODE)
@@ -524,6 +578,19 @@ jobs:
           mkdir -p dist
           mv "native/build/Time_Warp_Studio-$(cat VERSION)-macOS-universal.dmg" dist/
           ( cd dist && shasum -a 256 *.dmg > "$(ls *.dmg | head -1).sha256" )
+
+          # And the image is checked by opening it, because a disk image can be
+          # built from a good tree and still contain the wrong thing.
+          mount="${RUNNER_TEMP:-/tmp}/dmg"
+          rm -rf "$mount"
+          mkdir -p "$mount"
+          hdiutil attach -nobrowse -readonly -mountpoint "$mount" dist/*.dmg > /dev/null
+          app=$(find "$mount" -maxdepth 1 -name '*.app' -type d | head -1)
+          test -n "$app"
+          test -f "$app/Contents/Resources/share/time_warp/worker.py"
+          test -f "$app/Contents/Resources/share/doc/time-warp-studio/INDEX.md"
+          test -d "$app/Contents/Frameworks"
+          hdiutil detach "$mount" > /dev/null
           ls -l dist
 
       - uses: actions/upload-artifact@v4
