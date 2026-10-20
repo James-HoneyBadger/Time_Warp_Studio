@@ -1104,7 +1104,10 @@ void test_focal_functions() {
     TW_CHECK(contains(run_focal("01.10 T FPI").output, "3.14"));
     const FocalRun ran = run_focal("01.10 T FRAN");
     TW_CHECK(!any_error(ran.output));
-    TW_CHECK(contains(ran.output, "0."));
+    // FRAN is in [0, 1) and prints to two places, so a draw above 0.995 rounds
+    // to "1.00" -- which is not an error, and not a reason for CI to fail once
+    // in two hundred runs.
+    TW_CHECK(contains(ran.output, "0.") || contains(ran.output, "1.00"));
     TW_CHECK(any_error(run_focal("01.10 T FPI(1)").output));
 }
 
