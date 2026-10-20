@@ -23,6 +23,7 @@
 #include <cctype>
 #include <charconv>
 #include <cmath>
+#include <cstddef>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
@@ -72,6 +73,60 @@ inline std::size_t format_double(char* first, char* last, double value) {
         return length;
     }
     return 0;
+#endif
+}
+
+/// Writes `value` in general format with `precision` significant digits -- what
+/// `printf("%.*g")` means, and what `std::to_chars(..., chars_format::general,
+/// precision)` means. Returns the number of characters written, or 0.
+inline std::size_t format_double_general(char* first, char* last, double value,
+                                         int precision) {
+#if TIME_WARP_HAVE_FLOAT_CHARCONV
+    const auto result =
+        std::to_chars(first, last, value, std::chars_format::general, precision);
+    if (result.ec != std::errc{}) {
+        return 0;
+    }
+    return static_cast<std::size_t>(result.ptr - first);
+#else
+    char buffer[64] = {};
+    const int written = std::snprintf(buffer, sizeof buffer, "%.*g", precision, value);
+    if (written <= 0 || written >= static_cast<int>(sizeof buffer)) {
+        return 0;
+    }
+    const auto length = static_cast<std::size_t>(written);
+    if (length > static_cast<std::size_t>(last - first)) {
+        return 0;
+    }
+    std::memcpy(first, buffer, length);
+    return length;
+#endif
+}
+
+/// Writes `value` with exactly `precision` digits after the point and no
+/// exponent -- `printf("%.*f")`, and `std::to_chars(..., chars_format::fixed,
+/// precision)`. Returns the number of characters written, or 0.
+inline std::size_t format_double_fixed(char* first, char* last, double value,
+                                       int precision) {
+#if TIME_WARP_HAVE_FLOAT_CHARCONV
+    const auto result =
+        std::to_chars(first, last, value, std::chars_format::fixed, precision);
+    if (result.ec != std::errc{}) {
+        return 0;
+    }
+    return static_cast<std::size_t>(result.ptr - first);
+#else
+    char buffer[64] = {};
+    const int written = std::snprintf(buffer, sizeof buffer, "%.*f", precision, value);
+    if (written <= 0 || written >= static_cast<int>(sizeof buffer)) {
+        return 0;
+    }
+    const auto length = static_cast<std::size_t>(written);
+    if (length > static_cast<std::size_t>(last - first)) {
+        return 0;
+    }
+    std::memcpy(first, buffer, length);
+    return length;
 #endif
 }
 

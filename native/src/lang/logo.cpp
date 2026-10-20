@@ -24,6 +24,8 @@
 
 #include "timewarp/lang/logo.hpp"
 
+#include "timewarp/core/charconv.hpp"
+
 #include "timewarp/lang/interpreter.hpp"
 #include "timewarp/lang/python_random.hpp"
 #include "timewarp/lang/turtle_host.hpp"
@@ -193,8 +195,9 @@ std::string python_float_repr(double value) {
         return value < 0.0 ? "-inf" : "inf";
     }
     char buffer[64];
-    const auto result = std::to_chars(buffer, buffer + sizeof buffer, value);
-    std::string text{buffer, result.ptr};
+    const std::size_t length =
+        timewarp::core::format_double(buffer, buffer + sizeof buffer, value);
+    std::string text{buffer, length};
     if (text.find('.') == std::string::npos && text.find('e') == std::string::npos &&
         text.find('n') == std::string::npos && text.find('i') == std::string::npos) {
         text += ".0";
@@ -210,9 +213,9 @@ std::string python_g(double value) {
         return value < 0.0 ? "-inf" : "inf";
     }
     char buffer[64];
-    const auto result =
-        std::to_chars(buffer, buffer + sizeof buffer, value, std::chars_format::general, 6);
-    return std::string{buffer, result.ptr};
+    const std::size_t length =
+        timewarp::core::format_double_general(buffer, buffer + sizeof buffer, value, 6);
+    return std::string{buffer, length};
 }
 
 /// `str(int(value))` -- Python truncates toward zero.

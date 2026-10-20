@@ -15,6 +15,7 @@
 
 #pragma once
 
+#include <cstddef>
 #include <cstdint>
 
 namespace timewarp::lang {

@@ -10,6 +10,8 @@
 
 #include "timewarp/lang/comal.hpp"
 
+#include "timewarp/core/charconv.hpp"
+
 #include "timewarp/lang/interpreter.hpp"
 #include "timewarp/lang/turtle_host.hpp"
 
@@ -195,8 +197,9 @@ std::string format_number(double value) {
         return std::to_string(static_cast<long long>(value));
     }
     char buffer[64];
-    const auto result = std::to_chars(buffer, buffer + sizeof buffer, value);
-    return std::string{buffer, result.ptr};
+    const std::size_t length =
+        timewarp::core::format_double(buffer, buffer + sizeof buffer, value);
+    return std::string{buffer, length};
 }
 
 class ComalExecutor {

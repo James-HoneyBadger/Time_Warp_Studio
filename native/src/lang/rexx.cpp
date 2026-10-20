@@ -14,12 +14,13 @@
 
 #include "timewarp/lang/rexx.hpp"
 
+#include "timewarp/core/charconv.hpp"
+
 #include "timewarp/lang/interpreter.hpp"
 #include "timewarp/lang/turtle_host.hpp"
 
 #include <algorithm>
 #include <cctype>
-#include <charconv>
 #include <cmath>
 #include <cstdlib>
 #include <map>
@@ -95,10 +96,10 @@ std::string float_repr(double value) {
         return buffer;
     }
     char buffer[64];
-    const auto result =
-        std::to_chars(buffer, buffer + sizeof buffer, value, std::chars_format::general);
-    if (result.ec == std::errc()) {
-        return std::string{buffer, result.ptr};
+    const std::size_t length =
+        timewarp::core::format_double(buffer, buffer + sizeof buffer, value);
+    if (length != 0) {
+        return std::string{buffer, length};
     }
     std::snprintf(buffer, sizeof buffer, "%g", value);
     return buffer;

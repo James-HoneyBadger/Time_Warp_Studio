@@ -9,9 +9,10 @@
 
 #include "basic_internal.hpp"
 
+#include "timewarp/core/charconv.hpp"
+
 #include <algorithm>
 #include <cctype>
-#include <charconv>
 #include <cmath>
 #include <cstdlib>
 #include <cstring>
@@ -538,12 +539,12 @@ std::string format_general(double value) {
         return value < 0 ? "-inf" : "inf";
     }
     char buffer[64];
-    const auto result =
-        std::to_chars(buffer, buffer + sizeof buffer, value, std::chars_format::general, 6);
-    if (result.ec != std::errc{}) {
+    const std::size_t length =
+        timewarp::core::format_double_general(buffer, buffer + sizeof buffer, value, 6);
+    if (length == 0) {
         return "0";
     }
-    return std::string{buffer, result.ptr};
+    return std::string{buffer, length};
 }
 
 std::string format_numeric(double value, std::string_view preferred) {
@@ -562,9 +563,9 @@ std::string python_number_text(double value) {
         return std::to_string(static_cast<long long>(value)) + ".0";
     }
     char buffer[64];
-    const auto result =
-        std::to_chars(buffer, buffer + sizeof buffer, value, std::chars_format::general);
-    return std::string{buffer, result.ptr};
+    const std::size_t length =
+        timewarp::core::format_double(buffer, buffer + sizeof buffer, value);
+    return std::string{buffer, length};
 }
 
 // -- the string evaluator --------------------------------------------------
@@ -1019,9 +1020,9 @@ std::string Strings::evaluate_function(std::string_view input) {
             const Argument value = evaluate_arg(arguments[index]);
             if (const auto* number = std::get_if<double>(&value)) {
                 char buffer[64];
-                const auto written = std::to_chars(buffer, buffer + sizeof buffer, *number,
-                                                   std::chars_format::general);
-                numbers.emplace_back(buffer, written.ptr);
+                const std::size_t written =
+                    timewarp::core::format_double(buffer, buffer + sizeof buffer, *number);
+                numbers.emplace_back(buffer, written);
                 texts.emplace_back(numbers.back());
             } else {
                 numbers.push_back(trim(std::get<std::string>(value)));

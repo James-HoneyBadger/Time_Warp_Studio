@@ -16,13 +16,14 @@
 
 #include "timewarp/lang/focal.hpp"
 
+#include "timewarp/core/charconv.hpp"
+
 #include "timewarp/lang/interpreter.hpp"
 #include "timewarp/lang/python_random.hpp"
 #include "timewarp/lang/turtle_host.hpp"
 
 #include <algorithm>
 #include <cctype>
-#include <charconv>
 #include <cmath>
 #include <cstddef>
 #include <cstdlib>
@@ -473,12 +474,12 @@ double evaluate(std::string_view text, const std::map<std::string, Value>& varia
 std::string format_number(double value, int digits) {
     char buffer[4096];
     const int precision = std::max(0, digits);
-    const auto result =
-        std::to_chars(buffer, buffer + sizeof buffer, value, std::chars_format::fixed, precision);
-    if (result.ec != std::errc{}) {
+    const std::size_t length = timewarp::core::format_double_fixed(
+        buffer, buffer + sizeof buffer, value, precision);
+    if (length == 0) {
         return "?";
     }
-    return std::string{buffer, result.ptr};
+    return std::string{buffer, length};
 }
 
 // ---------------------------------------------------------------------------

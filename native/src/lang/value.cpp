@@ -2,6 +2,8 @@
 
 #include "timewarp/lang/value.hpp"
 
+#include "timewarp/core/charconv.hpp"
+
 #include <charconv>
 #include <cmath>
 #include <cstdio>
@@ -38,8 +40,9 @@ std::string Value::render() const {
         return std::string(buffer, result.ptr);
     }
     char buffer[64];
-    const auto result = std::to_chars(buffer, buffer + sizeof buffer, number);
-    return std::string(buffer, result.ptr);
+    const std::size_t length =
+        timewarp::core::format_double(buffer, buffer + sizeof buffer, number);
+    return std::string(buffer, length);
 }
 
 }  // namespace timewarp::lang

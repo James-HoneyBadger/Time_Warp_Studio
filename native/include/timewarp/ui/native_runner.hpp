@@ -22,6 +22,7 @@
 #include <QPointer>
 #include <QString>
 #include <QThread>
+#include <cstddef>
 
 #include <atomic>
 #include <condition_variable>
