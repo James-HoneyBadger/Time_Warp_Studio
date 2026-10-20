@@ -192,8 +192,13 @@ void test_port_policy() {
     TW_CHECK(policy.allows("/dev/lp0"));
     TW_CHECK(policy.allows("/dev/parport0"));
     // The pseudo-terminals the tests use, and which a program may open because
-    // they belong to the user running it.
+    // they belong to the user running it. Linux numbers them under `/dev/pts`;
+    // macOS names the slave of the pair `/dev/ttys3`, which is why both are here.
     TW_CHECK(policy.allows("/dev/pts/3"));
+    TW_CHECK(policy.allows("/dev/ttys003"));
+    // A USB serial adapter on a Mac is a call-out device, and its call-in twin.
+    TW_CHECK(policy.allows("/dev/cu.usbserial-1420"));
+    TW_CHECK(policy.allows("/dev/tty.usbserial-1420"));
 
     // Everything else is refused, including the ways round the rule.
     TW_CHECK(!policy.allows("/dev/mem"));
@@ -203,6 +208,10 @@ void test_port_policy() {
     TW_CHECK(!policy.allows("dev/ttyUSB0"));
     TW_CHECK(!policy.allows("/dev/../mem"));
     TW_CHECK(!policy.allows("/tmp/../etc/shadow"));
+    // The prefix list must not be read as allowing the controlling terminal, or
+    // the disk the system runs from.
+    TW_CHECK(!policy.allows("/dev/tty"));
+    TW_CHECK(!policy.allows("/dev/cua0"));
 }
 
 #if defined(__unix__) || defined(__APPLE__)
@@ -272,8 +281,11 @@ void test_serial_over_a_pseudo_terminal() {
 
     timewarp::io::SerialPort port;
     std::string error;
-    TW_CHECK(port.open(pty.slave(), 9600, &error));
-    TW_CHECK(error.empty());
+    const bool opened = port.open(pty.slave(), 9600, &error);
+    // The message first: `TW_CHECK` on the boolean alone says only that it
+    // failed, and the reason is the part worth reading.
+    TW_CHECK_EQ(error, std::string{});
+    TW_CHECK(opened);
     TW_CHECK(port.is_open());
 
     // A program writing to the port is a board receiving bytes.

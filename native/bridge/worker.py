@@ -151,6 +151,34 @@ MAX_INPUT_ROUNDS = 1000
 INPUT_TIMEOUT_SECONDS = 300.0
 
 
+def force_utf8_streams() -> None:
+    """Make this process's streams UTF-8, whatever the locale says they are.
+
+    On Windows the default is the ANSI code page -- cp1252 on a default install
+    -- and the protocol is UTF-8: lesson text, a program's output with its emoji
+    prefixes, a name the user typed. Under cp1252 the first reply containing one
+    of those characters raised `UnicodeEncodeError`, which is a `ValueError`, and
+    the emitter below reads that as a client that has gone away and exits. The
+    worker therefore died at its first non-ASCII reply and the client saw only a
+    timeout -- which is what every bridge test on Windows reported.
+
+    `reconfigure` exists on a text stream; a stream replaced by a test double may
+    not have it, and that is not this function's business.
+    """
+    for stream, options in (
+        (sys.stdin, {"encoding": "utf-8"}),
+        (sys.stdout, {"encoding": "utf-8", "errors": "replace", "newline": "\n"}),
+        (sys.stderr, {"encoding": "utf-8", "errors": "replace", "newline": "\n"}),
+    ):
+        reconfigure = getattr(stream, "reconfigure", None)
+        if reconfigure is None:
+            continue
+        try:
+            reconfigure(**options)
+        except (ValueError, OSError):  # pragma: no cover - a stream that refuses
+            pass
+
+
 class Emitter:
     """Writes protocol messages, safely from any thread.
 
@@ -176,6 +204,12 @@ class Emitter:
             try:
                 self._stream.write(line + "\n")
                 self._stream.flush()
+            except UnicodeEncodeError:
+                # Not a dead pipe: the stream cannot represent the text. Raising
+                # is what makes that visible, and `force_utf8_streams` is what
+                # stops it happening at all -- before that, a Windows code page
+                # turned every emoji-bearing reply into a silent exit.
+                raise
             except (BrokenPipeError, ValueError, OSError):
                 # The IDE has gone. Nothing can be reported to a pipe nobody is
                 # reading, so the process ends here and now: `os._exit` rather
@@ -904,6 +938,7 @@ class ClassroomService:
 
 def main(argv: Optional[List[str]] = None) -> int:
     del argv
+    force_utf8_streams()
     emitter = Emitter(sys.stdout)
     # The protocol owns stdout from here on. A stray `print` in the interpreter or
     # in a library would otherwise land in the middle of a message and desynchronise

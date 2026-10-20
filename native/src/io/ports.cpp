@@ -88,9 +88,18 @@ const PortPolicy& PortPolicy::current() {
         PortPolicy built;
         // The device families a school actually plugs in. `by-id` is a directory
         // of stable symlinks, which is why it is a prefix of its own.
-        built.prefixes = {"/dev/ttyS",  "/dev/ttyUSB", "/dev/ttyACM", "/dev/ttyAMA",
+        //
+        // `/dev/ttys` is a BSD pseudo-terminal, which is the only kind macOS has:
+        // Linux's `/dev/pts/` does not exist there, so a test -- or a program --
+        // opening a pty was refused by this list rather than by the line
+        // discipline. `/dev/tty.` and `/dev/cu.` are how a USB serial adapter
+        // appears on a Mac (`cu.usbserial-1420`), one for call-out and one for
+        // call-in, and neither matches the bare `/dev/tty` this list must not
+        // allow.
+        built.prefixes = {"/dev/ttyS",   "/dev/ttyUSB", "/dev/ttyACM", "/dev/ttyAMA",
                           "/dev/ttySAC", "/dev/serial/", "/dev/pts/",  "/dev/lp",
-                          "/dev/parport", "/dev/usb/lp"};
+                          "/dev/parport", "/dev/usb/lp", "/dev/ttys",  "/dev/tty.",
+                          "/dev/cu."};
         if (const char* extra = std::getenv("TIME_WARP_PORTS"); extra != nullptr) {
             std::string remaining{extra};
             while (!remaining.empty()) {
