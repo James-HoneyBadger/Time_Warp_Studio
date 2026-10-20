@@ -808,9 +808,9 @@ void test_a_native_run_fills_the_variables_and_telemetry_panels() {
     TW_CHECK(!hud->valueOf(QStringLiteral("Wall clock")).isEmpty());
     TW_CHECK(hud->valueOf(QStringLiteral("Canvas ink")).contains(QStringLiteral("4 segments")));
 
-    // A native run has no pause protocol either, so the debug panel says that
-    // rather than offering buttons that would do nothing.
-    TW_CHECK(!window.debugPanel()->isAvailable());
+    // Logo can stop: at a top-level statement. The panel is live even though
+    // this run had no breakpoint to stop at.
+    TW_CHECK(window.debugPanel()->isAvailable());
 }
 
 void test_a_second_run_replaces_the_panels_rather_than_appending() {
@@ -888,9 +888,9 @@ void test_a_native_run_fills_the_panels() {
     TW_CHECK(!hud->valueOf(QStringLiteral("Engine time")).isEmpty());
     TW_CHECK(hud->valueOf(QStringLiteral("Canvas ink")).contains(QStringLiteral("4 segments")));
 
-    // Native, like every language but Scheme: no pause protocol, so the panel
-    // says so.
-    TW_CHECK(!window.debugPanel()->isAvailable());
+    // FOCAL stops at a statement like every line-loop language, so the panel is
+    // live rather than explaining itself away.
+    TW_CHECK(window.debugPanel()->isAvailable());
 }
 
 /// The terminal is opt-in: a build nobody configured has no shell tab at all.
@@ -1614,6 +1614,56 @@ void test_a_run_pauses_at_a_breakpoint() {
     }
 }
 
+/// A whole-program language pauses too: Logo stops before the top-level
+/// statement whose line carries the breakpoint, and the Debug tab and canvas
+/// agree about where that is.
+void test_a_whole_program_run_pauses_at_a_breakpoint() {
+    announce("running: logo pauses at a breakpoint");
+    QTemporaryDir dir;
+    const QString path = writeFile(dir, QStringLiteral("paused.logo"),
+                                   QByteArray{"FD 10\nRT 90\nFD 20\n"});
+    TW_CHECK(!path.isEmpty());
+
+    MainWindow window;
+    window.resize(900, 600);
+    window.show();
+    QApplication::processEvents();
+    TW_CHECK(window.openFile(path, MainWindow::OpenFailure::Silent));
+    CodeEditor* editor = window.currentEditor();
+    TW_CHECK(editor != nullptr);
+    if (editor == nullptr) {
+        return;
+    }
+    // Zero-based line 1: the RT 90 statement has not happened yet.
+    editor->setBreakpoints({1});
+    window.runCurrentDocument();
+    TW_CHECK(waitFor([&window] {
+        return badgeText(window, "executionBadge") == QStringLiteral("paused");
+    }));
+
+    TurtleCanvas* canvas = window.turtleCanvas();
+    TW_CHECK(canvas != nullptr);
+    if (canvas != nullptr) {
+        TW_CHECK(waitFor([canvas] { return canvas->strokeCount() == 1; }));
+        // The second FD has not run, so there is exactly one stroke.
+        TW_CHECK_EQ(canvas->strokeCount(), 1);
+    }
+    auto* status = window.debugPanel()->findChild<QLabel*>(QStringLiteral("debugStatus"));
+    TW_CHECK(status != nullptr);
+    if (status != nullptr) {
+        TW_CHECK(status->text().contains(QStringLiteral("line 2")));
+    }
+
+    window.findChild<QAction*>(QStringLiteral("continueAction"))->trigger();
+    TW_CHECK(waitFor([&window] {
+        return badgeText(window, "executionBadge") != QStringLiteral("paused") &&
+               badgeText(window, "executionBadge") != QStringLiteral("running");
+    }));
+    if (canvas != nullptr) {
+        TW_CHECK_EQ(canvas->strokeCount(), 2);
+    }
+}
+
 void test_breakpoints_toggle_paint_and_persist() {
     announce("breakpoints: toggle, paint and persist");
     tw::test::TempDir dir;
@@ -1746,6 +1796,7 @@ int main(int argc, char** argv) {
     test_a_stale_breakpoint_path_is_dropped();
     test_the_split_survives_a_restart();
     test_a_run_pauses_at_a_breakpoint();
+    test_a_whole_program_run_pauses_at_a_breakpoint();
 
     test_running_scheme_draws_on_the_canvas();
     test_pen_up_moves_without_drawing();

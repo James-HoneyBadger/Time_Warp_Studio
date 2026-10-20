@@ -13,6 +13,7 @@
 
 #include "timewarp/lang/chip8.hpp"
 
+#include "timewarp/lang/interpreter.hpp"
 #include "timewarp/lang/python_random.hpp"
 #include "timewarp/lang/turtle_host.hpp"
 
@@ -632,6 +633,9 @@ Chip8Program assemble_chip8(std::string_view source) {
         }
         const std::vector<std::uint8_t> emitted =
             encode(text, program.labels, static_cast<int>(index) + 1);
+        // Remembered before the copy so the debugger can name the line the
+        // instruction at this address came from.
+        program.source_lines[address] = static_cast<int>(index) + 1;
         std::copy(emitted.begin(), emitted.end(), program.memory.begin() + address);
         address += static_cast<int>(emitted.size());
     }
@@ -1052,7 +1056,6 @@ void Chip8Machine::tick_timers() {
 }
 
 std::string execute_chip8(Interpreter& interpreter, std::string_view source, TurtleHost& turtle) {
-    (void)interpreter;
     Chip8Program program;
     try {
         program = assemble_chip8(source);
@@ -1060,6 +1063,9 @@ std::string execute_chip8(Interpreter& interpreter, std::string_view source, Tur
         return "❌ CHIP-8: " + std::string{error.what()} + "\n";
     }
 
+    // Kept outside the machine, which only needs the bytes: a listing's lines
+    // are what the debugger shows and what a gutter breakpoint names.
+    const std::map<int, int> source_lines = std::move(program.source_lines);
     Chip8Machine machine{std::move(program.memory), program.entry, keypad(source)};
     Chip8Display display{turtle};
     display.clear();
@@ -1074,6 +1080,14 @@ std::string execute_chip8(Interpreter& interpreter, std::string_view source, Tur
             for (int cycle = 0; cycle < kChip8CyclesPerFrame; ++cycle) {
                 if (machine.halted()) {
                     break;
+                }
+                // Paused before the instruction, so the debugger shows the line
+                // about to run. The display still repaints at the frame
+                // boundary, which is the machine's own unit of visible change.
+                const auto found = source_lines.find(machine.pc);
+                const int line = found != source_lines.end() ? found->second : 0;
+                if (!interpreter.pause_if_requested(line)) {
+                    return {};
                 }
                 machine.step();
             }

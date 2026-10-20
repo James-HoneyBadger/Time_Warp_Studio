@@ -279,21 +279,21 @@ directly. Check each language's tutorial for its graphics commands.
 
 ### Does the Studio have a debugger?
 
-For **Scheme**, yes: the 🐞 Debug tab drives a real runner with breakpoints, stepping, a call stack, the paused line and that frame's variables. The other nine languages run to completion in the native runner and have no pause protocol, so the Debug tab disables itself and says why.
+Yes, for every language. The 🐞 Debug tab, the toolbar's Debug/Continue/Trace actions and gutter breakpoints stop the run at the language's natural boundary: a statement for BASIC, FOCAL, PILOT, COMAL, APL and REXX; a top-level statement for Logo; a message send for Smalltalk; an instruction before CHIP-8 executes it (the tab shows the listing line, or "the next instruction" for a binary ROM). **Continue** runs to the next breakpoint and **Trace** stops at the next boundary.
 
-Not yet: watch expressions, an execution timeline, and the toolbar's Debug/Continue/Trace actions (the panel's own buttons work). Those are tracked in [ROADMAP.md](ROADMAP.md).
+Scheme additionally reports the call stack and the paused frame's bindings. For the other languages the 🔍 Variables tab shows the bindings the run is stopped in. Not yet: watch expressions and data breakpoints, tracked in [ROADMAP.md](ROADMAP.md).
 
 ### How do I set a breakpoint?
 
-In the Debug tab: type a line number and press **Add**. Breakpoints are listed there and **Remove** takes the selected one off. The editor's gutter does not take breakpoint clicks yet.
+Click in the editor's gutter, or put the cursor on the line and press **Ctrl+F8** (or use **Add** in the Debug tab). Breakpoints are kept per file, so reopening a program restores them, and a line outside the document is refused rather than remembered for a line that does not exist.
 
 ### How do I start debugging?
 
-Run the program as usual (F9) and press **Pause** in the Debug tab, or set a breakpoint first: the program stops there. **Continue** resumes it.
+Set a breakpoint and Run (F9): the program stops before the statement, message send or instruction on that line. **Debug** on the toolbar raises the Debug tab and runs. While a program runs, **Pause** stops it at the next boundary. **Continue** resumes it.
 
 ### What do the step commands do?
 
-**Step In**, **Step Over** and **Step Out** advance the Scheme machine by one form, entering or stepping past a call. The granularity is a form rather than a line, because that is what the explicit-stack machine executes.
+For Scheme, **Step In**, **Step Over** and **Step Out** advance the machine by one form, entering or stepping past a call. For every other language there is one step unit, the boundary named above, and all three buttons do the same thing as **Trace**: stop again at the next statement, message send or instruction.
 
 ### Can I see variable values while debugging?
 

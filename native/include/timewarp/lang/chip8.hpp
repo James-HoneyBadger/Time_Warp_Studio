@@ -60,6 +60,9 @@ inline constexpr int kChip8RomLimit = kChip8MemorySize - kChip8ProgramAddress;
 struct Chip8Program {
     std::vector<std::uint8_t> memory;
     std::map<std::string, int> labels;
+    /// The 1-based listing line each opcode was assembled from, by memory
+    /// address. Empty for a binary ROM, which has no lines to point at.
+    std::map<int, int> source_lines;
     int entry = kChip8ProgramAddress;
 };
 

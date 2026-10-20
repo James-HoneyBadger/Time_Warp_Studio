@@ -234,6 +234,10 @@ protected:
 
 private:
     std::string read_input(const std::string& prompt);
+    /// Copies the interpreter's bindings into the snapshot. Called at a pause
+    /// and at the end of a run: the Variables panel is an inspector while the
+    /// program is stopped as well as after it finishes.
+    void publishVariables(const timewarp::lang::Interpreter& engine);
 
     timewarp::lang::Language language_;
     std::unique_ptr<NativeCanvasHost> host_;

@@ -51,6 +51,19 @@ public:
     /// which the interpreter treats as "end the run cleanly".
     bool note_line(std::size_t index, int line);
 
+    /// A pause point keyed by *source line* rather than statement index, for the
+    /// whole-program languages: their code is not one statement per line, and
+    /// Logo's statement list skips the procedure definition lines.
+    ///
+    /// `line` is 1-based; 0 means "no source line" (a binary CHIP-8 ROM), where a
+    /// step still stops but a breakpoint cannot match. A breakpoint pauses once
+    /// per line: a Smalltalk line can hold several message sends, and a Continue
+    /// that stops again on the same line is not a continue. A step still stops
+    /// at every send.
+    ///
+    /// Returns false when the session asked for the run to stop.
+    bool note_source_line(int line);
+
     /// Zero-based statement indices a run may pause on.
     void set_breakpoints(std::set<std::size_t> lines);
     [[nodiscard]] std::size_t breakpointCount() const;
@@ -68,6 +81,11 @@ public:
     PauseCallback on_paused;
 
 private:
+    /// The one wait both pause points use. `breakpoint` is already decided by the
+    /// caller, which is what lets `note_line` match an index and
+    /// `note_source_line` match a line.
+    bool wait_at(bool breakpoint, int line);
+
     mutable std::mutex mutex_;
     std::condition_variable resumed_;
     std::set<std::size_t> breakpoints_;
@@ -78,6 +96,14 @@ private:
     bool paused_ = false;
     bool step_armed_ = false;
     int paused_line_ = -1;
+    /// The line the last whole-program pause point was on, so a line-keyed
+    /// breakpoint fires once per visit rather than once per message send on that
+    /// line: a Continue that stops again on the line it just left is not a
+    /// continue, and returning to the line after running another one pauses again.
+    int last_seen_line_ = -1;
+    /// Fast path for the hot loops: false when there are no breakpoints and no
+    /// step pending, so a CHIP-8 opcode pays one atomic load rather than a lock.
+    std::atomic<bool> engaged_{false};
 };
 
 }  // namespace timewarp::lang

@@ -563,6 +563,10 @@ private:
     std::vector<std::string> statements_;
     /// The number each statement reports in a `[line N]` annotation.
     std::vector<int> statement_lines_;
+    /// The physical source line each statement starts on, for the debugger.
+    /// Separate from `statement_lines_`: an annotation reports a numbered
+    /// statement's own number, which is not where a gutter breakpoint sits.
+    std::vector<int> statement_source_lines_;
 
     std::map<std::string, std::string> procedures_;
     std::map<std::string, std::vector<std::string>> procedure_params_;
@@ -598,8 +602,10 @@ void LogoMachine::load(std::string_view source) {
     std::vector<std::string> pending;
     int bracket_depth = 0;
     std::size_t index = 0;
+    // Where the statement being collected begins in the source, 1-based.
+    int pending_source_line = 0;
 
-    const auto flush = [this, &pending]() {
+    const auto flush = [this, &pending, &pending_source_line]() {
         if (pending.empty()) {
             return;
         }
@@ -626,6 +632,7 @@ void LogoMachine::load(std::string_view source) {
             statements_.push_back(rstrip(joined));
         }
         statement_lines_.push_back(reported);
+        statement_source_lines_.push_back(pending_source_line);
     };
 
     while (index < lines.size()) {
@@ -658,6 +665,9 @@ void LogoMachine::load(std::string_view source) {
             continue;
         }
 
+        if (pending.empty()) {
+            pending_source_line = static_cast<int>(index) + 1;
+        }
         pending.push_back(line);
         bracket_depth += static_cast<int>(std::count(line.begin(), line.end(), '['));
         bracket_depth -= static_cast<int>(std::count(line.begin(), line.end(), ']'));
@@ -3357,6 +3367,15 @@ void LogoMachine::run(std::string_view source) {
     load(source);
 
     for (std::size_t index = 0; index < statements_.size(); ++index) {
+        // The debugger's pause point. A whole statement is the unit: the loader
+        // joins bracketed lines into one, and a procedure call is one statement
+        // whose body runs commands that have no line of their own.
+        if (!interpreter_.pause_if_requested(statement_source_lines_[index])) {
+            // Break rather than return: the words this run created are still
+            // facts about it, and the Variables panel reads them after a stop.
+            interpreter_.running = false;
+            break;
+        }
         try {
             tick();
         } catch (const BudgetStop&) {

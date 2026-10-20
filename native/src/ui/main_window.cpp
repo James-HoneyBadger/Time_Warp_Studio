@@ -457,6 +457,10 @@ void MainWindow::buildUi() {
     // Last, because it reads the menus: a key the menus already answer must not
     // get a second action, and the check is against the actions that exist.
     buildFunctionKeyShortcuts();
+    // The first document is created while the right column is still being built,
+    // so its first refresh could not reach the debug panel. One refresh after
+    // the tree exists puts every badge and panel in step with it.
+    refreshDocumentState();
 }
 
 void MainWindow::buildCentralColumn() {
@@ -2905,10 +2909,10 @@ void MainWindow::buildToolBar() {
         action->setToolTip(tip);
         return action;
     };
-    // The debugging controls, live for every line-by-line language because they
-    // all run the same interpreter loop. A whole-program language (Scheme, Logo,
-    // Smalltalk, CHIP-8) has no statement boundary to stop at, so for those the
-    // run simply completes -- which is what the tooltips say.
+    // The debugging controls, live for every language. The line-loop languages
+    // stop at a statement; Logo at a top-level statement, Smalltalk at a message
+    // send and CHIP-8 at an instruction; Scheme through its own runner. Continue
+    // resumes and Trace stops at the next boundary.
     QAction* debug_action =
         addRunAction(tr("\U0001F41B Debug"), tr("Run, stopping before any breakpoint"));
     debug_action->setObjectName(QStringLiteral("debugAction"));
@@ -2923,8 +2927,9 @@ void MainWindow::buildToolBar() {
         }
         setExecutionState(tr("ready"), tr("Nothing is paused"));
     });
-    QAction* trace_action =
-        addRunAction(tr("\u2193 Trace"), tr("Resume and stop after one statement"));
+    QAction* trace_action = addRunAction(
+        tr("\u2193 Trace"),
+        tr("Resume and stop at the next statement, message send or instruction"));
     trace_action->setObjectName(QStringLiteral("traceAction"));
     connect(trace_action, &QAction::triggered, this, [this] {
         if (native_runner_ != nullptr && native_runner_->isPaused()) {
@@ -3702,12 +3707,10 @@ void MainWindow::refreshDocumentState() {
         find_bar_->setEditor(editor);
     }
     if (debug_panel_ != nullptr) {
-        // Stepping needs the pause protocol, which only the in-process Scheme
-        // machine has. The panel says so instead of offering six dead buttons.
-        debug_panel_->setAvailable(
-            languageOf(editor) == Language::Scheme,
-            tr("Stepping is Scheme only \u2014 every other language runs to "
-               "completion with no pause protocol."));
+        // Every language can stop now: the line-loop languages at a statement,
+        // Logo at a top-level statement, Smalltalk at a message send and CHIP-8
+        // at an instruction. The call stack remains the Scheme machine's own.
+        debug_panel_->setAvailable(true, QString{});
         debug_panel_->setLineNumber(editor->currentLine());
     }
     position_badge_->setText(
@@ -4255,10 +4258,10 @@ void MainWindow::runNatively(CodeEditor* editor, timewarp::lang::Language langua
         profile_source = editor->toPlainText().split(QLatin1Char('\n'));
     }
     runner->load_program(source);
-    // The editor's breakpoints are zero-based lines and the loader keeps every
-    // line -- blank ones included -- so an editor line is a statement index. That
-    // is the one invariant the mapping depends on, and it is why `parse_lines`
-    // does not drop blanks.
+    // The editor's breakpoints are zero-based lines. The line-loop languages use
+    // them as statement indices, which is why `parse_lines` keeps every line,
+    // blanks included; the whole-program executors match them against the source
+    // line they are about to run.
     std::set<std::size_t> breakpoints;
     for (const int line : editor->breakpoints()) {
         breakpoints.insert(static_cast<std::size_t>(line));
@@ -4303,6 +4306,11 @@ void MainWindow::runNatively(CodeEditor* editor, timewarp::lang::Language langua
                 }
                 if (variables_panel_ != nullptr) {
                     variables_panel_->setRows(rows);
+                }
+                // A run stopped while paused ends here rather than through
+                // `resumed`, so the panel is told the pause is over.
+                if (debug_panel_ != nullptr) {
+                    debug_panel_->setPaused(false, 0, QString{});
                 }
                 if (telemetry_panel_ != nullptr) {
                     const std::string_view name = timewarp::lang::display_name(language);
@@ -4357,13 +4365,37 @@ void MainWindow::runNatively(CodeEditor* editor, timewarp::lang::Language langua
         }
         // The console says where the run is, because the canvas cannot: a learner
         // needs to know which statement has not happened yet, not that something
-        // happened somewhere.
-        setExecutionState(tr("paused"), tr("Paused before line %1").arg(line));
+        // happened somewhere. Line 0 means the program has no source lines (a
+        // binary CHIP-8 ROM), so the instruction is named rather than a line.
+        setExecutionState(tr("paused"),
+                          line > 0 ? tr("Paused before line %1").arg(line)
+                                   : tr("Paused before the next instruction"));
+        // The Debug tab and the Variables tab follow the pause, so a stopped
+        // program is inspectable wherever the user looks.
+        if (debug_panel_ != nullptr) {
+            debug_panel_->setPaused(true, line, QString{});
+        }
+        QList<timewarp::bridge::VariableRow> rows;
+        for (const NativeRunner::VariableRow& row : runner->variables()) {
+            rows.append({row.name, row.type, row.value});
+        }
+        if (variables_panel_ != nullptr) {
+            variables_panel_->setRows(rows);
+        }
+        if (debug_panel_ != nullptr) {
+            // The panel's own variables table is the frame's bindings for
+            // Scheme; for a native engine the run's bindings are the best
+            // answer, and it is better than an empty table while stopped.
+            debug_panel_->setVariables(rows);
+        }
         static_cast<void>(showPanel(QStringLiteral("debug")));
     });
     connect(runner, &NativeRunner::resumed, this, [this, runner] {
         if (native_runner_ != runner) {
             return;
+        }
+        if (debug_panel_ != nullptr) {
+            debug_panel_->setPaused(false, 0, QString{});
         }
         setExecutionState(tr("running"), tr("Running…"));
     });
@@ -4759,8 +4791,28 @@ void MainWindow::connectDebugPanel() {
     // These do not connect *to* a runner: one exists only for the length of a
     // run, and is deleted when the run ends. They look it up when a button is
     // pressed, so a press between runs is a no-op rather than a dangling call.
+    //
+    // A native run is driven here too. The panel is the same panel whichever
+    // engine is paused; only the commands differ, because the native runner has
+    // one step unit (a statement, a send, a top-level statement or an opcode)
+    // rather than Scheme's in/over/out.
     const auto forward = [this](void (timewarp::debugger::DebuggerRunner::*command)()) {
         return [this, command] {
+            if (native_runner_ != nullptr && native_runner_->isRunning()) {
+                using timewarp::debugger::DebuggerRunner;
+                if (command == &DebuggerRunner::request_continue) {
+                    native_runner_->request_continue();
+                    return;
+                }
+                if (command == &DebuggerRunner::request_stop) {
+                    stopRunningDocument();
+                    return;
+                }
+                // Pause and the three step variants are all "stop at the next
+                // boundary" for an engine without a frame stack.
+                native_runner_->request_step();
+                return;
+            }
             if (runner_ != nullptr) {
                 (runner_.data()->*command)();
             }
@@ -4782,6 +4834,18 @@ void MainWindow::connectDebugPanel() {
             [this](const QList<int>& lines) {
                 if (runner_ != nullptr) {
                     runner_->set_breakpoints(lines);
+                }
+                if (native_runner_ != nullptr) {
+                    // The panel holds 1-based lines; the editor's gutter set,
+                    // which the native runner is given at run start, is
+                    // zero-based.
+                    std::set<std::size_t> zero_based;
+                    for (const int line : lines) {
+                        if (line > 0) {
+                            zero_based.insert(static_cast<std::size_t>(line - 1));
+                        }
+                    }
+                    native_runner_->set_breakpoints(zero_based);
                 }
             });
 }

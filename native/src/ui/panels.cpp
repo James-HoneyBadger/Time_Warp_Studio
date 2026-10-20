@@ -1460,6 +1460,8 @@ void DebugPanel::setAvailable(bool available, const QString& reason) {
         // The lists stay readable: what the last run left is still true even when
         // the current document cannot be stepped.
         status_->setText(tr("not steppable"));
+    } else {
+        setPaused(false, 0, QString{});
     }
 }
 
@@ -1472,8 +1474,16 @@ void DebugPanel::setPaused(bool paused, int line, const QString& procedure) {
     // "running" would be a lie after the run has finished, and the panel cannot
     // tell the two apart: all it knows is that nothing is paused. The status bar
     // is where "running" and "ready" are said.
-    status_->setText(paused ? tr("paused at line %1 in %2").arg(line).arg(procedure)
-                            : tr("not paused"));
+    if (!paused) {
+        status_->setText(tr("not paused"));
+        return;
+    }
+    // Line 0 means the program has no source line for the next unit (a binary
+    // CHIP-8 ROM), so there is nothing to number.
+    const QString where =
+        procedure.isEmpty() ? tr("paused at line %1").arg(line)
+                            : tr("paused at line %1 in %2").arg(line).arg(procedure);
+    status_->setText(line > 0 ? where : tr("paused before the next instruction"));
 }
 
 void DebugPanel::setStack(const QList<Frame>& frames) {

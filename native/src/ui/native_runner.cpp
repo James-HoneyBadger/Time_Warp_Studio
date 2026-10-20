@@ -492,6 +492,17 @@ void NativeRunner::answerInput(const QString& text) {
     input_ready_.notify_all();
 }
 
+void NativeRunner::publishVariables(const timewarp::lang::Interpreter& engine) {
+    const std::lock_guard<std::mutex> lock{snapshot_mutex_};
+    variables_.clear();
+    variables_.reserve(engine.variables().size());
+    for (const auto& [name, value] : engine.variables()) {
+        variables_.push_back(VariableRow{QString::fromStdString(name),
+                                         QString::fromLatin1(value.type_name()),
+                                         QString::fromStdString(value.render())});
+    }
+}
+
 std::vector<NativeRunner::VariableRow> NativeRunner::variables() const {
     const std::lock_guard<std::mutex> lock{snapshot_mutex_};
     return variables_;
@@ -546,7 +557,13 @@ void NativeRunner::run() {
     // this one exit at its first statement.
     auto session = std::make_unique<timewarp::lang::DebugSession>();
     session->set_breakpoints(breakpoints_);
-    session->on_paused = [this](int line) { emit paused(line); };
+    timewarp::lang::Interpreter* engine_ptr = engine.get();
+    session->on_paused = [this, engine_ptr](int line) {
+        // While the run is stopped, the Variables panel has to show the state it
+        // is stopped in rather than the state it will end in.
+        publishVariables(*engine_ptr);
+        emit paused(line);
+    };
     {
         const std::lock_guard<std::mutex> lock{interpreter_mutex_};
         interpreter_ = engine.get();
@@ -571,15 +588,9 @@ void NativeRunner::run() {
     engine->run();
     host_->flush();
 
+    publishVariables(*engine);
     {
         const std::lock_guard<std::mutex> lock{snapshot_mutex_};
-        variables_.clear();
-        variables_.reserve(engine->variables().size());
-        for (const auto& [name, value] : engine->variables()) {
-            variables_.push_back(VariableRow{QString::fromStdString(name),
-                                             QString::fromLatin1(value.type_name()),
-                                             QString::fromStdString(value.render())});
-        }
         steps_ = engine->steps_used();
         elapsed_ms_ = engine->elapsed_ms();
         // Copied, not referenced: the interpreter dies with this run, and the

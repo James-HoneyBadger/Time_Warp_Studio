@@ -64,7 +64,7 @@ nothing about that layer is missing a user-facing behaviour.
 | 3 | Help and learnability | documentation browser ✅, F1 ✅, keyword inspector ✅, guided tour ✅ | M | 0 |
 | 4 | Canvas time travel | scrubber ✅, GIF recording ✅, SVG export ✅ | M | — |
 | 5 | Export and print | PDF ✅, print ✅, session HTML ✅ | M | — |
-| 6 | Debugging breadth | breakpoints everywhere ✅, pause/step for line-by-line languages ✅, profiler ✅ | L | 0, best after 1 |
+| 6 | Debugging breadth | breakpoints everywhere ✅, pause/step for line-by-line languages ✅, pause/step for whole-program languages ✅, profiler ✅ | L | 0, best after 1 |
 | 7 | Workspace | document outline ✅, terminal ✅, split editor ✅, run both panes ✅ | M | 7.3 needs 1.5 |
 | 8 | Accessibility and display | high contrast ✅, font scale ✅, focus mode ✅, CRT settings ✅, screen presets ✅ | S–M | 0 |
 | 9 | Classroom | roster panel ✅, presentation mode ✅, lesson session export ✅, bundles ✅ | M | — |
@@ -552,11 +552,52 @@ Debug, Continue and Trace are live for every line-by-line language; the Debug
 *panel*'s own buttons still belong to the Scheme runner, which is recorded in
 `docs/ROADMAP.md`.
 
-### 6.3 Whole-program languages (L, later)
+### 6.3 Whole-program languages (L) ✅
 
 CHIP-8 pauses between frames, Smalltalk between message sends, Logo between
 statements (its loader already streams them). Each is a separate small change once
 6.2's session exists; none of them needs the machine rewritten.
+
+**Done**, with one deliberate refinement: CHIP-8 pauses *before every instruction*
+rather than between frames. A frame is ten instructions, so a frame boundary would
+miss most listing lines and a gutter breakpoint would be a lottery; per-instruction
+stepping lands on the line the user clicked. The display still repaints at the
+frame boundary, which is the machine's own unit of visible change.
+
+`DebugSession` gained `note_source_line(line)` beside `note_line(index, line)`.
+Whole-program code is not one statement per line, and Logo's statement list skips
+procedure definition lines, so these languages break on *source lines* directly.
+A line-keyed breakpoint pauses once per visit: a Smalltalk line can hold several
+sends, and a Continue that stops again on the line it just left is not a continue,
+while a loop that returns to the line after running another one pauses again. The
+session also gained an atomic `engaged_` fast path, so an unprofiled CHIP-8 run
+pays one load per opcode rather than a mutex.
+
+- **Logo**: the loader records the physical line each joined statement starts on
+  (`statement_source_lines_`, separate from the annotation number it already
+  reported), and the run pauses before each top-level statement. A procedure
+  call is one step; its body runs inside that statement.
+- **Smalltalk**: the tokenizer now carries a line on every token, so `Node` can
+  name the line a send was written on. `evaluate` pauses before each message
+  send; the driver also pauses before each top-level chunk. A `DebugStop`
+  exception unwinds a stopped run without reporting an error.
+- **CHIP-8**: the assembler records the listing line of every opcode by address
+  (`Chip8Program::source_lines`); the executor pauses before each instruction
+  and passes that line, or 0 for a binary ROM, which has no lines to name.
+
+`NativeRunner` publishes the interpreter's bindings at a pause as well as at the
+end, so the Variables panel and the Debug tab inspect the state the run stopped
+in. The Debug tab is live for every language and its buttons drive whichever
+runner is paused: Continue resumes, Pause and the three Step buttons stop at the
+next boundary (the native engines have one step unit, not Scheme's in/over/out),
+and Stop ends the run.
+
+**Tests:** `lang_tests` pauses Logo on a statement line, steps to the next one and
+checks the host's calls before and after; pauses Smalltalk on a message send and
+steps to the next send; and pauses CHIP-8 on a listing line, steps to the next
+instruction and continues to HALT. `ui_document_tests` sets a gutter breakpoint in
+a Logo document, runs it, sees the badge say paused, the canvas hold one of two
+strokes, the Debug tab name line 2, and Continue complete the drawing.
 
 ### 6.4 Profiler (M) ✅
 

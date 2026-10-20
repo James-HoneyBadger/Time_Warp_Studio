@@ -95,10 +95,11 @@ Please read that list before reporting one of them as a regression.
 Scheme runs on a native explicit-stack machine with a background runner, and the 🐞
 Debug panel drives it: Continue, Pause, Step In/Over/Out, Stop and breakpoints, with the
 call stack and that frame's bindings shown while paused. Values are typed by the machine
-rather than guessed from their printed form. Only Scheme can be stepped — every
-other language runs to completion and has no pause protocol — so
-the panel disables itself and says why, and the toolbar's Debug/Continue/Trace actions
-are still inert (tracked in the roadmap).
+rather than guessed from their printed form. Every language can stop: the line-loop
+languages at a statement, Logo at a top-level statement, Smalltalk at a message send
+and CHIP-8 before an instruction, with gutter breakpoints and Continue/Trace on the
+toolbar. The call stack and frame bindings are Scheme's own; for a native run the
+Variables panel shows the bindings the pause stopped in.
 
 ### Guided Lessons
 

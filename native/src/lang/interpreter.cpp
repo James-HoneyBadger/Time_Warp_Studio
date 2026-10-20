@@ -568,6 +568,10 @@ double Interpreter::elapsed_ms() const noexcept {
     return elapsed_ms_;
 }
 
+bool Interpreter::pause_if_requested(int line) {
+    return debug_ == nullptr || debug_->note_source_line(line);
+}
+
 std::vector<LineProfile> Interpreter::line_profiles() const {
     std::vector<LineProfile> rows;
     rows.reserve(profile_.size());

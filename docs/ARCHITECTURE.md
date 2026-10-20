@@ -714,9 +714,11 @@ migrating.
 
 - **The debugger is a runner, not a full debugger.** `DebuggerRunner` supports
   pause, step and breakpoints, and `debug_tests` covers the machinery; `DebugPanel`
-  drives it for Scheme. What is missing is breadth (only Scheme can be stepped),
-  the toolbar's Debug/Continue/Trace actions (disabled, with a note that the
-  wiring is not ported), and watch expressions.
+  drives it for Scheme. Every other language stops through the shared
+  `DebugSession`: a statement for the line-loop languages, a top-level statement
+  for Logo, a message send for Smalltalk and an instruction for CHIP-8. What is
+  missing is depth: watch expressions, data breakpoints, and a call stack for
+  languages that do not keep one.
 - **The editor** has syntax colouring, find/replace, find-in-files, a minimap, a
   formatter, language-specific checking as you type (squiggles, gutter markers,
   hover text), optional completion, auto-indent and a full settings dialog with a

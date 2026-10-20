@@ -661,7 +661,7 @@ void test_telemetry_panel_contract() {
     TW_CHECK(panel->valueOf(QStringLiteral("no such label")).isEmpty());
 }
 
-void test_debug_panel_is_scheme_only() {
+void test_debug_panel_controls() {
     announce("debug panel");
     const std::unique_ptr<MainWindow> window = shownWindow();
     DebugPanel* panel = window->debugPanel();
@@ -700,10 +700,10 @@ void test_debug_panel_is_scheme_only() {
     auto* remove = panel->findChild<QPushButton*>(QStringLiteral("debugRemoveBreakpoint"));
     TW_CHECK(add != nullptr && remove != nullptr);
 
-    // Whether it can step is a property of the language, and the window turns it
-    // on for Scheme and off -- with a reason -- for everything else. The controls
-    // are disabled with it, so a breakpoint cannot be set for a language that
-    // will never stop at one.
+    // Every language can stop now -- at a statement, a message send or an
+    // instruction -- so the controls stay live whichever document is open. The
+    // call stack remains the Scheme machine's own, which is a display difference
+    // rather than a disabled button.
     auto* combo = window->findChild<QComboBox*>(QStringLiteral("languageSelector"));
     TW_CHECK(combo != nullptr);
     if (combo != nullptr) {
@@ -713,8 +713,8 @@ void test_debug_panel_is_scheme_only() {
         TW_CHECK(basic >= 0);
         if (scheme >= 0 && basic >= 0) {
             combo->setCurrentIndex(basic);
-            TW_CHECK(!panel->isAvailable());
-            TW_CHECK(add != nullptr && !add->isEnabled());
+            TW_CHECK(panel->isAvailable());
+            TW_CHECK(add != nullptr && add->isEnabled());
             combo->setCurrentIndex(scheme);
             TW_CHECK(panel->isAvailable());
             TW_CHECK(add != nullptr && add->isEnabled());
@@ -3121,7 +3121,7 @@ int main(int argc, char** argv) {
     test_classroom_panel_contract();
     test_variables_panel_contract();
     test_telemetry_panel_contract();
-    test_debug_panel_is_scheme_only();
+    test_debug_panel_controls();
     test_output_and_graphics_share_a_persistent_split();
     test_run_both_panes_compares_them();
     test_the_split_editor_moves_documents_between_panes();

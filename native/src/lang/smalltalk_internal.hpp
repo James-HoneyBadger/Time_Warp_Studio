@@ -147,6 +147,10 @@ struct Runtime {
     double x = 0.0;
     double y = 0.0;
     double heading = 0.0;
+    /// The debugger's pause point, called before every message send with the
+    /// line the send was written on (0 when unknown). Returns false when the run
+    /// should stop; `evaluate` then throws `DebugStop`.
+    std::function<bool(int)> pause;
 
     void emit(std::string text) { output.push_back(std::move(text)); }
     FramePtr workspace_frame();
@@ -172,6 +176,10 @@ public:
     Ptr value;
 };
 
+/// Thrown when the debugger asked a paused run to stop. Caught by the driver,
+/// which ends the run without reporting an error.
+class DebugStop {};
+
 struct Node {
     enum class Kind {
         Literal,
@@ -189,6 +197,9 @@ struct Node {
 
     Kind kind = Kind::Literal;
     Ptr value;
+    /// The source line a send was written on, 1-based; 0 when the node came
+    /// from somewhere other than the tokenizer (a library-built node).
+    int line = 0;
     std::string name;
     NodePtr child;
     std::vector<NodePtr> items;

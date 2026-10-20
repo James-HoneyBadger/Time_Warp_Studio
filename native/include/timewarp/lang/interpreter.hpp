@@ -126,6 +126,14 @@ public:
     void set_debug_session(DebugSession* session) noexcept { debug_ = session; }
     [[nodiscard]] DebugSession* debug_session() const noexcept { return debug_; }
 
+    /// A pause point for a whole-program executor, which runs its own loop and
+    /// therefore calls this itself. `line` is 1-based, or 0 when the program has
+    /// no source lines (a binary CHIP-8 ROM).
+    ///
+    /// Returns false when the session asked for the run to stop; the executor
+    /// returns its output and the run ends cleanly.
+    [[nodiscard]] bool pause_if_requested(int line);
+
     // -- the surface executors use ---------------------------------------
 
     /// Execution position: an index into `program_lines()`.

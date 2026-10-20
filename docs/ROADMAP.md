@@ -33,6 +33,7 @@ derived rather than remembered.
 | Printing | File > Print Code (Ctrl+P) and Print Drawing, through the optional Qt6 PrintSupport |
 | Profiling | View > Profile Run times every statement in the line-by-line languages and ends with a per-line report, longest first |
 | Terminal | Opt-in in Settings > Workspace: an embedded shell in the document's folder, absent in presentation and player modes |
+| Debugging | Breakpoints, Pause, Continue and Trace in all ten languages; Scheme adds a stack and frame bindings |
 | Packaging | `make install` with the desktop entry and icon; `DESTDIR` staging |
 | Quality gates | 17 CTest suites in 4 build configurations, 3 parity gates, 560 engine tests, 446 command rows, 472 parity programs |
 
@@ -161,8 +162,8 @@ positions.
 `docs/ARCHITECTURE.md` has been **rewritten** around the Qt application and the engine.
 It no longer describes the removed PySide6 implementation, and it names what is not
 wired up rather than assuming it: the expression evaluator that does not participate in
-a Run, the REPL whose plumbing is absent, and the debugger's missing breadth. It is
-now the system-level
+a Run, the REPL whose plumbing is absent, and the debugger's missing depth (watch
+expressions). It is now the system-level
 description; `native/README.md` remains the detail on the C++ libraries.
 
 ---
@@ -285,16 +286,17 @@ and the command table exercises them. What is now true, and what is still limite
 
 ## Next: finish the IDE itself
 
-**Debugging** — `DebuggerRunner` is wired for Scheme, and the **Debug** tab is a real
-panel driving it: Continue, Pause, Step In/Over/Out, Stop and breakpoints all reach the
-runner, which reports the line, the procedure, the call stack and the frame's bindings.
-The six line-by-line languages (BASIC, FOCAL, PILOT, COMAL, APL, REXX) can now be
-paused too: a gutter breakpoint on a document, F9/Continue/Trace on the toolbar and
-a `DebugSession` in the shared interpreter loop, with the points persisted per file
-and pruned when the file is gone. What is still missing is *depth*: the Debug
-*panel*'s buttons still talk to the Scheme runner only, whole-program languages
-(Scheme, Logo, Smalltalk, CHIP-8) have no statement boundary to stop at, and there
-are no watch expressions and no step granularity finer than a form.
+**Debugging** — every language can stop. `DebuggerRunner` drives Scheme, and the
+**Debug** tab is a real panel over it: Continue, Pause, Step In/Over/Out, Stop,
+breakpoints, the line, the procedure, the call stack and the frame's bindings.
+The six line-by-line languages (BASIC, FOCAL, PILOT, COMAL, APL, REXX) stop at a
+statement through a `DebugSession` in the shared interpreter loop; the whole-program
+languages stop at their own natural boundary — Logo at a top-level statement,
+Smalltalk at a message send, CHIP-8 before an instruction (the listing line is kept
+per opcode address). Gutter breakpoints are persisted per file and pruned when the
+file is gone, and the panel's buttons drive whichever runner is paused. What is
+still missing is *depth*: no watch expressions, no data breakpoints, and a
+Smalltalk Program Counter is shown as a line rather than a stack frame.
 
 **Variables and the Telemetry HUD** are built too, and both answer the question a
 placeholder could not: *what did that run actually do?* The **Variables** tab lists every

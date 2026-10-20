@@ -45,6 +45,18 @@ Porting the features the removed PySide6 application had. The sequenced plan is
   the shell — a process nobody can see is a process nobody can stop. Closing the
   window stops it too. There is no PTY on purpose: prompts, job control and
   full-screen programs are absent, so `vim` fails rather than taking the IDE over.
+- **Stepping every language.** The whole-program languages stop too: Logo before a
+  top-level statement, Smalltalk before a message send, and CHIP-8 before every
+  instruction (the assembler keeps the listing line of each opcode by address, so a
+  gutter breakpoint names a line rather than an address; the display still repaints
+  at the frame boundary). `DebugSession` gained a source-line pause point beside the
+  statement-index one, with a once-per-visit rule so a line holding several sends
+  does not re-pause on Continue but does pause again when a loop returns to it, and
+  an atomic fast path so an ordinary CHIP-8 run pays one load per opcode. The
+  Variables panel and the Debug tab are refreshed at a pause, and the Debug tab's
+  buttons drive whichever runner is paused. Stop reaches these languages too: the
+  session's stop flag is checked at the same pause points, so a looping CHIP-8 or
+  Smalltalk program no longer runs to its own frame or send limit first.
 - **CHIP-8 runs SuperChip hi-res.** The machine and the Python reference both
   implement the SuperChip 1.1 core: 00FE/00FF select 64x32 or 128x64 (clearing the
   screen), 00Cn/00FB/00FC scroll, 00FD exits, DXY0 draws a 16x16 sprite in hi-res

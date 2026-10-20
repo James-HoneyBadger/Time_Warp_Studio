@@ -39,46 +39,62 @@ bool is_blank(const std::string& line) {
     });
 }
 
+/// One top-level unit the driver executes, with the source line it starts on so
+/// a breakpoint in the gutter means the same thing here as in a line loop.
+struct Chunk {
+    std::string text;
+    int line = 0;
+};
+
 /// Group the source into definitions and blocks of top-level code.
 ///
 /// A definition is a header line followed by *indented* lines and ends at the
 /// next line that begins in column 0; top-level lines form one block however they
 /// are indented. That is what stands in for a file-in's `!` terminator.
-std::vector<std::string> split_chunks(const std::string& source) {
-    std::vector<std::string> chunks;
+std::vector<Chunk> split_chunks(const std::string& source) {
+    std::vector<Chunk> chunks;
     std::vector<std::string> current;
+    int current_line = 0;
     bool inside_definition = false;
 
-    const auto flush = [&chunks, &current]() {
+    const auto flush = [&chunks, &current, &current_line]() {
         if (!current.empty()) {
-            std::string chunk;
+            Chunk chunk;
             for (const std::string& line : current) {
-                if (!chunk.empty()) {
-                    chunk.push_back('\n');
+                if (!chunk.text.empty()) {
+                    chunk.text.push_back('\n');
                 }
-                chunk += line;
+                chunk.text += line;
             }
+            chunk.line = current_line;
             chunks.push_back(std::move(chunk));
             current.clear();
         }
     };
 
     std::size_t start = 0;
+    int line_number = 1;
     while (start <= source.size()) {
         const std::size_t end = source.find('\n', start);
         const std::string line =
             source.substr(start, end == std::string::npos ? std::string::npos
                                                           : end - start);
+        const int this_line = line_number;
         start = end == std::string::npos ? source.size() + 1 : end + 1;
+        if (end != std::string::npos) {
+            ++line_number;
+        }
 
         if (std::regex_match(line, method_header()) ||
             std::regex_match(line, class_header())) {
             flush();
+            current_line = this_line;
             current.push_back(line);
             inside_definition = true;
             continue;
         }
         if (current.empty()) {
+            current_line = this_line;
             current.push_back(line);
             inside_definition = false;
             continue;
@@ -86,6 +102,7 @@ std::vector<std::string> split_chunks(const std::string& source) {
         if (inside_definition && !is_blank(line) && !line.empty() &&
             std::isspace(static_cast<unsigned char>(line[0])) == 0) {
             flush();
+            current_line = this_line;
             current.push_back(line);
             inside_definition = false;
             continue;
@@ -94,9 +111,9 @@ std::vector<std::string> split_chunks(const std::string& source) {
     }
     flush();
 
-    std::vector<std::string> result;
-    for (std::string& chunk : chunks) {
-        if (!is_blank(chunk)) {
+    std::vector<Chunk> result;
+    for (Chunk& chunk : chunks) {
+        if (!is_blank(chunk.text)) {
             result.push_back(std::move(chunk));
         }
     }
@@ -251,28 +268,37 @@ struct RunTeardown {
 std::string execute_smalltalk(Interpreter& interpreter, std::string_view source,
                               TurtleHost& turtle) {
     using namespace smalltalk;  // NOLINT(google-build-using-namespace)
-    (void)interpreter;
     Runtime runtime;
     runtime.turtle = &turtle;
+    runtime.pause = [&interpreter](int line) {
+        return interpreter.pause_if_requested(line);
+    };
     const RunTeardown teardown{runtime};
 
-    std::vector<std::string> chunks;
+    std::vector<Chunk> chunks;
     try {
         chunks = split_chunks(std::string{source});
     } catch (const StError& error) {
         return std::string{"❌ Smalltalk: "} + error.what() + "\n";
     }
 
-    for (const std::string& chunk : chunks) {
-        const std::string first = split_lines(chunk).front();
+    for (const Chunk& chunk : chunks) {
+        // A chunk boundary is the driver's own statement boundary. Message sends
+        // inside it pause through `runtime.pause` with their own lines.
+        if (!interpreter.pause_if_requested(chunk.line)) {
+            return join_output(runtime);
+        }
+        const std::string first = split_lines(chunk.text).front();
         try {
             if (std::regex_match(first, method_header())) {
-                runtime.emit(install_method(chunk, runtime));
+                runtime.emit(install_method(chunk.text, runtime));
                 continue;
             }
-            for (const std::string& line : run_code(chunk, runtime)) {
+            for (const std::string& line : run_code(chunk.text, runtime)) {
                 runtime.emit(line);
             }
+        } catch (const DebugStop&) {
+            return join_output(runtime);
         } catch (const StError& error) {
             return join_output(runtime) + "❌ Smalltalk: " + error.what() + "\n";
         } catch (const NonLocalReturn& unwind) {

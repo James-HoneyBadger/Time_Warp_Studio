@@ -55,7 +55,21 @@ enum class TokenKind {
 struct Token {
     TokenKind kind;
     std::string text;
+    /// The 1-based source line the token starts on, so a message send can name
+    /// the line the debugger should show.
+    int line = 1;
 };
+
+/// Newlines in `source[from, to)`, clamped to the string.
+int newlines_in(const std::string& source, std::size_t from, std::size_t to) {
+    int count = 0;
+    for (std::size_t index = from; index < to && index < source.size(); ++index) {
+        if (source[index] == '\n') {
+            ++count;
+        }
+    }
+    return count;
+}
 
 bool is_ident_start(char character) {
     return std::isalpha(static_cast<unsigned char>(character)) != 0 || character == '_';
@@ -82,10 +96,14 @@ bool starts_with(std::string_view text, std::string_view prefix) {
 std::vector<Token> tokenize(const std::string& source) {
     std::vector<Token> tokens;
     std::size_t index = 0;
+    int line = 1;
     const std::size_t length = source.size();
     while (index < length) {
         const char character = source[index];
         if (is_space(character)) {
+            if (character == '\n') {
+                ++line;
+            }
             ++index;
             continue;
         }
@@ -94,10 +112,12 @@ std::vector<Token> tokenize(const std::string& source) {
             if (end == std::string::npos) {
                 throw StError("unterminated comment");
             }
+            line += newlines_in(source, index, end + 1);
             index = end + 1;
             continue;
         }
         if (character == '\'') {
+            const std::size_t literal_start = index;
             ++index;
             std::string text;
             while (true) {
@@ -116,20 +136,23 @@ std::vector<Token> tokenize(const std::string& source) {
                 text.push_back(source[index]);
                 ++index;
             }
-            tokens.push_back({TokenKind::String, std::move(text)});
+            // The token starts on the line the opening quote was on; the line
+            // counter then moves past any newlines inside the literal.
+            tokens.push_back({TokenKind::String, std::move(text), line});
+            line += newlines_in(source, literal_start, index);
             continue;
         }
         if (character == '$') {
             if (index + 1 >= length) {
                 throw StError("a $ must be followed by the character it names");
             }
-            tokens.push_back({TokenKind::Char, std::string(1, source[index + 1])});
+            tokens.push_back({TokenKind::Char, std::string(1, source[index + 1]), line});
             index += 2;
             continue;
         }
         if (character == '#') {
             if (index + 1 < length && source[index + 1] == '(') {
-                tokens.push_back({TokenKind::HashArray, "#("});
+                tokens.push_back({TokenKind::HashArray, "#(", line});
                 index += 2;
                 continue;
             }
@@ -139,7 +162,8 @@ std::vector<Token> tokenize(const std::string& source) {
                     throw StError("unterminated symbol");
                 }
                 tokens.push_back(
-                    {TokenKind::Symbol, source.substr(index + 2, end - index - 2)});
+                    {TokenKind::Symbol, source.substr(index + 2, end - index - 2), line});
+                line += newlines_in(source, index, end + 1);
                 index = end + 1;
                 continue;
             }
@@ -149,7 +173,7 @@ std::vector<Token> tokenize(const std::string& source) {
                 while (index < length && is_ident_body(source[index])) {
                     ++index;
                 }
-                tokens.push_back({TokenKind::Symbol, source.substr(start, index - start)});
+                tokens.push_back({TokenKind::Symbol, source.substr(start, index - start), line});
                 continue;
             }
             if (index + 1 < length && is_binary_char(source[index + 1])) {
@@ -158,7 +182,7 @@ std::vector<Token> tokenize(const std::string& source) {
                 while (index < length && is_binary_char(source[index])) {
                     ++index;
                 }
-                tokens.push_back({TokenKind::Symbol, source.substr(start, index - start)});
+                tokens.push_back({TokenKind::Symbol, source.substr(start, index - start), line});
                 continue;
             }
             throw StError("a # must name a symbol or start an array");
@@ -175,7 +199,7 @@ std::vector<Token> tokenize(const std::string& source) {
                        std::isalnum(static_cast<unsigned char>(source[index])) != 0) {
                     ++index;
                 }
-                tokens.push_back({TokenKind::Number, source.substr(start, index - start)});
+                tokens.push_back({TokenKind::Number, source.substr(start, index - start), line});
                 continue;
             }
             if (index < length && source[index] == '.' && index + 1 < length &&
@@ -200,7 +224,7 @@ std::vector<Token> tokenize(const std::string& source) {
                     }
                 }
             }
-            tokens.push_back({TokenKind::Number, source.substr(start, index - start)});
+            tokens.push_back({TokenKind::Number, source.substr(start, index - start), line});
             continue;
         }
         if (is_ident_start(character)) {
@@ -211,20 +235,20 @@ std::vector<Token> tokenize(const std::string& source) {
             if (index < length && source[index] == ':' &&
                 !starts_with(std::string_view{source}.substr(index), ":=")) {
                 tokens.push_back(
-                    {TokenKind::Keyword, source.substr(start, index - start + 1)});
+                    {TokenKind::Keyword, source.substr(start, index - start + 1), line});
                 ++index;
                 continue;
             }
-            tokens.push_back({TokenKind::Ident, source.substr(start, index - start)});
+            tokens.push_back({TokenKind::Ident, source.substr(start, index - start), line});
             continue;
         }
         if (starts_with(std::string_view{source}.substr(index), ":=")) {
-            tokens.push_back({TokenKind::Assign, ":="});
+            tokens.push_back({TokenKind::Assign, ":=", line});
             index += 2;
             continue;
         }
         if (starts_with(std::string_view{source}.substr(index), ">>")) {
-            tokens.push_back({TokenKind::Method, ">>"});
+            tokens.push_back({TokenKind::Method, ">>", line});
             index += 2;
             continue;
         }
@@ -233,44 +257,44 @@ std::vector<Token> tokenize(const std::string& source) {
             while (index < length && is_binary_char(source[index])) {
                 ++index;
             }
-            tokens.push_back({TokenKind::Binary, source.substr(start, index - start)});
+            tokens.push_back({TokenKind::Binary, source.substr(start, index - start), line});
             continue;
         }
         switch (character) {
             case '[':
-                tokens.push_back({TokenKind::LBracket, "["});
+                tokens.push_back({TokenKind::LBracket, "[", line});
                 ++index;
                 continue;
             case ']':
-                tokens.push_back({TokenKind::RBracket, "]"});
+                tokens.push_back({TokenKind::RBracket, "]", line});
                 ++index;
                 continue;
             case '(':
-                tokens.push_back({TokenKind::LParen, "("});
+                tokens.push_back({TokenKind::LParen, "(", line});
                 ++index;
                 continue;
             case ')':
-                tokens.push_back({TokenKind::RParen, ")"});
+                tokens.push_back({TokenKind::RParen, ")", line});
                 ++index;
                 continue;
             case '.':
-                tokens.push_back({TokenKind::Dot, "."});
+                tokens.push_back({TokenKind::Dot, ".", line});
                 ++index;
                 continue;
             case ';':
-                tokens.push_back({TokenKind::Semi, ";"});
+                tokens.push_back({TokenKind::Semi, ";", line});
                 ++index;
                 continue;
             case '|':
-                tokens.push_back({TokenKind::Bar, "|"});
+                tokens.push_back({TokenKind::Bar, "|", line});
                 ++index;
                 continue;
             case '^':
-                tokens.push_back({TokenKind::Caret, "^"});
+                tokens.push_back({TokenKind::Caret, "^", line});
                 ++index;
                 continue;
             case ':':
-                tokens.push_back({TokenKind::Colon, ":"});
+                tokens.push_back({TokenKind::Colon, ":", line});
                 ++index;
                 continue;
             default:
@@ -749,6 +773,13 @@ Ptr evaluate(const Node& node, const FramePtr& frame) {
             return Value::block_value(std::move(block));
         }
         case Node::Kind::Send: {
+            // One pause point per message send, with the line it was written
+            // on. The debugger decides whether this send stops the run.
+            if (const struct Runtime& runtime = frame->runtime(); runtime.pause) {
+                if (!runtime.pause(node.line)) {
+                    throw DebugStop{};
+                }
+            }
             const Ptr receiver = evaluate(*node.child, frame);
             std::vector<Ptr> arguments;
             arguments.reserve(node.arguments.size());
@@ -872,6 +903,7 @@ private:
             if (token == nullptr || token->kind != TokenKind::Keyword) {
                 return with_cascades(std::move(receiver));
             }
+            const int send_line = token->line;
             std::string selector;
             std::vector<NodePtr> arguments;
             while (true) {
@@ -885,6 +917,7 @@ private:
             }
             auto send = std::make_shared<Node>();
             send->kind = Node::Kind::Send;
+            send->line = send_line;
             send->child = std::move(receiver);
             send->selector = std::move(selector);
             send->arguments = std::move(arguments);
@@ -902,6 +935,7 @@ private:
             ++index_;
             auto send = std::make_shared<Node>();
             send->kind = Node::Kind::Send;
+            send->line = token->line;
             send->child = std::move(receiver);
             send->selector = token->text;
             send->arguments.push_back(parse_unary_message());
@@ -924,6 +958,7 @@ private:
             ++index_;
             auto send = std::make_shared<Node>();
             send->kind = Node::Kind::Send;
+            send->line = token->line;
             send->child = std::move(receiver);
             send->selector = token->text;
             receiver = std::move(send);
