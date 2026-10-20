@@ -67,10 +67,19 @@ Both are also `make command-matrix` and `make repl-matrix`.
 
 ## The bridge engine's own tests
 
+The suite needs `pytest`, which is not in the standard library, so it runs from
+the repository's virtual environment. `make engine-test` is the command to use:
+it picks `.venv/bin/python3` when that exists and falls back to `python3`.
+
 ```bash
-PYTHONPATH=native/bridge python3 -m pytest -q
-make -C native engine-test    # equivalent, from the root Makefile
+make engine-test                                          # from the repository root
+PYTHONPATH=native/bridge .venv/bin/python3 -m pytest -q    # what it runs
 ```
+
+A system interpreter without `pytest` fails with `No module named pytest`. Give
+the virtual environment a `pytest` with `python3 -m venv .venv` and
+`.venv/bin/pip install pytest ruff`, as the troubleshooting section of
+[INSTALLATION.md](INSTALLATION.md) describes.
 
 ## Parity gates
 

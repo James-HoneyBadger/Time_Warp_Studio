@@ -993,7 +993,7 @@ python3 native/tools/differential_check.py native/build/expr_cli
 python3 native/tools/lang_differential_check.py          # 474/0/9
 python3 native/tools/example_smoke.py                   # 60 programs
 python3 native/tools/command_matrix.py                   # no new untested rows
-PYTHONPATH=native/bridge python3 -m pytest -q
+make engine-test                                        # the engine's pytest suite, from .venv
 python3 native/tools/teach.py validate
 python3 Scripts/version_sync.py
 make lint-md

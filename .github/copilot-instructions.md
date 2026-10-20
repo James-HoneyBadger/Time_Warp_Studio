@@ -113,8 +113,9 @@ python3 native/tools/repl_matrix.py      # every command row through the REPL
 ./twc Examples/basic/hello.bas -o hello
 ./api                                 # JSON-RPC on stdin/stdout; docs/API.md
 
-# The bridge engine's own tests
-PYTHONPATH=native/bridge python3 -m pytest -q
+# The bridge engine's own tests. They need pytest, which the repository's .venv
+# carries; a bare `python3 -m pytest` fails with "No module named pytest".
+make engine-test    # or: PYTHONPATH=native/bridge .venv/bin/python3 -m pytest -q
 
 # Parity gates against the Python reference (0 unexpected mismatches)
 python3 native/tools/differential_check.py native/build/expr_cli

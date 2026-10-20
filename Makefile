@@ -39,7 +39,15 @@ help:
 $(FORWARDED):
 	@$(MAKE) --no-print-directory -C $(NATIVE) $@
 
+# A missing pytest is a setup problem rather than a failing test, so it is
+# reported as one: the alternative is a traceback that reads like the engine
+# broke.
 engine-test:
+	@$(PYTHON) -c "import pytest" 2>/dev/null || { \
+		echo "pytest is not installed for $(PYTHON)."; \
+		echo "Create the virtual environment: python3 -m venv .venv && .venv/bin/pip install pytest ruff"; \
+		exit 1; \
+	}
 	@PYTHONPATH=$(NATIVE)/bridge $(PYTHON) -m pytest -q $(NATIVE)/bridge/time_warp/tests
 
 smoke:
