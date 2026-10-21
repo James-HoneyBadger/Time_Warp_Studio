@@ -1139,6 +1139,13 @@ if(TIME_WARP_QT_FOUND)
             DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/../docs/
             DESTINATION ${TIME_WARP_SHARE_DIR}/doc/time-warp-studio
         )
+        # The MIT notice travels with the application rather than in a dialog in
+        # front of the disk image (see CPACK_DMG_SLA_USE_RESOURCE_FILE_LICENSE),
+        # so this copy is the one a user can read after installing.
+        install(
+            FILES ${CMAKE_CURRENT_SOURCE_DIR}/../LICENSE
+            DESTINATION ${TIME_WARP_SHARE_DIR}/doc/time-warp-studio
+        )
         if(NOT APPLE)
             install(
                 FILES ${CMAKE_CURRENT_SOURCE_DIR}/../packaging/linux/time-warp-studio.desktop
@@ -1531,6 +1538,15 @@ elseif(APPLE)
     set(CPACK_DMG_VOLUME_NAME "Time Warp Studio")
     set(CPACK_DMG_FORMAT "UDZO")
     set(CPACK_DMG_DISABLE_APPLICATIONS_SYMLINK OFF)
+    # CPack 3.22 and older -- and any project whose policy level predates
+    # CMP0133, which is this one -- put CPACK_RESOURCE_FILE_LICENSE on the image
+    # as an agreement hdiutil shows before the volume mounts. That is a dialog
+    # between a user and a MIT licence they receive in full inside the bundle,
+    # and it breaks every non-interactive mount: `hdiutil attach` prints the
+    # agreement and then cancels when there is no terminal to accept it, and
+    # `-acceptlicense`, its one escape, no longer exists. The deb, rpm and
+    # installer generators still read the license from CPACK_RESOURCE_FILE_LICENSE.
+    set(CPACK_DMG_SLA_USE_RESOURCE_FILE_LICENSE OFF)
     set(CPACK_PACKAGING_INSTALL_PREFIX "/")
 else()
     # DEB only by default: `rpmbuild` is not installed everywhere, and a

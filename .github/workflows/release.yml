@@ -564,6 +564,7 @@ jobs:
           test -f "$installed/Contents/Resources/share/time_warp/worker.py"
           test -d "$installed/Contents/Resources/share/time-warp-studio/examples"
           test -f "$installed/Contents/Resources/share/doc/time-warp-studio/INDEX.md"
+          test -f "$installed/Contents/Resources/share/doc/time-warp-studio/LICENSE"
           test -f "$installed/Contents/Resources/share/time-warp-studio/snippets.json"
           # The frameworks travel inside the bundle or the image is a broken
           # download for anybody without Qt.
@@ -587,15 +588,18 @@ jobs:
           ( cd dist && shasum -a 256 *.dmg > "$(ls *.dmg | head -1).sha256" )
 
           # And the image is checked by opening it, because a disk image can be
-          # built from a good tree and still contain the wrong thing.
+          # built from a good tree and still contain the wrong thing. Nothing
+          # asks for agreement first: the license is inside the bundle, not in
+          # front of the volume.
           mount="${RUNNER_TEMP:-/tmp}/dmg"
           rm -rf "$mount"
           mkdir -p "$mount"
-          hdiutil attach -nobrowse -readonly -mountpoint "$mount" dist/*.dmg > /dev/null
+          hdiutil attach -nobrowse -readonly -noautoopen -noverify -mountpoint "$mount" dist/*.dmg
           app=$(find "$mount" -maxdepth 1 -name '*.app' -type d | head -1)
           test -n "$app"
           test -f "$app/Contents/Resources/share/time_warp/worker.py"
           test -f "$app/Contents/Resources/share/doc/time-warp-studio/INDEX.md"
+          test -f "$app/Contents/Resources/share/doc/time-warp-studio/LICENSE"
           test -d "$app/Contents/Frameworks"
           # And the copy on the image runs from where a user will put it: a
           # bundle can survive the staging directory and lose what it needs on

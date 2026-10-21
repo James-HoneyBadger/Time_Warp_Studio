@@ -25,10 +25,10 @@ fork.
   adds Start Menu and desktop shortcuts, and carries the Qt runtime that
   `windeployqt` deploys during the install.
 - **The macOS build is a `.app` bundle inside a disk image.** `Time Warp Studio.app`
-  holds the bridge, the examples, the snippet catalogue and the documentation in
-  `Contents/Resources`, deploys its Qt frameworks with `macdeployqt`, and is
-  ad-hoc signed so it starts on Apple silicon. The image is universal: one file for
-  Intel and Apple silicon, built with Qt 6.12 and declaring macOS 14.4 -- that
+  holds the bridge, the examples, the snippet catalogue, the documentation and the
+  licence in `Contents/Resources`, deploys its Qt frameworks with `macdeployqt`, and
+  is ad-hoc signed so it starts on Apple silicon. The image is universal: one file
+  for Intel and Apple silicon, built with Qt 6.12 and declaring macOS 14.4 -- that
   release's own floor -- as its minimum. Source builds on macOS 26 need Qt 6.10 or
   newer, because 6.8 and 6.9 link a framework the newest SDK no longer ships.
 - **A Windows 2000 theme.** The 2000 "Windows Classic" scheme -- 3D-face grey
