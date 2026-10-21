@@ -337,7 +337,7 @@ def assemble(source: str) -> tuple[bytearray, dict[str, int], int]:
             text = text[label.end() :].strip()
             if not text:
                 continue
-        address += _size_of(text, number)
+        address += _size_of(text)
 
     if address > _MEMORY_SIZE:
         raise Chip8Error(
@@ -363,7 +363,7 @@ def assemble(source: str) -> tuple[bytearray, dict[str, int], int]:
     return memory, labels, _PROGRAM_ADDRESS
 
 
-def _size_of(text: str, number: int) -> int:
+def _size_of(text: str) -> int:
     """How many bytes a statement emits, without encoding it."""
     head = text.split(maxsplit=1)[0].upper()
     if head == "DB":
@@ -538,10 +538,12 @@ class Machine:
 
     @property
     def width(self) -> int:
+        """The framebuffer's width: 128 in hi-res, 64 otherwise."""
         return HIRES_WIDTH if self.hi_res else SCREEN_WIDTH
 
     @property
     def height(self) -> int:
+        """The framebuffer's height: 64 in hi-res, 32 otherwise."""
         return HIRES_HEIGHT if self.hi_res else SCREEN_HEIGHT
 
     # -- helpers ---------------------------------------------------------
@@ -804,6 +806,7 @@ class Machine:
             raise Chip8Error(f"unknown opcode Fx{low:02X}")
 
     def tick_timers(self) -> None:
+        """Advance both timers by one frame, which is 60 Hz on the real machine."""
         if self.delay_timer:
             self.delay_timer -= 1
         if self.sound_timer:
@@ -895,12 +898,17 @@ def _keypad(source: str) -> int:
     return keys
 
 
-def execute_chip8(
-    interpreter: "Interpreter",
+def execute_chip8(  # pylint: disable=unused-argument
+    interpreter: "Interpreter | None",
     source: str,
     turtle: "TurtleState",
 ) -> str:
-    """Assemble and run a CHIP-8 listing."""
+    """Assemble and run a CHIP-8 listing.
+
+    ``interpreter`` is accepted to match the executor signature and is not used:
+    CHIP-8 has no variables to read or write, so the machine is the whole state.
+    The tests pass ``None`` to say so.
+    """
     try:
         memory, _labels, entry = assemble(source)
     except Chip8Error as exc:

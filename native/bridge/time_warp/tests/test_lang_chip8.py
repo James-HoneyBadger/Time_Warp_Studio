@@ -5,9 +5,14 @@ a wrongly executed right opcode are different bugs, and a test that only ran a
 program end to end would let the first hide inside the second.
 """
 
+# Tests say what they check in their names, which is the convention across this
+# suite; a docstring per test would only restate the name.
+# pylint: disable=missing-function-docstring
+
 from __future__ import annotations
 
 from time_warp.core.interpreter import Language
+from time_warp.graphics.turtle_state import TurtleState
 from time_warp.languages.chip8 import (
     _FONT_ADDRESS,
     _LARGE_FONT,
@@ -189,7 +194,13 @@ def test_shr_shifts_the_named_register_in_place() -> None:
 
 def test_bcd_conversion_writes_three_digits() -> None:
     memory, labels, _entry = assemble(
-        "start: LD V0, 205\n       LD I, data\n       LD B, V0\n       HALT\ndata: DB 0\n      DB 0\n      DB 0"
+        "start: LD V0, 205\n"
+        "       LD I, data\n"
+        "       LD B, V0\n"
+        "       HALT\n"
+        "data: DB 0\n"
+        "      DB 0\n"
+        "      DB 0"
     )
     machine = Machine(memory, 0x200)
     while not machine.halted:
@@ -249,7 +260,7 @@ def test_call_and_return() -> None:
         "start: LD V0, 7\n       CALL sub\n       HALT\nsub:   ADD V0, 1\n       RET"
     )
     assert machine.v[0] == 8
-    assert machine.stack == []
+    assert not machine.stack
 
 
 def test_ret_without_call_is_reported() -> None:
@@ -503,8 +514,6 @@ def test_rpl_flags_round_trip() -> None:
 
 
 def test_the_display_uses_the_palette() -> None:
-    from time_warp.graphics.turtle_state import TurtleState
-
     turtle = TurtleState()
     execute_chip8(
         None,
@@ -522,8 +531,6 @@ def test_the_display_uses_the_palette() -> None:
 
 
 def test_the_display_halves_the_pixel_size_in_hires() -> None:
-    from time_warp.graphics.turtle_state import TurtleState
-
     turtle = TurtleState()
     execute_chip8(
         None,
@@ -542,8 +549,6 @@ def test_the_display_halves_the_pixel_size_in_hires() -> None:
 
 
 def test_the_display_is_cleared_before_the_first_frame() -> None:
-    from time_warp.graphics.turtle_state import TurtleState
-
     turtle = TurtleState()
     execute_chip8(None, "start: CLS\n       HALT", turtle)
     assert turtle.shapes, "the screen is painted even by a program that draws nothing"
