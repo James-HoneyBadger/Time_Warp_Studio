@@ -69,6 +69,9 @@ struct Recording {
     int failures = 0;
     QString last_failure;
 
+    // The input round trip: the prompts the program asked for, in order.
+    QStringList input_prompts;
+
     // Drawing, as the IDE would have received it.
     int strokes = 0;
     int clears = 0;
@@ -152,6 +155,13 @@ public:
                          [this](const QString& text) {
                              ++recorded_.failures;
                              recorded_.last_failure = text;
+                         });
+        // Answered with whatever the test set through `answerPromptsWith`: the
+        // panel asks the person in front of it, and this asks on their behalf.
+        QObject::connect(&worker_, &PythonWorker::inputRequested, &worker_,
+                         [this](const QString& prompt) {
+                             recorded_.input_prompts << prompt;
+                             worker_.answerInput(answer_);
                          });
         QObject::connect(&worker_, &PythonWorker::lessonsReceived, &worker_,
                          [this](const QList<LessonSummary>& lessons, int presentation_font) {
@@ -254,6 +264,10 @@ public:
 
     [[nodiscard]] PythonWorker& worker() { return worker_; }
     [[nodiscard]] const Recording& recorded() const { return recorded_; }
+
+    /// The answer every prompt gets. Empty means "carry on without it", which is
+    /// what a client that nobody is sitting in front of does.
+    void answerPromptsWith(const QString& text) { answer_ = text; }
     /// The queue's consumer side. Called automatically on every batch.
     void drain() { queue_.drain([this](timewarp::canvas::CanvasCommandView view) { note(view); }); }
 
@@ -334,6 +348,7 @@ private:
     CanvasCommandQueue queue_;
     PythonWorker worker_;
     Recording recorded_;
+    QString answer_;
     QString start_error_;
 };
 
@@ -1091,6 +1106,46 @@ void test_a_basic_program_prints() {
     TW_CHECK_EQ(harness.recorded().strokes, 0);
 }
 
+// The prompt the program asks for has to reach the client, and the client's
+// answer has to reach the program. This is the round trip the Lessons panel's
+// check and every `INPUT` in a bridged language depend on, and until it was
+// tested the failure mode was silence: a program stopped at its first prompt and
+// the run ended with no error at all.
+void test_a_prompt_is_answered_through_the_bridge() {
+    announce("input round trip");
+    QString reason;
+    if (!locateWorker(&reason).isValid()) {
+        std::printf("SKIP: %s\n", qPrintable(reason));
+        return;
+    }
+
+    Harness harness;
+    if (!harness.requireStart()) {
+        return;
+    }
+    harness.answerPromptsWith(QStringLiteral("Ada"));
+
+    // The string form, because the prompt is a literal and the answer has to land
+    // in a string variable at the type it was typed.
+    TW_CHECK(harness.worker().run(QStringLiteral("basic"),
+                                  QStringLiteral("10 INPUT \"NAME\"; N$\n"
+                                                 "20 PRINT \"HELLO \"; N$\n"),
+                                  QStringLiteral("input.bas")));
+    TW_CHECK(harness.waitFor([&harness] { return harness.recorded().finished_count > 0; }));
+
+    const Recording& recorded = harness.recorded();
+    TW_CHECK(recorded.last_ok);
+    TW_CHECK(recorded.last_error.isEmpty());
+    TW_CHECK_EQ(recorded.input_prompts.size(), 1);
+    if (!recorded.input_prompts.isEmpty()) {
+        // The trailing space belongs to the prompt: it is what separates the
+        // question from what the person types.
+        TW_CHECK_EQ(recorded.input_prompts.first(), QStringLiteral("NAME "));
+    }
+    TW_CHECK(recorded.output.contains(QStringLiteral("Ada")));
+    TW_CHECK(recorded.errors.isEmpty());
+}
+
 void test_an_unknown_language_is_refused() {
     announce("unknown language");
     QString reason;
@@ -1406,6 +1461,7 @@ int main(int argc, char** argv) {
 
     run("logo", test_logo_draws_through_the_bridge);
     run("basic", test_a_basic_program_prints);
+    run("input", test_a_prompt_is_answered_through_the_bridge);
     run("unknown-language", test_an_unknown_language_is_refused);
     run("broken", test_a_broken_program_says_something);
     run("stop-real", test_stop_ends_a_runaway_program);

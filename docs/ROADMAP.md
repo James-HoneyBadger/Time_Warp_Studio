@@ -28,6 +28,7 @@ derived rather than remembered.
 | Canvas | Live drawing, zoom, pan, grid, auto-fit, turtle marker, scrubber playback, animated GIF recording, raster and SVG export |
 | Display | 35 themes, high contrast, A+ text sizes (100/125/150%), focus mode, CRT settings, four Monitor presets |
 | Execution | Run (F9) and Stop; one program at a time; unsaved-change prompts |
+| Input | A program can ask for a line and wait for it — `INPUT`, FOCAL's `ASK`, PILOT's `ACCEPT`, REXX's `PULL` — on whichever engine runs it; BASIC's round trip is asserted on the engine, on `NativeRunner`, and through the bridged worker |
 | HB-1 machine | Tools > HB-1 Computer (`Ctrl+Alt+W`): one CRT with a boot intro, a language ROM socket for all ten languages, TEXT/SPLIT/GRAPHICS modes, a program editor, a turtle canvas, and a prompt with BASIC direct mode; CONFIG (`Ctrl+,`) sets the boot ROM and screen, start-up message, phosphor palette, text sizes and CRT glass; each ROM's program, the ROM, the screen mode and the configuration persist; HB DOS 1.0 stores programs on a 512-sector volume with an Apple DOS-style catalogue, lock bits and a two-step INIT. Manuals: [the machines](MACHINES.md), [HB-1](hb1/README.md) |
 | CHIP-8 machine | Tools > CHIP-8 Emulator (`Ctrl+Shift+M`): a live 60 Hz CHIP-8 with a 64×32 screen (128×64 hi-res), keypad, Run/Pause/Step/Reset, 1–2000 opcodes per frame, register/memory/listing inspector, sound, and a ROM library the user points at a folder. It assembles listings and loads binary ROMs; the editor's CHIP-8 Run is the whole-program path. Manuals: [machine](chip8/README.md), [assembler](chip8/assembly.md), [instruction set](chip8/instruction-set.md) |
 | Languages | 10 languages, 60 verified example programs |
@@ -405,10 +406,19 @@ The snippet library is built:
 Edit > Insert Snippet (Ctrl+Shift+I) reads `native/share/snippets.json`, which
 ships beside the application, and every snippet in it is syntax this build runs.
 
-**Input** — the input round-trip (the prompt, and the `in`/`in-reply` protocol the
-reference worker uses) is implemented,
-but it has no automated coverage, because the prompt is modal. It needs a manual
-pass with a PILOT or BASIC program.
+**Input is built and covered.** The round trip is the prompt plus the answer that
+comes back: a line-loop language asks through `Interpreter::request_input`, which
+the window answers with the dialog's reply, and the bridged worker asks with
+`{"t": "in"}` and is answered with `{"t": "in-reply"}`. Three tests now drive it
+rather than asking a person to: `lang_tests` asserts that BASIC's `INPUT` hands the
+caller the program's own prompt (`"NAME "`), that the answer lands in the variable
+at its type, and that an answer nobody gave leaves a numeric variable at 0 instead
+of stopping the program; `ui_layout_tests` drives `NativeRunner` end to end, so the
+`inputRequested` → `answerInput` pair the dialog sits on is exercised and the value
+shows up in the Variables snapshot; and `python_bridge_tests` runs a program through
+the real worker and answers its `in`, which is the path the Lessons panel's check
+uses. The dialog itself is still modal and is verified by hand — what is covered is
+everything on either side of it.
 
 ---
 

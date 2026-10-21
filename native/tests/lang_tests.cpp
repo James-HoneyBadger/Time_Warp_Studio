@@ -1736,6 +1736,9 @@ void test_smalltalk_turtle_messages_draw() {
 
 struct BasicRun {
     std::vector<std::string> output;
+    /// The prompts `INPUT` asked for, in order, so a test can assert what the
+    /// caller is asked as well as what the program does with the answer.
+    std::vector<std::string> prompts;
     RecordingHost host;
 };
 
@@ -1743,7 +1746,8 @@ BasicRun run_basic(std::string_view source, std::vector<std::string> inputs = {}
     BasicRun run;
     Interpreter interpreter{Language::Basic, run.host};
     std::size_t next = 0;
-    interpreter.set_input_callback([&](const std::string&) {
+    interpreter.set_input_callback([&](const std::string& prompt) {
+        run.prompts.push_back(prompt);
         if (next < inputs.size()) {
             return inputs[next++];
         }
@@ -1869,6 +1873,41 @@ void test_basic_loops_and_subroutines_run() {
         "10 TOTAL = 0\n20 FOR I = 1 TO 3\n30 GOSUB 100\n40 NEXT I\n50 PRINT TOTAL\n"
         "60 END\n100 TOTAL = TOTAL + I\n110 RETURN");
     TW_CHECK_EQ(run.output.at(0), std::string{"6"});
+}
+
+// `INPUT` is the one statement whose work happens outside the engine, so both
+// halves of the round trip are asserted here: the caller is asked with the
+// program's own prompt, and the answer comes back in the variable the statement
+// names. A prompt nobody receives and an answer the program never reads look
+// identical from the console -- the program simply goes quiet.
+void test_basic_input_prompt_and_answer_round_trip() {
+    const BasicRun run = run_basic("10 INPUT \"NAME\"; N$\n20 PRINT \"HELLO \"; N$\n",
+                                   {"Ada"});
+    TW_CHECK_EQ(run.prompts.size(), std::size_t{1});
+    if (!run.prompts.empty()) {
+        // The reference's prompt keeps the literal's trailing space, which is
+        // what separates the question from what the person types.
+        TW_CHECK_EQ(run.prompts.at(0), std::string{"NAME "});
+    }
+    TW_CHECK(contains(run.output, "Ada"));
+    TW_CHECK(!any_error(run.output));
+}
+
+// A numeric `INPUT` parses what was typed, and an answer nobody gave leaves the
+// variable at 0 -- BASIC's value for an unset number -- rather than stopping the
+// program at the prompt.
+void test_basic_numeric_input_is_coerced() {
+    const BasicRun answered = run_basic("10 INPUT \"N\"; N\n20 PRINT N * 2\n", {"21"});
+    TW_CHECK_EQ(answered.output.size(), std::size_t{1});
+    if (!answered.output.empty()) {
+        TW_CHECK_EQ(answered.output.at(0), std::string{"42"});
+    }
+
+    const BasicRun unanswered = run_basic("10 INPUT \"N\"; N\n20 PRINT N * 2\n");
+    TW_CHECK_EQ(unanswered.output.size(), std::size_t{1});
+    if (!unanswered.output.empty()) {
+        TW_CHECK_EQ(unanswered.output.at(0), std::string{"0"});
+    }
 }
 
 
@@ -2253,6 +2292,8 @@ int main() {
     test_basic_unknown_word_is_still_an_error();
     test_basic_say_refuses_without_a_backend();
     test_basic_loops_and_subroutines_run();
+    test_basic_input_prompt_and_answer_round_trip();
+    test_basic_numeric_input_is_coerced();
     test_profiling_counts_each_line();
     test_profiling_is_off_unless_asked();
     test_logo_stops_at_a_breakpoint_and_steps();

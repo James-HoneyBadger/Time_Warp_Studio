@@ -11,6 +11,7 @@
 //
 // Runs offscreen, so it needs no display and belongs in CI alongside the rest.
 
+#include <atomic>
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
@@ -63,12 +64,14 @@
 #include "timewarp/core/qt_gui_compat.hpp"
 #include "check.hpp"
 #include "timewarp/canvas/command.hpp"
+#include "timewarp/canvas/command_queue.hpp"
 #include "timewarp/ui/autosave.hpp"
 #include "timewarp/ui/chip8_window.hpp"
 #include "timewarp/ui/code_editor.hpp"
 #include "timewarp/ui/command_palette.hpp"
 #include "timewarp/ui/find_bar.hpp"
 #include "timewarp/ui/main_window.hpp"
+#include "timewarp/ui/native_runner.hpp"
 #include "timewarp/ui/panels.hpp"
 #include "timewarp/ui/preferences.hpp"
 #include "timewarp/project/project.hpp"
@@ -2597,6 +2600,57 @@ void test_profile_run_is_opt_in() {
     TW_CHECK(profile->isChecked());
 }
 
+// The window's prompt path, without the dialog: the runner asks, the answer the
+// dialog would have collected goes back, and the program reads it. The dialog
+// itself is modal and cannot be clicked from a test -- which is why this seam,
+// the one the dialog calls, is the half worth covering, and why the round trip
+// went unverified for so long.
+void test_input_round_trip_reaches_the_runner() {
+    announce("input round trip");
+
+    timewarp::canvas::CanvasCommandQueue queue;
+    timewarp::ui::NativeRunner runner{timewarp::lang::Language::Basic, queue};
+
+    QStringList prompts;
+    QString output;
+    std::atomic<bool> finished{false};
+    bool completed = false;
+    QObject::connect(&runner, &timewarp::ui::NativeRunner::inputRequested, &runner,
+                     [&](const QString& prompt) {
+                         prompts << prompt;
+                         runner.answerInput(QStringLiteral("21"));
+                     });
+    QObject::connect(&runner, &timewarp::ui::NativeRunner::outputAvailable, &runner,
+                     [&](const QString& text) { output += text; });
+    QObject::connect(&runner, &timewarp::ui::NativeRunner::run_finished, &runner,
+                     [&](bool ok, const QString&) {
+                         completed = ok;
+                         finished = true;
+                     });
+
+    runner.load_program(QStringLiteral("10 INPUT \"N\"; N\n20 PRINT N * 2\n"));
+    runner.start();
+    TW_CHECK(spin_until([&finished] { return finished.load(); }));
+    runner.wait(5000);
+
+    TW_CHECK(completed);
+    TW_CHECK_EQ(prompts.size(), 1);
+    if (!prompts.isEmpty()) {
+        TW_CHECK_EQ(prompts.first(), QStringLiteral("N "));
+    }
+    TW_CHECK(output.contains(QStringLiteral("42")));
+
+    // The answer landed in the engine, not just in the runner: the Variables panel
+    // reads the same snapshot, so a value the program used has to be there.
+    bool saw_n = false;
+    for (const auto& row : runner.variables()) {
+        if (row.name == QStringLiteral("N")) {
+            saw_n = true;
+        }
+    }
+    TW_CHECK(saw_n);
+}
+
 /// The report shows what the engine measured, in the order the engine sorted it:
 /// the dialog must not re-sort or drop rows.
 void test_profile_report_lists_the_measurements() {
@@ -3565,6 +3619,7 @@ int main(int argc, char** argv) {
     test_view_menu_grid_drives_the_canvas();
     test_view_menu_zoom_scales_the_canvas();
     test_profile_run_is_opt_in();
+    test_input_round_trip_reaches_the_runner();
     test_profile_report_lists_the_measurements();
     test_run_menu_clear_output_empties_the_console();
     test_edit_menu_acts_on_whatever_has_focus();
