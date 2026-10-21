@@ -21,6 +21,7 @@
 #include <QList>
 #include <QPair>
 #include <QPlainTextEdit>
+#include <QPointF>
 #include <QSize>
 #include <QString>
 #include <QStringList>

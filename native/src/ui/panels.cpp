@@ -2,6 +2,8 @@
 
 #include "timewarp/ui/panels.hpp"
 
+#include "timewarp/core/qt_compat.hpp"
+
 #include <algorithm>
 #include <cmath>
 #include <iterator>
@@ -1809,7 +1811,7 @@ QString colour_text(std::uint32_t colour) {
 /// string can be arbitrarily long, and one of them must not push every argument
 /// off the visible line.
 QString quoted_text(std::string_view text) {
-    QString value = QString::fromUtf8(text.data(), static_cast<int>(text.size()));
+    QString value = timewarp::core::fromUtf8(text);
     if (value.size() > 24) {
         value = value.left(23) + QChar{0x2026};
     }
@@ -1912,8 +1914,10 @@ QString TurtleCommandLog::describe(const timewarp::canvas::CanvasCommandView& vi
     using timewarp::canvas::CanvasCommandKind;
 
     const timewarp::canvas::CanvasCommand& command = view.command;
+    // `to_string` answers a `string_view`, and Qt 5's `fromLatin1` has no such
+    // overload: the compatibility seam is where that difference lives.
     const QString name =
-        QString::fromLatin1(timewarp::canvas::to_string(command.kind)).toUpper();
+        timewarp::core::fromUtf8(timewarp::canvas::to_string(command.kind)).toUpper();
 
     switch (command.kind) {
         case CanvasCommandKind::Forward:
