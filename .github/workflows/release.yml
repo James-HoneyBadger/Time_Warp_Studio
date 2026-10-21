@@ -656,6 +656,13 @@ jobs:
         with:
           platforms: arm64
 
+      # A `docker-container` builder, because the driver Docker installs by
+      # default cannot emit a manifest list: it builds one platform and says so
+      # with "Multi-platform build is not supported for the docker driver" when
+      # asked for two.
+      - name: Set up Buildx
+        uses: docker/setup-buildx-action@v4
+
       - name: Build and push
         uses: docker/build-push-action@v7
         with:
