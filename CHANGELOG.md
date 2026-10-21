@@ -1,5 +1,56 @@
 # Changelog
 
+## [16.4.4] - 2026-10-21
+
+The canvas explains itself. The Turtle Log tab had been there since the window was
+first built and nothing ever wrote to it — a placeholder that looked finished — and
+the one thing the roadmap still listed as missing from the canvas was a way to see
+what the turtle had been told and where it ended up.
+
+### Added
+
+- **The 🐢 Turtle Log lists the drawing.** Every command the canvas receives is
+  appended, numbered and spelled with its arguments — `FORWARD 100`,
+  `SETPENCOLOR #FF8800`, `DRAWPOLYLINE 3 points #00FF00`, `DRAWTEXT "hi" at 5 6
+  (size 12)` — so a picture that came out wrong can be read back as the sequence
+  that made it. The last 2000 lines are kept, because a looping program can emit
+  tens of thousands and a log that outgrows the drawing is not a log. The run's
+  commands replace the previous run's, and clearing the canvas clears the record of
+  how it was made.
+- **A pose strip under the canvas.** X, Y, heading, pen state, colour and width,
+  plus how many drawing commands the run has sent, refreshed as the turtle moves.
+  It sits under the drawing rather than in a dock because a value that changes
+  while the turtle turns is only useful if it can be read without looking away.
+
+Both are views over the canvas rather than copies of its state: the strip is
+refreshed from `TurtleCanvas::turtleStateChanged`, and the log is filled by the same
+call that applies the command to the canvas — `MainWindow::applyCanvasCommand`, the
+bridge's sink — so the two cannot disagree about what was drawn.
+
+### Fixed
+
+- **`turtleStateChanged` reported less than it promised.** The canvas emits it for
+  "moved, turned, or changed pen", but `apply()` compared only position and
+  heading, so `PENUP` left the status readouts — and the new strip — showing a pen
+  that was no longer down. A pen colour, a pen width and the turtle's visibility
+  are state too and are compared now.
+- **`setTurtlePose` ignored a heading-only arrival.** A pose from the bridge that
+  turned the turtle without moving it emitted nothing, which left the marker tilted
+  by a heading no readout had been told about.
+
+### Documentation and tests
+
+- **The input round trip has automated coverage**, which the roadmap had recorded
+  as impossible because the prompt is modal. The dialog is; everything on either
+  side of it is not, and the failure mode was silence — a program stopped at its
+  first prompt and the run ended with no error at all. BASIC's `INPUT` is now
+  asserted on the engine (the program's own prompt, the answer in the variable, 0
+  when nobody answered), on `NativeRunner` (`inputRequested` → `answerInput`, with
+  the value reaching the Variables snapshot) and through the real worker's
+  `in`/`in-reply`, which is the path the lesson check uses.
+- `docs/ROADMAP.md` and `docs/USER_GUIDE.md` describe the log and the strip, and
+  the roadmap's "still missing" list no longer names them.
+
 ## [16.4.3] - 2026-10-21
 
 ### Packaging
