@@ -646,11 +646,22 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      # arm64 is built on an amd64 runner, so it is emulated: the alternative is a
+      # second job on `ubuntu-24.04-arm` and a manifest merge, and the cost here is
+      # minutes on a release rather than a second place that pushes tags. Both
+      # platforms want the same base image and the same package set, which is what
+      # the "linux/amd64,linux/arm64" line below is the whole reason for.
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v4
+        with:
+          platforms: arm64
+
       - name: Build and push
         uses: docker/build-push-action@v7
         with:
           context: .
           file: packaging/docker/Dockerfile
+          platforms: linux/amd64,linux/arm64
           push: true
           tags: |
             ${{ env.IMAGE_NAME }}:${{ needs.verify.outputs.version }}

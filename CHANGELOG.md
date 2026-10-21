@@ -1,5 +1,24 @@
 # Changelog
 
+## [16.4.3] - 2026-10-21
+
+### Packaging
+
+- **The container image runs natively on arm64.** Every tag was amd64, because
+  Arch -- the distribution the project is developed on -- publishes no arm64 image.
+  An ARM laptop or a Raspberry Pi therefore emulated every instruction, and a
+  plain `docker run` on one failed with `exec format error`. The image is now
+  built on Ubuntu 24.04, whose compiler and Qt 6.4 are the ones the Linux job
+  already builds and tests against, and each tag is a manifest list for
+  `linux/amd64` and `linux/arm64`.
+- **The container's user is still uid 1000.** Ubuntu's base image spends 1000 on
+  its own `ubuntu` user, so `studio` is created explicitly with that id. The
+  guide's `-v "$PWD:/work"` example writes into a directory the person running it
+  owns, and any other id would have turned the export into a permission error.
+- The runtime stage now fails its own build if `ldd` finds the binary needs a
+  library the stage does not carry, naming what is missing. A dropped Qt plugin or
+  SQLite driver is a failed release rather than a user's first `docker run`.
+
 ## [16.4.2] - 2026-10-21
 
 ### Packaging

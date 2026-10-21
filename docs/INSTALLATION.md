@@ -365,10 +365,15 @@ docker run --rm -e QT_QPA_PLATFORM=offscreen \
   --run --export /work/out.png /work/Examples/logo/mandala.logo
 ```
 
-The bind mount for `~/.time_warp` is what keeps lesson progress between runs; the
-container runs as a non-root `studio` user, so its home directory is the only
-place it writes. Sound works if the host's device is passed through
-(`--device /dev/snd`), because `SOUND` and `PLAY` hand their WAV to `aplay`.
+Each tag is a manifest list for **linux/amd64 and linux/arm64**, so an ARM laptop
+or a Raspberry Pi pulls its own architecture and runs it rather than emulating
+every instruction; `docker run` picks the right one, and `--platform` is only
+needed to ask for the other. The bind mount for `~/.time_warp` is what keeps
+lesson progress between runs; the container runs as a non-root `studio` user with
+uid 1000, so a directory your own desktop user owns is writable to it and its home
+directory is the only place outside that mount it writes. Sound works if the host's
+device is passed through (`--device /dev/snd`), because `SOUND` and `PLAY` hand
+their WAV to `aplay`.
 
 The install target above, plus the desktop entry and icon, is the foundation for
 distro packaging. See [ROADMAP.md](ROADMAP.md).
