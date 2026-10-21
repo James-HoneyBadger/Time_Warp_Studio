@@ -42,7 +42,8 @@ env:
   # and the repository, and an OCI repository name must be lowercase, so
   # `ghcr.io/James-HoneyBadger/Time_Warp_Studio` gets all the way to buildx and
   # fails there ("repository name must be lowercase"). Each job that needs it
-  # lowercases it into `GITHUB_ENV` first.
+  # lowercases it into `GITHUB_ENV` first, and names the image after the product
+  # rather than the repository -- see the step.
 
 jobs:
   verify:
@@ -625,8 +626,18 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
-      - name: Lowercase the image name
-        run: echo "IMAGE_NAME=ghcr.io/${GITHUB_REPOSITORY,,}" >> "$GITHUB_ENV"
+      # The image is named after the product, like every other artifact a release
+      # carries, so a rename of the repository cannot move it out from under a
+      # `docker run` somebody wrote down. The repository's own name, lowercased,
+      # is pushed with the same tags as an alias: it is the name the earlier
+      # releases used, so their notes and the scripts written against them keep
+      # resolving -- to this build, rather than to whatever was last published
+      # there.
+      - name: Work out the image names
+        run: |
+          owner="${GITHUB_REPOSITORY_OWNER,,}"
+          echo "IMAGE_NAME=ghcr.io/${owner}/time-warp-studio" >> "$GITHUB_ENV"
+          echo "ALIAS_IMAGE_NAME=ghcr.io/${owner}/time_warp_studio" >> "$GITHUB_ENV"
 
       - name: Log in to GitHub Packages
         uses: docker/login-action@v4
@@ -644,6 +655,8 @@ jobs:
           tags: |
             ${{ env.IMAGE_NAME }}:${{ needs.verify.outputs.version }}
             ${{ env.IMAGE_NAME }}:latest
+            ${{ env.ALIAS_IMAGE_NAME }}:${{ needs.verify.outputs.version }}
+            ${{ env.ALIAS_IMAGE_NAME }}:latest
           labels: |
             org.opencontainers.image.title=Time Warp Studio
             org.opencontainers.image.description=An old-school programming environment: ten languages, an IDE, an HB-1 home computer and a live CHIP-8
@@ -669,10 +682,14 @@ jobs:
       # `merge-multiple` puts both architectures' files in one directory: the
       # release attaches a flat list, and every file name already says which
       # architecture it is.
-      # The notes name the image too, and the same lowercase rule applies to what
-      # is printed as to what is pushed.
-      - name: Lowercase the image name
-        run: echo "IMAGE_NAME=ghcr.io/${GITHUB_REPOSITORY,,}" >> "$GITHUB_ENV"
+      # The two names the image job publishes under, because the notes print
+      # IMAGE_NAME and the same lowercase rule applies to what is printed as to
+      # what is pushed.
+      - name: Work out the image names
+        run: |
+          owner="${GITHUB_REPOSITORY_OWNER,,}"
+          echo "IMAGE_NAME=ghcr.io/${owner}/time-warp-studio" >> "$GITHUB_ENV"
+          echo "ALIAS_IMAGE_NAME=ghcr.io/${owner}/time_warp_studio" >> "$GITHUB_ENV"
 
       - uses: actions/download-artifact@v7
         with:

@@ -61,7 +61,7 @@ a hand-written copy, kept in step by `Scripts/version_sync.py` and checked by th
       `docs/INSTALLATION.md`) and the **universal macOS disk image** on
       `macos-latest`. Each job runs the suites
       and an offscreen screenshot against the exact tree it packages, publishes
-      `ghcr.io/<owner>/time_warp_studio:X.Y.Z` and attaches every file with a
+      `ghcr.io/<owner>/time-warp-studio:X.Y.Z` and attaches every file with a
       `.sha256` beside it. See `DEPLOYMENT.md` for what each job does and what it
       needs from the repository settings.
 
@@ -87,13 +87,14 @@ a hand-written copy, kept in step by `Scripts/version_sync.py` and checked by th
       should put **Time Warp Studio** in the Start Menu and start, and the dragged
       application should open, show the examples (File > Open Example) and the
       documentation (Help > Documentation) from inside the bundle.
-- [ ] Confirm the container image is tagged `X.Y.Z` and `latest`
+- [ ] Confirm the container image is tagged `X.Y.Z` and `latest`, and that the
+      same two tags are on `<owner>/time_warp_studio`
 - [ ] Download the package for a distribution you have and install it before
       announcing: a release nobody installed is a release nobody knows works.
 - [ ] Confirm the Deployment appears under Settings > Environments > `production`
       with the release as its URL
 - [ ] Check the image runs before announcing it:
-      `docker run --rm ghcr.io/<owner>/time_warp_studio:X.Y.Z --version`
+      `docker run --rm ghcr.io/<owner>/time-warp-studio:X.Y.Z --version`
 - [ ] If `X.Y.Z` is a patch release of a release that never published an artifact,
       move the tag instead of bumping again: `git tag -f -a vX.Y.Z`, then
       `git push --force origin vX.Y.Z` — safe only while the old tag has no

@@ -1,5 +1,19 @@
 # Changelog
 
+## [16.4.2] - 2026-10-21
+
+### Packaging
+
+- **The container image is published under the name the guide prints.** Releases
+  pushed `ghcr.io/<owner>/time_warp_studio` -- the repository's name, lowercased --
+  while `docs/INSTALLATION.md` told people to pull
+  `ghcr.io/<owner>/time-warp-studio`, which is what every other artifact here is
+  called. A package under that name has survived since before the repository was
+  renamed, so the documented `docker run` did not fail: it started 14.1.2. The
+  image is now built and pushed under the product's name, and the same tags are
+  pushed to the repository's name with it, so the notes of the releases before
+  this one keep resolving -- to this build rather than to a leftover.
+
 ## [16.4.1] - 2026-10-20
 
 The release 16.4.0 described below could not be built: its macOS job stopped on a
