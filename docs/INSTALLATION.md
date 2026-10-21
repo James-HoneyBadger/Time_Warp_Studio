@@ -342,20 +342,25 @@ The **tarball** is the install tree above, plus the licence and the two READMEs.
 It needs Qt 6, SQLite, a C++ runtime and `python3` for the lesson check — the
 same requirements as a local build, minus the compiler.
 
-The container image is `ghcr.io/james-honeybadger/time-warp-studio:<version>`
-(or `:latest`), and it carries everything, including Qt and Python:
+The container image is `ghcr.io/james-honeybadger/time_warp_studio:<version>`
+(or `:latest`), and it carries everything, including Qt and Python. The
+underscore is not a typo: the release workflow publishes the repository's own
+name lowercased. The hyphenated `time-warp-studio` package under the same owner
+is a leftover from before a rename, and its `:latest` is several releases old.
+
+So, on a machine with Docker:
 
 ```bash
 # A window on your desktop
 docker run --rm -e DISPLAY \
   -v /tmp/.X11-unix:/tmp/.X11-unix \
   -v "$HOME/.time_warp:/home/studio/.time_warp" \
-  ghcr.io/james-honeybadger/time-warp-studio:latest
+  ghcr.io/james-honeybadger/time_warp_studio:latest
 
 # Headless: render a drawing from a program, no display at all
 docker run --rm -e QT_QPA_PLATFORM=offscreen \
   -v "$PWD:/work" \
-  ghcr.io/james-honeybadger/time-warp-studio:latest \
+  ghcr.io/james-honeybadger/time_warp_studio:latest \
   --run --export /work/out.png /work/Examples/logo/mandala.logo
 ```
 
