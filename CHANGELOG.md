@@ -1,5 +1,31 @@
 # Changelog
 
+## [16.4.1] - 2026-10-20
+
+The release 16.4.0 described below could not be built: its macOS job stopped on a
+bundle that could not load Qt from inside itself, and then on the disk image it
+had just made. This is that release with the packaging that finishes, so nothing
+it lists has changed.
+
+### Packaging
+
+- **The macOS bundle loads its own frameworks.** The installed bundle now carries
+  `@executable_path/../Frameworks` as its rpath. The install step stripped the
+  build tree's rpath and left `@rpath/QtSvg.framework/…` pointing at nothing, so
+  the staged application aborted in `dyld` the first time it was run, before the
+  disk image was even made -- `macdeployqt` copies the frameworks in but rewrites
+  only what it can resolve.
+- **The disk image opens without an agreement to accept.** CPack put the MIT
+  licence on the image as a volume agreement, because the project's policy level
+  predates `CMP0133`, and `hdiutil` cancelled every non-interactive mount --
+  the release job's own check included -- now that `-acceptlicense` no longer
+  exists. The agreement is switched off, the licence travels in
+  `Contents/Resources/share/doc/time-warp-studio/LICENSE` the way the deb and rpm
+  carry theirs, and the release job mounts the image and runs the copy on it.
+- **The release job checks what it would ship.** The macOS job tests the staged
+  install rather than a path the build tree never produced, and every action the
+  pipeline uses is pinned to a major that runs on Node 24.
+
 ## [16.4.0] - 2026-10-20
 
 The Studio leaves Linux: a release now carries a native Windows installer and a
