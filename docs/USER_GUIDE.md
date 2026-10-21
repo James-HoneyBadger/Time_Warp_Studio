@@ -36,7 +36,11 @@ from the desktop menu, or run the `time_warp_ide` binary directly.
 - **Editor** — tabs, line numbers, current-line highlight, syntax colouring,
   find/replace, find in files, go-to-line, formatting, a minimap and an outline dock.
 - **Output and Graphics** — the console, the error list, the turtle log and the
-  canvas. A program that prints and draws keeps both in view.
+  canvas. A program that prints and draws keeps both in view. The 🐢 Turtle Log
+  tab lists every drawing command the canvas received, numbered and spelled with
+  its arguments, so a picture that came out wrong can be read back; a pose strip
+  under the canvas shows where the turtle is, which way it faces, what the pen is
+  doing and how many commands the run has sent.
 - **Right-column tabs** — Variables, Telemetry HUD, Debug, Lessons, Classroom and
   Database.
 - **Projects dock** — the project tree (View → Project Panel, `Ctrl+Shift+E`).

@@ -20,12 +20,14 @@
 #include <QHash>
 #include <QList>
 #include <QPair>
+#include <QPlainTextEdit>
 #include <QSize>
 #include <QString>
 #include <QStringList>
 #include <QWidget>
 
 #include "timewarp/bridge/python_worker.hpp"
+#include "timewarp/canvas/command.hpp"
 #include "timewarp/ui/export.hpp"
 #include "timewarp/ui/outline.hpp"
 
@@ -670,6 +672,69 @@ private:
     QPushButton* data_add_ = nullptr;
     QPushButton* data_remove_ = nullptr;
     bool available_ = false;
+};
+
+/// The canvas's own state, as a one-line readout under the drawing: where the
+/// turtle is, which way it faces, what the pen is doing and how much the program
+/// has drawn.
+///
+/// A view, not a second copy of the state: the canvas owns the pose, and this is
+/// refreshed from `TurtleCanvas::turtleStateChanged`. It sits under the canvas
+/// rather than in a dock for the reason an inspector exists at all -- a learner
+/// watching the turtle turn cannot turn away to read it.
+class TurtleInspector final : public QFrame {
+    Q_OBJECT
+
+public:
+    explicit TurtleInspector(QWidget* parent = nullptr);
+
+    void showPose(const QPointF& position, double heading, bool pen_down,
+                  const QColor& pen_colour, double pen_width);
+    void setCommandCount(int count);
+    /// The state of a canvas that has not been drawn on.
+    void clear();
+
+    /// The two halves of the strip, so a test can read what a user reads without
+    /// reaching into the labels.
+    [[nodiscard]] QString poseText() const;
+    [[nodiscard]] QString penText() const;
+    [[nodiscard]] int commandCount() const noexcept { return commands_; }
+
+private:
+    QLabel* pose_ = nullptr;
+    QLabel* pen_ = nullptr;
+    QLabel* commands_label_ = nullptr;
+    int commands_ = 0;
+};
+
+/// The drawing commands the canvas has received, in the order it received them.
+///
+/// The canvas is a display list, so "why does my picture look like that" is
+/// answered by the sequence that built it -- and the last few hundred commands
+/// are the part anybody actually reads. The log is capped for that reason: a
+/// program may emit tens of thousands, and an uncapped log would cost more than
+/// the drawing it describes.
+class TurtleCommandLog final : public QPlainTextEdit {
+    Q_OBJECT
+
+public:
+    explicit TurtleCommandLog(QWidget* parent = nullptr);
+
+    /// One line per command, numbered from 1. Past `kMaxLines` the oldest go.
+    void appendCommand(const timewarp::canvas::CanvasCommandView& view);
+    void clearLog();
+    [[nodiscard]] int commandCount() const noexcept { return count_; }
+
+    /// How one command is spelled, without appending it. Public so a test can
+    /// assert the spelling of every kind without filling a widget.
+    [[nodiscard]] static QString describe(const timewarp::canvas::CanvasCommandView& view);
+
+    /// Lines kept. Enough for a looping program's last spiral, small enough that
+    /// the log stays a log.
+    static constexpr int kMaxLines = 2000;
+
+private:
+    int count_ = 0;
 };
 
 }  // namespace timewarp::ui

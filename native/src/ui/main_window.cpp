@@ -852,12 +852,8 @@ void MainWindow::buildOutputColumn() {
     errors_view_->setPlaceholderText(tr("Errors and warnings appear here\u2026"));
     output_sub_tabs_->addTab(errors_view_, tr("\u274C Errors"));
 
-    auto* turtle_log = new QPlainTextEdit{output_sub_tabs_};
-    turtle_log->setObjectName(QStringLiteral("turtleLog"));
-    turtle_log->setReadOnly(true);
-    turtle_log->setFont(QFont{QStringLiteral("Courier New"), 10});
-    turtle_log->setAccessibleName(tr("Turtle Command Log"));
-    turtle_log->setPlaceholderText(tr("Turtle \U0001F422 commands appear here\u2026"));
+    auto* turtle_log = new TurtleCommandLog{output_sub_tabs_};
+    turtle_log_ = turtle_log;
     output_sub_tabs_->addTab(turtle_log, tr("\U0001F422 Turtle Log"));
 
     // The terminal tab is added by `refreshTerminalTab()`, which the constructor
@@ -880,6 +876,14 @@ void MainWindow::buildOutputColumn() {
 
     turtle_canvas_ = new TurtleCanvas{canvas_pane};
     canvas_column->addWidget(turtle_canvas_, 1);
+
+    // The pose readout goes under the drawing rather than in a dock: an inspector
+    // whose value changes while the turtle turns is only useful if it can be read
+    // without looking away from the turtle.
+    turtle_inspector_ = new TurtleInspector{canvas_pane};
+    canvas_column->addWidget(turtle_inspector_);
+    connect(turtle_canvas_, &TurtleCanvas::turtleStateChanged, this,
+            [this] { refreshTurtleInspector(); });
 
     scrubber_ = new Scrubber{canvas_pane};
     // Hidden until there is ink: an empty window should not offer to replay a
@@ -915,7 +919,7 @@ void MainWindow::buildOutputColumn() {
     canvas_queue_ = std::make_unique<timewarp::canvas::CanvasCommandQueue>();
     canvas_bridge_ = std::make_unique<timewarp::canvas::qt::CanvasBridge>(*canvas_queue_, this);
     canvas_bridge_->set_sink([this](timewarp::canvas::CanvasCommandView view) {
-        turtle_canvas_->apply(view);
+        applyCanvasCommand(view);
     });
 
     // Keys typed at the canvas are what `INKEY$` reads. Routed through the
@@ -4865,7 +4869,40 @@ void MainWindow::clearCanvas() {
     if (turtle_canvas_ != nullptr) {
         turtle_canvas_->reset();
     }
+    clearTurtleLog();
     setExecutionState(tr("ready"), tr("Canvas cleared"));
+}
+
+void MainWindow::applyCanvasCommand(const timewarp::canvas::CanvasCommandView& view) {
+    if (turtle_canvas_ != nullptr) {
+        turtle_canvas_->apply(view);
+    }
+    if (turtle_log_ == nullptr) {
+        return;
+    }
+    turtle_log_->appendCommand(view);
+    if (turtle_inspector_ != nullptr) {
+        turtle_inspector_->setCommandCount(turtle_log_->commandCount());
+    }
+}
+
+void MainWindow::refreshTurtleInspector() {
+    if (turtle_inspector_ == nullptr || turtle_canvas_ == nullptr) {
+        return;
+    }
+    turtle_inspector_->showPose(turtle_canvas_->turtlePosition(),
+                                turtle_canvas_->turtleHeading(),
+                                turtle_canvas_->penIsDown(), turtle_canvas_->penColor(),
+                                turtle_canvas_->penWidth());
+}
+
+void MainWindow::clearTurtleLog() {
+    if (turtle_log_ != nullptr) {
+        turtle_log_->clearLog();
+    }
+    if (turtle_inspector_ != nullptr) {
+        turtle_inspector_->clear();
+    }
 }
 
 bool MainWindow::handleBasicDirectCommand(const QString& command, CodeEditor* editor) {
@@ -5050,6 +5087,7 @@ void MainWindow::resetProgram() {
     if (turtle_canvas_ != nullptr) {
         turtle_canvas_->reset();
     }
+    clearTurtleLog();
     clearOutput();
     clearRunState();
     setExecutionState(tr("ready"), tr("Program reset"));
@@ -5089,6 +5127,7 @@ void MainWindow::runSource(CodeEditor* editor, const QString& source) {
     // cleared, so a command still in the queue cannot land on the new picture.
     canvas_bridge_->drainNow();
     turtle_canvas_->reset();
+    clearTurtleLog();
     if (console_view_ != nullptr) {
         console_view_->clear();
     }
@@ -5244,6 +5283,7 @@ void MainWindow::runNatively(CodeEditor* editor, timewarp::lang::Language langua
     // The same clean surface the other engines get, in the same order.
     canvas_bridge_->drainNow();
     turtle_canvas_->reset();
+    clearTurtleLog();
     if (console_view_ != nullptr) {
         console_view_->clear();
     }
@@ -5481,6 +5521,7 @@ void MainWindow::runInBridge(CodeEditor* editor, const QString& source) {
     // rather than a Python start.
     canvas_bridge_->drainNow();
     turtle_canvas_->reset();
+    clearTurtleLog();
     if (console_view_ != nullptr) {
         console_view_->clear();
     }

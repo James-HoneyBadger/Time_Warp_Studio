@@ -25,7 +25,7 @@ derived rather than remembered.
 | Projects | `.twproject` files, named groups, files and folders added to a project, drag-and-drop grouping, missing-file reporting, recent projects and session restore |
 | REPL | A persistent session per language under the editor; Scheme keeps definitions and echoes values, the line-loop languages and Logo keep bindings, while Smalltalk and CHIP-8 run each entry as a whole program |
 | Console | Streaming output, and interpreter errors in their own tab |
-| Canvas | Live drawing, zoom, pan, grid, auto-fit, turtle marker, scrubber playback, animated GIF recording, raster and SVG export |
+| Canvas | Live drawing, zoom, pan, grid, auto-fit, turtle marker, scrubber playback, animated GIF recording, raster and SVG export, the pose strip and the command log |
 | Display | 35 themes, high contrast, A+ text sizes (100/125/150%), focus mode, CRT settings, four Monitor presets |
 | Execution | Run (F9) and Stop; one program at a time; unsaved-change prompts |
 | Input | A program can ask for a line and wait for it — `INPUT`, FOCAL's `ASK`, PILOT's `ACCEPT`, REXX's `PULL` — on whichever engine runs it; BASIC's round trip is asserted on the engine, on `NativeRunner`, and through the bridged worker |
@@ -461,10 +461,18 @@ file holds vector paths painted by the same `paintInk`; without it, neither
 offers the format. **Printing is built** the same way, through Qt6::PrintSupport:
 File > Print Code (Ctrl+P) lays out the program as the A4 document the PDF export
 writes, and File > Print Drawing renders the canvas at the printer's resolution
-and scales it to the page. Without the component neither entry appears. Still
-missing here: a turtle-state inspector and a drawing-command log. The PDF of the
-*code* and the session HTML are built, and neither needed a new component:
-`QPdfWriter` is part of Qt Gui.
+and scales it to the page. Without the component neither entry appears.
+
+**The turtle is inspectable.** A pose strip under the canvas shows X, Y, heading,
+pen state, colour and width, and how many drawing commands the run has sent; the
+🐢 Turtle Log tab lists those commands in order, numbered and spelled with their
+arguments (`FORWARD 100`, `SETPENCOLOR #FF8800`, `DRAWPOLYLINE 3 points #00FF00`),
+capped at the last 2000 so a long run cannot make the log cost more than the
+drawing. Both are views over the canvas rather than copies of its state: the strip
+is refreshed from `turtleStateChanged`, and the log is filled by the same call that
+applies the command to the canvas, so the two cannot disagree about what was drawn.
+The PDF of the *code* and the session HTML are built, and neither needed a new
+component: `QPdfWriter` is part of Qt Gui.
 
 ---
 

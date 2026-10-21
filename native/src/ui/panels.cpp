@@ -1777,4 +1777,248 @@ void DebugPanel::toggleBreakpointAt(int line) {
     emitBreakpoints();
 }
 
+// ---------------------------------------------------------------------------
+// TurtleInspector and TurtleCommandLog
+// ---------------------------------------------------------------------------
+
+namespace {
+
+/// Up to three decimals without the trailing zeros: a log line for `RIGHT 90`
+/// should read 90, not 90.000.
+QString plain_number(double value) {
+    QString text = QString::number(value, 'f', 3);
+    if (text.contains(QLatin1Char{'.'})) {
+        while (text.endsWith(QLatin1Char{'0'})) {
+            text.chop(1);
+        }
+        if (text.endsWith(QLatin1Char{'.'})) {
+            text.chop(1);
+        }
+    }
+    if (text == QLatin1String{"-0"}) {
+        text = QStringLiteral("0");
+    }
+    return text;
+}
+
+QString colour_text(std::uint32_t colour) {
+    return QStringLiteral("#%1").arg(colour & 0xFFFFFFu, 6, 16, QLatin1Char{'0'}).toUpper();
+}
+
+/// A command's text payload, quoted and clipped. A sprite name or a `DRAWTEXT`
+/// string can be arbitrarily long, and one of them must not push every argument
+/// off the visible line.
+QString quoted_text(std::string_view text) {
+    QString value = QString::fromUtf8(text.data(), static_cast<int>(text.size()));
+    if (value.size() > 24) {
+        value = value.left(23) + QChar{0x2026};
+    }
+    return QLatin1Char{'"'} + value + QLatin1Char{'"'};
+}
+
+QString point_count_text(std::size_t count) {
+    return count == 1 ? QStringLiteral("1 point") : QStringLiteral("%1 points").arg(count);
+}
+
+}  // namespace
+
+TurtleInspector::TurtleInspector(QWidget* parent) : QFrame(parent) {
+    setObjectName(QStringLiteral("turtleInspector"));
+    setFrameShape(QFrame::NoFrame);
+    // The strip takes its height from its font, so the text-size ladder grows it
+    // rather than clipping it, and the canvas keeps the rest.
+    setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Fixed);
+
+    auto* row = new QHBoxLayout{this};
+    row->setContentsMargins(6, 1, 6, 1);
+    row->setSpacing(14);
+
+    pose_ = new QLabel{this};
+    pose_->setObjectName(QStringLiteral("turtlePose"));
+    pose_->setAccessibleName(tr("Turtle position and heading"));
+    pen_ = new QLabel{this};
+    pen_->setObjectName(QStringLiteral("turtlePen"));
+    pen_->setAccessibleName(tr("Pen state, colour and width"));
+    commands_label_ = new QLabel{this};
+    commands_label_->setObjectName(QStringLiteral("turtleCommands"));
+    commands_label_->setAccessibleName(tr("Drawing commands received"));
+
+    row->addWidget(pose_);
+    row->addWidget(pen_);
+    row->addStretch(1);
+    row->addWidget(commands_label_);
+
+    clear();
+}
+
+void TurtleInspector::showPose(const QPointF& position, double heading, bool pen_down,
+                               const QColor& pen_colour, double pen_width) {
+    // The canvas keeps whatever heading it was turned to, which may be past a
+    // full circle or negative; the strip shows the heading a person would name.
+    double normalised = std::fmod(heading, 360.0);
+    if (normalised < 0.0) {
+        normalised += 360.0;
+    }
+    pose_->setText(tr("X %1   Y %2   Heading %3\u00B0")
+                       .arg(plain_number(position.x()), plain_number(position.y()),
+                            plain_number(normalised)));
+    pen_->setText(tr("Pen %1   %2   %3 px")
+                      .arg(pen_down ? tr("DOWN") : tr("UP"), pen_colour.name().toUpper(),
+                           plain_number(pen_width)));
+}
+
+void TurtleInspector::setCommandCount(int count) {
+    commands_ = count;
+    commands_label_->setText(count == 1 ? tr("1 command") : tr("%1 commands").arg(count));
+}
+
+void TurtleInspector::clear() {
+    showPose(QPointF{0.0, 0.0}, 0.0, true, QColor{Qt::white}, 1.0);
+    setCommandCount(0);
+}
+
+QString TurtleInspector::poseText() const { return pose_->text(); }
+
+QString TurtleInspector::penText() const { return pen_->text(); }
+
+TurtleCommandLog::TurtleCommandLog(QWidget* parent) : QPlainTextEdit(parent) {
+    setObjectName(QStringLiteral("turtleLog"));
+    setAccessibleName(tr("Turtle Command Log"));
+    setReadOnly(true);
+    setFont(QFont{QStringLiteral("Courier New"), 10});
+    setPlaceholderText(tr("Turtle \U0001F422 commands appear here\u2026"));
+    // A command is one line and its arguments are its columns, so wrapping would
+    // turn one command into two and break the alignment that makes the log
+    // scannable.
+    setLineWrapMode(QPlainTextEdit::NoWrap);
+    setMaximumBlockCount(kMaxLines);
+}
+
+void TurtleCommandLog::appendCommand(const timewarp::canvas::CanvasCommandView& view) {
+    ++count_;
+    // Numbered, because "the third FORWARD" is how somebody refers to a command
+    // when comparing the log with the program that emitted it.
+    appendPlainText(QStringLiteral("%1  %2")
+                        .arg(count_, 5, 10, QLatin1Char{' '})
+                        .arg(describe(view)));
+}
+
+void TurtleCommandLog::clearLog() {
+    count_ = 0;
+    clear();
+}
+
+QString TurtleCommandLog::describe(const timewarp::canvas::CanvasCommandView& view) {
+    using timewarp::canvas::CanvasCommandKind;
+
+    const timewarp::canvas::CanvasCommand& command = view.command;
+    const QString name =
+        QString::fromLatin1(timewarp::canvas::to_string(command.kind)).toUpper();
+
+    switch (command.kind) {
+        case CanvasCommandKind::Forward:
+        case CanvasCommandKind::Back:
+        case CanvasCommandKind::Left:
+        case CanvasCommandKind::Right:
+        case CanvasCommandKind::Pitch:
+        case CanvasCommandKind::Roll:
+        case CanvasCommandKind::SetX:
+        case CanvasCommandKind::SetY:
+        case CanvasCommandKind::SetHeading:
+        case CanvasCommandKind::SetPenWidth:
+            return name + QLatin1Char{' '} + plain_number(command.x);
+
+        case CanvasCommandKind::Goto:
+            return QStringLiteral("%1 %2 %3")
+                .arg(name, plain_number(command.x), plain_number(command.y));
+
+        case CanvasCommandKind::SetPenColor:
+        case CanvasCommandKind::SetBackgroundColor:
+        case CanvasCommandKind::FillLastShape:
+            return name + QLatin1Char{' '} + colour_text(command.color);
+
+        case CanvasCommandKind::SetPenStyle:
+            return QStringLiteral("%1 %2 %3")
+                .arg(name, QString::number(command.index), plain_number(command.x));
+
+        case CanvasCommandKind::SetSvgaMode:
+            return QStringLiteral("%1 %2\u00D7%3")
+                .arg(name, plain_number(command.x), plain_number(command.y));
+
+        case CanvasCommandKind::SetPaletteColor:
+            return QStringLiteral("%1 %2 %3")
+                .arg(name, QString::number(command.index), colour_text(command.color));
+
+        case CanvasCommandKind::CyclePalette:
+            return name + QLatin1Char{' '} + QString::number(command.index);
+
+        case CanvasCommandKind::Circle:
+            // The extent is a full circle unless the program asked for an arc.
+            return command.y == 360.0
+                       ? name + QLatin1Char{' '} + plain_number(command.x)
+                       : QStringLiteral("%1 %2 %3")
+                             .arg(name, plain_number(command.x), plain_number(command.y));
+
+        case CanvasCommandKind::DrawPoint:
+            return QStringLiteral("%1 %2 %3 %4")
+                .arg(name, plain_number(command.x), plain_number(command.y),
+                     colour_text(command.color));
+
+        case CanvasCommandKind::DrawPolyline:
+        case CanvasCommandKind::BezierCurve:
+            return QStringLiteral("%1 %2 %3")
+                .arg(name, point_count_text(view.point_count()), colour_text(command.color));
+
+        case CanvasCommandKind::DrawRect:
+        case CanvasCommandKind::DrawEllipse:
+        case CanvasCommandKind::DrawRectGradient:
+        case CanvasCommandKind::DrawEllipseGradient:
+            return QStringLiteral("%1 %2 %3 %4 %5 %6")
+                .arg(name, plain_number(command.x), plain_number(command.y),
+                     plain_number(command.w), plain_number(command.h),
+                     colour_text(command.color));
+
+        case CanvasCommandKind::DrawArc:
+            return QStringLiteral("%1 %2 %3 %4 %5 %6 %7")
+                .arg(name, plain_number(command.x), plain_number(command.y),
+                     plain_number(command.w), plain_number(command.h),
+                     plain_number(command.a), plain_number(command.b));
+
+        case CanvasCommandKind::DrawText:
+            return QStringLiteral("%1 %2 at %3 %4 (size %5)")
+                .arg(name, quoted_text(view.text), plain_number(command.x),
+                     plain_number(command.y), plain_number(command.w));
+
+        case CanvasCommandKind::DefineSprite:
+            return QStringLiteral("%1 %2 %3 %4 %5 %6")
+                .arg(name, quoted_text(view.text), plain_number(command.x),
+                     plain_number(command.y), plain_number(command.w),
+                     plain_number(command.h));
+
+        case CanvasCommandKind::PlaceSprite:
+        case CanvasCommandKind::MoveSprite:
+            return QStringLiteral("%1 %2 %3 %4")
+                .arg(name, quoted_text(view.text), plain_number(command.x),
+                     plain_number(command.y));
+
+        case CanvasCommandKind::ShowSprite:
+        case CanvasCommandKind::HideSprite:
+            return name + QLatin1Char{' '} + quoted_text(view.text);
+
+        case CanvasCommandKind::None:
+        case CanvasCommandKind::Home:
+        case CanvasCommandKind::PenUp:
+        case CanvasCommandKind::PenDown:
+        case CanvasCommandKind::BeginFill:
+        case CanvasCommandKind::EndFill:
+        case CanvasCommandKind::ShowTurtle:
+        case CanvasCommandKind::HideTurtle:
+        case CanvasCommandKind::Clear:
+        case CanvasCommandKind::Reset:
+        case CanvasCommandKind::ClearSvgaMode:
+            break;
+    }
+    return name;
+}
+
 }  // namespace timewarp::ui

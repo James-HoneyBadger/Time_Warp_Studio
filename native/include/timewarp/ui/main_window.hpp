@@ -338,6 +338,11 @@ public:
     [[nodiscard]] QToolBar* secondaryToolBar() const noexcept { return tool_bar_secondary_; }
     [[nodiscard]] TurtleCanvas* turtleCanvas() const noexcept { return turtle_canvas_; }
 
+    /// Applies one command to everything that shows the drawing: the canvas
+    /// itself, the command log and the inspector's counters. The bridge's sink is
+    /// this function, so a command pushed by a program takes exactly this path.
+    void applyCanvasCommand(const timewarp::canvas::CanvasCommandView& view);
+
     // -- appearance -------------------------------------------------------
     //
     // A theme is one of the 33 colour records in `themes.cpp`. Applying one sets
@@ -569,6 +574,12 @@ public:
     void clearOutput();
     /// Empties the graphics canvas.
     void clearCanvas();
+    /// Refreshes the turtle strip from the canvas: the canvas owns the pose, and
+    /// the strip is a view of it.
+    void refreshTurtleInspector();
+    /// Empties the command log and the strip, so the next run's log describes the
+    /// next run rather than the last one plus this one.
+    void clearTurtleLog();
 
 public:
     // -- window state -----------------------------------------------------
@@ -950,6 +961,10 @@ private:
 
     // -- execution --------------------------------------------------------
     TurtleCanvas* turtle_canvas_ = nullptr;
+    /// The pose readout under the canvas, and the command log beside it. Both are
+    /// views over what the canvas was told; neither keeps state of its own.
+    TurtleInspector* turtle_inspector_ = nullptr;
+    TurtleCommandLog* turtle_log_ = nullptr;
     /// The playback strip under the canvas. Hidden until there is ink to
     /// scrub, so an empty window keeps its full canvas height.
     Scrubber* scrubber_ = nullptr;

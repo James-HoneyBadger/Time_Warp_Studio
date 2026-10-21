@@ -198,6 +198,48 @@ void test_pen_state_controls_whether_a_move_leaves_ink() {
     TW_CHECK(nearly(canvas->turtlePosition().y(), 100.0));
 }
 
+// `turtleStateChanged` promises "moved, turned, or changed pen", and the readouts
+// built on it (the status bar, the turtle strip) show all of that. A pen-up that
+// left the signal unsent left those saying the pen was still down.
+void test_a_state_change_reports_itself() {
+    announce("turtle state signal");
+    const std::unique_ptr<TurtleCanvas> canvas{sizedCanvas()};
+
+    int state_changes = 0;
+    QObject::connect(canvas.get(), &TurtleCanvas::turtleStateChanged,
+                     [&state_changes] { ++state_changes; });
+
+    auto pen_up = timewarp::canvas::make_command(CanvasCommandKind::PenUp);
+    push(*canvas, pen_up);
+    TW_CHECK_EQ(state_changes, 1);
+
+    // A colour is state too, and so is the width.
+    auto colour = timewarp::canvas::make_color(CanvasCommandKind::SetPenColor,
+                                               timewarp::canvas::make_rgb(10, 20, 30));
+    push(*canvas, colour);
+    TW_CHECK_EQ(state_changes, 2);
+
+    auto width = timewarp::canvas::make_motion(CanvasCommandKind::SetPenWidth, 3.0);
+    push(*canvas, width);
+    TW_CHECK_EQ(state_changes, 3);
+
+    // And a command that changes none of it stays quiet, so a drawing that emits
+    // thousands of shapes does not turn every one into a palette update.
+    const int before = state_changes;
+    auto clear = timewarp::canvas::make_command(CanvasCommandKind::Clear);
+    push(*canvas, clear);
+    TW_CHECK_EQ(state_changes, before);
+
+    // A pose arriving from the bridge counts even when only the heading or the
+    // marker's visibility moved: the strip shows both.
+    canvas->setTurtlePose(QPointF{0.0, 0.0}, 45.0, true);
+    TW_CHECK_EQ(state_changes, before + 1);
+    canvas->setTurtlePose(QPointF{0.0, 0.0}, 45.0, false);
+    TW_CHECK_EQ(state_changes, before + 2);
+    canvas->setTurtlePose(QPointF{0.0, 0.0}, 45.0, false);
+    TW_CHECK_EQ(state_changes, before + 2);
+}
+
 void test_pen_colour_and_width_are_recorded() {
     announce("pen style");
     const std::unique_ptr<TurtleCanvas> canvas{sizedCanvas()};
@@ -698,6 +740,7 @@ int main(int argc, char** argv) {    // Set before QApplication exists, or Qt tr
     test_world_y_is_up_on_screen();
     test_absolute_moves_and_home();
     test_pen_state_controls_whether_a_move_leaves_ink();
+    test_a_state_change_reports_itself();
     test_pen_colour_and_width_are_recorded();
 
     test_a_circle_is_walked_as_a_polygon();

@@ -106,6 +106,13 @@ void TurtleCanvas::apply(const timewarp::canvas::CanvasCommandView& view) {
     const timewarp::canvas::CanvasCommand& command = view.command;
     const QPointF before = position_;
     const double before_heading = heading_;
+    // The pen is part of the state this widget reports, and `turtleStateChanged`
+    // promises "moved, turned, or changed pen". A pen-up that left the signal
+    // unsent left every readout showing a pen that was no longer down.
+    const bool before_pen_down = pen_down_;
+    const QColor before_pen_colour = pen_color_;
+    const double before_pen_width = pen_width_;
+    const bool before_visible = turtle_visible_;
 
     switch (command.kind) {
         case CanvasCommandKind::Forward:
@@ -273,7 +280,9 @@ void TurtleCanvas::apply(const timewarp::canvas::CanvasCommandView& view) {
     }
 
     ++applied_;
-    if (position_ != before || heading_ != before_heading) {
+    if (position_ != before || heading_ != before_heading || pen_down_ != before_pen_down ||
+        pen_color_ != before_pen_colour || pen_width_ != before_pen_width ||
+        turtle_visible_ != before_visible) {
         emit turtleStateChanged();
     }
     emit contentChanged();
@@ -281,10 +290,18 @@ void TurtleCanvas::apply(const timewarp::canvas::CanvasCommandView& view) {
 }
 
 void TurtleCanvas::setTurtlePose(const QPointF& position, double heading, bool visible) {
+    const QPointF before_position = position_;
+    const double before_heading = heading_;
+    const bool before_visible = turtle_visible_;
     heading_ = normaliseHeading(heading);
     turtle_visible_ = visible;
     if (position_ != position) {
         position_ = position;
+    }
+    // An arrival from the bridge that only turned the turtle is still a state
+    // change: the readouts show the heading, and the marker is tilted by it.
+    if (position_ != before_position || heading_ != before_heading ||
+        turtle_visible_ != before_visible) {
         emit turtleStateChanged();
     }
     growBounds(QRectF{position, position});

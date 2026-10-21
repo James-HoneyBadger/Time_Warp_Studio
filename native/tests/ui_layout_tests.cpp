@@ -18,6 +18,7 @@
 #include <cstdio>
 #include <memory>
 #include <string>
+#include <vector>
 
 #include <QAction>
 #include <QElapsedTimer>
@@ -1035,6 +1036,113 @@ void test_the_scrubber_appears_only_when_there_is_ink() {
     window->turtleCanvas()->apply(timewarp::canvas::CanvasCommandView{clear, {}, {}});
     TW_CHECK_EQ(scrubber->frames(), 0);
     TW_CHECK(!scrubber->isVisible());
+}
+
+// The command log is how a picture can be explained after the fact: a program
+// emits hundreds of commands, and "why does it look like that" is answered by the
+// sequence. The spelling of each kind is what a person reads, so it is asserted
+// directly rather than through the widget.
+void test_turtle_command_log_spells_each_command() {
+    announce("turtle command log");
+    using timewarp::canvas::CanvasCommand;
+    using timewarp::canvas::CanvasCommandKind;
+    using timewarp::canvas::CanvasCommandView;
+    using timewarp::ui::TurtleCommandLog;
+
+    const auto line = [](CanvasCommand command, std::vector<double> points = {},
+                         std::string text = {}) {
+        return TurtleCommandLog::describe(CanvasCommandView{command, points, text});
+    };
+
+    TW_CHECK_EQ(line(timewarp::canvas::make_motion(CanvasCommandKind::Forward, 100.0)),
+                QStringLiteral("FORWARD 100"));
+    // A half degree survives: a heading rounded to a whole number is a drawing
+    // that quietly disagrees with the program.
+    TW_CHECK_EQ(line(timewarp::canvas::make_motion(CanvasCommandKind::Right, 90.5)),
+                QStringLiteral("RIGHT 90.5"));
+
+    CanvasCommand colour = timewarp::canvas::make_command(CanvasCommandKind::SetPenColor);
+    colour.color = timewarp::canvas::make_rgb(255, 136, 0);
+    TW_CHECK_EQ(line(colour), QStringLiteral("SETPENCOLOR #FF8800"));
+
+    // A full circle has no meaningful extent, so it is not printed.
+    CanvasCommand circle = timewarp::canvas::make_command(CanvasCommandKind::Circle);
+    circle.x = 30.0;
+    circle.y = 360.0;
+    TW_CHECK_EQ(line(circle), QStringLiteral("CIRCLE 30"));
+
+    // A point list is summarised: the coordinates of a 200-point polygon would
+    // bury every command around it.
+    CanvasCommand polygon = timewarp::canvas::make_command(CanvasCommandKind::DrawPolyline);
+    polygon.color = timewarp::canvas::make_rgb(0, 255, 0);
+    TW_CHECK_EQ(line(polygon, {0.0, 0.0, 10.0, 10.0, 20.0, 0.0}),
+                QStringLiteral("DRAWPOLYLINE 3 points #00FF00"));
+
+    CanvasCommand text = timewarp::canvas::make_command(CanvasCommandKind::DrawText);
+    text.x = 5.0;
+    text.y = 6.0;
+    text.w = 12.0;
+    TW_CHECK_EQ(line(text, {}, "hi"), QStringLiteral("DRAWTEXT \"hi\" at 5 6 (size 12)"));
+
+    // A name is a payload too, and it arrives as trailing bytes.
+    CanvasCommand sprite = timewarp::canvas::make_command(CanvasCommandKind::ShowSprite);
+    TW_CHECK_EQ(line(sprite, {}, "ship"), QStringLiteral("SHOWSPRITE \"ship\""));
+
+    TW_CHECK_EQ(line(timewarp::canvas::make_command(CanvasCommandKind::PenUp)),
+                QStringLiteral("PENUP"));
+}
+
+// The strip and the log are views over the canvas, so they are asserted through
+// the window: the command that reaches the drawing has to reach the record of it
+// in the same call, or the two disagree about what was drawn.
+void test_turtle_log_and_inspector_follow_the_canvas() {
+    announce("turtle inspector");
+    using timewarp::canvas::CanvasCommandKind;
+    using timewarp::canvas::CanvasCommandView;
+
+    const std::unique_ptr<MainWindow> window = shownWindow();
+    auto* inspector =
+        window->findChild<timewarp::ui::TurtleInspector*>(QStringLiteral("turtleInspector"));
+    auto* log = window->findChild<timewarp::ui::TurtleCommandLog*>(
+        QStringLiteral("turtleLog"));
+    TW_CHECK(inspector != nullptr);
+    TW_CHECK(log != nullptr);
+    if (inspector == nullptr || log == nullptr) {
+        return;
+    }
+
+    // An untouched window has drawn nothing and says so, rather than showing a
+    // pose from whatever was drawn last.
+    TW_CHECK_EQ(log->commandCount(), 0);
+    TW_CHECK_EQ(inspector->commandCount(), 0);
+
+    // Through the window's own apply, which is the sink the bridge drains into.
+    auto forward = timewarp::canvas::make_motion(CanvasCommandKind::Forward, 40.0);
+    window->applyCanvasCommand(CanvasCommandView{forward, {}, {}});
+    TW_CHECK_EQ(log->commandCount(), 1);
+    TW_CHECK_EQ(inspector->commandCount(), 1);
+    TW_CHECK(log->toPlainText().endsWith(QStringLiteral("FORWARD 40")));
+
+    // Heading 0 is north, so a forward move grows Y: the strip reads the canvas's
+    // own pose rather than keeping a copy that could drift from it.
+    TW_CHECK(inspector->poseText().contains(QStringLiteral("Y 40")));
+    TW_CHECK(inspector->penText().contains(QStringLiteral("DOWN")));
+
+    auto pen_up = timewarp::canvas::make_command(CanvasCommandKind::PenUp);
+    window->applyCanvasCommand(CanvasCommandView{pen_up, {}, {}});
+    TW_CHECK(inspector->penText().contains(QStringLiteral("UP")));
+    TW_CHECK_EQ(log->commandCount(), 2);
+
+    auto right = timewarp::canvas::make_motion(CanvasCommandKind::Right, 90.0);
+    window->applyCanvasCommand(CanvasCommandView{right, {}, {}});
+    TW_CHECK(inspector->poseText().contains(QStringLiteral("Heading 90")));
+
+    // Clearing the canvas clears the record of how it was made.
+    window->clearCanvas();
+    TW_CHECK_EQ(log->commandCount(), 0);
+    TW_CHECK(log->toPlainText().isEmpty());
+    TW_CHECK_EQ(inspector->commandCount(), 0);
+    TW_CHECK(inspector->penText().contains(QStringLiteral("DOWN")));
 }
 
 void test_output_sub_tabs() {
@@ -3579,6 +3687,8 @@ int main(int argc, char** argv) {
     test_repl_basic_direct_mode();
     test_the_outline_lists_and_jumps();
     test_the_scrubber_appears_only_when_there_is_ink();
+    test_turtle_command_log_spells_each_command();
+    test_turtle_log_and_inspector_follow_the_canvas();
     test_output_sub_tabs();
     test_function_key_bar_is_fixed_height();
     test_function_key_layers();
