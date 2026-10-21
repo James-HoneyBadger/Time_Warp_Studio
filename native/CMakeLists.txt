@@ -1070,6 +1070,14 @@ if(TIME_WARP_QT_FOUND)
                 MACOSX_BUNDLE_ICON_FILE "time-warp-studio.icns"
                 MACOSX_BUNDLE_INFO_PLIST
                     "${CMAKE_CURRENT_BINARY_DIR}/Info.plist")
+            # The bundle's frameworks live in Contents/Frameworks, and the
+            # dependencies name them through `@rpath`. Without this the install
+            # step strips the build tree's rpath and leaves
+            # `@rpath/QtSvg.framework/...` pointing at nothing, which is a dyld
+            # abort the moment the staged bundle is run: macdeployqt copies the
+            # frameworks in but rewrites only what it can resolve.
+            set_target_properties(time_warp_ide PROPERTIES
+                INSTALL_RPATH "@executable_path/../Frameworks")
             # A bundle resource rather than an installed file: CMake copies it
             # into Contents/Resources as part of the build, so the .app in the
             # build tree is as complete as the one on the disk image.
