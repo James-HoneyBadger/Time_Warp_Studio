@@ -568,7 +568,14 @@ jobs:
           # The frameworks travel inside the bundle or the image is a broken
           # download for anybody without Qt.
           test -d "$installed/Contents/Frameworks"
-          "$installed/Contents/MacOS/time_warp_ide" --version
+          # The staged application has to load Qt from inside the bundle, which
+          # is what macdeployqt exists to arrange: an unresolved rpath fails here
+          # as a dyld error. Located rather than spelled out, because the
+          # executable carries the product's name (`Time Warp Studio`), not the
+          # target's -- the same reason the test step above finds it.
+          app=$(find "$installed/Contents/MacOS" -maxdepth 1 -type f | head -1)
+          test -x "$app"
+          "$app" --version
 
           cd native/build
           cpack -G DragNDrop
@@ -590,6 +597,12 @@ jobs:
           test -f "$app/Contents/Resources/share/time_warp/worker.py"
           test -f "$app/Contents/Resources/share/doc/time-warp-studio/INDEX.md"
           test -d "$app/Contents/Frameworks"
+          # And the copy on the image runs from where a user will put it: a
+          # bundle can survive the staging directory and lose what it needs on
+          # the way into the image.
+          app_binary=$(find "$app/Contents/MacOS" -maxdepth 1 -type f | head -1)
+          test -x "$app_binary"
+          "$app_binary" --version
           hdiutil detach "$mount" > /dev/null
           ls -l dist
 
