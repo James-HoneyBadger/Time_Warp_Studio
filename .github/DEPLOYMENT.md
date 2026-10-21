@@ -14,6 +14,15 @@ that exist and what they gate.
 | `version.yml` | Push and pull request to `main`, when `VERSION`, the README, the changelog, `docs/`, `Scripts/` or the engine's `__init__.py` changes | That every hand-written copy of the version agrees with `VERSION`. Separate from the native build because it has to run on documentation changes, which the C++ job does not watch. |
 | `release.yml` | A `v*` tag, or `workflow_dispatch` with a version | Refuses a tag that disagrees with `VERSION` (running `version_sync.py` as the same check `version.yml` makes), then builds the release on five runners -- `ubuntu-24.04` and `ubuntu-24.04-arm` for the Linux packages, `windows-latest` for the installer and ZIP, `windows-2022` for the Windows 7 installer that Qt 5.15 makes possible, `macos-latest` for the universal disk image -- running the CTest suites and an offscreen screenshot against each tree before packaging it, and attaching every artifact with a `.sha256` to the GitHub Release. It also pushes the container image to `ghcr.io`. The release job runs in the `production` environment, which is what makes GitHub record a Deployment. |
 
+**The actions, and the Node runtime behind them.** Every action is pinned to a
+major tag, and the majors are the ones that run on Node 24 — `checkout@v5`,
+`upload-artifact@v6`, `download-artifact@v7`, `docker/login-action@v4`,
+`docker/build-push-action@v7`. GitHub runs a Node 20 action anyway, on Node 24,
+but only until it stops, so a workflow that still pins one is a workflow with a
+date on it. `ilammy/msvc-dev-cmd` is the exception: its newest release
+(`v1.13.0`) is still a Node 20 action and upstream has published nothing newer,
+so the annotation it draws is upstream's to fix.
+
 Two of these exist because of a failure the others cannot see. The lesson plans in
 `docs/lessons/plans/` are **generated** from the curriculum, and the failure that
 matters is somebody editing a lesson without regenerating the document a teacher

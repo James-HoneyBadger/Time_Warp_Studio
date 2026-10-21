@@ -51,7 +51,7 @@ jobs:
     outputs:
       version: ${{ steps.version.outputs.version }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Work out the version
         id: version
@@ -96,7 +96,7 @@ jobs:
             appimage: false
     runs-on: ${{ matrix.runner }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Install Qt 6 and the build tools
         run: |
@@ -202,7 +202,7 @@ jobs:
           ( cd dist && sha256sum "$OUTPUT" > "$OUTPUT.sha256" )
           ls -l dist
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v6
         with:
           name: linux-artifact-${{ matrix.arch }}
           path: |
@@ -224,7 +224,7 @@ jobs:
       run:
         shell: pwsh
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       # Pinned: 6.8.3 is the Qt the suite is validated against on Windows.
       - name: Install Qt 6
@@ -343,7 +343,7 @@ jobs:
           }
           Get-ChildItem dist | Format-Table Name, Length
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v6
         with:
           name: windows-artifact-x64
           path: |
@@ -362,7 +362,7 @@ jobs:
       run:
         shell: pwsh
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       # Qt 6 requires Windows 10. 5.15.2 is the last Qt that runs on 7 SP1, and
       # the last with an MSVC binary package, so it is what this artifact is
@@ -486,7 +486,7 @@ jobs:
           }
           Get-ChildItem dist | Format-Table Name, Length
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v6
         with:
           name: windows7-artifact-x64
           path: |
@@ -500,7 +500,7 @@ jobs:
     needs: verify
     runs-on: macos-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       # The newest Qt: 6.8 and 6.9 link `-framework AGL`, which macOS 26's SDK no
       # longer has. Qt 6.12 is universal and declares macOS 14.4 as its floor.
@@ -593,7 +593,7 @@ jobs:
           hdiutil detach "$mount" > /dev/null
           ls -l dist
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v6
         with:
           name: macos-artifact-universal
           path: |
@@ -606,20 +606,20 @@ jobs:
     needs: [verify, build]
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Lowercase the image name
         run: echo "IMAGE_NAME=ghcr.io/${GITHUB_REPOSITORY,,}" >> "$GITHUB_ENV"
 
       - name: Log in to GitHub Packages
-        uses: docker/login-action@v3
+        uses: docker/login-action@v4
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build and push
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: .
           file: packaging/docker/Dockerfile
@@ -647,7 +647,7 @@ jobs:
       name: production
       url: ${{ github.server_url }}/${{ github.repository }}/releases/tag/v${{ needs.verify.outputs.version }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       # `merge-multiple` puts both architectures' files in one directory: the
       # release attaches a flat list, and every file name already says which
@@ -657,7 +657,7 @@ jobs:
       - name: Lowercase the image name
         run: echo "IMAGE_NAME=ghcr.io/${GITHUB_REPOSITORY,,}" >> "$GITHUB_ENV"
 
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v7
         with:
           pattern: '*-artifact-*'
           merge-multiple: true
