@@ -1,6 +1,6 @@
 # Architecture Guide
 
-## Time Warp Studio v22.3.2 — System Design and Implementation
+## Time Warp Studio v22.4.0 — System Design and Implementation
 
 > **This page describes the shipping product.** It was rewritten alongside the move
 > to C++20 / Qt6. Earlier revisions documented the PySide6 implementation, which has

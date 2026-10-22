@@ -3670,6 +3670,33 @@
    "command": "error: division by zero",
    "source": "1 0 / . CR",
    "expect": "error"
+  },
+  {
+   "language": "REXX",
+   "command": "IF / THEN with the body on the next line",
+   "source": "score = 10\nIF score > 50 THEN\nSAY 'pass'\nELSE\nSAY 'fail'",
+   "expect": "prints:fail"
+  },
+  {
+   "language": "REXX",
+   "command": "ELSE IF chain",
+   "source": "n = 4\nIF n = 1 THEN\nSAY 'one'\nELSE IF n = 2 THEN\nSAY 'two'\nELSE\nSAY 'many'",
+   "expect": "prints:many",
+   "also": [
+    "ELSE"
+   ]
+  },
+  {
+   "language": "REXX",
+   "command": "LEFT and RIGHT pad to a width",
+   "source": "SAY LEFT('ab', 5)||'|' RIGHT('ab', 5)||'|'",
+   "expect": "prints:ab   |   ab|"
+  },
+  {
+   "language": "REXX",
+   "command": "ARG reads a call's argument",
+   "source": "CALL echo 'hello', 'world'\nEXIT\necho:\nSAY ARG(1) || ' ' || ARG(2)\nRETURN",
+   "expect": "prints:hello world"
   }
  ],
  "waivers": [
@@ -3677,6 +3704,11 @@
    "language": "BASIC",
    "command": "INKEY$",
    "reason": "polls a keyboard buffer that only an interactive session fills"
+  },
+  {
+   "language": "REXX",
+   "command": "LEFT and RIGHT pad to a width",
+   "reason": "the REPL collapses runs of spaces, so a padded column cannot be read back through it; the program gate still checks the padding"
   }
  ]
 }

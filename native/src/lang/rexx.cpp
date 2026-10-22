@@ -186,6 +186,12 @@ struct RexxState {
     std::optional<std::map<std::string, std::size_t>> labels;
     std::optional<std::string> waiting;
     std::vector<RValue> args;
+    /// The ELSE lines a taken single-statement IF has to skip. A DO body ends at its
+    /// END, where `handle_end` can skip; a one-line body has no END, so the ELSE line
+    /// that follows it is recorded and looked at when execution gets there. A list
+    /// rather than one line, because an IF's body may be another IF with an ELSE of
+    /// its own, and both have to be skipped when both branches were taken.
+    std::vector<std::size_t> skip_else_lines;
 };
 
 bool is_loop(const std::string& kind) {
@@ -834,6 +840,115 @@ std::string statement_after_label(const std::string& text) {
     return trim(text);
 }
 
+/// Whether the text at a line starts a DO block.
+bool line_starts_do(Interpreter& interpreter, std::size_t line) {
+    const auto& lines = interpreter.program_lines();
+    if (line >= lines.size()) {
+        return false;
+    }
+    return starts_with(upper(statement_after_label(strip_comment(lines[line].text))), "DO");
+}
+
+std::size_t after_else_clause(Interpreter& interpreter, std::size_t else_line);
+
+/// The first line after the statement that begins at `line`.
+///
+/// One line, unless that line opens something: a DO block runs to its END, and an IF
+/// carries its own body and then any ELSE clause of its own. An IF's body is what
+/// this has to get right, because the statement after `IF c THEN` may itself be an
+/// `IF ... ELSE ...`, and skipping "one line" would leave the inner ELSE looking
+/// like an ELSE of the outer IF.
+std::size_t after_statement(Interpreter& interpreter, std::size_t line) {
+    const auto& lines = interpreter.program_lines();
+    if (line >= lines.size()) {
+        return line;
+    }
+    const std::string text = statement_after_label(strip_comment(lines[line].text));
+    const std::string shouted = upper(text);
+    if (starts_with(shouted, "DO")) {
+        return scan_block_end(interpreter, line) + 1;
+    }
+    static const std::regex then_pattern{R"(^IF\b.*\bTHEN\b(.*)$)",
+                                         std::regex::ECMAScript | std::regex::icase};
+    std::smatch match;
+    if (std::regex_match(text, match, then_pattern)) {
+        // `IF c THEN statement` is complete on its line; `IF c THEN` has its body on
+        // the next one, and that body is itself a statement.
+        const std::string tail = trim(match[1].str());
+        std::size_t end = line + 1;
+        if (starts_with(upper(tail), "DO")) {
+            end = scan_block_end(interpreter, line) + 1;  // `IF c THEN DO`: block here
+        } else if (tail.empty() && line + 1 < lines.size()) {
+            end = after_statement(interpreter, line + 1);
+        }
+        if (end < lines.size() &&
+            starts_with(upper(statement_after_label(strip_comment(lines[end].text))), "ELSE")) {
+            return after_else_clause(interpreter, end);
+        }
+        return end;
+    }
+    return line + 1;
+}
+
+/// The first line after the ELSE clause that begins at `else_line`.
+///
+/// An ELSE can be followed by one statement, by a DO block, or by another IF --
+/// `ELSE IF ... THEN` is the chain REXX programs are written with, and it is how one
+/// says "otherwise, try this instead". Skipping a taken IF's ELSE means skipping all
+/// of that, so this walks the chain: each clause ends one line after its body, or
+/// after its `END` when the body is a block, and a clause that is itself an IF hands
+/// over to the ELSE that may follow its own body.
+std::size_t after_else_clause(Interpreter& interpreter, std::size_t else_line) {
+    const auto& lines = interpreter.program_lines();
+    static const std::regex else_pattern{R"(^ELSE\b)", std::regex::ECMAScript | std::regex::icase};
+    static const std::regex then_pattern{R"(^IF\b.*\bTHEN\b(.*)$)",
+                                         std::regex::ECMAScript | std::regex::icase};
+    const auto text_at = [&](std::size_t index) {
+        return index < lines.size() ? statement_after_label(strip_comment(lines[index].text))
+                                    : std::string{};
+    };
+    // One statement, or a whole DO block, beginning at `line`.
+    const auto after_body = [&](std::size_t line) {
+        return line_starts_do(interpreter, line) ? scan_block_end(interpreter, line) + 1
+                                                 : std::min(line + 1, lines.size());
+    };
+
+    std::size_t line = else_line;
+    for (std::size_t guard = 0; guard < lines.size(); ++guard) {
+        const std::string text = text_at(line);
+        std::smatch match;
+        if (!std::regex_search(text, match, else_pattern)) {
+            return line;
+        }
+        const std::string body = trim(std::regex_replace(text, else_pattern, ""));
+        std::size_t end = 0;
+        if (body.empty()) {
+            end = after_body(line + 1);  // `ELSE` alone: its body is the next line
+        } else if (std::smatch inner; std::regex_match(body, inner, then_pattern)) {
+            // `ELSE IF ... THEN`: the inner body follows on the next line, or opens a
+            // block on this one (`... THEN DO`), or is already complete after THEN.
+            const std::string tail = trim(inner[1].str());
+            if (tail.empty()) {
+                end = after_body(line + 1);
+            } else if (starts_with(upper(tail), "DO")) {
+                end = scan_block_end(interpreter, line) + 1;
+            } else {
+                end = line + 1;
+            }
+        } else if (starts_with(upper(body), "DO")) {
+            end = scan_block_end(interpreter, line) + 1;
+        } else {
+            end = line + 1;  // `ELSE statement` on one line
+        }
+        if (!starts_with(upper(text_at(end)), "ELSE")) {
+            return end;
+        }
+        line = end;
+    }
+    return std::min(else_line + 1, lines.size());
+}
+
+
 // ---------------------------------------------------------------------------
 // Executor
 // ---------------------------------------------------------------------------
@@ -886,6 +1001,13 @@ void RexxMachine::sync_pending_input() {
 }
 
 Flow RexxMachine::run_statements(const std::string& text) {
+    const auto skip = std::find(state.skip_else_lines.begin(), state.skip_else_lines.end(),
+                                interpreter.current_line);
+    if (skip != state.skip_else_lines.end()) {
+        state.skip_else_lines.erase(skip);
+        interpreter.jump_to(after_else_clause(interpreter, interpreter.current_line));
+        return Flow::Jump;
+    }
     for (const std::string& statement : split_statements(statement_after_label(text))) {
         Flow flow = Flow::None;
         try {
@@ -913,6 +1035,14 @@ Flow RexxMachine::exec_statement(const std::string& statement) {
     }
     if (shouted == "END") {
         return handle_end();
+    }
+    // An ELSE line executes itself. The interpreter has already decided that this
+    // branch is the one to run -- a taken IF's ELSE is skipped before its line is
+    // reached -- and `ELSE` alone leaves the statement on the next line to fall
+    // through, while `ELSE IF ... THEN` is simply an IF handled by the case below.
+    if (starts_with(shouted, "ELSE")) {
+        const std::string body = trim(text.substr(4));
+        return body.empty() ? Flow::None : exec_statement(body);
     }
 
     if (const std::optional<Flow> flow = handle_flow(text, shouted)) {
@@ -1038,6 +1168,33 @@ Flow RexxMachine::handle_if(const std::string& text) {
         return after_block(block_end);
     }
 
+    if (rest.empty()) {
+        // `IF c THEN` with the statement on the next line, which is the shape most
+        // REXX is written in. Falling through ran that statement whether or not the
+        // condition held, and the `ELSE` after it was then reached as a bare
+        // statement and reported as unknown.
+        const std::size_t body = interpreter.current_line + 1;
+        const auto& lines = interpreter.program_lines();
+        if (body >= lines.size()) {
+            return Flow::None;
+        }
+        const std::size_t body_end = after_statement(interpreter, body);
+        if (!taken) {
+            // Continues on the ELSE line when there is one, past everything when not.
+            interpreter.jump_to(body_end);
+            return Flow::Jump;
+        }
+        // A one-line body has no END to end it, so an ELSE after it is skipped by
+        // line number when execution arrives there.
+        if (body_end < lines.size() &&
+            starts_with(upper(statement_after_label(strip_comment(lines[body_end].text))), "ELSE")) {
+            state.skip_else_lines.push_back(body_end);
+        }
+        interpreter.jump_to(body);
+        return Flow::Jump;
+    }
+
+    // One line: `IF c THEN statement` or `IF c THEN statement ELSE statement`.
     std::string then_statement = rest;
     std::string else_statement;
     static const std::regex else_pattern{R"(^(.*?)\s+ELSE\s+(.*)$)",
@@ -1058,28 +1215,11 @@ Flow RexxMachine::handle_if(const std::string& text) {
 }
 
 Flow RexxMachine::after_block(std::size_t block_end) {
-    const auto& lines = interpreter.program_lines();
-    const std::size_t next = block_end + 1;
-    if (next < lines.size()) {
-        const std::string rest =
-            statement_after_label(strip_comment(lines[next].text));
-        static const std::regex else_pattern{R"(^ELSE\b)",
-                                             std::regex::ECMAScript | std::regex::icase};
-        if (std::regex_search(rest, else_pattern)) {
-            const std::string body =
-                trim(std::regex_replace(rest, else_pattern, ""));
-            interpreter.jump_to(next + 1);
-            if (starts_with(upper(body), "DO")) {
-                Frame frame;
-                frame.kind = "else_body";
-                state.stack.push_back(std::move(frame));
-            } else if (!body.empty()) {
-                exec_statement(body);
-            }
-            return Flow::Jump;
-        }
-    }
-    interpreter.jump_to(next);
+    // The branch above this one was not taken, so execution continues on the line
+    // after its body. When that line is an `ELSE`, it is executed like any other
+    // statement -- it decides what to run and this function does not need to know
+    // which of the four shapes of ELSE it is looking at.
+    interpreter.jump_to(block_end + 1);
     return Flow::Jump;
 }
 
@@ -1266,12 +1406,10 @@ Flow RexxMachine::skip_else() {
     if (!std::regex_search(rest, else_pattern)) {
         return Flow::None;
     }
-    const std::string body = trim(std::regex_replace(rest, else_pattern, ""));
-    if (starts_with(upper(body), "DO")) {
-        interpreter.jump_to(scan_block_end(interpreter, next) + 1);
-    } else {
-        interpreter.jump_to(next + 1);
-    }
+    // The whole clause, not just its first line: a bare `ELSE` carries its body on
+    // the next line and `ELSE IF ... THEN` carries a chain, and both were skipped by
+    // one line -- which ran the else body after the then body had already run.
+    interpreter.jump_to(after_else_clause(interpreter, next));
     return Flow::Jump;
 }
 
@@ -1501,20 +1639,28 @@ RValue call_builtin(Interpreter& interpreter, const std::string& name,
         }
         return RValue::word(text.substr(static_cast<std::size_t>(begin)));
     }
-    if (name == "LEFT") {
-        const long long count = static_cast<long long>(n(1));
-        return RValue::word(count <= 0
-                                ? std::string{}
-                                : s(0).substr(0, static_cast<std::size_t>(count)));
-    }
-    if (name == "RIGHT") {
+    // `LEFT(string, length, pad)` and `RIGHT(...)` return exactly `length`
+    // characters: they truncate and they *pad*, which is what makes them useful for
+    // a column. Both used to ignore the length when the text was short, so a report
+    // that lined up on paper came out as one run-together line.
+    if (name == "LEFT" || name == "RIGHT") {
         const std::string text = s(0);
         const long long count = static_cast<long long>(n(1));
         if (count <= 0) {
             return RValue::word("");
         }
-        const std::size_t wanted = std::min(text.size(), static_cast<std::size_t>(count));
-        return RValue::word(text.substr(text.size() - wanted));
+        const std::string pad = args.size() >= 3 ? s(2) : std::string{" "};
+        const char fill = pad.empty() ? ' ' : pad.front();
+        const auto wanted = static_cast<std::size_t>(count);
+        std::string result;
+        if (text.size() >= wanted) {
+            result = name == "LEFT" ? text.substr(0, wanted)
+                                    : text.substr(text.size() - wanted);
+        } else {
+            const std::string padding(wanted - text.size(), fill);
+            result = name == "LEFT" ? text + padding : padding + text;
+        }
+        return RValue::word(result);
     }
     if (name == "COPIES") {
         const long long count = std::max(0LL, static_cast<long long>(n(1)));

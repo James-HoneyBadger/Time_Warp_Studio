@@ -42,7 +42,7 @@ derived rather than remembered.
 | Database | A SQLite-backed Database tab, the shared `SQL` statement in nine languages, scripts, tables and schema; compiled programs link SQLite |
 | Automation | JSON-RPC over stdin/stdout (`language.run`, `repl.*`, `debug.*`, `sql.*`, `project.*`, `watch.evaluate`) and the `twc` terminal compiler |
 | Packaging | `make install`; tagged releases build a Windows installer and portable ZIP (Qt 6), a second Windows installer for Windows 7 (Qt 5.15), a universal macOS disk image, `.deb`, `.rpm`, AppImage, tarball and container artifacts |
-| Quality gates | 24 CTest suites in 4 build configurations and on four platforms (Linux, Windows, Windows with Qt 5.15, macOS); the frozen-corpus gate over 662 programs (470 language, 192 Scheme); 546 command rows run as programs and through the REPL; 63 example programs through the smoke gate; and the documentation gates (links, claims, version, Markdown lint) |
+| Quality gates | 24 CTest suites in 4 build configurations and on four platforms (Linux, Windows, Windows with Qt 5.15, macOS); the frozen-corpus gate over 662 programs (470 language, 192 Scheme); 550 command rows run as programs and through the REPL; 69 example programs through the smoke gate; and the documentation gates (links, claims, version, Markdown lint) |
 
 ---
 
@@ -57,7 +57,27 @@ written down in `WAIVERS`.
 
 **Still open**
 
-None. Every defect below has a regression row in `native/share/command_rows.json` and, where the
+Four, all found by writing the new examples at 22.4.0 rather than by reading the code.
+They are listed because a language the IDE offers should not have a documented feature
+that cannot be used, and each is small enough to be somebody's afternoon:
+
+- **BASIC's `FUNCTION ... END FUNCTION` cannot be called.** The definition parses and is
+  skipped, and a call in an expression throws `Unknown function: TWICE`, whichever order
+  the definition and the call appear in. The pieces exist — `Machine::function_definition`,
+  `Machine::end_function` and a `CallFrame` — but nothing registers a `FunctionHook`, which
+  is how COMAL's `FUNC` reaches the evaluator; BASIC's bodies are statements, so the hook
+  would have to run the machine rather than a lambda. The example that found it
+  (`basic/gradebook.bas`) uses `GOSUB` instead, which is what BASIC did for thirty years.
+- **`STR$` and `PRINT ... +` reject an array element**: `STR$(7)` works, `STR$(A(1))`
+  raises `Unknown function: STR`.
+- **`PRINT USING` prints only its first value** when two are given on one line; `FORMAT$`
+  in a concatenation is the working form.
+- **A COMAL program can read an array element inside a loop and get zero for the same
+  index outside it.** `comal/results_table.comal` reads `mark(i)` correctly for all eight
+  `i` and reports `mark(8)` as 0 four lines later; nothing in isolation reproduces it, so
+  it is written down here rather than worked around silently.
+
+Every defect below has a regression row in `native/share/command_rows.json` and, where the
 behaviour is expressible in a unit test, a case in the language's test module. The
 section stays because the next port has to keep them fixed: a port that quietly
 restores one of these is a regression even though it is new code.

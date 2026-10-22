@@ -59,6 +59,10 @@ const QSet<QString>& nativeOnly() {
 const QSet<QString>& drawingExamples() {
     static const QSet<QString> examples{
         QStringLiteral("basic/math_explorer.bas"),
+        QStringLiteral("apl/sensor_readings.apl"),
+        QStringLiteral("basic/gradebook.bas"),
+        QStringLiteral("comal/results_table.comal"),
+        QStringLiteral("focal/numerics.foc"),
         QStringLiteral("basic/space_simulation.bas"),
         QStringLiteral("logo/community_campus.logo"),
         QStringLiteral("logo/fractal_forest.logo"),

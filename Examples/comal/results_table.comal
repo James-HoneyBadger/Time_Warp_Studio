@@ -1,0 +1,112 @@
+10 REM ============================================================
+20 REM RESULTS TABLE
+30 REM A COMAL program of the kind COMAL was written for in a
+40 REM classroom: read a set of marks, sort them, rank them, and
+50 REM print a table with a histogram beside it. COMAL's PROCs and
+60 REM FUNCs take parameters, which is what made it teachable.
+70 REM ============================================================
+80 PROC banner(t$)
+90   PRINT
+100   PRINT t$
+110   PRINT "--------------------------------------------------"
+120 ENDPROC
+130 PROC rule
+140   PRINT "--------------------------------------------------"
+150 ENDPROC
+
+160 FUNC mean(total, count)
+170   RETURN total / count
+180 ENDFUNC
+
+190 REM A COMAL FUNC is one expression, so a four-way choice is a
+200 REM procedure that leaves its answer where the caller can read it.
+210 PROC grade(score)
+220   IF score >= 85 THEN
+230     letter$ := "A"
+240   ELIF score >= 70 THEN
+250     letter$ := "B"
+260   ELIF score >= 55 THEN
+270     letter$ := "C"
+280   ELSE
+290     letter$ := "D"
+300   ENDIF
+310 ENDPROC
+
+320 PROC bars(score)
+330   stars := score / 4
+340   bar$ := ""
+350   FOR k := 1 TO stars
+360     bar$ := bar$ + "*"
+370   NEXT k
+380   PRINT bar$
+390 ENDPROC
+
+400 CALL banner("M A R K S   B O A R D")
+410 DIM mark(8)
+420 DATA 72, 91, 58, 44, 83, 67, 95, 51
+430 REM READ fills a scalar, so the array is filled from one.
+440 FOR i := 1 TO 8
+450   READ paper
+460   mark(i) := paper
+470 NEXT i
+
+460 REM --- 1. The marks, as they arrived -------------------------
+470 PRINT "The marks, in the order they were handed in:"
+480 total := 0
+490 FOR i := 1 TO 8
+500   PRINT "  paper "; i; ": "; mark(i)
+510   total := total + mark(i)
+520 NEXT i
+530 PRINT
+540 PRINT "Mean mark: "; mean(total, 8)
+
+550 REM --- 2. Sorted: an exchange sort, written out --------------
+560 CALL banner("RANKED")
+570 FOR i := 1 TO 7
+580   FOR j := i + 1 TO 8
+590     IF mark(j) > mark(i) THEN
+600       hold := mark(i)
+610       mark(i) := mark(j)
+620       mark(j) := hold
+630     ENDIF
+640   NEXT j
+650 NEXT i
+660 FOR i := 1 TO 8
+670   CALL grade(mark(i))
+675   PRINT "  "; i; "  "; mark(i); "  "; letter$
+680 NEXT i
+690 PRINT
+695 PRINT "Sorted, so the table begins with the best paper: "; mark(1)
+
+710 REM --- 3. The same numbers as bars ---------------------------
+720 CALL banner("THE SHAPE OF THE CLASS")
+730 FOR i := 1 TO 8
+740   PRINT "  "; mark(i); " ";
+750   CALL bars(mark(i))
+760 NEXT i
+770 CALL rule
+780 PRINT "One star is four marks. The tall bars are the papers to read first."
+
+790 REM --- 4. And drawn, not typed --------------------------------
+800 REM Each mark becomes a bar; the turtle is moved to the next
+810 REM one with the pen up, which is what a bar chart is.
+820 CALL banner("DRAWN")
+830 SIDE := 30
+840 FOR i := 1 TO 8
+850   PENUP
+860   HOME
+870   TURN 90
+880   MOVE (i - 1) * 34
+890   TURN -90
+900   PENDOWN
+910   MOVE mark(i)
+920   TURN 90
+930   MOVE 12
+940   TURN 90
+950   MOVE mark(i)
+960   TURN 90
+970   MOVE 12
+980 NEXT i
+990 PENUP
+1000 HOME
+1010 PRINT "Drawn: eight bars, tallest first, since they are sorted."

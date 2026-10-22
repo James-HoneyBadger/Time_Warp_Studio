@@ -1212,8 +1212,8 @@ wrong name.
 
 **All eleven languages run.** Scheme goes through its own machine on a background
 thread; the other ten run in process through `timewarp_lang`. No program is sent to
-a Python engine any more, and the engine itself is deleted. Every one of the 63
-examples the reference could run executes, and the 33 that draw produce drawing --
+a Python engine any more, and the engine itself is deleted. Every one of the 69
+examples executes, and the 37 that draw produce drawing --
 checked by `make smoke` (`time_warp_gates smoke`). Fifty of them are also frozen
 against the reference's own answers in `lang_corpus.json.gz`.
 `basic/star_patrol.bas` uses commands the reference never had, so `lang_tests` runs

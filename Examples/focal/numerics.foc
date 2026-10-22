@@ -1,0 +1,56 @@
+01.10 C ============================================================
+01.20 C NEWTON'S WORKBENCH
+01.30 C Numerical work in FOCAL: iterate to a root, sum a series,
+01.40 C print a table a person can read, then draw it. FOCAL has
+01.50 C no user-defined functions, so each method is a loop over
+01.60 C globals and the three-way IF decides when to stop.
+01.70 C ============================================================
+01.80 T "N E W T O N ' S   W O R K B E N C H"
+01.90 T "--------------------------------------------------"
+
+02.10 C --- 1. Square root by Newton's method --------------------
+02.20 C x <- (x + a/x)/2 converges on sqrt(a) from any start.
+02.30 S A=2
+02.40 S X=1
+02.50 S N=0
+02.60 T %0,"Iterating to the square root of ",A," from ",X,":"
+02.70 S X=(X+A/X)/2
+02.80 S N=N+1
+02.90 T %0,"  step ",N,%8,"  x = ",X
+03.10 C Keep going while x*x is more than a billionth away.
+03.20 S E=X*X-A-0.000000001
+03.30 IF (E) 3.40,3.40,2.70
+03.40 T %0,"Converged after ",N,%8," steps, to x = ",X
+03.50 T %3,"Library check: FSQT(2) = ",FSQT(A)
+03.60 T ""
+
+04.10 C --- 2. e, summed rather than looked up -------------------
+04.20 S E=0
+04.30 S TERM=1
+04.40 S K=0
+04.50 S E=E+TERM
+04.60 S K=K+1
+04.70 S TERM=TERM/K
+04.80 C Stop once a term is too small to move the seventh place.
+04.90 S D=TERM-0.0000001
+05.10 IF (D) 5.20,5.20,4.50
+05.20 T %0,"e from ",K,%7," terms of 1/k! = ",E
+05.30 T %3,"Library check: FEXP(1) = ",FEXP(1)
+05.40 T ""
+
+06.10 C --- 3. A table, which is what a desk calculator is for ---
+06.20 T %0,"    n        n^2       sqrt(n)"
+06.30 FOR N=1,8;S R=N;S R=(R+N/R)/2;S R=(R+N/R)/2;S R=(R+N/R)/2;S R=(R+N/R)/2;T %0,"   ",N,%3,"   ",N*N,"      ",R
+06.40 T ""
+
+07.10 C --- 4. Draw the table --------------------------------------
+07.20 C Eight columns, climbing to the right, each as tall as its
+07.30 C own square. HOME between columns keeps the turtle honest.
+07.40 T "The same eight columns, drawn:"
+07.50 S SIDE=6
+07.60 S X0=0
+07.70 FOR N=1,8;PU;HOME;RT 90;FD X0;LT 90;PD;FD SIDE*N;RT 90;FD 10;RT 90;FD SIDE*N;RT 90;FD 10;RT 90;S X0=X0+12
+07.80 PU
+07.90 HOME
+08.10 T "Drawn: eight columns, each as tall as its own square."
+08.20 Q

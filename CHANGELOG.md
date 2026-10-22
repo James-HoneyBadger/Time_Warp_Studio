@@ -2,6 +2,60 @@
 
 <!-- history: all -->
 
+## [22.4.0] - 2026-10-22
+
+The examples were the part of the tree nobody had asked whether it was good. Six new
+programs, in the five languages whose sets were thin, and four interpreter defects
+that only writing them could find.
+
+### Added
+
+- **`rexx/log_analysis.rexx`** -- a web log triaged: PARSE VAR, an `ELSE IF` chain,
+  padded columns, internal subroutines reading `ARG(n)`, and a verdict rather than
+  just figures.
+- **`focal/numerics.foc`** -- Newton's method and a summed series, a formatted table,
+  and the same table drawn as columns.
+- **`apl/sensor_readings.apl`** -- a week of readings: reductions for the summary
+  figures, `⍋` for the ranking, a labelled report built with `⍕`, and a drawing whose
+  size the mean decides.
+- **`smalltalk/ledger.st`** -- an Account that refuses what it cannot pay: instance
+  state, a class-side constructor, blocks, and a report built with the collection
+  protocol.
+- **`comal/results_table.comal`** -- a class set of marks: DATA and READ, an exchange
+  sort, PROC and FUNC with parameters, a ranked table with a histogram, and a bar
+  chart.
+- **`basic/gradebook.bas`** -- a class report: two parallel arrays, a ranked table
+  built with `FORMAT$`, and a bar chart drawn with `LINE ... BF`.
+
+### Fixed
+
+- **REXX's `IF ... THEN` with the statement on the next line ran the statement
+  whether or not the condition held.** The shape most REXX is written in was wrong:
+  `IF score > 50 THEN` / `SAY 'pass'` printed `pass` for a score of 10, and the `ELSE`
+  after it was then reached as a bare statement and reported as unknown.
+- **REXX's `ELSE` was never skipped after a taken branch, and `ELSE IF` was not
+  supported at all.** A taken `THEN DO ... END` executed the statement after its
+  `ELSE` as well, and any `ELSE IF` chain failed to parse. Both are now handled by one
+  scanner that works out where the whole clause ends -- one statement, a DO block, or
+  a chain -- whether it is being run or skipped. Nested IFs work, because the skips
+  are a list rather than one line.
+- **REXX's `LEFT` and `RIGHT` ignored their length when the text was short**, so a
+  report written in columns printed as one run-together line. They now pad to the
+  width, with the optional third argument, which is what the two functions are for.
+- Four command rows and one REPL waiver cover the above: the next-line body, the
+  `ELSE IF` chain, padding, and `ARG(n)`.
+
+### Changed
+
+- `make smoke` runs 69 programs (was 63) and asserts ink for 37 of them; the command
+  table is 550 rows (was 546); `Examples/CATALOG.md` describes all 69.
+- `docs/ROADMAP.md` records the four defects the new examples found and did not fix:
+  BASIC's `FUNCTION` cannot be called at all, `STR$` rejects an array element,
+  `PRINT USING` prints only its first value, and one COMAL program reads an array
+  element as zero outside the loop that read it correctly. Writing them down is the
+  point -- a language the IDE offers should not have a documented feature that cannot
+  be used, and a known gap in a list is a gap somebody can close.
+
 ## [22.3.2] - 2026-10-22
 
 No identifier or file in the tree is named after Python any more. `MersenneRandom`

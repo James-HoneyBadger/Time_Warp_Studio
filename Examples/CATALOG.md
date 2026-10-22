@@ -28,6 +28,7 @@ smaller examples beside them each teach one idea; the showcases are the tour.
 | --- | --- |
 | `basic/showcase.bas` | The weather station: strings, arrays, all three loops, procedures, error handling, turtle graphics and sound |
 | `basic/star_patrol.bas` | A small game on `SCREEN 13`: a captured sprite ship, a star field, a shot whose hits are found with `POINT`, and a score bar |
+| `basic/gradebook.bas` | A class report: two parallel arrays, a ranked table built with `FORMAT$`, and a bar chart drawn with `LINE ... BF` |
 | `basic/hello.bas` | Hello World and basic output |
 | `basic/adventure.bas` | Text adventure control flow |
 | `basic/budget_tracker.bas` | Variables and tabular calculations |
@@ -71,6 +72,7 @@ smaller examples beside them each teach one idea; the showcases are the tour.
 
 | File | Description |
 | --- | --- |
+| `comal/results_table.comal` | A class set of marks: DATA and READ, an exchange sort, PROC and FUNC with parameters, a ranked table with a histogram and a bar chart the turtle draws |
 | `comal/showcase.comal` | The marks board: output, selection, FOR (with STEP), WHILE and REPEAT loops, procedures, functions, arrays and turtle graphics |
 | `comal/hello.comal` | Hello World and PRINT formatting |
 | `comal/loops.comal` | FOR, WHILE and REPEAT loops |
@@ -83,6 +85,7 @@ smaller examples beside them each teach one idea; the showcases are the tour.
 
 | File | Description |
 | --- | --- |
+| `rexx/log_analysis.rexx` | A web log triaged: PARSE VAR, an `ELSE IF` chain, padded columns via `LEFT`/`RIGHT`, internal subroutines reading `ARG(n)`, and a verdict rather than just figures |
 | `rexx/showcase.rexx` | The text analyst: typeless values, PARSE, DO TO/BY, DO OVER and DO WHILE, functions, subroutines and turtle graphics |
 | `rexx/hello.rexx` | SAY output and abuttal concatenation |
 | `rexx/loops.rexx` | DO TO/BY, DO WHILE and DO OVER iterations |
@@ -107,6 +110,7 @@ smaller examples beside them each teach one idea; the showcases are the tour.
 
 | File | Description |
 | --- | --- |
+| `focal/numerics.foc` | Newton's method and a summed series, a formatted table, and the same table drawn as columns |
 | `focal/showcase.foc` | The numbers desk: formatting, the function library, sign branches, FOR, DO groups and turtle graphics |
 | `focal/square.foc` | A square and a polygon, with a FOR loop and a sign branch |
 
@@ -131,11 +135,13 @@ so it can be opened, edited and re-assembled. The language is documented in
 | --- | --- |
 | `apl/showcase.apl` | The array workshop: every function family, right-to-left evaluation, a defined function and turtle geometry |
 | `apl/arrays_and_turtle.apl` | Iota, reduce, reshape and a user-defined function, then a hexagon |
+| `apl/sensor_readings.apl` | A week of readings: reductions for the summary figures, `⍋` for the ranking, a labelled report built with `⍕`, and a drawing whose size the mean decides |
 
 ## Smalltalk
 
 | File | Description |
 | --- | --- |
+| `smalltalk/ledger.st` | An Account class that refuses what it cannot pay: instance state, a class-side constructor, blocks, and a report built with the collection protocol |
 | `smalltalk/showcase.st` | The shape factory: classes, inheritance and super, blocks, collections and turtle graphics |
 | `smalltalk/shapes.st` | A Polygon class, nested figures drawn by a block, and Transcript output |
 
