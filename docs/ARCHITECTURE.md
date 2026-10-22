@@ -1,6 +1,6 @@
 # Architecture Guide
 
-## Time Warp Studio v16.6.0 — System Design and Implementation
+## Time Warp Studio v17.0.0 — System Design and Implementation
 
 > **This page describes the shipping product.** It was rewritten alongside the move
 > to C++20 / Qt6. Earlier revisions documented the PySide6 implementation, which has
@@ -51,9 +51,9 @@ stream of JSON messages coming back.
 | `timewarp_scheme` | `native/src/scheme/` | runner thread, in-process | Scheme, on an explicit-stack machine with no native recursion |
 | `timewarp_lang` | `native/src/lang/` | runner thread, in-process | The shared interpreter loop and every line-by-line executor: BASIC, FOCAL, PILOT, COMAL, APL and REXX, plus whole-program CHIP-8, Logo and Smalltalk |
 | `timewarp_debugger` | `native/src/debugger/` | its own `QThread` | Runs a Scheme program and services pause / step / breakpoint requests |
-| `timewarp_bridge` | `native/src/bridge/` | GUI thread, driving a `QProcess` | The IDE's end of the Python bridge |
 | `timewarp_expr` | `native/src/token.cpp`, `lexer.cpp`, `evaluator.cpp` | runner thread, in-process | The ported expression evaluator, linked into `timewarp_lang` — see the note below |
-| the bridge engine | `native/bridge/` | a separate Python process | The reference the parity gates, the lesson check and the command matrix compare against |
+| `timewarp_lessons` | `native/src/lessons/` | GUI thread, or a command | The curriculum, the verifier, the learner's progress and the classroom. See the libraries section |
+| the reference engine | `native/bridge/` | a separate Python process, in development only | The fixture the parity corpus was recorded from and the harnesses drive. Not installed, and never reached by the application |
 
 > **`timewarp_expr` is part of a Run now.** It builds, it has 485 checks of its
 > own, `native/tools/differential_check.py` compares it against the Python
@@ -83,26 +83,27 @@ There are three places code can run, and the rules differ between them.
 | --- | --- | --- |
 | **GUI thread** | Every widget, `QSettings`, the canvas display list | Anything |
 | **Runner thread** — `debugger::DebuggerRunner`, a `QThread` | A running Scheme program and its machine state | The canvas queue, through a host adapter. Never a widget |
-| **Worker process** — `bridge::PythonWorker` around a `QProcess` | The Python interpreter and the language state | Its own protocol on stdout; a child process cannot reach a widget anyway |
+| **Lesson check** — `lessons::ProgressStore` | The curriculum and the learner's program | `RecordingHost` instead of a canvas, so nothing on screen is touched |
+
+Every language runs in process. There is no worker process: the Python engine is a
+development fixture, not a runtime component, and nothing in the application starts
+it.
 
 ```mermaid
 flowchart LR
     subgraph GUI["GUI thread"]
         W[MainWindow] --> C[TurtleCanvas]
         B[CanvasBridge] --> C
-        PW[PythonWorker] --> B
+        LP[LessonPanel] --> LS["lessons::ProgressStore"]
         DR[DebuggerRunner] -. queued signals .-> W
     end
     subgraph RT["runner thread"]
         DR2["DebuggerRunner::run()<br/>Scheme machine"] --> H[QueuedTurtleHost]
-    end
-    subgraph PP["worker process"]
-        WK["worker.py<br/>nine language executors"]
+        NR["NativeRunner<br/>timewarp_lang"] --> H
     end
     H -- "push() then wake()" --> Q[(CanvasCommandQueue)]
     Q --> B
-    PW -- "run / in-reply / stop" --> WK
-    WK -- "ready / out / canvas / pose / err / in / done" --> PW
+    LS --> RH[RecordingHost]
 ```
 
 ### Control going *in* deliberately does not use slots
@@ -703,7 +704,7 @@ needs no change per language.
    is the default — in `include/timewarp/canvas/command.hpp`. That single predicate is
    the only thing deciding whether an adjacent duplicate is merged.
 4. Handle it in `TurtleCanvas::apply()`.
-5. Emit it from `bridge/worker.py`, or from `QueuedTurtleHost` in `host_adapter.hpp` for
+5. Emit it from `QueuedTurtleHost` in `host_adapter.hpp` for
    a native engine.
 
 ### Replacing a placeholder panel
@@ -795,7 +796,7 @@ gates and a command matrix. All of them must stay green, in every build tree.
 
 | Gate | Command | What it protects |
 | --- | --- | --- |
-| C++ suites (21) | `make -C native test` | Lexer, evaluator, Scheme, native languages, canvas queue, canvas bridge, debug, debugger runner, UI layout, UI documents, turtle canvas, syntax highlighter, Python bridge, media, editor services, help browser, CHIP-8 emulator, retro computer |
+| C++ suites (23) | `make -C native test` | Lexer, evaluator, Scheme, native languages, canvas queue, canvas bridge, debug, debugger runner, UI layout, UI documents, turtle canvas, syntax highlighter, media, editor services, help browser, CHIP-8 emulator, retro computer, project, SQL, API, audio, lessons, classroom |
 | Debug tree | `make -C native test-debug` | Keeps `Q_ASSERT` and standard-library hardening live; a suite green in Release can crash here |
 | Sanitisers | `make -C native asan` | Reads and writes of memory that is no longer valid, which no assertion can see. `ASAN=undefined` for UBSan |
 | Engine tests | `make engine-test` | The bridge engine: the ten executors, the evaluator, the validators, the lesson curriculum and the classroom |
@@ -910,7 +911,7 @@ coming from the Python application starts from this build's defaults.
   AppImage for x86_64, and a container image from the same install rules. Flatpak,
   Snap, a Windows installer and a macOS bundle are not built.
 - **Lesson checking still runs in the Python engine**, which is what keeps
-  `native/bridge/` and the `python_worker` target in the build.
+  `native/bridge/` itself, which is development tooling now.
 - **No pixel framebuffer.** Graphics are a display list of strokes and shapes
   with fit-to-content, so there is no `GET`/`PUT` sprite capture and no fixed
   screen coordinate system; a game draws primitives and polls `INKEY$`.

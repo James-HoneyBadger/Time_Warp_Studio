@@ -82,6 +82,10 @@ struct Lesson {
 /// `share/lessons.json`, then the checkout's `native/share/lessons.json`.
 [[nodiscard]] QString default_curriculum_path();
 
+/// The extension a handed-out file carries for a language: a learner opens it in
+/// their editor, and the editor picks the language from the extension.
+[[nodiscard]] std::string_view extension_for(lang::Language language) noexcept;
+
 /// The lessons for one language, in teaching order.
 [[nodiscard]] std::vector<const Lesson*> lessons_for(const std::vector<Lesson>& lessons,
                                                      lang::Language language);

@@ -27,7 +27,7 @@ help:
 	@echo "  screenshot    Capture a window screenshot"
 	@echo "  clean         Remove build output"
 	@echo ""
-	@echo "The temporary language bridge in $(NATIVE)/bridge:"
+	@echo "The reference engine in $(NATIVE)/bridge (development tooling):"
 	@echo "  engine-test   The bridge engine's own pytest suite"
 	@echo "  smoke         Every example program, through the real bridge"
 	@echo "  golden-check  The ports against the frozen reference corpus (no Python)"

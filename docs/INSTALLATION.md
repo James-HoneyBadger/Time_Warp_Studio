@@ -171,34 +171,26 @@ rather than failing obscurely — read its message.
 `-DCMAKE_MAP_IMPORTED_CONFIG_DEBUG=Release`; that breaks `OpenGL::OpenGL` and
 `OpenGL::GLX` in a way that is harder to diagnose.
 
-**The Lessons panel says the worker was not found.** Checking a lesson still runs
-in the reference engine. The IDE looks for `native/bridge/worker.py` beside the
-executable, two levels up, and in the working directory, in that order. Set
-`TIME_WARP_WORKER` (full path to `worker.py`) or `TIME_WARP_PYTHON`
-(interpreter) to override either half. The error message lists every path it
-tried.
+**The Lessons panel says the curriculum was not found.** It is shipped data -
+`share/time-warp-studio/lessons.json` beside the application - and
+`TIME_WARP_LESSONS` overrides it. A checkout finds `native/share/lessons.json`
+from the build tree. There is no worker and no Python involved: the check runs in
+process.
 
-**The Lessons panel says no interpreter was found.** Install Python 3.10+ or
-point `TIME_WARP_PYTHON` at one. Running a program needs no Python at all; only
-the lesson check does. The packaged application looks in the python.org framework
-and Homebrew locations on macOS before `PATH` (a bundle opened from the Finder does
-not inherit the shell's `PATH`), and on Windows it uses `python` on `PATH` and then
-the `py` launcher, skipping the Store's app-execution alias.
-
-**`make test` runs the wrong Python.** The bridge's pytest suite comes from
-`.venv` if it exists. Create one with `python3 -m venv .venv` and
-`pip install pytest ruff`, or override with `make engine-test PYTHON=python3`.
+**`make test` reports a missing `pytest`.** That is the reference engine's own
+suite, which is development tooling and not part of the product. Create the
+virtual environment with `python3 -m venv .venv` and `pip install pytest ruff`, or
+skip it: `make test` is the C++ suite and needs no Python.
 
 ---
 
-## 6. The reference engine (already bundled)
+## 6. The reference engine (development only)
 
-All ten languages run in C++ inside the IDE. The Python engine is still shipped
-because it is the reference the parity gates compare against and the engine the
-Lessons panel checks a program with:
-
-- `native/bridge/worker.py` — the worker the IDE spawns for a lesson check
-- `native/bridge/time_warp/` — the engine it drives
+All ten languages run in C++ inside the IDE, and the lesson check does too. The
+Python engine in `native/bridge/` is **not installed**: it is the fixture the
+parity corpus was recorded from, and the harnesses (`example_smoke.py`,
+`command_matrix.py`, `repl_matrix.py`) drive it while it exists. Nothing the
+product runs reaches it.
 
 Optional extras are imported defensively and are **not** required: `pyttsx3`
 (the reference's BASIC `SAY` backend), `pygame` and `inputs` (BASIC `SOUND` and
@@ -228,22 +220,25 @@ make -C native uninstall               # removes what install wrote
 make -C native install DESTDIR=/tmp/stage PREFIX=/usr
 ```
 
-That installs seven things, and they have to stay together:
+That installs these, and they have to stay together:
 
 | Path | What |
 | --- | --- |
 | `<prefix>/bin/time_warp_ide` | the application |
-| `<prefix>/share/time_warp/` | the reference engine — `worker.py` and the Python package |
+| `<prefix>/bin/time_warp_api` | the JSON-RPC automation surface |
+| `<prefix>/bin/time_warp_teach` | validate the curriculum, and bundle or unpack a class |
+| `<prefix>/bin/time_warp_learn` | the learner's command: list, show, start, check, hint |
+| `<prefix>/share/time-warp-studio/lessons.json` | the curriculum the panel and the two commands read |
 | `<prefix>/share/time-warp-studio/snippets.json` | the snippet catalogue Insert Snippet reads |
 | `<prefix>/share/time-warp-studio/examples/` | the programs File > Open Example lists |
 | `<prefix>/share/doc/time-warp-studio/` | the documentation Help > Documentation reads |
 | `<prefix>/share/applications/time-warp-studio.desktop` | the desktop entry |
 | `<prefix>/share/icons/hicolor/256x256/apps/time-warp-studio.png` | the icon |
 
-The bridge goes in `share/time_warp` because that is where the application looks
-for it (`../share/time_warp` relative to the binary), so an installed build needs
-no path configuration. It still needs `python3` on `PATH` for lesson checks; no
-language's Run uses it.
+The curriculum and the snippets go beside the application because that is where
+it looks for them (`../share/time-warp-studio` relative to the binary), so an
+installed build needs no path configuration. Nothing installed needs Python: the
+reference engine stays in the checkout, as development tooling.
 
 ### Installing on Windows and macOS
 

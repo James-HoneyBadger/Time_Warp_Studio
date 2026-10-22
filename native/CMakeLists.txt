@@ -702,10 +702,16 @@ endif()
 # ---------------------------------------------------------------------------
 
 if(TIME_WARP_QT_FOUND)
+    # zlib for classroom bundles: a zip a school can open with the tools it
+    # already has. Qt does not expose the copy it links internally, so this is a
+    # real dependency of the lessons library, and the packaging ships it.
+    find_package(ZLIB REQUIRED)
     add_library(timewarp_lessons
+        src/lessons/classroom.cpp
         src/lessons/curriculum.cpp
         src/lessons/progress.cpp
         src/lessons/verify.cpp
+        include/timewarp/lessons/classroom.hpp
         include/timewarp/lessons/curriculum.hpp
         include/timewarp/lessons/progress.hpp
         include/timewarp/lessons/verify.hpp
@@ -717,7 +723,7 @@ if(TIME_WARP_QT_FOUND)
     )
     target_compile_features(timewarp_lessons PUBLIC cxx_std_20)
     target_link_libraries(timewarp_lessons
-        PUBLIC ${TIME_WARP_QT}::Core timewarp::lang timewarp::scheme
+        PUBLIC ${TIME_WARP_QT}::Core timewarp::lang timewarp::scheme ZLIB::ZLIB
     )
 
     if(MSVC)
@@ -747,6 +753,17 @@ if(TIME_WARP_QT_FOUND)
             endif()
         endif()
         add_test(NAME lessons_tests COMMAND lessons_tests)
+
+        add_executable(classroom_tests tests/classroom_tests.cpp)
+        target_link_libraries(classroom_tests PRIVATE timewarp::lessons)
+        target_include_directories(classroom_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/tests)
+        if(NOT MSVC)
+            target_compile_options(classroom_tests PRIVATE -Wall -Wextra -Wpedantic -Wshadow)
+            if(TIME_WARP_EXPR_WERROR)
+                target_compile_options(classroom_tests PRIVATE -Werror)
+            endif()
+        endif()
+        add_test(NAME classroom_tests COMMAND classroom_tests)
     endif()
 
     # The learner's command, from the same library the panel uses.
@@ -845,64 +862,6 @@ if(TIME_WARP_QT_FOUND AND TARGET timewarp::sql)
     endif()
 endif()
 
-# ---------------------------------------------------------------------------
-# Python bridge (Qt)
-#
-# Runs the Python implementations of the languages that have no C++ interpreter
-# yet, in a child process, and turns what it draws into canvas commands. QtCore
-# only: it is a pipe and a JSON parser, and the UI is one of its callers rather
-# than its owner.
-# ---------------------------------------------------------------------------
-
-if(TIME_WARP_QT_FOUND)
-    message(STATUS "${TIME_WARP_QT} ${TIME_WARP_QT_CORE_VERSION} found: building the Python bridge")
-
-    add_library(timewarp_bridge
-        src/bridge/python_worker.cpp
-        # Listed so AUTOMOC scans it: the Q_OBJECT class lives in the header.
-        include/timewarp/bridge/python_worker.hpp
-    )
-    add_library(timewarp::bridge ALIAS timewarp_bridge)
-
-    target_include_directories(timewarp_bridge
-        PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-    )
-    target_link_libraries(timewarp_bridge PUBLIC timewarp::canvas ${TIME_WARP_QT}::Core)
-    set_target_properties(timewarp_bridge PROPERTIES AUTOMOC ON)
-
-    if(MSVC)
-        target_compile_options(timewarp_bridge PRIVATE /W4 /permissive-)
-    else()
-        target_compile_options(timewarp_bridge PRIVATE
-            -Wall -Wextra -Wpedantic -Wshadow -Wcast-qual ${TIME_WARP_GNU_WARNING_FLAGS}
-            ${TIME_WARP_NULL_DEREFERENCE}
-        )
-        if(TIME_WARP_EXPR_WERROR)
-            target_compile_options(timewarp_bridge PRIVATE -Werror)
-        endif()
-    endif()
-
-    if(TIME_WARP_EXPR_BUILD_TESTS)
-        add_executable(python_bridge_tests tests/python_bridge_tests.cpp)
-        target_link_libraries(python_bridge_tests PRIVATE timewarp::bridge)
-        target_include_directories(python_bridge_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/tests)
-        if(NOT MSVC)
-            target_compile_options(python_bridge_tests PRIVATE -Wall -Wextra -Wpedantic -Wshadow)
-            if(TIME_WARP_EXPR_WERROR)
-                target_compile_options(python_bridge_tests PRIVATE -Werror)
-            endif()
-        endif()
-        add_test(NAME python_bridge_tests COMMAND python_bridge_tests)
-        # The suite runs the real worker, which imports the Python package from
-        # the repository. PYTHONPATH is passed through the environment rather than
-        # hard-coded in the test, so the same suite works from an installed tree.
-        set_tests_properties(python_bridge_tests PROPERTIES
-            ENVIRONMENT "PYTHONPATH=${CMAKE_CURRENT_SOURCE_DIR}/bridge"
-        )
-    endif()
-else()
-    message(STATUS "Qt not found: skipping the Python bridge")
-endif()
 
 # ---------------------------------------------------------------------------
 # Desktop UI (Qt Widgets)
@@ -1063,11 +1022,6 @@ if(TIME_WARP_QT_FOUND)
         # Projects: a JSON model over files, no widget and no engine.
         target_link_libraries(timewarp_ui PRIVATE timewarp::project)
         target_link_libraries(timewarp_ui PRIVATE timewarp::sql)
-        # The Python bridge, which is how the four languages without a C++
-        # interpreter run at all.
-        if(TARGET timewarp::bridge)
-            target_link_libraries(timewarp_ui PRIVATE timewarp::bridge)
-        endif()
         target_compile_definitions(timewarp_ui PRIVATE
             TIME_WARP_VERSION="${TIME_WARP_VERSION}"
         )
@@ -1230,16 +1184,11 @@ if(TIME_WARP_QT_FOUND)
         endif()
         install(TARGETS time_warp_api
                 RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
-        install(
-            DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/bridge/
-            DESTINATION ${TIME_WARP_SHARE_DIR}/time_warp
-            PATTERN "__pycache__" EXCLUDE
-            PATTERN "*.pyc" EXCLUDE
-            PATTERN ".ruff_cache" EXCLUDE
-            PATTERN ".mypy_cache" EXCLUDE
-            PATTERN ".pytest_cache" EXCLUDE
-            PATTERN "tests" EXCLUDE
-        )
+        # `native/bridge/` is deliberately not installed. It is the reference the
+        # parity gates compare the ports against and the thing `make smoke` and
+        # `make command-matrix` drive -- development tooling, in the checkout,
+        # and no part of the product. A package that carried it would be shipping
+        # a second interpreter nothing runs.
         # The snippet catalogue: `snippetRoot()` looks here first, so a package
         # and a build tree offer the same snippets.
         install(

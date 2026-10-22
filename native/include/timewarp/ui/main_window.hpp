@@ -52,7 +52,8 @@
 
 #include <array>
 
-#include "timewarp/bridge/python_worker.hpp"
+#include "timewarp/ui/reports.hpp"
+#include "timewarp/lessons/classroom.hpp"
 #include "timewarp/lessons/progress.hpp"
 #include "timewarp/debugger/debugger_runner.hpp"
 #include "timewarp/lang/language.hpp"
@@ -768,7 +769,7 @@ private:
     void noteRecentDatabase(const QString& path);
     /// The rows only the IDE can vouch for: wall clock, and how much ink actually
     /// reached the canvas. Appended to whatever the engine reported.
-    [[nodiscard]] QList<timewarp::bridge::TelemetryRow> ideTelemetryRows() const;
+    [[nodiscard]] QList<timewarp::ui::TelemetryRow> ideTelemetryRows() const;
     /// Shows the Scheme runner's stack and variables in the variables and debug
     /// panels. Harmless when nothing is paused: it shows the last known state.
     void showRunnerSnapshot();
@@ -840,11 +841,11 @@ private:
     /// What the engine reported for the run in flight. Held rather than shown
     /// because the wall clock is only known once the run has stopped, and the two
     /// are one table.
-    QList<timewarp::bridge::TelemetryRow> engine_telemetry_;
+    QList<timewarp::ui::TelemetryRow> engine_telemetry_;
     /// The bindings last shown in the Variables tab. Watch expressions are
     /// evaluated against these rather than against a live engine, so a watch
     /// cannot race a runner thread that is already executing again.
-    QList<timewarp::bridge::VariableRow> last_variables_;
+    QList<timewarp::ui::VariableRow> last_variables_;
     FunctionKeyBar* function_key_bar_ = nullptr;
     CrtOverlay* crt_overlay_ = nullptr;
     QDockWidget* outline_dock_ = nullptr;
@@ -978,15 +979,13 @@ private:
     QVector<timewarp::ui::gif::Frame> gif_frames_;
     QSize gif_size_;
     /// Program output and errors, both read-only views. Named apart from the
-    /// Starts the bridge if it is not running. Distinct from `runInBridge`,
-    /// which also clears the console and canvas: a lesson check must not wipe the
-    /// drawing the learner is looking at while checking it.
-    [[nodiscard]] bool ensureBridge();
     /// Loads the curriculum and the learner's place in it, once. The lesson
     /// panel is a view over this, not a client of the bridge: a check runs
     /// in-process through `timewarp_lessons`, which is the same function the
     /// teacher's command asks.
     [[nodiscard]] bool ensureLessons();
+    /// Loads the class: the roster, the assignment and what has been marked.
+    [[nodiscard]] bool ensureClassroom();
     /// Opens a checkpoint's starting program in a new document.
     void openLessonCode(const QString& languageKey, const QString& source,
                         const QString& name);
@@ -1039,10 +1038,13 @@ private:
     /// `curriculum_requested_` exists.
     bool classroom_requested_ = false;
 
-    std::unique_ptr<timewarp::bridge::PythonWorker> python_worker_;
     /// The curriculum and the learner's progress. Loaded on first use, because a
     /// learner who never opens the Lessons tab should not pay for it at start-up.
     std::unique_ptr<timewarp::lessons::ProgressStore> lessons_;
+    /// The class the Classroom page shows. Loaded when the page is first raised,
+    /// for the same reason the curriculum is: a learner who never opens it should
+    /// not pay for it.
+    std::unique_ptr<timewarp::lessons::Classroom> classroom_;
 
     /// Appends a line to the console, scrolling only if the user was already at
     /// the bottom.
@@ -1053,13 +1055,9 @@ private:
     /// because three callers need it and a missed one means two programs drawing
     /// into the same canvas.
     void stopEngines();
-    /// Runs `editor` in the Python bridge, starting the worker if needed.
-    void runInBridge(CodeEditor* editor, const QString& source);
     /// Runs `editor` on the native engine for a language that has been ported.
     void runNatively(CodeEditor* editor, timewarp::lang::Language language,
                      const QString& source);
-    /// Wires a freshly created bridge worker to this window.
-    void adoptBridgeWorker();
     /// Tears down the current run and waits for its thread, then empties the
     /// queue so no command from the old run can land on the fresh canvas.
     void finishRun(const QString& error, bool completed);

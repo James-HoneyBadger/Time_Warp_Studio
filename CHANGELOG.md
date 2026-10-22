@@ -1,13 +1,35 @@
 # Changelog
 
-## [Unreleased]
+## [17.0.0] - 2026-10-22
 
-Lesson checking moves into the application. The bridge's last runtime job was
-deciding whether a learner's program satisfied a checkpoint, which meant the
-Lessons panel asked Python and the teacher's command asked Python, and the two had
-to be kept saying the same thing.
+The product contains no Python. The engine that decided whether a learner's program
+satisfied a checkpoint — and the classroom behind it — was the last thing the
+application asked a second interpreter to do. Both are C++ now, the worker classes
+are gone, and `cmake --install` produces a payload with no Python file in it. The
+other half of the claim is what 16.5 and 16.6 built: a program can name a screen,
+read a pixel back, capture a sprite, and sound two voices at once.
 
 ### Added
+
+- **`timewarp_classroom`** (`native/src/lessons/classroom.hpp`): the roster, the
+  assignment, handing out starters, collecting and marking, the class's
+  presentation size, and bundles. Marking calls the same `verify_checkpoint` a
+  learner's own check calls, so a teacher's mark and a green tick cannot disagree —
+  and it touches nobody's progress, because collecting a class must not move a
+  learner's place or write into the teacher's own.
+- **Bundles are plain zips, read and written with zlib.** A class made by
+  `teach.py` opens here and one made here opens in `teach.py`; both directions are
+  checked by hand and the reader refuses a member that would land outside the
+  classroom. `time_warp_teach bundle` and `unbundle` are the commands.
+- **The worker is gone.** `PythonWorker`, `locateWorker`, the `timewarp_bridge`
+  target and `python_bridge_tests` are deleted; the row types the panels draw moved
+  to `include/timewarp/ui/reports.hpp`, where they name a table rather than a
+  protocol. `runInBridge` went with them: every language has an executor, and the
+  branch that could have started Python now reports that it cannot happen.
+- **Nothing Python is installed.** The `install(DIRECTORY bridge/)` rule is gone,
+  along with the advice in the installation guide about `TIME_WARP_WORKER` and
+  `TIME_WARP_PYTHON`. A staged install carries the IDE, the API, the two commands,
+  the curriculum, the snippets, the examples, the documentation and the Qt runtime.
 
 - **`timewarp_lessons`** (`native/src/lessons/`): the curriculum loader, the
   verifier and the progress file, in C++ and Qt Core only. The verifier runs a
@@ -32,9 +54,11 @@ to be kept saying the same thing.
   `start` (writes the current starter to a file), `check`, `hint`, `solution`,
   `progress` and `reset`. The counter of the reference's `learn.py`, and it gives
   the same verdicts for the same reason.
-- **`lessons_tests`** (23 suites now): the whole curriculum through the engine,
-  plus the loader's refusals, the message a wrong answer gets, and the progress
-  round trip.
+- **`lessons_tests`**: the whole curriculum through the engine, plus the loader's
+  refusals, the message a wrong answer gets, and the progress round trip.
+- **`classroom_tests`**: handing out never overwrites a learner's work, "not handed
+  in" stays different from "handed in and wrong", marking writes no progress, and a
+  bundle round-trips between two classrooms.
 
 ### Fixed
 
@@ -49,15 +73,27 @@ to be kept saying the same thing.
 
 ### Changed
 
-- **The Lessons panel is a view over the library.** Opening the tab loads the
-  curriculum in process, a check runs in process, and the six worker signals the
-  panel used to listen to are gone. `ui_layout_tests` proves it: the tab is
-  raised in a window with no bridge started, and the twenty lessons still arrive.
+- **Both panels are views over the library.** Opening the Lessons tab loads the
+  curriculum in process and a check runs in process; the Classroom page reads the
+  roster, marks the handed-in files and writes a bundle in process. The worker
+  signals they used to listen to are gone. `ui_layout_tests` proves the Lessons
+  side: the tab is raised in a window with no bridge started, and the twenty
+  lessons still arrive.
+- **`time_warp_teach` and `time_warp_learn` are installed** beside the IDE, so the
+  claim that the panel and the tools give one answer holds outside a checkout.
 
-### Notes
+### Notes and limits
 
-- `classroom_mode.py` (rosters, handouts, marking, bundles) is still Python and
-  still reached through the worker. It is the last runtime job the bridge has.
+- `native/bridge/` remains in the checkout as development tooling: it is the
+  fixture the parity corpus was recorded from, and what `example_smoke.py`,
+  `command_matrix.py` and `repl_matrix.py` drive. `make golden-check` is the parity
+  gate and imports no Python. Deleting the fixture, and porting those three
+  harnesses to a native `timewarp_check`, is 17.1.
+- The standalone artifact is still a copy of the IDE with the program appended;
+  `time_warp_player` is 17.1 too.
+- Two behavioural fixes came with the port rather than after it: a passed final
+  checkpoint says `🏆 Lesson complete:` again, and hints are counted per request and
+  clamped to the last one, which is what `FORMAT.md` documents.
 
 ## [16.6.0] - 2026-10-22
 

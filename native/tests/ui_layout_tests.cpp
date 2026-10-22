@@ -478,19 +478,19 @@ void test_lesson_panel_records_the_session() {
         return;
     }
 
-    timewarp::bridge::LessonSummary lesson;
+    timewarp::ui::LessonSummary lesson;
     lesson.id = QStringLiteral("basic_first_steps");
     lesson.title = QStringLiteral("First Steps in BASIC");
     lesson.language = QStringLiteral("BASIC");
     lesson.description = QStringLiteral("Print something.");
     lesson.objectives = QStringList{QStringLiteral("Use PRINT")};
     for (int index = 0; index < 3; ++index) {
-        timewarp::bridge::LessonCheckpoint checkpoint;
+        timewarp::ui::LessonCheckpoint checkpoint;
         checkpoint.title = QStringLiteral("Checkpoint %1").arg(index + 1);
         checkpoint.description = QStringLiteral("Do the thing.");
         lesson.checkpoints.append(checkpoint);
     }
-    timewarp::bridge::LessonProgress row;
+    timewarp::ui::LessonProgress row;
     row.id = lesson.id;
     row.status = QStringLiteral("in_progress");
     row.checkpoint = 0;
@@ -564,11 +564,11 @@ void test_classroom_panel_contract() {
         TW_CHECK(load_bundle->isEnabled());
     }
 
-    QList<timewarp::bridge::ClassroomStudent> students;
-    students.append(timewarp::bridge::ClassroomStudent{
+    QList<timewarp::ui::ClassroomStudent> students;
+    students.append(timewarp::ui::ClassroomStudent{
         QStringLiteral("ada-lovelace"), QStringLiteral("Ada Lovelace"),
         QStringLiteral("/tmp/class/students/ada-lovelace")});
-    students.append(timewarp::bridge::ClassroomStudent{
+    students.append(timewarp::ui::ClassroomStudent{
         QStringLiteral("alan-turing"), QStringLiteral("Alan Turing"),
         QStringLiteral("/tmp/class/students/alan-turing")});
     panel->setRoster(students, {QStringLiteral("basic_first_steps")},
@@ -584,8 +584,8 @@ void test_classroom_panel_contract() {
     TW_CHECK_EQ(panel->directoryForRow(-1),
                 QStringLiteral("/tmp/class/students/ada-lovelace"));
 
-    QList<timewarp::bridge::ClassroomMark> rows;
-    rows.append(timewarp::bridge::ClassroomMark{
+    QList<timewarp::ui::ClassroomMark> rows;
+    rows.append(timewarp::ui::ClassroomMark{
         QStringLiteral("alan-turing"), QStringLiteral("basic_first_steps"),
         QStringLiteral("First steps"), 3, 3, 2, false});
     panel->setMarks(rows);
@@ -665,7 +665,7 @@ void test_variables_panel_contract() {
     TW_CHECK_EQ(panel->visibleRowCount(), 0);
     TW_CHECK(status != nullptr && !status->text().isEmpty());
 
-    const QList<timewarp::bridge::VariableRow> rows{
+    const QList<timewarp::ui::VariableRow> rows{
         {QStringLiteral("name"), QStringLiteral("text"), QStringLiteral("ada")},
         {QStringLiteral("repcount"), QStringLiteral("number"), QStringLiteral("4")},
         {QStringLiteral("total"), QStringLiteral("number"), QStringLiteral("12.5")}};

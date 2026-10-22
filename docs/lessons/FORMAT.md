@@ -239,11 +239,14 @@ counter being cumulative is how the leak was noticed.
 - `unbundle` resolves each member path before writing and refuses anything outside
   the classroom.
 
-## 8. The bridge protocol
+## 8. The reference harness protocol
 
-The IDE drives all of this through the Python bridge, so the checking happens in
-the engine that would run the program rather than in a second implementation in
-C++. Requests and replies, one JSON object per line:
+The IDE and the two commands drive all of this through `timewarp_lessons`, in
+process. What follows is the *reference engine's* harness protocol: `worker.py` in
+`native/bridge/` still speaks it, and the example and command harnesses still drive
+that. It is development tooling — nothing installed speaks it — and it is documented
+because a change to the lesson data has to be visible to the harness that checks it.
+Requests and replies, one JSON object per line:
 
 | Request | Reply | Notes |
 | ------- | ----- | ----- |
@@ -268,10 +271,10 @@ An error reply is `{"t":<kind>,"ok":false,"error":"…"}`, and every one of them
 clears the pending flag: a failed request that left it set would lock the panel
 out of every request after it.
 
-The C++ side is `timewarp::bridge::LessonSummary`, `LessonCheckpoint` and
+The C++ side of the panel's tables is `LessonSummary`, `LessonCheckpoint` and
 `LessonProgress` in
-[`python_worker.hpp`](../../native/include/timewarp/bridge/python_worker.hpp),
-with one request method and one signal per row of the table above.
+[`reports.hpp`](../../native/include/timewarp/ui/reports.hpp); the library behind them
+is [`timewarp_lessons`](../../native/include/timewarp/lessons/progress.hpp).
 
 ## 9. Adding lessons for a new language
 

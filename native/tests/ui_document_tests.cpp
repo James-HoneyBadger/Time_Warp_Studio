@@ -44,7 +44,6 @@
 
 #include "check.hpp"
 #include "temp_dir.hpp"
-#include "timewarp/bridge/python_worker.hpp"
 #include "timewarp/canvas/command_queue.hpp"
 #include "timewarp/ui/app_paths.hpp"
 #include "timewarp/ui/autosave.hpp"

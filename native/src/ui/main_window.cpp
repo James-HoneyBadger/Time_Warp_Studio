@@ -1777,8 +1777,9 @@ void MainWindow::setPresentationMode(bool on) {
         // The class's size may not have been read yet, and presentation mode is
         // reachable without opening a panel first. One request settles it; the
         // answer applies to the mode already on screen.
-        if (presentation_font_ <= 0 && ensureBridge()) {
-            static_cast<void>(python_worker_->requestClassroomPresentation());
+        if (presentation_font_ <= 0 && ensureClassroom()) {
+            setPresentationSettings(classroom_->presentation().fontSize,
+                                    classroom_->presentation().fullscreen);
         }
         applyPresentationSettings();
     } else {
@@ -5117,9 +5118,12 @@ void MainWindow::runSource(CodeEditor* editor, const QString& source) {
         const std::optional<timewarp::lang::Language> native = nativeLanguage(languageOf(editor));
         if (native.has_value() && timewarp::lang::executor_for(*native) != nullptr) {
             runNatively(editor, *native, source);
-        } else {
-            runInBridge(editor, source);
+            return;
         }
+        // Unreachable: every language has a native executor, and `language_tests`
+        // asserts it. Said rather than silently doing nothing, because "the Run
+        // button did nothing" is the report this branch would otherwise produce.
+        reportError(tr("This language has no interpreter in this build."));
         return;
     }
 
@@ -5252,24 +5256,12 @@ void MainWindow::stopEngines() {
         wait_draining(runner_.data());
         delete runner_.data();
     }
-    // Only when a program is actually in flight. The worker process stays alive
-    // between runs on purpose, and cycling it here would pay a Python start every
-    // time for nothing.
-    if (python_worker_ != nullptr && python_worker_->isRunningProgram()) {
-        // Cooperative stop, then a kill if the program is inside a statement that
-        // will never return. Both are needed: the first lets a program that is
-        // merely slow finish tidily, the second is the only thing that stops a
-        // loop with nothing to check a flag between.
-        python_worker_->stop();
-    }
 }
 
 void MainWindow::stopRunningDocument() {
     const bool scheme_running = runner_ != nullptr && runner_->isRunning();
     const bool native_running = native_runner_ != nullptr && native_runner_->isRunning();
-    const bool bridge_running =
-        python_worker_ != nullptr && python_worker_->isRunningProgram();
-    if (!scheme_running && !native_running && !bridge_running) {
+    if (!scheme_running && !native_running) {
         setExecutionState(tr("ready"), tr("Nothing is running"));
         return;
     }
@@ -5379,7 +5371,7 @@ void MainWindow::runNatively(CodeEditor* editor, timewarp::lang::Language langua
                 canvas_bridge_->drainNow();
                 turtle_canvas_->fitToContent();
 
-                QList<timewarp::bridge::VariableRow> rows;
+                QList<timewarp::ui::VariableRow> rows;
                 for (const NativeRunner::VariableRow& row : runner->variables()) {
                     rows.append({row.name, row.type, row.value});
                 }
@@ -5395,7 +5387,7 @@ void MainWindow::runNatively(CodeEditor* editor, timewarp::lang::Language langua
                 }
                 if (telemetry_panel_ != nullptr) {
                     const std::string_view name = timewarp::lang::display_name(language);
-                    QList<timewarp::bridge::TelemetryRow> hud;
+                    QList<timewarp::ui::TelemetryRow> hud;
                     hud.append({tr("Language"),
                                 QString::fromLatin1(name.data(), static_cast<int>(name.size()))});
                     hud.append({tr("Outcome"), completed ? tr("finished") : tr("stopped")});
@@ -5456,7 +5448,7 @@ void MainWindow::runNatively(CodeEditor* editor, timewarp::lang::Language langua
         if (debug_panel_ != nullptr) {
             debug_panel_->setPaused(true, line, QString{});
         }
-        QList<timewarp::bridge::VariableRow> rows;
+        QList<timewarp::ui::VariableRow> rows;
         for (const NativeRunner::VariableRow& row : runner->variables()) {
             rows.append({row.name, row.type, row.value});
         }
@@ -5483,7 +5475,7 @@ void MainWindow::runNatively(CodeEditor* editor, timewarp::lang::Language langua
                     debug_panel_->setPaused(true, line, QString{});
                     debug_panel_->setPauseReason(tr("%1 changed").arg(name));
                 }
-                QList<timewarp::bridge::VariableRow> rows;
+                QList<timewarp::ui::VariableRow> rows;
                 for (const NativeRunner::VariableRow& row : runner->variables()) {
                     rows.append({row.name, row.type, row.value});
                 }
@@ -5509,30 +5501,6 @@ void MainWindow::runNatively(CodeEditor* editor, timewarp::lang::Language langua
 
     setExecutionState(tr("running"), tr("Running %1…").arg(nameOf(editor)));
     runner->start();
-}
-
-void MainWindow::runInBridge(CodeEditor* editor, const QString& source) {
-    if (!ensureBridge()) {
-        return;
-    }
-
-    // The caller has already stopped any program in flight. The worker *process*
-    // is left alone: it stays alive between runs on purpose, so Run is a message
-    // rather than a Python start.
-    canvas_bridge_->drainNow();
-    turtle_canvas_->reset();
-    clearTurtleLog();
-    if (console_view_ != nullptr) {
-        console_view_->clear();
-    }
-    if (errors_view_ != nullptr) {
-        errors_view_->clear();
-    }
-
-    setExecutionState(tr("running"), tr("Running %1…").arg(nameOf(editor)));
-    if (!python_worker_->run(settingsKey(languageOf(editor)), source, nameOf(editor))) {
-        reportError(tr("The program could not be started."));
-    }
 }
 
 namespace {
@@ -5580,22 +5548,6 @@ bool MainWindow::showPanel(const QString& name) {
     return false;
 }
 
-bool MainWindow::ensureBridge() {
-    if (python_worker_ == nullptr) {
-        python_worker_ = std::make_unique<timewarp::bridge::PythonWorker>(*canvas_queue_);
-        adoptBridgeWorker();
-    }
-    QString problem;
-    if (!python_worker_->start(&problem)) {
-        reportError(problem);
-        if (lesson_panel_ != nullptr) {
-            lesson_panel_->setFailure(tr("the language engine"), problem);
-        }
-        return false;
-    }
-    return true;
-}
-
 void MainWindow::openLessonCode(const QString& languageKey, const QString& source,
                                 const QString& name) {
     if (source.isEmpty()) {
@@ -5632,9 +5584,9 @@ void MainWindow::requestLessonCurriculum() {
     if (!ensureLessons()) {
         return;
     }
-    QList<timewarp::bridge::LessonSummary> summaries;
+    QList<timewarp::ui::LessonSummary> summaries;
     for (const timewarp::lessons::Lesson& lesson : lessons_->lessons()) {
-        timewarp::bridge::LessonSummary summary;
+        timewarp::ui::LessonSummary summary;
         summary.id = QString::fromStdString(lesson.id);
         summary.title = QString::fromStdString(lesson.title);
         summary.language = QString::fromStdString(std::string{
@@ -5650,7 +5602,7 @@ void MainWindow::requestLessonCurriculum() {
             summary.prerequisites << QString::fromStdString(prerequisite);
         }
         for (const timewarp::lessons::Checkpoint& checkpoint : lesson.checkpoints) {
-            timewarp::bridge::LessonCheckpoint row;
+            timewarp::ui::LessonCheckpoint row;
             row.title = QString::fromStdString(checkpoint.title);
             row.description = QString::fromStdString(checkpoint.description);
             row.starter = QString::fromStdString(checkpoint.starter_code);
@@ -5679,9 +5631,9 @@ void MainWindow::requestLessonProgress() {
     if (!ensureLessons() || lesson_panel_ == nullptr) {
         return;
     }
-    QList<timewarp::bridge::LessonProgress> rows;
+    QList<timewarp::ui::LessonProgress> rows;
     for (const timewarp::lessons::Lesson& lesson : lessons_->lessons()) {
-        timewarp::bridge::LessonProgress row;
+        timewarp::ui::LessonProgress row;
         row.id = QString::fromStdString(lesson.id);
         row.title = QString::fromStdString(lesson.title);
         row.language = QString::fromStdString(std::string{
@@ -5777,52 +5729,93 @@ void MainWindow::requestLessonReset(const QString& lesson) {
     requestLessonProgress();
 }
 
-void MainWindow::requestClassroom() {
-    if (!ensureBridge()) {
+bool MainWindow::ensureClassroom() {
+    if (classroom_ != nullptr) {
+        return true;
+    }
+    auto room = std::make_unique<timewarp::lessons::Classroom>();
+    QString error;
+    if (!room->load(&error)) {
         if (classroom_panel_ != nullptr) {
-            classroom_panel_->setFailure(QStringLiteral("classroom-roster"),
-                                         tr("the language engine did not start"));
+            classroom_panel_->setFailure(QStringLiteral("classroom-roster"), error);
         }
+        return false;
+    }
+    classroom_ = std::move(room);
+    return true;
+}
+
+void MainWindow::requestClassroom() {
+    if (classroom_panel_ == nullptr) {
         return;
     }
-    // The roster first, and the marks when its answer arrives: the worker takes
-    // one request at a time, so sending both at once would have the second
-    // refused and the table would stay empty forever. They are separate requests
-    // because the class list is a file read and the marking is a directory walk,
-    // so the panel can show who is in the class while the marks are worked out.
-    if (python_worker_->requestClassroomRoster() || classroom_panel_ == nullptr) {
+    if (!ensureClassroom()) {
         return;
     }
-    // Refused, which means another request is in flight or the worker has gone:
-    // either way the panel must say so rather than sit there looking like a
-    // school with no pupils.
-    classroom_panel_->setFailure(
-        QStringLiteral("classroom-roster"),
-        python_worker_->isRunning()
-            ? tr("another request is still being answered; try Refresh")
-            : tr("the language engine is not running"));
+    QList<timewarp::ui::ClassroomStudent> students;
+    for (const timewarp::lessons::Student& student : classroom_->students()) {
+        timewarp::ui::ClassroomStudent row;
+        row.id = student.id;
+        row.name = student.name;
+        // Reported rather than derived: a learner whose work lives on a shared
+        // drive is a fact only the class knows.
+        row.directory = classroom_->studentDirectory(student.id);
+        students.append(row);
+    }
+    classroom_panel_->setRoster(students, classroom_->assignment().lessonIds,
+                                classroom_->assignment().note);
+
+    // Marking runs each handed-in file through the same verifier a learner's
+    // check uses, so the mark sheet and the panel cannot disagree.
+    QList<timewarp::ui::ClassroomMark> rows;
+    if (!students.isEmpty()) {
+        for (const timewarp::lessons::MarkRow& mark :
+             classroom_->lessonMarks(classroom_->collect({}))) {
+            timewarp::ui::ClassroomMark row;
+            row.student = mark.student;
+            row.lesson = mark.lesson;
+            row.title = mark.title;
+            row.handedIn = mark.handedIn;
+            row.checkpoints = mark.checkpoints;
+            row.passed = mark.passed;
+            row.complete = mark.complete;
+            rows.append(row);
+        }
+    }
+    classroom_panel_->setMarks(rows);
+
+    // Presentation mode may be entered before this page is ever shown, and the
+    // class's own size is what it has to use.
+    if (presentation_font_ <= 0) {
+        setPresentationSettings(classroom_->presentation().fontSize,
+                                classroom_->presentation().fullscreen);
+    }
 }
 
 void MainWindow::exportClassroomBundle() {
-    // The dialog comes first: a teacher who cancels should not have started a
-    // Python process to do it.
+    // The dialog comes first: a teacher who cancels should not have caused a
+    // directory walk.
     const QString path = QFileDialog::getSaveFileName(
         this, tr("Save class bundle"),
         QDir{QDir::homePath()}.filePath(QStringLiteral("classroom.zip")),
         tr("Class bundle (*.zip)"));
-    if (path.isEmpty() || !ensureBridge()) {
+    if (path.isEmpty() || !ensureClassroom()) {
         return;
     }
-    if (!python_worker_->requestClassroomBundle(path)) {
-        statusBar()->showMessage(tr("Another classroom request is still being answered"), 8000);
+    QString error;
+    if (!classroom_->createBundle(path, &error)) {
+        reportError(error);
+        statusBar()->showMessage(tr("The class could not be bundled: %1").arg(error), 8000);
+        return;
     }
+    setExecutionState(tr("ready"), tr("Wrote %1").arg(QFileInfo{path}.fileName()));
 }
 
 void MainWindow::importClassroomBundle() {
     const QString path = QFileDialog::getOpenFileName(this, tr("Open class bundle"),
                                                       QDir::homePath(),
                                                       tr("Class bundle (*.zip)"));
-    if (path.isEmpty()) {
+    if (path.isEmpty() || !ensureClassroom()) {
         return;
     }
     // The one question with two genuinely different answers: setting up a new
@@ -5834,130 +5827,21 @@ void MainWindow::importClassroomBundle() {
         tr("Replace files that are already in the classroom?\n\n"
            "No leaves them alone, which is what setting up a new class wants."),
         QMessageBox::Yes | QMessageBox::No | QMessageBox::Cancel, QMessageBox::No);
-    if (answer == QMessageBox::Cancel || !ensureBridge()) {
+    if (answer == QMessageBox::Cancel) {
         return;
     }
-    if (!python_worker_->requestClassroomUnbundle(path, answer == QMessageBox::Yes)) {
-        statusBar()->showMessage(tr("Another classroom request is still being answered"), 8000);
+    QString error;
+    if (!classroom_->importBundle(path, answer == QMessageBox::Yes, &error)) {
+        reportError(error);
+        statusBar()->showMessage(tr("The bundle could not be unpacked: %1").arg(error), 8000);
+        return;
     }
+    setExecutionState(tr("ready"),
+                      tr("Imported %1 student(s)").arg(classroom_->students().size()));
+    // The class on screen is now a different class.
+    requestClassroom();
 }
 
-void MainWindow::adoptBridgeWorker() {
-    // Everything the worker produces arrives on this thread, so the canvas is
-    // touched only here. There is no lock in this path because there is no second
-    // thread to lock against: the process's pipes are delivered by the event loop.
-    connect(python_worker_.get(), &timewarp::bridge::PythonWorker::commandsQueued, this,
-            [this] { canvas_bridge_->drainNow(); });
-    connect(python_worker_.get(), &timewarp::bridge::PythonWorker::outputReceived, this,
-            [this](const QString& text) { appendOutput(text); });
-    connect(python_worker_.get(), &timewarp::bridge::PythonWorker::errorReceived, this,
-            [this](const QString& text) { reportError(text); });
-    connect(python_worker_.get(), &timewarp::bridge::PythonWorker::poseReceived, this,
-            [this](double x, double y, double heading, bool visible) {
-                turtle_canvas_->setTurtlePose(QPointF{x, y}, heading, visible);
-            });
-    connect(python_worker_.get(), &timewarp::bridge::PythonWorker::inputRequested, this,
-            [this](const QString& prompt) {
-                // A modal prompt is right *here*: a program that asked a question
-                // and stopped is waiting for an answer, and the answer is not
-                // something the IDE can invent.
-                bool accepted = false;
-                const QString answer = QInputDialog::getText(
-                    this, tr("The program is waiting for input"), prompt, QLineEdit::Normal,
-                    QString{}, &accepted);
-                python_worker_->answerInput(accepted ? answer : QString{});
-            });
-    connect(python_worker_.get(), &timewarp::bridge::PythonWorker::finished, this,
-            [this](bool ok, const QString& error, const QStringList& unsupported) {
-                stopRunClock();
-                canvas_bridge_->drainNow();
-                turtle_canvas_->fitToContent();
-                if (telemetry_panel_ != nullptr) {
-                    telemetry_panel_->setRows(engine_telemetry_ + ideTelemetryRows());
-                }
-                if (!error.isEmpty()) {
-                    reportError(error);
-                    return;
-                }
-                // A drawing the canvas could not fully render says so. Silence
-                // would leave a missing shape to be discovered by looking.
-                const QString gaps = unsupported.isEmpty()
-                                         ? QString{}
-                                         : tr(" — %1 not drawn").arg(unsupported.join(tr(", ")));
-                setExecutionState(ok ? tr("ready") : tr("stopped"),
-                                  (ok ? tr("Finished") : tr("Stopped")) + gaps);
-            });
-    // The run's own state, which arrives just before `finished`.
-    connect(python_worker_.get(), &timewarp::bridge::PythonWorker::variablesReported,
-            this,
-            [this](const QList<timewarp::bridge::VariableRow>& rows) {
-                if (variables_panel_ != nullptr) {
-                    variables_panel_->setRows(rows);
-                }
-            });
-    connect(python_worker_.get(), &timewarp::bridge::PythonWorker::telemetryReported,
-            this,
-            [this](const QList<timewarp::bridge::TelemetryRow>& rows) {
-                // Held, not shown: the wall clock is not known until `finished`,
-                // and both belong to the same table.
-                engine_telemetry_ = rows;
-            });
-    connect(python_worker_.get(), &timewarp::bridge::PythonWorker::classroomRosterReceived,
-            this,
-            [this](const QList<timewarp::bridge::ClassroomStudent>& students,
-                   const QStringList& lessons, const QString& note) {
-                if (classroom_panel_ != nullptr) {
-                    classroom_panel_->setRoster(students, lessons, note);
-                }
-                // The roster's answer is what lets the marks be asked for; see
-                // `requestClassroom`. An empty class has no marks, so it is not
-                // worth a second round trip.
-                if (!students.isEmpty()) {
-                    static_cast<void>(python_worker_->requestClassroomMarks());
-                }
-            });
-    connect(python_worker_.get(), &timewarp::bridge::PythonWorker::classroomMarksReceived,
-            this, [this](const QList<timewarp::bridge::ClassroomMark>& rows) {
-                if (classroom_panel_ != nullptr) {
-                    classroom_panel_->setMarks(rows);
-                }
-            });
-    connect(python_worker_.get(),
-            &timewarp::bridge::PythonWorker::classroomPresentationReceived, this,
-            [this](const timewarp::bridge::ClassroomPresentation& settings) {
-                setPresentationSettings(settings.fontSize, settings.fullscreen);
-            });
-    connect(python_worker_.get(), &timewarp::bridge::PythonWorker::classroomBundleWritten,
-            this, [this](const QString& path) {
-                setExecutionState(tr("ready"),
-                                  tr("Wrote %1").arg(QFileInfo{path}.fileName()));
-            });
-    connect(python_worker_.get(), &timewarp::bridge::PythonWorker::classroomUnbundled, this,
-            [this](int students) {
-                setExecutionState(tr("ready"),
-                                  tr("Imported %1 student(s)").arg(students));
-                // The class on screen is now a different class.
-                requestClassroom();
-            });
-    connect(python_worker_.get(), &timewarp::bridge::PythonWorker::classroomFailed, this,
-            [this](const QString& request, const QString& error) {
-                // Said in three places on purpose: an empty class and a broken
-                // class look the same in a table, so the summary row and the
-                // status bar have to say which one this is.
-                reportError(error);
-                statusBar()->showMessage(tr("%1 could not be answered: %2").arg(request, error),
-                                         8000);
-                if (classroom_panel_ != nullptr) {
-                    classroom_panel_->setFailure(request, error);
-                }
-            });
-    connect(python_worker_.get(), &timewarp::bridge::PythonWorker::failed, this,
-            [this](const QString& text) {
-                canvas_bridge_->drainNow();
-                turtle_canvas_->fitToContent();
-                reportError(text);
-            });
-}
 
 void MainWindow::connectDebugPanel() {
     if (debug_panel_ == nullptr) {
@@ -6048,8 +5932,8 @@ void MainWindow::connectDebugPanel() {
             });
 }
 
-QList<timewarp::bridge::TelemetryRow> MainWindow::ideTelemetryRows() const {
-    QList<timewarp::bridge::TelemetryRow> rows;
+QList<timewarp::ui::TelemetryRow> MainWindow::ideTelemetryRows() const {
+    QList<timewarp::ui::TelemetryRow> rows;
     if (last_run_ms_ >= 0) {
         rows.append({tr("Wall clock"), tr("%1 ms").arg(last_run_ms_)});
     }
@@ -6075,7 +5959,7 @@ void MainWindow::refreshWatches() {
     }
 
     std::map<std::string, timewarp::lang::Value> bindings;
-    for (const timewarp::bridge::VariableRow& row : last_variables_) {
+    for (const timewarp::ui::VariableRow& row : last_variables_) {
         if (row.type == QLatin1String("text")) {
             bindings[row.name.toStdString()] = timewarp::lang::Value{row.value.toStdString()};
         } else if (row.value == QLatin1String("#t") || row.value == QLatin1String("#f")) {
@@ -6119,7 +6003,7 @@ void MainWindow::showRunnerSnapshot() {
     const auto kind_word = [](const QString& kind) {
         return kind == QLatin1String("string") ? QStringLiteral("text") : kind;
     };
-    QList<timewarp::bridge::VariableRow> rows;
+    QList<timewarp::ui::VariableRow> rows;
     rows.reserve(snapshot.variables.size());
     for (const timewarp::debugger::DebugVariable& entry : snapshot.variables) {
         rows.append({entry.name, kind_word(entry.kind), entry.rendered});
@@ -6197,7 +6081,7 @@ void MainWindow::finishRun(const QString& error, bool completed) {
     }
     showRunnerSnapshot();
     if (telemetry_panel_ != nullptr) {
-        QList<timewarp::bridge::TelemetryRow> rows;
+        QList<timewarp::ui::TelemetryRow> rows;
         rows.append({tr("Language"), tr("Scheme")});
         rows.append({tr("Outcome"),
                      error.isEmpty() ? (completed ? tr("finished") : tr("stopped"))

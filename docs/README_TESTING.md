@@ -20,7 +20,7 @@ ctest --test-dir native/build --output-on-failure
 There are 23 suites: the lexer, the expression evaluator, the Scheme machine, the
 native language engine, the canvas command queue, the Qt canvas bridge, the debug and
 debugger runner, the UI layout, the UI documents, the turtle canvas, the syntax
-highlighter, the Python bridge, the mixer, the lessons library, sound and ports, the
+highlighter, the mixer, the lessons library, the classroom, sound and ports, the
 editor's text services
 (formatting, snippets, find-in-files, autosave), the help browser, the live CHIP-8
 machine with its window, the HB-1 computer, the project file, the SQL

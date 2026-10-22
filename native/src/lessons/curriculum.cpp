@@ -250,6 +250,22 @@ QString default_curriculum_path() {
     return {};
 }
 
+std::string_view extension_for(lang::Language language) noexcept {
+    switch (language) {
+        case lang::Language::Basic: return ".bas";
+        case lang::Language::Pilot: return ".pilot";
+        case lang::Language::Logo: return ".logo";
+        case lang::Language::Comal: return ".comal";
+        case lang::Language::Rexx: return ".rexx";
+        case lang::Language::Scheme: return ".scm";
+        case lang::Language::Focal: return ".foc";
+        case lang::Language::Chip8: return ".ch8";
+        case lang::Language::Apl: return ".apl";
+        case lang::Language::Smalltalk: return ".st";
+    }
+    return ".txt";
+}
+
 std::vector<const Lesson*> lessons_for(const std::vector<Lesson>& lessons,
                                        lang::Language language) {
     std::vector<const Lesson*> chosen;

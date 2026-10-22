@@ -27,7 +27,7 @@
 #include <QStringList>
 #include <QWidget>
 
-#include "timewarp/bridge/python_worker.hpp"
+#include "timewarp/ui/reports.hpp"
 #include "timewarp/canvas/command.hpp"
 #include "timewarp/ui/export.hpp"
 #include "timewarp/ui/outline.hpp"
@@ -112,10 +112,10 @@ public:
     explicit ClassroomPanel(QWidget* parent = nullptr);
 
     /// Replaces the class list and what it has been set.
-    void setRoster(const QList<timewarp::bridge::ClassroomStudent>& students,
+    void setRoster(const QList<timewarp::ui::ClassroomStudent>& students,
                    const QStringList& assignedLessons, const QString& note);
     /// Replaces the mark sheet.
-    void setMarks(const QList<timewarp::bridge::ClassroomMark>& rows);
+    void setMarks(const QList<timewarp::ui::ClassroomMark>& rows);
 
     /// Reports a request the engine could not answer.
     ///
@@ -384,9 +384,9 @@ public:
     explicit LessonPanel(QWidget* parent = nullptr);
 
     /// Replaces the lesson list, keeping the current selection when it survives.
-    void setLessons(const QList<timewarp::bridge::LessonSummary>& lessons);
+    void setLessons(const QList<timewarp::ui::LessonSummary>& lessons);
     /// Applies the learner's place in every lesson.
-    void setProgress(const QList<timewarp::bridge::LessonProgress>& rows, int completed,
+    void setProgress(const QList<timewarp::ui::LessonProgress>& rows, int completed,
                      int total);
     /// Shows a hint. `number` and `total` are 1-based, for "hint 2 of 3".
     void setHint(const QString& text, int number, int total);
@@ -472,8 +472,8 @@ private:
     /// The curriculum as last received. Named apart from `lessons_`, which is the
     /// combo box that shows it: one is the data and one is the widget, and a
     /// single name for both is how a panel ends up assigning one to the other.
-    QList<timewarp::bridge::LessonSummary> curriculum_;
-    QList<timewarp::bridge::LessonProgress> rows_;
+    QList<timewarp::ui::LessonSummary> curriculum_;
+    QList<timewarp::ui::LessonProgress> rows_;
     /// What each checkpoint was given this session. The panel shows one verdict at
     /// a time, which is right while a learner is working; a session report is the
     /// one place where all of them matter, and only the panel sees them arrive.
@@ -504,7 +504,7 @@ public:
 
     /// Replaces the table. The filter is re-applied, because a filter that
     /// survived a new set of names would show an empty table with no explanation.
-    void setRows(const QList<timewarp::bridge::VariableRow>& rows);
+    void setRows(const QList<timewarp::ui::VariableRow>& rows);
 
     /// Rows given, and rows showing after the filter. Both, because a test that
     /// only knew one of them could not tell "filtered out" from "never arrived".
@@ -519,7 +519,7 @@ private:
     QLineEdit* filter_ = nullptr;
     QTableWidget* table_ = nullptr;
     QLabel* status_ = nullptr;
-    QList<timewarp::bridge::VariableRow> rows_;
+    QList<timewarp::ui::VariableRow> rows_;
 };
 
 /// The telemetry HUD: labelled counters for the run that just finished.
@@ -534,7 +534,7 @@ class TelemetryPanel final : public QFrame {
 public:
     explicit TelemetryPanel(QWidget* parent = nullptr);
 
-    void setRows(const QList<timewarp::bridge::TelemetryRow>& rows);
+    void setRows(const QList<timewarp::ui::TelemetryRow>& rows);
 
     [[nodiscard]] int rowCount() const;
     /// The value shown for `label`, or an empty string. For tests: a HUD is read
@@ -575,7 +575,7 @@ public:
 
     void setPaused(bool paused, int line, const QString& procedure);
     void setStack(const QList<Frame>& frames);
-    void setVariables(const QList<timewarp::bridge::VariableRow>& rows);
+    void setVariables(const QList<timewarp::ui::VariableRow>& rows);
     void setBreakpoints(const QList<int>& lines);
     [[nodiscard]] QList<int> breakpoints() const;
 

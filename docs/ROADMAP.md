@@ -33,7 +33,7 @@ derived rather than remembered.
 | CHIP-8 machine | Tools > CHIP-8 Emulator (`Ctrl+Shift+M`): a live 60 Hz CHIP-8 with a 64×32 screen (128×64 hi-res), keypad, Run/Pause/Step/Reset, 1–2000 opcodes per frame, register/memory/listing inspector, sound, and a ROM library the user points at a folder. It assembles listings and loads binary ROMs; the editor's CHIP-8 Run is the whole-program path. Manuals: [machine](chip8/README.md), [assembler](chip8/assembly.md), [instruction set](chip8/instruction-set.md) |
 | Languages | 10 languages, 61 verified example programs |
 | Native engines | Expression evaluator (`timewarp_expr`) and Scheme (`timewarp_scheme`) |
-| Bridged engines | None — every language runs in process. `native/bridge/` remains as the reference the parity gates and the lesson check use |
+| Bridged engines | None — every language runs in process, and nothing the product runs starts Python. `native/bridge/` remains as development tooling: the fixture the parity corpus was recorded from |
 | Native executors | All ten — BASIC, FOCAL, PILOT, COMAL, APL and REXX line-by-line; CHIP-8, Logo, Smalltalk and Scheme whole-program |
 | Printing | File > Print Code (Ctrl+P) and Print Drawing, through the optional Qt6 PrintSupport |
 | Profiling | View > Profile Run times every statement in the line-by-line languages and ends with a per-line report, longest first |
@@ -267,8 +267,11 @@ statements, and the reference's Logo fallback (a `.bas` file's `FORWARD` is
 Logo's `FORWARD`) are all in `native/src/lang/basic*.cpp`. It is gated by the
 same rows and examples the reference is: 138 programs, 0 differences.
 
-The next step is to move lesson checking into the native engine; only then can
-`native/bridge/` and the `python_worker` target be deleted together.
+Lesson checking, the curriculum and the classroom are native now, and the worker
+classes are gone from the application and from the installed payload. What remains
+is `native/bridge/` itself: development tooling that the parity corpus was recorded
+from and the example and command harnesses drive. Deleting it is what retires those
+three harnesses.
 
 BASIC's extended statement set is ported too: shapes, particles, fractals, music,
 speech and the gamepad words are in `basic_features.cpp` and `basic_library.cpp`,
@@ -318,14 +321,14 @@ and the command table exercises them. What is now true, and what is still limite
 
 ---
 
-## Towards 17.0
+## 17.0
 
 A major version here is a claim, not a number. 16.0 claimed that all ten languages
-run in C++. 17.0 claims two things, and this section is what stands between the
-tree and them.
+run in C++. 17.0 claims two: the product contains no Python, and a program can draw
+and play a game. This section is what stands behind them.
 
-**The product has no Python in it.** The bridge had two runtime jobs left, and the
-first is now native. `timewarp_lessons` (`native/src/lessons/`) reads the
+**The product has no Python in it.** The bridge had two runtime jobs left, and
+both are native now. `timewarp_lessons` (`native/src/lessons/`) reads the
 curriculum from `native/share/lessons.json` — the file moved out of the reference's
 package, so a package and a checkout teach the same course — and judges a program
 through the engines with `RecordingHost` as the surface, which is what makes a
@@ -338,13 +341,19 @@ asking one verifier. The `lessons_tests` suite asserts the same
 thing, so the curriculum is data that something executes deliberately rather than
 data that sits in the tree looking correct.
 
-The Lessons panel is a view over that library now: opening the tab loads the
-curriculum in process, a check runs in process, and the worker signals it used to
-listen to are gone. `ui_layout_tests` raises the tab in a window with no bridge and
-asserts the twenty lessons arrive.
+The Lessons and Classroom panels are views over that library now: opening a tab
+loads in process, a check and a mark run in process, and the worker signals they
+used to listen to are gone. `ui_layout_tests` raises the Lessons tab in a window
+with no bridge and asserts the twenty lessons arrive.
 
-What is left of the port is the classroom (`classroom_mode.py`: rosters,
-handouts, marking, bundles), which is still reached through the worker.
+The classroom — rosters, handouts, marking, bundles — is `lessons::Classroom`, with
+one deliberate addition: bundles are written and read with zlib, so they stay the
+plain zips `teach.py` writes and any school can open. `classroom_tests` covers the
+promises a teacher relies on, and a bundle made by either side opens in the other.
+
+The worker classes (`PythonWorker`, `locateWorker`, the `timewarp_bridge` target and
+its suite) are deleted, and `native/bridge/` is no longer installed: a staged
+`cmake --install` contains **no Python file at all**.
 
 The parity gates' remaining dependency is done too: the reference's answers to
 470 programs are frozen in
@@ -383,8 +392,8 @@ measuring the wrong machine.
 | --- | --- |
 | 16.5 ✓ | The framebuffer and fixed-coordinate modes, `GET`/`PUT`, gamepad input |
 | 16.6 ✓ | Audio that mixes — several voices in process, not one `paplay` per note |
-| 17.0-beta | Lesson and classroom checking native, behind a flag, with both paths compared |
-| 17.0 | `native/bridge/` and `python_worker` deleted; `make golden-check` is the parity gate |
+| 17.0 ✓ | No Python in the product: lessons and classroom in C++, the worker deleted, nothing Python installed; `make golden-check` is the parity gate |
+| 17.1 | `native/bridge/` deleted, the three harnesses that drive it replaced by `timewarp_check`, and `time_warp_player` replacing the copy-of-the-IDE artifact |
 
 Smaller items belong in one of those releases rather than a release of their own:
 `time_warp_player` — a player executable instead of the copy of the IDE

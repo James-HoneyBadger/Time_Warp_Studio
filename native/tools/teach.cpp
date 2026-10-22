@@ -23,6 +23,7 @@
 #include <QCoreApplication>
 #include <QString>
 
+#include "timewarp/lessons/classroom.hpp"
 #include "timewarp/lessons/curriculum.hpp"
 #include "timewarp/lessons/verify.hpp"
 
@@ -31,9 +32,12 @@ namespace {
 using timewarp::lessons::Lesson;
 
 int usage() {
-    std::printf("usage: time_warp_teach <command> [curriculum.json]\n\n"
-                "  validate   every solution passes, every starter fails\n"
-                "  list       the lessons, in teaching order\n");
+    std::printf("usage: time_warp_teach <command> [path]\n\n"
+                "  validate            every solution passes, every starter fails\n"
+                "  list                the lessons, in teaching order\n"
+                "  roster              the class, and what it has been set\n"
+                "  bundle <out.zip>    zip the classroom, work and all\n"
+                "  unbundle <in.zip>   unpack a class bundle (--replace to overwrite)\n");
     return 2;
 }
 
@@ -119,6 +123,59 @@ int main(int argc, char** argv) {
     std::vector<std::string> arguments;
     for (int index = 2; index < argc; ++index) {
         arguments.emplace_back(argv[index]);
+    }
+
+    // The classroom side first: its path argument is a bundle, not a curriculum,
+    // and the class carries its own curriculum in the default location.
+    if (command == "roster" || command == "bundle" || command == "unbundle") {
+        timewarp::lessons::Classroom room;
+        QString error;
+        if (!room.load(&error)) {
+            std::printf("❌ %s\n", error.toStdString().c_str());
+            return 1;
+        }
+        if (command == "roster") {
+            std::printf("%zu student(s); assigned: %s\n", room.students().size(),
+                        room.assignment().lessonIds.join(QStringLiteral(", "))
+                            .toStdString()
+                            .c_str());
+            for (const auto& student : room.students()) {
+                std::printf("  %-24s %s\n", student.id.toStdString().c_str(),
+                            student.name.toStdString().c_str());
+            }
+            for (const auto& row : room.classProgress()) {
+                std::printf("  %-24s %d/%d lesson(s), %d hint(s)\n",
+                            row.id.toStdString().c_str(), row.completed, row.lessons,
+                            row.hintsUsed);
+            }
+            return 0;
+        }
+        QString bundle;
+        bool replace = false;
+        for (const std::string& argument : arguments) {
+            if (argument == "--replace") {
+                replace = true;
+            } else if (bundle.isEmpty()) {
+                bundle = QString::fromStdString(argument);
+            }
+        }
+        if (bundle.isEmpty()) {
+            return usage();
+        }
+        if (command == "bundle") {
+            if (!room.createBundle(bundle, &error)) {
+                std::printf("❌ %s\n", error.toStdString().c_str());
+                return 1;
+            }
+            std::printf("✅ wrote %s\n", bundle.toStdString().c_str());
+            return 0;
+        }
+        if (!room.importBundle(bundle, replace, &error)) {
+            std::printf("❌ %s\n", error.toStdString().c_str());
+            return 1;
+        }
+        std::printf("✅ %zu student(s) in the class\n", room.students().size());
+        return 0;
     }
 
     const QString path = curriculum_path(arguments);

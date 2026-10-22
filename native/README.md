@@ -1202,22 +1202,19 @@ holds no curriculum and runs no program. It asks the bridge for the lesson list,
 the current checkpoint, and sends the learner's source back to be checked.
 
 That division is the point. The check runs **in the worker's engine**, so the panel's
-green tick and `native/tools/learn.py`'s verdict are the same function's answer rather
-than two implementations that drift. The panel's program comes from whatever document is
-in front, and the curriculum is loaded when the tab is first looked at rather than at
-start-up, so a user who never opens it never starts a Python process for it.
+green tick, `time_warp_learn`'s verdict and `time_warp_teach`'s marking are the same
+function's answer rather than four implementations that drift. The panel's program comes
+from whatever document is in front, and the curriculum is loaded when the tab is first
+looked at rather than at start-up.
 
-Requests and replies are documented in
-[`docs/lessons/FORMAT.md`](../docs/lessons/FORMAT.md); the C++ side is
-`LessonSummary`, `LessonCheckpoint` and `LessonProgress` in
-`include/timewarp/bridge/python_worker.hpp`, with one request method and one signal each.
-A `lesson-check` is refused while a program is running, because two interpreters in one
-process would share the engine's module state -- the refusal is the feature, and it is
-also the useful thing to be told.
+The panel is a view over `lessons::ProgressStore`; the row types it draws are in
+[`include/timewarp/ui/reports.hpp`](include/timewarp/ui/reports.hpp). Checking runs in
+process with `RecordingHost` as the surface, so nothing on screen is disturbed and no
+second interpreter is involved.
 
 The **Classroom** page is the teacher's side of the same machinery. `ClassroomPanel`
-shows the roster, the assignment and one row of marks per learner per lesson, and asks
-`classroom-roster` and `classroom-marks`; both are answered by `classroom_mode.py`, the
+shows the roster, the assignment and one row of marks per learner per lesson, filled
+from `lessons::Classroom`, the
 module `teach.py` writes, so the mark the panel shows and `teach.py collect`'s are one
 function's answer. The class list is a file read and answers at any time; the marks run
 the verifier and are refused while a program is running, for the reason above.
@@ -1257,9 +1254,8 @@ That last one is not a detail. The reference's pen is white and its canvas is
 `(10, 10, 20)`; a client that ignored the background would draw white ink on its own
 white canvas and show nothing -- the exact symptom this bridge was built to fix.
 
-The protocol lives in `native/bridge/worker.py` and is documented at
-the top of that file. It is one JSON object per line, because a line is the only
-framing a pipe gives you for free.
+The reference engine's harness protocol still lives in `native/bridge/worker.py` and is
+documented at the top of that file; the application no longer speaks it.
 
 #### The conventions are the reference's, not the obvious ones
 
@@ -1367,15 +1363,15 @@ strokes a circle costs.
 `docs/ROADMAP.md` is the live list. This is the part of it that belongs to the
 application rather than to the engines.
 
-1. Every language runs natively, and `native/bridge/` remains as the one reference the
-   parity gates, the command matrix and the lesson check compare against. That is the
-   part that goes away once lesson checking runs natively.
+1. Every language runs natively, and `native/bridge/` remains as development tooling:
+   the fixture the parity corpus was recorded from, and what the example and command
+   harnesses drive. Nothing installed contains it.
 2. A `CompiledExpression` handle (interned identifiers + owned RPN) and a Scheme
    `Procedure` cache, so a program is compiled once at load time rather than re-read per
    call.
 
-Landed since this file was first written: the runner bridge (`worker.py` behind
-`bridge::PythonWorker`), the real output console and turtle canvas on top of
+Landed since this file was first written: the runner bridge (`worker.py` behind a
+`QProcess`, since removed), the real output console and turtle canvas on top of
 `CanvasCommandQueue`, the two-row toolbar, `native/` under the repository Makefile and
 CI, the function-key row, the lesson and classroom panels, projects, the REPL bar,
 watch expressions and data breakpoints, SQL, the JSON-RPC API, the `twc` compiler and

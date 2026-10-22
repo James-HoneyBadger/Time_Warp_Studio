@@ -212,13 +212,13 @@ ClassroomPanel::ClassroomPanel(QWidget* parent) : QFrame(parent) {
     setMarks({});
 }
 
-void ClassroomPanel::setRoster(const QList<timewarp::bridge::ClassroomStudent>& students,
+void ClassroomPanel::setRoster(const QList<timewarp::ui::ClassroomStudent>& students,
                                const QStringList& assignedLessons, const QString& note) {
     student_count_ = static_cast<int>(students.size());
     directories_.clear();
     names_.clear();
     student_order_.clear();
-    for (const timewarp::bridge::ClassroomStudent& student : students) {
+    for (const timewarp::ui::ClassroomStudent& student : students) {
         directories_.insert(student.id, student.directory);
         names_.insert(student.id, student.name.isEmpty() ? student.id : student.name);
         student_order_ << student.id;
@@ -256,10 +256,10 @@ void ClassroomPanel::setRoster(const QList<timewarp::bridge::ClassroomStudent>& 
     updateSummary();
 }
 
-void ClassroomPanel::setMarks(const QList<timewarp::bridge::ClassroomMark>& rows) {
+void ClassroomPanel::setMarks(const QList<timewarp::ui::ClassroomMark>& rows) {
     marks_->setRowCount(static_cast<int>(rows.size()));
     for (int index = 0; index < rows.size(); ++index) {
-        const timewarp::bridge::ClassroomMark& row = rows.at(index);
+        const timewarp::ui::ClassroomMark& row = rows.at(index);
         marks_->setItem(index, 0,
                         new QTableWidgetItem{names_.value(row.student, row.student)});
         marks_->setItem(index, 1, new QTableWidgetItem{row.title.isEmpty() ? row.lesson
@@ -936,7 +936,7 @@ LessonPanel::LessonPanel(QWidget* parent) : QFrame(parent) {
     // window, which is the only thing that knows when that happens.
 }
 
-void LessonPanel::setLessons(const QList<timewarp::bridge::LessonSummary>& lessons) {
+void LessonPanel::setLessons(const QList<timewarp::ui::LessonSummary>& lessons) {
     const QString previous = currentLesson();
     curriculum_ = lessons;
     // A new curriculum is a new session: a verdict against an id that may no
@@ -945,7 +945,7 @@ void LessonPanel::setLessons(const QList<timewarp::bridge::LessonSummary>& lesso
 
     const QSignalBlocker blocker{lessons_};
     lessons_->clear();
-    for (const timewarp::bridge::LessonSummary& lesson : lessons) {
+    for (const timewarp::ui::LessonSummary& lesson : lessons) {
         lessons_->addItem(tr("%1 \u00b7 %2").arg(lesson.language, lesson.title), lesson.id);
     }
 
@@ -962,7 +962,7 @@ void LessonPanel::setLessons(const QList<timewarp::bridge::LessonSummary>& lesso
     onLessonChanged(lessons_->currentIndex());
 }
 
-void LessonPanel::setProgress(const QList<timewarp::bridge::LessonProgress>& rows, int completed,
+void LessonPanel::setProgress(const QList<timewarp::ui::LessonProgress>& rows, int completed,
                               int total) {
     rows_ = rows;
     progress_->setRange(0, total > 0 ? total : 1);
@@ -1066,7 +1066,7 @@ int LessonPanel::currentCheckpoint() const { return checkpoints_->currentRow(); 
 QString LessonPanel::currentStarter() const {
     const int index = currentCheckpoint();
     const QString id = currentLesson();
-    for (const timewarp::bridge::LessonSummary& lesson : curriculum_) {
+    for (const timewarp::ui::LessonSummary& lesson : curriculum_) {
         if (lesson.id == id && index >= 0 && index < lesson.checkpointCount()) {
             return lesson.checkpoints.at(index).starter;
         }
@@ -1076,7 +1076,7 @@ QString LessonPanel::currentStarter() const {
 
 QString LessonPanel::currentLanguageKey() const {
     const QString id = currentLesson();
-    for (const timewarp::bridge::LessonSummary& lesson : curriculum_) {
+    for (const timewarp::ui::LessonSummary& lesson : curriculum_) {
         if (lesson.id == id) {
             return lesson.languageKey;
         }
@@ -1104,7 +1104,7 @@ timewarp::ui::exporter::LessonSession LessonPanel::session() const {
     const QHash<int, SessionVerdict>& lesson_verdicts =
         found == verdicts_.constEnd() ? no_verdicts : found.value();
 
-    for (const timewarp::bridge::LessonSummary& lesson : curriculum_) {
+    for (const timewarp::ui::LessonSummary& lesson : curriculum_) {
         if (lesson.id != id) {
             continue;
         }
@@ -1126,7 +1126,7 @@ timewarp::ui::exporter::LessonSession LessonPanel::session() const {
         }
         break;
     }
-    for (const timewarp::bridge::LessonProgress& row : rows_) {
+    for (const timewarp::ui::LessonProgress& row : rows_) {
         if (row.id == id) {
             session.status = row.status;
             break;
@@ -1142,7 +1142,7 @@ void LessonPanel::onLessonChanged(int index) {
         detail_->clear();
         return;
     }
-    const timewarp::bridge::LessonSummary& lesson = curriculum_.at(index);
+    const timewarp::ui::LessonSummary& lesson = curriculum_.at(index);
     description_->setText(tr("%1 \u2014 %2").arg(lesson.title, lesson.description));
 
     const QSignalBlocker blocker{checkpoints_};
@@ -1176,7 +1176,7 @@ void LessonPanel::refreshCheckpoint() {
     // The learner's place decides which checkpoint the panel opens on, so a
     // learner who comes back to a lesson is put where they left off rather than
     // at the beginning of it.
-    for (const timewarp::bridge::LessonProgress& row : std::as_const(rows_)) {
+    for (const timewarp::ui::LessonProgress& row : std::as_const(rows_)) {
         if (row.id != id) {
             continue;
         }
@@ -1198,7 +1198,7 @@ void LessonPanel::refreshCheckpoint() {
     if (position < 0 || index < 0 || position >= curriculum_.size()) {
         return;
     }
-    const timewarp::bridge::LessonSummary& lesson = curriculum_.at(position);
+    const timewarp::ui::LessonSummary& lesson = curriculum_.at(position);
     if (index < lesson.checkpointCount()) {
         detail_->setPlainText(lesson.checkpoints.at(index).description);
     }
@@ -1260,7 +1260,7 @@ VariablesPanel::VariablesPanel(QWidget* parent) : QFrame(parent) {
     applyFilter();
 }
 
-void VariablesPanel::setRows(const QList<timewarp::bridge::VariableRow>& rows) {
+void VariablesPanel::setRows(const QList<timewarp::ui::VariableRow>& rows) {
     rows_ = rows;
     applyFilter();
 }
@@ -1276,7 +1276,7 @@ void VariablesPanel::applyFilter() {
     table_->setRowCount(0);
 
     int shown = 0;
-    for (const timewarp::bridge::VariableRow& row : rows_) {
+    for (const timewarp::ui::VariableRow& row : rows_) {
         if (!needle.isEmpty() && !row.name.contains(needle, Qt::CaseInsensitive)) {
             continue;
         }
@@ -1322,7 +1322,7 @@ TelemetryPanel::TelemetryPanel(QWidget* parent) : QFrame(parent) {
     setRows({});
 }
 
-void TelemetryPanel::setRows(const QList<timewarp::bridge::TelemetryRow>& rows) {
+void TelemetryPanel::setRows(const QList<timewarp::ui::TelemetryRow>& rows) {
     table_->setRowCount(0);
     if (rows.isEmpty()) {
         // One row stating the state, rather than an empty grid that looks broken.
@@ -1331,7 +1331,7 @@ void TelemetryPanel::setRows(const QList<timewarp::bridge::TelemetryRow>& rows) 
         table_->setItem(0, 1, new QTableWidgetItem{tr("run a program")});
         return;
     }
-    for (const timewarp::bridge::TelemetryRow& row : rows) {
+    for (const timewarp::ui::TelemetryRow& row : rows) {
         const int index = table_->rowCount();
         table_->insertRow(index);
         table_->setItem(index, 0, new QTableWidgetItem{row.label});
@@ -1698,9 +1698,9 @@ void DebugPanel::setStack(const QList<Frame>& frames) {
     }
 }
 
-void DebugPanel::setVariables(const QList<timewarp::bridge::VariableRow>& rows) {
+void DebugPanel::setVariables(const QList<timewarp::ui::VariableRow>& rows) {
     variables_->setRowCount(0);
-    for (const timewarp::bridge::VariableRow& row : rows) {
+    for (const timewarp::ui::VariableRow& row : rows) {
         const int index = variables_->rowCount();
         variables_->insertRow(index);
         variables_->setItem(index, 0, new QTableWidgetItem{row.name});
