@@ -619,9 +619,19 @@ std::string resolve_confined_path(std::string_view filename) {
     if (!canonical_error) {
         candidate = canonical;
     }
-    const std::string base_text = base.string();
-    const std::string candidate_text = candidate.string();
-    if (candidate_text.rfind(base_text, 0) != 0) {
+    // A prefix test is not a containment test. `/tmp/run` is a prefix of
+    // `/tmp/run2`, so `OPEN "../run2/notes.txt"` from `/tmp/run` passed the old
+    // check and wrote outside the directory the program was confined to. Compare
+    // whole components: the candidate is inside when it *is* the base, or when
+    // what follows the base is a separator.
+    const std::string base_text = base.generic_string();
+    const std::string candidate_text = candidate.generic_string();
+    const bool at_base = candidate_text == base_text;
+    const bool below_base =
+        candidate_text.size() > base_text.size() &&
+        candidate_text.compare(0, base_text.size(), base_text) == 0 &&
+        (base_text.back() == '/' || candidate_text[base_text.size()] == '/');
+    if (!at_base && !below_base) {
         throw BasicError("Path '" + raw + "' escapes sandbox directory");
     }
     return candidate_text;

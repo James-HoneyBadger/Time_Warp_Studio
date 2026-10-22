@@ -1,5 +1,19 @@
 # Changelog
 
+## [17.1.1] - 2026-10-22
+
+A program confined to a directory could reach a sibling of it. `OPEN` resolved a
+name against the working directory and then checked that the answer *began with*
+it — and `/home/me/run` is a prefix of `/home/me/run2`, so
+`OPEN "../run2/notes.txt"` from `/home/me/run` wrote outside the fence. It is a
+component test now, the fence confines rather than refuses, and `lang_tests`
+fails against the old code with two checks and passes with the new one.
+
+Worth saying plainly because the classroom makes it matter: marking a class runs
+thirty programs written by other people, unattended. This is a fence around one
+directory, not a privilege boundary — the threat model in `SECURITY.md` says so in
+the terms the code actually implements.
+
 ## [17.1.0] - 2026-10-22
 
 Two things a program could do but a user could not watch. A `SCREEN` was a picture

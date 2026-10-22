@@ -17,6 +17,7 @@
 #include <condition_variable>
 #include <cstdint>
 #include <cstdio>
+#include <filesystem>
 #include <fstream>
 #include <iterator>
 #include <map>
@@ -2270,6 +2271,48 @@ void test_gamepad_axis_scaling_is_centred() {
 }
 
 
+// A program's own directory is a fence, and a fence has to be made of
+// components. The check was a string-prefix test, and `/tmp/run` is a prefix of
+// `/tmp/run2` -- so a program confined to the first could reach a sibling whose
+// name only started the same way. That matters because a class's programs are
+// marked unattended: nobody reads the source before it runs.
+void test_file_access_is_confined_to_the_directory() {
+    namespace fs = std::filesystem;
+    const fs::path root = fs::temp_directory_path() / "timewarp-lang-confinement";
+    const fs::path inside = root / "run";
+    const fs::path sibling = root / "run2";
+    std::error_code ignored;
+    fs::remove_all(root, ignored);
+    fs::create_directories(inside, ignored);
+    fs::create_directories(sibling, ignored);
+
+    const fs::path started_in = fs::current_path();
+    std::error_code error;
+    fs::current_path(inside, error);
+    TW_CHECK(!error);
+
+    const BasicRun escaped = run_basic(
+        "10 OPEN \"../run2/escaped.txt\" FOR OUTPUT AS #1\n"
+        "20 PRINT #1, \"x\"\n"
+        "30 CLOSE #1\n");
+    const bool reached_a_sibling = fs::exists(sibling / "escaped.txt");
+
+    // The fence confines rather than refuses: a name inside is still written.
+    const BasicRun wrote = run_basic(
+        "10 OPEN \"notes.txt\" FOR OUTPUT AS #1\n"
+        "20 PRINT #1, \"x\"\n"
+        "30 CLOSE #1\n");
+    const bool wrote_inside = fs::exists(inside / "notes.txt");
+
+    fs::current_path(started_in, ignored);
+    fs::remove_all(root, ignored);
+
+    TW_CHECK(contains(escaped.output, "escapes sandbox"));
+    TW_CHECK(!reached_a_sibling);
+    TW_CHECK(contains(wrote.output, "Opened file 'notes.txt'"));
+    TW_CHECK(wrote_inside);
+}
+
 // ---------------------------------------------------------------------------
 // REPL, watch expressions and data breakpoints
 // ---------------------------------------------------------------------------
@@ -2666,6 +2709,7 @@ int main() {
     test_basic_cls_clears_what_point_reads();
     test_basic_stick_is_neutral_before_joyinit();
     test_gamepad_axis_scaling_is_centred();
+    test_file_access_is_confined_to_the_directory();
     test_basic_an_empty_loop_body_does_not_end_its_outer_loop();
     test_the_screen_game_example_runs_and_draws();
     test_a_runaway_program_stops_at_the_budget();

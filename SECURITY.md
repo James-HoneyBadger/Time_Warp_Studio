@@ -59,9 +59,16 @@ A program runs in the application's process, with the user's privileges. It is n
 a security boundary and is not presented as one. What it *can* do:
 
 - **Files.** BASIC's file channel (`OPEN`, `GET #`, `PUT #`) reads and writes what
-  the user can read and write. A file name is resolved by the engine, not the
-  shell, and `SHELL` is refused outright — but a program that can write files can
-  still overwrite one you own. Run programs you trust.
+  the user can read and write, but only inside **one directory**: the process's
+  working directory, which is the document's folder when the IDE starts on a file
+  and the launch directory otherwise. A name is resolved against it, `..` is
+  followed and then checked, and a path that lands outside — including a sibling
+  whose name merely starts the same way — is refused with
+  `Path '…' escapes sandbox directory` (`resolve_confined_path`,
+  `native/src/lang/basic_features.cpp`, asserted by `lang_tests`). That is a fence
+  around one directory, not a privilege boundary: a program can still overwrite
+  anything inside it, and a program that can write files can still lose you one.
+  Run programs you trust.
 - **Device nodes, through an allow-list.** `SERIAL` and `PARALLEL`
   (`native/src/io/ports.cpp`) open raw POSIX devices only from a family list —
   `/dev/ttyUSB*`, `/dev/ttyACM*`, `/dev/ttyAMA*`, `/dev/serial/by-id/*`, `/dev/lp*`,
