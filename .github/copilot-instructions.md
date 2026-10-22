@@ -53,20 +53,26 @@ the parity gate compares with a recorded corpus, and the harnesses drive
 
 ## Language Executor Pattern
 
-Each language executor is a **function** (not a class) conforming to the Protocol in `languages/base.py`:
+Each language executor is a **function**, not a class, and its contract is the one
+`TurtleHost` documents in `native/include/timewarp/lang/turtle_host.hpp`:
 
-```python
-def execute_my_lang(interpreter: Interpreter, source: str, turtle: TurtleState) -> str:
-    """Execute source code, return output text with emoji prefixes."""
-    ...
+```cpp
+std::string execute_my_lang(Interpreter& interpreter, std::string_view source,
+                            TurtleHost& turtle);
+// Returns the text to display, with the emoji prefixes; never throws out of the
+// executor, because every caller reads the returned text.
 ```
 
 **Two execution modes:**
 
-- **Whole-program executors** (3 active languages: Scheme, CHIP-8 and Smalltalk): Receive the entire source as a string. Registered in `_WHOLE_PROGRAM_EXECUTORS` dict in `core/interpreter.py`.
-- **Line-by-line executors** (7 active languages: BASIC, APL, Logo, PILOT, FOCAL, COMAL and REXX): The interpreter iterates lines and calls the executor per statement.
+- **Whole-program executors** (five languages: Scheme, CHIP-8, Logo, Smalltalk and
+  Forth): receive the entire source at once. `is_whole_program` in
+  `native/src/lang/language.cpp` is the one list.
+- **Line-by-line executors** (six languages: BASIC, APL, PILOT, FOCAL, COMAL and
+  REXX): the interpreter iterates lines and calls the executor per statement.
 
-Whole-program executors are dispatched through `_WHOLE_PROGRAM_EXECUTORS` in `core/interpreter.py`; adding a language also requires the corresponding enum, extension, editor, and test updates.
+`executor_for` in the same file answers with the executor for every language; adding
+one also requires the enum, the extension, the IDE table and the tests.
 
 ## Critical Workflows
 
@@ -96,14 +102,14 @@ make -C native run
   reason the second Qt exists: `-DTIME_WARP_QT5=ON` selects it and
   `-DTIME_WARP_WIN7=ON` states the Windows 7 API level. Never `#if` on the Qt
   version at a call site — the two compatibility headers below are the seam.
-- Python 3.10+ **only** to run the harness and documentation scripts in
-  `native/tools/`; every language runs in-process with no Python at all, and there is
-  no Python engine any more
+- No interpreter of any kind. Every language runs in process, and the gates and
+  documentation tools are C++ built from this tree; `make tree-check` fails if a
+  `.py` comes back.
 
 ### Testing Strategy
 
 ```bash
-# The Qt suites (21 of them)
+# The Qt suites (24 of them)
 ctest --test-dir native/build --output-on-failure
 make -C native test-debug     # Debug tree
 make -C native asan           # AddressSanitizer; ASAN=undefined for UBSan
@@ -117,8 +123,7 @@ make -C native asan           # AddressSanitizer; ASAN=undefined for UBSan
 ./api                                 # JSON-RPC on stdin/stdout; docs/API.md
 
 # The parity gate: the ports against the corpus recorded from the reference engine
-# before it was deleted. 0 differences is the verdict, and it needs no Python
-# engine -- only a python3 to run the script.
+# before it was deleted. 0 differences is the verdict.
 make golden-check     # both corpora: 470 language programs and 192 Scheme ones
 
 # The curriculum and the documentation gates
@@ -190,13 +195,10 @@ The order is the native one first, because that is the only implementation there
 
 ### Safe Expression Evaluation
 
-**Never use `eval()` directly.** Use the `ExpressionEvaluator` class for math expressions:
-
-```python
-from time_warp.utils.expression_evaluator import ExpressionEvaluator
-evaluator = ExpressionEvaluator(variables={"X": 5})
-result = evaluator.evaluate("2 + 3 * X")  # Returns 17
-```
+There is no `eval()` anywhere in the tree. Arithmetic a language needs goes through
+`timewarp_expr` (`native/src/token.cpp`, `lexer.cpp`, `evaluator.cpp`), reached from
+an executor as `interpreter.evaluate_expression(...)` with the program's variables
+supplied — the same evaluator every language shares, and the one the corpus pins.
 
 ## Integration Points to Watch
 
@@ -240,30 +242,25 @@ maximum-contrast variant of the active theme; it does not replace it.
 native/                        - the Qt application (the product)
   CMakeLists.txt
   include/ src/ tests/ tools/
-    project/                   - .twproject model (groups, relative paths)
-    sql/                       - SQLite connection and result type
-    api/                       - JSON-RPC 2.0 dispatcher (server.cpp)
-    worker.py                  - the JSON-lines protocol it answered (gone at 18.0)
-    pyproject.toml             - ruff/mypy config for the engine
-    time_warp/
-      core/                    - interpreter.py, language_registry.py, config.py, sandbox.py
-      languages/               - the 10 executors (base.py documents the Protocol)
-      features/                - lesson_system.py + lessons.json, classroom_mode.py,
-                                 and the language-level modules a program reaches
-                                 by name (music, speech, shapes, particles,
-                                 fractals, gamepad, game_support)
-      graphics/turtle_state.py - turtle state
-      utils/                   - expression_evaluator.py, error_hints.py, validators.py
-      tests/                   - the engine's own tests
-Examples/                      - 60 example programs across the 10 active languages
+    lang/                      - the eleven executors and the shared loop
+    scheme/                    - the explicit-stack Scheme machine
+    lessons/                   - curriculum, verifier, progress, classroom
+    debugger/ project/ sql/ api/ canvas/
+  share/                       - lessons.json, snippets.json, command_rows.json
+  tools/
+    gates/                     - time_warp_gates: smoke, commands, repl, golden, tree
+    docs/                      - time_warp_docs: links, claims, version (no Qt)
+    icon/                      - time_warp_icon: the packaged icons (zlib only)
+Examples/                      - 63 example programs across the 11 active languages
 docs/                          - USER_GUIDE, API, language guide and tutorials
-Scripts/                       - generate_icon.py,
-                                 version_sync.py
 ```
 
 ---
 
-**When in doubt:** Read `core/interpreter.py` (main dispatch logic, look for `_WHOLE_PROGRAM_EXECUTORS`) and check `pytest --help` for test workflows.
+**When in doubt:** Read `native/src/lang/interpreter.cpp` (the dispatch, and
+`is_whole_program`), and run `make help` for the checks this tree has. Nothing here
+needs an interpreter: if a guide names a `python3` command it is out of date, and
+`make tree-check` is the gate that says so.
 
 ### Key Components
 
@@ -333,8 +330,8 @@ The removed PySide6 application's dependencies are no longer installed or refere
 
 ### File Naming Conventions
 
-- **Test files**: `test_*.py` for unit tests
-- **Language demos**: `*.bas`, `*.logo`, `*.pilot`, `*.c`, `*.py`, etc. in `Examples/`
+- **Test files**: `native/tests/*_tests.cpp`, one suite per area
+- **Language demos**: `*.bas`, `*.logo`, `*.pilot`, `*.fs`, etc. in `Examples/`
 - **Language executors**: Named after the language in `time_warp/languages/`
 
 ### Configuration Management
@@ -411,7 +408,7 @@ Each fact has one home; the other guides link to it rather than restating it.
 `README.md` is the front door and carries the capability inventory that links into
 all of the above. `.github/workflows/docs.yml` gates the set: every promised file
 must exist, every lesson plan must match the curriculum, and (with
-`native/tools/check_doc_links.py`) every relative link and anchor must resolve.
+`time_warp_docs links`) every relative link and anchor must resolve.
 
 ## GitHub surfaces
 

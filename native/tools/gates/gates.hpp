@@ -123,5 +123,7 @@ struct ReplAnswer {
 [[nodiscard]] int runCommands(const QStringList& arguments);
 [[nodiscard]] int runRepl(const QStringList& arguments);
 [[nodiscard]] int runGolden(const QStringList& arguments);
+/// Fails if the tree has grown a `.py` back.
+[[nodiscard]] int runTree(const QStringList& arguments);
 
 }  // namespace timewarp::gates

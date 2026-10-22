@@ -141,11 +141,13 @@ the IDE and opens in player mode. The full guide is [USER_GUIDE.md](USER_GUIDE.m
 ## 4. Verify the build
 
 ```bash
-ctest --test-dir native/build --output-on-failure     # 23 suites
-python3 native/tools/example_smoke.py                 # all 60 examples
-python3 native/tools/command_matrix.py                # every command-table row
-python3 native/tools/repl_matrix.py                   # every row through the REPL
-python3 native/tools/teach.py validate                # every lesson solution
+ctest --test-dir native/build --output-on-failure   # 24 suites
+make smoke                                          # all 63 examples
+make command-matrix                                 # every command-table row
+make repl-matrix                                    # every row through the REPL
+./native/build/time_warp_teach validate             # every lesson solution
+make doc-links doc-claims                           # the guides
+make tree-check                                     # no Python in the tree
 ```
 
 All must pass. See [README_TESTING.md](README_TESTING.md) for the full set,
@@ -178,30 +180,25 @@ rather than failing obscurely — read its message.
 from the build tree. There is no worker and no Python involved: the check runs in
 process.
 
-**`make test` reports a missing `pytest`.** That is the reference engine's own
-suite, which is development tooling and not part of the product. Create the
-virtual environment with `python3 -m venv .venv` and `pip install pytest ruff`, or
-skip it: `make test` is the C++ suite and needs no Python.
+**Nothing in the tree needs Python.** There is no `pytest`, no `ruff`, no virtual
+environment and no script to install: every check is a C++ target built from this
+repository. If a guide you are following names a `python3` command, it is out of
+date -- `make help` lists the real ones.
 
 ---
 
-## 6. The reference engine (development only)
+## 6. No interpreter anywhere
 
-All eleven languages run in C++ inside the IDE, and the lesson check does too. The
-Python reference engine that the ports were judged against has been **deleted**: its
-answers are frozen in `native/tests/golden/lang_corpus.json.gz`, and the harnesses
-(`example_smoke.py`, `command_matrix.py`, `repl_matrix.py`) drive `time_warp_check`
-— the native engines — instead. A `python3` is needed to run those scripts and the
-two documentation gates, and for nothing else.
+All eleven languages run in C++ inside the IDE, and so do the lesson check, the
+classroom and every gate. The Python reference engine the ports were judged against
+was deleted in 18.0, its answers are frozen in
+`native/tests/golden/lang_corpus.json.gz`, and the harnesses that compare the ports
+with those answers are `time_warp_gates`, built here.
 
-Optional extras are imported defensively and are **not** required: `pyttsx3`
-(the reference's BASIC `SAY` backend), `pygame` and `inputs` (BASIC `SOUND` and
-`GAMEPAD`). Without them those commands degrade rather than fail. The native
-engine reports `Speech synthesis not available` for `SAY`; `PLAY` and the sound
-commands still produce their acknowledgement.
-
-The engine is the part that goes away once lesson checking runs natively;
-`docs/ROADMAP.md` tracks that.
+The last Python in the tree — the two documentation gates, the version tool, the
+icon generator and the `twc` wrapper — became C++ in 22.1.0. `make tree-check`
+fails if any `.py` comes back, so "the product needs no interpreter to be built,
+tested or checked" is a claim with a gate behind it rather than a wish.
 
 ---
 

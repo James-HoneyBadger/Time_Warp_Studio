@@ -2,6 +2,64 @@
 
 <!-- history: all -->
 
+## [22.1.0] - 2026-10-22
+
+No Python. The last five scripts are C++, and the tree holds none at all — which is
+a claim a gate now enforces rather than a claim a reader has to trust.
+
+### Added
+
+- **`time_warp_docs`** (`native/tools/docs/`) — the two documentation gates and the
+  version tool as one dependency-free C++ project: `links`, `claims [--self-test]`,
+  `version [--write]`. Its own CMake project with no Qt, so the documentation job
+  still answers in seconds while building it with a compiler instead of needing an
+  interpreter. The claims gate's nine self-test cases and its Makefile/`$(FORWARDED)`
+  parsing came across whole.
+- **`time_warp_icon`** (`native/tools/icon/`) — the icon generator in C++, zlib only.
+  It reproduces the three packaged icons **byte for byte** (md5 identical for the
+  PNG, ICO and ICNS), which is the test: a generator that draws the same picture
+  differently would churn the committed assets on every run. `--check` compares what
+  it would write with what is on disk, so a release can assert the icons are current.
+- **`time_warp_gates tree`** — fails if any tracked file is a `.py`. The removal
+  needed a gate for the same reason every other claim here has one: a deletion that
+  nothing enforces grows back.
+
+### Removed
+
+- **Five scripts and their scaffolding**: `check_doc_links.py`,
+  `check_doc_claims.py`, `version_sync.py`, `generate_icon.py`, `twc.py`, plus
+  `native/tools/pyproject.toml` and the `.venv`/`__pycache__`/`pytest`/`ruff`
+  ignore rules and the ruff pre-commit hook. Twelve scripts and 4,648 lines in
+  total across 22.0.0 and this release.
+- **`./twc` is a wrapper around the IDE's own compiler.** The Python script
+  generated a C++ runner and compiled it; `time_warp_ide --compile` had grown the
+  same feature natively, so the script was a second implementation of one thing.
+  `./twc program.bas -o name` still works, and `--output` works too.
+
+### Changed
+
+- **The documentation jobs build a tool instead of needing an interpreter.**
+  `docs.yml`, `version.yml` and `release.yml` each configure and build
+  `native/tools/docs` — one compiler, no Qt, no network — and then run it. The
+  stated reason those jobs were Python-only was "it must not depend on the C++
+  build"; that is still true, and it is now a C++ tool the size of one directory.
+- **`make lint` is the build.** Ruff linted the harnesses; there is nothing left for
+  it to lint, and every target is compiled `-Werror`, so the target now says that
+  rather than shelling out to a tool that is not installed.
+
+### Notes for a reader checking the port
+
+- Both ports were checked the way the harness port was: old and new run on the same
+  tree, output compared, then the new one made to fail on purpose. The documentation
+  tools agree on all four commands (`455 checked, all resolve`; `58 files, no false
+  claims`; `self-test: 9 cases`; `All 2 hand-written copies match`), and on a scratch
+  document with a dead link and a moved path both report the same two failures in the
+  same order. The icon generator was checked by hash, and `--check` was made to fail
+  by changing one byte of the committed PNG.
+- The doc-tools port found two of its own bugs in the process — a link scan that did
+  not skip fenced blocks, and a trailing `/` in a target — both fixed against the
+  Python's behaviour rather than against a guess.
+
 ## [22.0.0] - 2026-10-22
 
 The harnesses are C++, and a project runs as a project. Two sentences, both about

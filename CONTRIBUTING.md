@@ -99,14 +99,15 @@ Help improve code quality:
 
 ### Prerequisites
 
-The application is C++20 and Qt6. Python is needed only for the reference
-engine the parity gates and the lesson check use; every language runs in C++.
+The application is C++20 and Qt6, and so is everything that tests it: there is no
+interpreter in the tree, so a checkout needs a compiler and nothing else.
 
 | To work on | You need |
 | ---------- | -------- |
 | The IDE and the C++ suites | A C++20 compiler (GCC 11+ or Clang 14+), CMake 3.20+, Qt6 (Widgets, Core, Gui; Svg optional for SVG export, PrintSupport optional for printing) and the SQLite 3 development package |
-| The bridge engine | Python 3.10 or higher, standard library only |
-| The documentation gates | Python 3, and `node` for `markdownlint-cli2` |
+| The gates (`make smoke`, `command-matrix`, `repl-matrix`, `golden-check`, `tree-check`) | The same build: they are `time_warp_gates`, built with the product |
+| The documentation gates (`make doc-links`, `doc-claims`) | A C++20 compiler. `time_warp_docs` is its own small project with no Qt |
+| `make lint-md` | `node`, for `markdownlint-cli2` |
 | Any of it | Git and a command line |
 
 ### Clone Repository
@@ -116,39 +117,19 @@ git clone https://github.com/James-HoneyBadger/Time_Warp_Studio.git
 cd Time_Warp_Studio
 ```
 
-### Create Virtual Environment
+### Configure and build
 
-```bash
-# Linux/macOS
-python3 -m venv .venv
-source .venv/bin/activate
-
-# Windows
-python -m venv .venv
-.venv\Scripts\activate
-```
-
-### Install Dependencies
-
-The application itself needs no dependency step: Qt6, CMake and a C++20 compiler
-are all it takes. Configure once, then build.
+The application needs no dependency step: Qt6, CMake and a C++20 compiler are all it
+takes. Configure once, then build.
 
 ```bash
 cmake -S native -B native/build -DCMAKE_BUILD_TYPE=Release
 cmake --build native/build -j
 ```
 
-Contributors who touch the reference engine also need its test
-tooling. Its Python executors are what the parity gates compare the native ones
-against, so they must keep running even though no program uses them at run time:
-
-```bash
-python3 -m venv .venv
-.venv/bin/pip install pytest ruff
-```
-
-Optional extras for those languages are not required: `pyttsx3` (BASIC `SAY`),
-`pygame` and `inputs` (BASIC `SOUND`/`GAMEPAD`) are imported defensively.
+The gates and the documentation tools are built the same way — `make smoke` and
+`make doc-links` build what they need first. There is no virtual environment, no
+`pip install` and no interpreter to provide.
 
 ### Verify Setup
 
@@ -156,7 +137,7 @@ Optional extras for those languages are not required: `pyttsx3` (BASIC `SAY`),
 # Build and run the IDE
 make -C native run
 
-# The 21 C++ suites
+# The 24 C++ suites
 make test
 ```
 
@@ -165,12 +146,14 @@ Both should work without errors.
 ### Install the Git hooks
 
 ```bash
-.venv/bin/pip install pre-commit   # or: pipx install pre-commit
+pipx install pre-commit    # the hook runner itself, which needs Python to install
 pre-commit install
 ```
 
-That installs three hooks. `ruff` lints and formats Python, and `detect-secrets`
-fails the commit when a file contains something shaped like a credential.
+That installs one hook: `detect-secrets` fails the commit when a file contains
+something shaped like a credential. There is no Python linter any more, because
+there is no Python: the build is compiled `-Werror`, and `make tree-check` fails if
+a `.py` file comes back.
 
 `detect-secrets` compares against the committed baseline in `.secrets.baseline`,
 which records what the tree already holds. That is deliberate: without it every
@@ -186,7 +169,7 @@ the key.
 When the hook flags a false positive, silence that one line rather than
 weakening the detection:
 
-```python
+```text
 EXAMPLE_TOKEN = "not-a-real-token"  # pragma: allowlist secret
 ```
 
@@ -194,7 +177,7 @@ When a real value is removed from a file, or the baseline is audited and the
 finding is intentional, regenerate it and review the diff:
 
 ```bash
-.venv/bin/detect-secrets scan --baseline .secrets.baseline
+detect-secrets scan --baseline .secrets.baseline
 ```
 
 ---
@@ -220,20 +203,21 @@ corpora. The rows are data in `native/share/command_rows.json`, and the inventor
 that measures their coverage reads the executors' own sources
 (`native/tools/gates/inventory.cpp`).
 
-Two documentation tools are the last Python in the tree, and they move to C++ in
-22.1.0; `make lint` checks them against `native/tools/pyproject.toml`. Nothing here
-is part of the product, and nothing installed contains it.
+The documentation gates are `time_warp_docs` (`native/tools/docs`, one small
+project with no Qt): `links`, `claims` and `version`. `time_warp_icon` writes the
+packaged icons. None of them is part of the product, and nothing installed contains
+them — there is no Python in the tree at all, which `make tree-check` enforces.
 
-Two things in there are not executors and break just as easily: the lesson
-curriculum (`features/lessons.json`) and the teacher's side
-(`features/classroom_mode.py`). A checkpoint is checked by *running* the learner's
+Two things in the application are not executors and break just as easily: the lesson
+curriculum (`native/share/lessons.json`) and the teacher's side
+(`classroom.cpp`). A checkpoint is checked by *running* the learner's
 program, so an executor change can fail a lesson without touching the lesson —
 which is why `make engine-test` is not optional here.
 
 ```bash
-make lint        # ruff check native/bridge
+make lint        # the build, which is warning-free by construction
 make lint-md     # markdownlint over every tracked Markdown file
-make engine-test # pytest over the engine
+make doc-claims  # every path, name and make target the guides name exists
 ```
 
 ### Example Code Standards
@@ -383,10 +367,7 @@ ctest --test-dir native/build -R turtle_canvas_tests --output-on-failure
 make test-debug
 make asan
 
-# The bridge engine's own tests
-make engine-test
-
-# Every example program, through the reference engine
+# Every example program, through the native engines
 make smoke
 
 # All of the above, plus lint
@@ -432,14 +413,9 @@ class TestMyFeature:
 
 ### Test Coverage
 
-Aim for >80% coverage on new code. For the C++ suites, add assertions to the
-relevant `native/tests/*_tests.cpp`; for the bridge engine:
-
-```bash
-.venv/bin/python -m pytest native/bridge/time_warp/tests -q \
-  --cov=time_warp --cov-report=html
-# Coverage report in htmlcov/index.html
-```
+Add assertions to the relevant `native/tests/*_tests.cpp`. There is no coverage
+tool in the tree: a suite that fails when a claim is broken is the measure this
+project uses, and every fix is expected to arrive with one.
 
 ---
 
@@ -493,71 +469,58 @@ cannot open.
 
 ### 1. Create the executor
 
-File: `native/bridge/time_warp/languages/newlang.py`<!-- doc-claims: ignore -->
+File: `native/src/lang/newlang.cpp`<!-- doc-claims: ignore -->, with its header in
+`native/include/timewarp/lang/`<!-- doc-claims: ignore -->
 
-```python
-from __future__ import annotations
-from typing import TYPE_CHECKING
-
-if TYPE_CHECKING:
-    from ..core.interpreter import Interpreter
-    from ..graphics.turtle_state import TurtleState
-
-
-class NewLangError(Exception):
-    """Raised while parsing or evaluating NewLang; reported with the error emoji."""
-
-
-def execute_newlang(interpreter: Interpreter, source: str, turtle: TurtleState) -> str:
-    """Execute NewLang source and return output lines."""
-    output_lines = []
-    try:
-        output_lines.append(f"✅ {_parse_and_execute(source)}")
-    except NewLangError as exc:
-        output_lines.append(f"❌ NewLang: {exc}")
-    return "\n".join(output_lines) + "\n"
+```cpp
+std::string execute_newlang(Interpreter& interpreter, std::string_view source,
+                            TurtleHost& turtle) {
+    // A statement at a time (the line-by-line shape) or the whole source at once
+    // (the whole-program shape). Either way: return the text, never throw out of
+    // the executor, and prefix a failure with the error emoji.
+    return "❌ NewLang: not implemented yet\n";
+}
 ```
 
-Errors are *returned as a line beginning with the error emoji*, never raised out
-of the executor: the interpreter, the canvas and the lesson checker all read the
+Errors are *returned as a line beginning with the error emoji*, never raised out of
+the executor: the interpreter, the canvas and the lesson checker all read the
 returned text.
 
 ### 2. Register it
 
-- `languages/__init__.py` — import and export the executor
-- `core/interpreter.py` — the `Language` enum member, the import, the dispatch
-  entry, `Language.from_extension()`, and `_WHOLE_PROGRAM_EXECUTORS` if the
-  executor takes the whole source at once rather than one line at a time
-- `core/language_registry.py` — display name, folder name, extensions and
-  execution mode (`line` or `whole`)
-- `features/classroom_mode.py` — the handout file extension
+Every table a language has to be in, and each one a compile error or a test failure
+if you miss it:
+
+- `native/src/lang/language.cpp` — the `Language` enum member, `display_name`,
+  `key`, `all_languages`, `is_whole_program` and `executor_for`
 - `native/src/ui/language.cpp` — display name, settings key and extensions. CHIP-8
   is the trap here: the enum member is `CHIP8` and the display name is `CHIP-8`
+- the switches that have a case per language: `syntax_highlighter.cpp`, `lint.cpp`,
+  `outline.cpp`, `native_runner.cpp`, `retro_computer.cpp` (the ROM socket) and
+  `curriculum.cpp` (the extension)
+- `native/CMakeLists.txt` — the source file
 
-`test_interpreter_inventory.py` asserts the registry and the enum are the same
-set, so half an entry fails the suite rather than shipping.
+The build is `-Werror` with switch-exhaustiveness warnings, so a missing case is a
+build failure rather than a language that silently does nothing.
 
 ### 3. Test it
 
-File: `native/bridge/time_warp/tests/test_lang_newlang.py`<!-- doc-claims: ignore -->
+Assertions go in `native/tests/lang_tests.cpp`<!-- doc-claims: ignore -->, through the
+same `Interpreter` the IDE runs:
 
-```python
-from time_warp.core.interpreter import Language
-from .conftest_lang import run, has, no_errors, first_error
-
-NEWLANG = Language.NEWLANG
-
-
-def test_hello_world():
-    out = run('print "Hello"', NEWLANG)
-    assert has(out, "Hello")
-    assert no_errors(out)
+```cpp
+void test_newlang_prints_hello() {
+    RecordingHost host;
+    Interpreter interpreter{Language::NewLang, host};
+    interpreter.load_program("print \"Hello\"");
+    interpreter.run();
+    TW_CHECK_EQ(interpreter.output().at(0), std::string{"Hello"});
+}
 ```
 
-The second argument is the enum member, not its name. Then add a row per command
-to the `rows` list in `native/share/command_rows.json` and run
-`make command-matrix`: it fails on a row that has no effect and on a command in the
-inventory that has no row.
+Then add a row per command to the `rows` list in `native/share/command_rows.json` and
+run `make command-matrix`: it fails on a row that has no effect and on a command in
+the inventory that has no row.
 
 ### 4. Add examples
 
@@ -633,28 +596,23 @@ Understanding the codebase:
 Time_Warp_Studio/
 ├── native/                       # THE APPLICATION (C++20 / Qt6)
 │   ├── CMakeLists.txt
-│   ├── include/ src/             # ui/, canvas/, scheme/, lang/, debugger/,
-│   │                             #   bridge/, project/, sql/, api/
-│   ├── tests/                    # 23 CTest suites, and the golden corpora
-│   └── tools/                    # time_warp_ide.cpp, time_warp_api.cpp, twc.py
+│   ├── include/ src/             # ui/, canvas/, scheme/, lang/, lessons/,
+│   │                             #   debugger/, project/, sql/, api/
+│   ├── tests/                    # 24 CTest suites, and the golden corpora
+│   ├── share/                    # lessons.json, snippets.json, command_rows.json
+│   └── tools/                    # time_warp_ide.cpp, time_warp_api.cpp
 │                                 #   and the commands and gates: time_warp_check,
 │                                 #   time_warp_learn, time_warp_teach,
 │                                 #   time_warp_gates (smoke, commands, repl,
-│                                 #   golden, in gates/), check_doc_links.py,
-│                                 #   check_doc_claims.py
-│           ├── core/             #     interpreter.py, language_registry.py
-│           ├── languages/        #     one stateless function per language
-│           ├── features/         #     lesson_system.py + lessons.json,
-│           │                     #     classroom_mode.py (the teacher's side)
-│           ├── graphics/         #     turtle_state.py
-│           └── tests/            #     the engine's pytest suite
-├── Examples/                     # 60 example programs across the 10 languages
+│                                 #   golden, tree, in gates/), time_warp_docs
+│                                 #   (links, claims, version, in docs/),
+│                                 #   time_warp_icon (the packaged icons)
+├── Examples/                     # 63 example programs across the 11 languages
 ├── docs/                         # the guides
 │   ├── USER_GUIDE.md             #   the IDE manual (projects, REPL, SQL, API)
 │   ├── API.md                    #   JSON-RPC methods and libraries
 │   ├── tutorials/                #   one tutorial per language
 │   └── lessons/                  #   the curriculum, both guides and the plans
-├── Scripts/                      # audits, version sync, build helper
 ├── run.sh                        # build (if needed) and launch the IDE
 ├── twc                           # compile one program to an executable
 ├── api                           # JSON-RPC on stdin/stdout

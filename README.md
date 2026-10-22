@@ -6,7 +6,7 @@ complete computers inside it.*
 [![C++20](https://img.shields.io/badge/C%2B%2B-20-blue)](https://en.cppreference.com/)
 [![Qt](https://img.shields.io/badge/Qt-6%20%7C%205.15-green)](https://www.qt.io/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/Version-22.0.0-orange)](https://github.com/James-HoneyBadger/Time_Warp_Studio)
+[![Version](https://img.shields.io/badge/Version-22.1.0-orange)](https://github.com/James-HoneyBadger/Time_Warp_Studio)
 
 Time Warp Studio is a native C++20 and Qt workbench for people who like old
 computers. It is the programming environment the 1980s promised and never quite
@@ -88,9 +88,10 @@ you had:
   recolours the header, the editor, the canvas and the glass together, because the
   palette is one table.
 - **Native, offline, inspectable.** Every interpreter is C++ running in process,
-  and so are the lesson check, the classroom and the two commands that drive them
-  (`time_warp_teach`, `time_warp_learn`). An installed package contains no Python
-  file at all; there is no network call and no telemetry. The project is
+  and so are the lesson check, the classroom, the two commands that drive them
+  (`time_warp_teach`, `time_warp_learn`) and every gate that tests the tree. There
+  is no Python anywhere — not in the product, not in its tests, not in its
+  documentation checks — no network call and no telemetry. The project is
   MIT-licensed, and both the tests and the manuals are in the repository.
 
 ---

@@ -55,11 +55,12 @@ anybody could send.
 Debug, AddressSanitizer and UndefinedBehaviorSanitizer. A crash or a diagnostic
 that appears in only one of them is a real bug and worth reporting.
 
-**The languages.** All ten are supported, and each has an executor, a test suite,
+**The languages.** All eleven are supported, and each has an executor, a test suite,
 an example, command coverage, a tutorial, a reference section and a lesson. Every
 language runs in C++ in the application, and so does the lesson check. The Python
-reference engine they were ported from was deleted at 18.0; what the parity gate
-compares against is a recorded corpus, which is not a supported API either.
+reference engine they were ported from was deleted at 18.0, and the last Python
+anywhere in the tree went at 22.1; what the parity gate compares against is a
+recorded corpus, which is not a supported API either.
 
 **The lessons.** Both tools are supported — `native/tools/learn.cpp` for a
 learner, `native/tools/teach.cpp` for a teacher — and so is the curriculum. A

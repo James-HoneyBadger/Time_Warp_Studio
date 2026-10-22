@@ -6,16 +6,18 @@
 
 `VERSION` is the source of truth: the Qt application reads it at configure time, so
 the binary, the window title and the About box follow on their own. Everything else is
-a hand-written copy, kept in step by `Scripts/version_sync.py` and checked by the
+a hand-written copy, kept in step by `time_warp_docs version` and checked by the
 `Version metadata` workflow.
 
 - [ ] Set `VERSION` to the new release number
-- [ ] Add a `## [X.Y.Z] - YYYY-MM-DD` section to `CHANGELOG.md`. The script checks that
+- [ ] Add a `## [X.Y.Z] - YYYY-MM-DD` section to `CHANGELOG.md`. The tool checks that
       this exists but will not write it: the newest heading in that file is usually a
       release that has already shipped, so renaming it would rewrite history
-- [ ] Run `python3 Scripts/version_sync.py --write` to update the copies it owns (the
-      README badge and the architecture guide title)
-- [ ] Run `python3 Scripts/version_sync.py` and confirm it exits 0 before tagging
+- [ ] Run `./native/tools/docs/build/time_warp_docs version --write` (after
+      `make docs-tool`) to update the copies it owns — the README badge and the
+      architecture guide title
+- [ ] Run `./native/tools/docs/build/time_warp_docs version` and confirm it exits 0
+      before tagging
 - [ ] Check any prose that names a version by hand — the script only knows the places
       listed above
 

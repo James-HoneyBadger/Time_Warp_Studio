@@ -1,9 +1,10 @@
 name: Docs
 
 # Documentation that drifts from the thing it describes is worse than no
-# documentation, because it is believed. This job is deliberately small and runs
-# with nothing but python3 from the runner image: it has to answer in seconds, on
-# every documentation change, and it must not depend on the C++ build.
+# documentation, because it is believed. This job is deliberately small: it builds
+# one C++ target with no Qt and no dependency beyond a compiler, because it has to
+# answer in seconds, on every documentation change, and it must not depend on the
+# product's build.
 #
 # It watches the curriculum and the teacher's command as well as `docs/`: a lesson
 # edit changes a document, and the checks here are the ones that notice a guide
@@ -19,8 +20,7 @@ on:
       - 'Examples/CATALOG.md'
       - 'native/share/lessons.json'
       - 'native/tools/teach.cpp'
-      - 'native/tools/check_doc_links.py'
-      - 'native/tools/check_doc_claims.py'
+      - 'native/tools/docs/**'
       - '.github/workflows/docs.yml'
   pull_request:
     branches: [ main ]
@@ -30,8 +30,7 @@ on:
       - 'Examples/CATALOG.md'
       - 'native/share/lessons.json'
       - 'native/tools/teach.cpp'
-      - 'native/tools/check_doc_links.py'
-      - 'native/tools/check_doc_claims.py'
+      - 'native/tools/docs/**'
       - '.github/workflows/docs.yml'
 
 jobs:
@@ -98,11 +97,19 @@ jobs:
           test "$missing" -eq 0
           echo "$(find docs/tutorials -maxdepth 1 -name '*.md' | wc -l) tutorials present."
 
+      # The two gates below are `time_warp_docs`, built here rather than shipped:
+      # its project is `native/tools/docs`, which needs a compiler and nothing else,
+      # so a documentation pull request still answers in seconds.
+      - name: Build the documentation tools
+        run: |
+          cmake -S native/tools/docs -B native/tools/docs/build \
+            -DCMAKE_BUILD_TYPE=Release
+          cmake --build native/tools/docs/build --target time_warp_docs -j
+
       # The guides are a set of books that link to each other, and a dead link is
-      # how a reader discovers the map is wrong. Checked with python3 alone, so a
-      # documentation pull request does not depend on the C++ build.
+      # how a reader discovers the map is wrong.
       - name: Every relative link and anchor resolves
-        run: python3 native/tools/check_doc_links.py
+        run: ./native/tools/docs/build/time_warp_docs links
 
       # The stronger property: a path named in backticks exists, a name that was
       # deleted is discussed in the past tense, and a `make <target>` is a target.
@@ -110,6 +117,6 @@ jobs:
       # is what this step is for.
       - name: Every claim in the guides is still true
         run: |
-          python3 native/tools/check_doc_claims.py --self-test
-          python3 native/tools/check_doc_claims.py
+          ./native/tools/docs/build/time_warp_docs claims --self-test
+          ./native/tools/docs/build/time_warp_docs claims
 

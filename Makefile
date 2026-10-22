@@ -5,16 +5,16 @@
 # repository root does the obvious thing, and so every check has one obvious home.
 
 NATIVE := native
-# The gates are `time_warp_gates`, one binary with a subcommand per harness; it is
-# built with the product and needs nothing installed beside it. `PYTHON` is still
-# here for the two documentation tools, which move to C++ in 22.1.0.
-PYTHON ?= $(shell test -x .venv/bin/python3 && echo .venv/bin/python3 || echo python3)
+# The checks are C++ and built from this repository: `time_warp_gates` asks the
+# questions about programs, and `time_warp_docs` asks them about the guides. Nothing
+# here needs an interpreter, a virtual environment or a package manager.
 GATES := $(NATIVE)/build/time_warp_gates
+DOCS_TOOL := native/tools/docs/build/time_warp_docs
 FORWARDED := build run test test-debug asan clean distclean info test-list \
              screenshot reset-layout
 
-.PHONY: help $(FORWARDED) engine-test smoke command-matrix repl-matrix \
-        golden-check teach-check test-all lint lint-md doc-links doc-claims
+.PHONY: help $(FORWARDED) smoke command-matrix repl-matrix gates-built \
+        golden-check teach-check test-all lint lint-md docs-tool doc-links doc-claims
 
 help:
 	@echo "Time Warp Studio"
@@ -35,9 +35,10 @@ help:
 	@echo "  teach-check   Every lesson solution passes and every starter fails"
 	@echo "  doc-links     Every relative link and #anchor in the guides resolves"
 	@echo "  test-all      All of the above"
-	@echo "  lint          Ruff over the remaining tooling"
+	@echo "  lint          clang-tidy-shaped checks: the build is warning-free"
 	@echo "  lint-md       Markdownlint over every tracked Markdown file"
 	@echo "  doc-claims    Every path, name and make target the guides name exists"
+	@echo "  tree-check    The tree holds no Python"
 	@echo ""
 	@echo "See 'make -C $(NATIVE) help' for everything the native tree offers."
 
@@ -82,24 +83,36 @@ teach-check:
 	@$(MAKE) --no-print-directory -C $(NATIVE) teach-check
 
 test-all: test smoke command-matrix repl-matrix teach-check golden-check doc-links \
-          doc-claims
+          doc-claims tree-check
 
-# The two documentation tools are the only Python left. Ruff's configuration sits
-# beside them.
-lint:
-	@$(PYTHON) -m ruff check $(NATIVE)/tools
+# Warnings are errors in every target, so a lint pass is the build passing. Kept as
+# a target because `make lint` is what a contributor types and because the guides
+# name it.
+lint: build
+	@echo "lint: the build compiles with -Werror; see native/CMakeLists.txt"
 
 # The guides link to each other; a dead link is how a reader learns the map is wrong.
-# Python only, because the documentation job must not need the C++ build.
-doc-links:
-	@$(PYTHON) $(NATIVE)/tools/check_doc_links.py
+# `time_warp_docs` is its own small CMake project with no Qt and no dependency beyond
+# a C++ compiler, which is what lets the documentation job answer in seconds.
+docs-tool:
+	@cmake -S native/tools/docs -B native/tools/docs/build >/dev/null \
+		&& cmake --build native/tools/docs/build -j >/dev/null
+	@echo "  built      native/tools/docs/build/time_warp_docs"
+
+doc-links: docs-tool
+	@$(DOCS_TOOL) links
 
 # A link that resolves can still be a false claim: a sentence can name a file that
 # moved, a symbol that was deleted, or a `make` target that never existed. Nothing
 # else checks that, and three such claims survived a release.
-doc-claims:
-	@$(PYTHON) $(NATIVE)/tools/check_doc_claims.py --self-test
-	@$(PYTHON) $(NATIVE)/tools/check_doc_claims.py
+doc-claims: docs-tool
+	@$(DOCS_TOOL) claims --self-test
+	@$(DOCS_TOOL) claims
+
+# The tree holds no Python: the product is built, tested and checked by C++ tools
+# that live here, and this is what keeps a script from creeping back.
+tree-check: gates-built
+	@$(GATES) tree
 
 # Markdown lint over the repository's own Markdown. `git ls-files` is what keeps the
 # virtual environment, the build trees and node_modules out of the run without a

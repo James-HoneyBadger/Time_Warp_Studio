@@ -69,10 +69,13 @@ jobs:
             echo "::error::Bump VERSION and the changelog first, then retag."
             exit 1
           fi
-          # The changelog is the other half of a release, and version_sync.py
+          # The changelog is the other half of a release, and the version tool
           # already knows how to check the paperwork. Running it here means a
           # missing section fails before anything is built.
-          python3 Scripts/version_sync.py
+          cmake -S native/tools/docs -B native/tools/docs/build \
+            -DCMAKE_BUILD_TYPE=Release >/dev/null
+          cmake --build native/tools/docs/build --target time_warp_docs -j >/dev/null
+          ./native/tools/docs/build/time_warp_docs version
           echo "version=$wanted" >> "$GITHUB_OUTPUT"
 
   build:

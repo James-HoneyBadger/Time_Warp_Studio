@@ -512,6 +512,7 @@ add_executable(time_warp_gates
     tools/gates/repl.cpp
     tools/gates/golden.cpp
     tools/gates/inventory.cpp
+    tools/gates/tree.cpp
 )
 target_include_directories(time_warp_gates PRIVATE tools/gates)
 target_compile_definitions(time_warp_gates PRIVATE
@@ -524,6 +525,28 @@ if(NOT MSVC)
     target_compile_options(time_warp_gates PRIVATE -Wall -Wextra -Wpedantic -Wshadow)
     if(TIME_WARP_EXPR_WERROR)
         target_compile_options(time_warp_gates PRIVATE -Werror)
+    endif()
+endif()
+
+# ---------------------------------------------------------------------------
+# The icon generator
+# ---------------------------------------------------------------------------
+#
+# `time_warp_icon` draws the application icon and writes the three committed
+# assets the packages carry -- `packaging/{linux,windows,macos}/time-warp-studio.*`.
+# It replaced `Scripts/generate_icon.py`, and it is the one tool here that links
+# no Qt at all: its only dependency is zlib, for the CRC-32 and the deflate stream
+# a PNG is made of. `--check` compares what it would write with what is on disk so
+# a release can assert the committed icons are current.
+
+add_executable(time_warp_icon tools/icon/main.cpp)
+target_compile_definitions(time_warp_icon PRIVATE
+    TIME_WARP_SOURCE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/..")
+target_link_libraries(time_warp_icon PRIVATE ZLIB::ZLIB)
+if(NOT MSVC)
+    target_compile_options(time_warp_icon PRIVATE -Wall -Wextra -Wpedantic -Wshadow)
+    if(TIME_WARP_EXPR_WERROR)
+        target_compile_options(time_warp_icon PRIVATE -Werror)
     endif()
 endif()
 

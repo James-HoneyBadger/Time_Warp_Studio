@@ -1,7 +1,67 @@
 #!/usr/bin/env bash
 # Compile a Time Warp Studio program into a standalone executable.
-# The work lives in native/tools/twc.py; this wrapper keeps `./twc` at the root
-# the way `./run.sh` is, so neither has to be found inside the tree.
+#
+#   ./twc Examples/basic/hello.bas -o hello
+#   ./twc Examples/logo/mandala.logo --title "Mandala"
+#
+# The work is the IDE's own compiler (`time_warp_ide --compile`), which links the
+# same engines the IDE runs and writes an artifact the player opens. This wrapper
+# exists so the command is at the repository root, and so that `-o` -- the flag a
+# compiler has had since forever -- means what it means; `--output` works too.
+#
+# Until 22.2.0 this was a wrapper around a Python script that generated a C++
+# runner and compiled it. The IDE grew the same feature natively, so the script
+# was a second implementation of one thing -- and the one that shipped no longer
+# needed an interpreter.
 set -euo pipefail
+
 root="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
-exec python3 "$root/native/tools/twc.py" "$@"
+build_dir="${TIME_WARP_BUILD_DIR:-$root/native/build}"
+ide="$build_dir/time_warp_ide"
+
+if [[ ! -x "$ide" ]]; then
+    printf 'twc: %s was not built; run `make -C native` first\n' "$ide" >&2
+    exit 1
+fi
+
+if [[ $# -eq 0 ]]; then
+    printf 'usage: twc <program> [-o|--output <path>] [--force] [--title <text>]\n' >&2
+    exit 2
+fi
+
+case "$1" in
+    -h|--help)
+        printf 'usage: twc <program> [-o|--output <path>] [--force] [--title <text>]\n'
+        printf '\nCompiles one program into a standalone executable. The result runs the\n'
+        printf 'program without the Studio and accepts --svg FILE and --db FILE.\n'
+        exit 0
+        ;;
+esac
+
+program="$1"
+shift
+
+output=""
+arguments=()
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        -o|--output)
+            if [[ $# -lt 2 ]]; then
+                printf 'twc: %s needs a path\n' "$1" >&2
+                exit 2
+            fi
+            output="$2"
+            shift 2
+            ;;
+        *)
+            arguments+=("$1")
+            shift
+            ;;
+    esac
+done
+
+if [[ -z "$output" ]]; then
+    output="${program%.*}"
+fi
+
+exec "$ide" --compile "$program" --output "$output" "${arguments[@]}"

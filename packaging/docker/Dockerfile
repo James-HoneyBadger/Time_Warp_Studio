@@ -3,8 +3,8 @@
 # The container image published to GitHub Packages (ghcr.io).
 #
 # Two stages, because the build needs a compiler and the runtime does not: the
-# published image carries the binary, the Qt libraries it links against, the
-# Python engine the lesson check runs, and nothing else.
+# published image carries the binary, the Qt libraries it links against and nothing
+# else. There is no interpreter in the image, because there is none in the tree.
 #
 # Ubuntu 24.04 is the base because it is what the Linux job in `native.yml` builds
 # and tests against -- the same compiler and the same Qt 6.4 -- and because it
@@ -61,7 +61,7 @@ FROM ubuntu:24.04
 ARG VERSION=0.0.0
 
 LABEL org.opencontainers.image.title="Time Warp Studio" \
-      org.opencontainers.image.description="An old-school programming environment: ten languages, an IDE, an HB-1 home computer and a live CHIP-8" \
+      org.opencontainers.image.description="An old-school programming environment: eleven languages, an IDE, an HB-1 home computer and a live CHIP-8" \
       org.opencontainers.image.licenses="MIT" \
       org.opencontainers.image.version="${VERSION}"
 

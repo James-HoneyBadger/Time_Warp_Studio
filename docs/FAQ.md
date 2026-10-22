@@ -90,8 +90,10 @@ No. The core features work offline.
 - A C++20 compiler, CMake 3.20+, Qt6 (Widgets, Core, Gui; Svg is optional and
   adds SVG drawing export, PrintSupport is optional and adds the two Print
   entries), and SQLite 3 (the development package is needed for a source build)
-- Python 3.10 or newer **only** for the lesson-check engine (and the test
-  harnesses). Running a program needs no Python at all, whatever the language.
+- Nothing else. Every language, the lesson check, the classroom, the two
+  machines, the gates and the documentation tools are C++ built from this
+  repository: no interpreter is needed to run a program, test the tree or check a
+  guide.
 
 ### How do I build it?
 
@@ -508,7 +510,7 @@ them, and the PDF and HTML exports still work.
 
 The 🎓 **Lessons** tab is on the right, beside Output, Variables, Telemetry and
 Debug. It shows the curriculum and your progress. From a terminal, use
-`python3 native/tools/learn.py`.
+`./native/build/time_warp_learn`.
 
 ### Do lessons save my progress?
 

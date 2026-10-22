@@ -1,6 +1,6 @@
 # Architecture Guide
 
-## Time Warp Studio v22.0.0 — System Design and Implementation
+## Time Warp Studio v22.1.0 — System Design and Implementation
 
 > **This page describes the shipping product.** It was rewritten alongside the move
 > to C++20 / Qt6. Earlier revisions documented the PySide6 implementation, which has
@@ -18,7 +18,7 @@
 3. [The canvas command queue](#the-canvas-command-queue)
 4. [The Qt application](#the-qt-application)
 5. [The native engines](#the-native-engines)
-6. [The language bridge](#the-language-bridge)
+6. [The language bridge, and what replaced it](#the-language-bridge-until-180)
 7. [Extension points](#extension-points)
 8. [Tests and gates](#tests-and-gates)
 9. [Configuration and persistence](#configuration-and-persistence)
@@ -32,12 +32,12 @@ Time Warp Studio is a desktop workbench for old-school programming: eleven
 interpreters from 1964–1980 — **BASIC, APL, Logo, PILOT, FOCAL, Scheme, CHIP-8,
 COMAL, REXX, Smalltalk and Forth** — with an integrated turtle graphics canvas, and
 two complete machines. It is a C++20 / Qt application — Qt 6 for the release, Qt 5.15
-for the Windows 7 build — and all eleven languages run in C++ inside it. The Python
-engine ships as the **reference** the parity gates, the command matrix and the
-lesson check use; no program is sent to it.
+for the Windows 7 build — and all eleven languages run in C++ inside it. There is no
+Python in the tree at all: the product, its tests, its gates and its documentation
+checks are one language.
 
-So the product is **one GUI process**. The child process remains only for a
-lesson check, where a second interpreter must not share the document's state;
+So the product is **one GUI process**. The only child process is the optional
+embedded terminal, which is a shell the user asked for;
 that channel is JSON lines, one message per line — program text going in and a
 stream of JSON messages coming back.
 
@@ -86,9 +86,9 @@ There are three places code can run, and the rules differ between them.
 | **Runner thread** — `debugger::DebuggerRunner`, a `QThread` | A running Scheme program and its machine state | The canvas queue, through a host adapter. Never a widget |
 | **Lesson check** — `lessons::ProgressStore` | The curriculum and the learner's program | `RecordingHost` instead of a canvas, so nothing on screen is touched |
 
-Every language runs in process. There is no worker process: the Python engine is a
-development fixture, not a runtime component, and nothing in the application starts
-it.
+Every language runs in process. There is no worker process and no interpreter to
+start: the reference engine those ports were judged against is gone, its answers are
+frozen in the corpora, and `time_warp_gates` compares the ports with them.
 
 ```mermaid
 flowchart LR
@@ -545,27 +545,29 @@ Four libraries sit beside the engines, each with one job and a test suite:
   design rule: an API that grew its own interpreter would be a second answer to
   "what does this program do".
 
-`native/tools/twc.py` generates a small C++ launcher for a program, embeds the
-source as bytes (a CHIP-8 ROM is binary), links `timewarp_lang` or
-`timewarp_scheme`, and uses `graphics::RecordingHost` — the same recorder the API
-returns — to write the drawing as SVG. The result needs neither Qt nor the Studio
-at run time.
+`time_warp_ide --compile` (and `./twc`, which is a wrapper for it) writes a
+standalone artifact for a program: the source is embedded as bytes (a CHIP-8 ROM is
+binary), the player that runs it links `timewarp_lang` or `timewarp_scheme`, and
+`graphics::RecordingHost` — the same recorder the API returns — writes the drawing
+as SVG. The result needs neither the Studio nor a second interpreter at run time.
+Until 22.2.0 a Python script generated that launcher and compiled it; the IDE grew
+the same feature natively, so the script was removed rather than maintained twice.
 
-## The language bridge
+## The language bridge (until 18.0)
 
-### Why a separate process
+<!-- history -->
+For ten releases a Python worker ran the languages that had not been ported, and
+then only the ones the parity gates compared against a live reference: it was the
+**reference** implementation, the curriculum checker the Lessons panel called, and
+the engine the command matrix drove. The IDE stopped using it for runs one port at a
+time, and 18.0 deleted it once every language was native and its answers had been
+frozen into `native/tests/golden/`.
+<!-- /history -->
 
-All eleven languages now have a C++ interpreter. The Python engine is kept for a
-different job: it is the **reference** the parity gates compare each port against,
-the curriculum checker the Lessons panel calls, and the engine the command matrix
-drives. Keeping it means "did the port stay faithful?" is a question a machine
-answers instead of a matter of opinion.
-
-The IDE itself no longer runs a program there. Each port removed its path through
-the bridge, and the last one (BASIC) removed the runtime case entirely. The child
-process remains the answer for work the IDE should not run in its own process: a
-reference implementation that is deliberately allowed to fail, and a lesson check
-that must not disturb the learner's document.
+Nothing crosses a process boundary to run a program. `timewarp_lang` and
+`timewarp_scheme` are linked into the application, `timewarp_lessons` judges a
+learner's program in the same process through `RecordingHost`, and the gates that
+answer "did the port stay faithful" drive the same binaries the IDE does.
 
 ### The protocol
 
@@ -839,7 +841,7 @@ gates and a command matrix. All of them must stay green, in every build tree.
 | Parity gate | `make golden-check` (`time_warp_gates golden`) | The ports against 662 recorded programs: the reference's answers, frozen before it was deleted. 0 differences |
 | Lesson curriculum | `make teach-check` (`time_warp_teach validate`) | That every checkpoint's own solution passes, that no starter already passes, and that every language has a lesson |
 | Command matrix | `make command-matrix` (`time_warp_gates commands`) | One row per documented command, through `time_warp_check` and then through the REPL |
-| Version metadata | `Scripts/version_sync.py` | That every hand-written copy of the version agrees with `VERSION` |
+| Version metadata | `make doc-claims` (`time_warp_docs version`) | That every hand-written copy of the version agrees with `VERSION` |
 
 Two of these exist for a failure the others cannot see:
 

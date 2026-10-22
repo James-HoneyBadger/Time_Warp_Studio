@@ -20,6 +20,7 @@ void usage() {
                  "  commands  every row of the command table, one program each\n"
                  "  repl      every row again, through the REPL API\n"
                  "  golden    the ports against the frozen reference corpora\n"
+                 "  tree      that the tree holds no Python\n"
                  "\n"
                  "Run with no command for this message. Each command returns 0 only\n"
                  "when every question it asked was answered, and prints what failed.\n");
@@ -50,6 +51,9 @@ int main(int argc, char** argv) {
     }
     if (command == QLatin1String("golden")) {
         return timewarp::gates::runGolden(rest);
+    }
+    if (command == QLatin1String("tree")) {
+        return timewarp::gates::runTree(rest);
     }
     if (command == QLatin1String("--help") || command == QLatin1String("-h") ||
         command == QLatin1String("help")) {

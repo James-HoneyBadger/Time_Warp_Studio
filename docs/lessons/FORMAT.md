@@ -11,10 +11,13 @@ or the [teacher guide](teacher-guide.md) instead.
 ## 1. The curriculum is data, and where it lives
 
 ```text
-native/bridge/time_warp/features/
+native/share/
   lessons.json       the curriculum                  ← edit this to change a lesson
-  lesson_system.py   loads it, checks it, records progress
-  classroom_mode.py  rosters, handouts, marking, bundles
+native/src/lessons/  the library that reads it:
+  curriculum.cpp     loads it, validates it
+  verify.cpp         runs a learner's program and judges the checkpoint
+  progress.cpp       what a learner has finished
+  classroom.cpp      rosters, handouts, marking, bundles
 ```
 
 `lessons.json` is data rather than code for three reasons, and each one has been
@@ -23,10 +26,10 @@ paid for at least once:
 - the panels and tools that show the curriculum can be replaced without touching
   it, which is how the same twenty-two lessons are reachable from a terminal, from the
   IDE, and from a printed plan;
-- a teacher can author a lesson without editing Python;
+- a teacher can author a lesson without editing C++;
 - **the whole corpus can be verified in one pass**, which is what
-  `validate_curriculum` does and what nothing else in the project could do for a
-  curriculum expressed as Python.
+  `time_warp_teach validate` does and what nothing else in the project could do for a
+  curriculum expressed as code.
 
 ## 2. Schema
 
@@ -246,8 +249,8 @@ The IDE and the two commands drive all of this through `timewarp_lessons`, in
 process. What follows is the *reference engine's* harness protocol, recorded for
 anyone reading how the port was checked. Nothing drives it any more: the example and
 command harnesses spawn `native/tools/check.cpp` (`time_warp_check`), which asks the
-same questions of the engines the product ships, and `worker.py` goes when
-`native/bridge/` does.
+same questions of the engines the product ships. The worker and its engine went in
+18.0, and the harnesses that drove them are `time_warp_gates` now.
 <!-- /history -->
 
 Requests and replies, one JSON object per line:
@@ -282,9 +285,9 @@ is [`timewarp_lessons`](../../native/include/timewarp/lessons/progress.hpp).
 
 ## 9. Adding lessons for a new language
 
-1. Add the language to the engine's `Language` enum and to
-   `core/language_registry.py` (the display name comes from there), and to
-   `native/src/ui/language.cpp` for the IDE's table.
+1. Add the language to the engine's `Language` enum (`native/src/lang/language.cpp`,
+   which carries the display name too) and to `native/src/ui/language.cpp` for the
+   IDE's table.
 2. Add at least one lesson to `lessons.json`. `time_warp_teach new <id> --language NAME`
    prints a skeleton the loader accepts.
 3. Author the checkpoints, then run `time_warp_teach validate` until it is silent.
@@ -296,8 +299,6 @@ is [`timewarp_lessons`](../../native/include/timewarp/lessons/progress.hpp).
 
 | Gate | What it covers |
 | ---- | -------------- |
-| `test_lessons.py` | The curriculum is sound; the verifier's rules; progress; hint clamping; the validator's refusals |
-| `test_classroom.py` | Roster, handouts, marking, roll-up, bundles, presentation, path escapes |
-| `lessons_tests` (C++) | The same curriculum, verifier, progress and classroom, through the library the IDE and both commands call |
+| `lessons_tests` | The curriculum is sound; the verifier's rules; progress; hint clamping; the validator's refusals; roster, handouts, marking, roll-up, bundles, presentation and path escapes, through the library the IDE and both commands call |
 | `ui_layout_tests` (`lesson panel`) | The panel's widgets, its place as the fifth right-column tab, and that it starts empty |
 | `time_warp_teach validate` | The same curriculum pass as a standalone command, for an author |
