@@ -1,6 +1,6 @@
 # Architecture Guide
 
-## Time Warp Studio v17.2.0 — System Design and Implementation
+## Time Warp Studio v17.2.1 — System Design and Implementation
 
 > **This page describes the shipping product.** It was rewritten alongside the move
 > to C++20 / Qt6. Earlier revisions documented the PySide6 implementation, which has
@@ -588,15 +588,21 @@ Three things the bridge is careful about:
 something the command stream expresses: its commands say what to draw, not where the
 turtle ended up.
 
-### Finding the worker
+### Finding the worker (until 17.0)
 
-`locateWorker()` searches in a fixed order — `TIME_WARP_PYTHON` and `TIME_WARP_WORKER`
-first, then beside the executable and two levels up (the build-tree layout), then the
-working directory; then the interpreter from the repository's `.venv`, then `python3`
-and `python` from `PATH`. It reports **what it looked for** when it fails, because a
-missing bridge has to say which half is missing. The order is explicit rather than clever
-on purpose: for a cross-process launcher, "it works on my machine" means "the paths
-happen to line up here".
+<!-- history -->
+The application used to start a Python worker, and `locateWorker()` searched for it in
+a fixed order: `TIME_WARP_PYTHON` and `TIME_WARP_WORKER` first, then beside the
+executable and two levels up (the build-tree layout), then the working directory; then
+the interpreter from the repository's `.venv`, then `python3` and `python` from `PATH`.
+It reported **what it looked for** when it failed, because a missing bridge had to say
+which half was missing. The order was explicit rather than clever on purpose: for a
+cross-process launcher, "it works on my machine" means "the paths happen to line up
+here".
+<!-- /history -->
+
+Nothing is located now. Every language has an executor in this process, the lessons
+and the classroom are `timewarp_lessons`, and `locateWorker` went with the worker.
 
 ### The engine
 
@@ -667,15 +673,23 @@ depends on the distinction:
 
 ### Adding a language
 
-1. **The executor**, in `native/bridge/time_warp/languages/my_lang.py`, as a function with
+Since 17.0 the order is the other way round: the **native executor** in
+`native/src/lang/`, registered in `executor_for`, is what a language is; the bridge
+steps below record how the ten that exist were ported, and go with the reference
+engine at 18.0.
+
+<!-- history -->
+1. **The executor**, in `native/bridge/time_warp/languages/my_lang.py`<!-- doc-claims: ignore -->, as a function with
    the signature above.
 2. **Register it in the bridge**: import it in `languages/__init__.py`, add
    `Language.MY_LANG` in `core/interpreter.py`, and add the extension in
    `Language.from_extension()` and `core/language_registry.py`.
+<!-- /history -->
+
 3. **Register it on the Qt side** in `native/src/ui/language.cpp`: display name, settings
    key, extensions. The IDE needs this to name the language and to pick it from a file
    name.
-4. **Add an example** under `Examples/my_lang/` — adding the ones that draw to
+4. **Add an example** under `Examples/my_lang/`<!-- doc-claims: ignore --> — adding the ones that draw to
    `DRAWING_EXAMPLES` in `native/tools/example_smoke.py`, or a program that draws
    nothing passes by being silent — and a row to
    `native/bridge/time_warp/tests/command_table.py` so every new command is covered by

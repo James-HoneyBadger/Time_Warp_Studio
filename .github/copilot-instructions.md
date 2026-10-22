@@ -40,11 +40,11 @@ reference the parity gates, the command matrix and the lesson check run in (see
   executable.
 - **The Python reference engine** — `native/bridge/`.
   - No program is routed to it at run time: `executor_for()` answers for all ten.
-    It is kept because the differential gates compare each port against it, the
-    command matrix and example smoke drive it, and the Lessons panel asks
-    `native/bridge/worker.py` to check a learner's program, so the panel's
-    verdict and `teach.py`'s are one function's answer.
-  - Protocol: `run`/`in-reply`/`stop` in; `ready`/`out`/`canvas`/`pose`/`err`/`in`/`done` out.
+    It is kept for one reason only: the differential harnesses compare each port
+    against it, and `golden-record` re-freezes the corpus from it. Nothing in the
+    product runs it, and since 17.2 the gates do not either -- `time_warp_check`
+    (`native/tools/check.cpp`) answers "what did this program do?" from the native
+    engines, and it goes at 18.0.
   - It is the part that goes away once lesson checking runs natively.
 
 **Critical Design Decision:** Language executors are stateless command processors returning text output. All UI state (turtle canvas, output display, themes) lives in the Qt application, not in an interpreter. Drawing crosses the thread boundary as commands on a `CanvasCommandQueue`, which the GUI thread drains into `TurtleCanvas`.
@@ -142,7 +142,7 @@ make lint-md
 ### Adding a New Language
 
 1. Create the reference executor first, because the parity gate compares against
-   it: `native/bridge/time_warp/languages/my_lang.py`:
+   it: `native/bridge/time_warp/languages/my_lang.py`<!-- doc-claims: ignore -->:
 
    ```python
    from __future__ import annotations
@@ -179,14 +179,14 @@ make lint-md
    `CHIP8`, the display name is `CHIP-8`, and using one where the other belongs is a
    wrong name in the one place it is written down.
 
-5. Add an example under `Examples/my_lang/` and a row to
+5. Add an example under `Examples/my_lang/`<!-- doc-claims: ignore --> and a row to
    `native/bridge/time_warp/tests/command_table.py` so every new command is covered
    by `native/tools/command_matrix.py`. A row's `language` string is the protocol key
    (`Language[key.upper()]`), so CHIP-8's rows read `CHIP8`; a row labelled with prose
    needs `also=(...)` naming the command the inventory knows, or it is reported as
    untested forever.
 
-6. Add at least one lesson to `native/bridge/time_warp/features/lessons.json`
+6. Add at least one lesson to `native/share/lessons.json`
    (`native/tools/teach.py new <id> --language NAME` prints a skeleton the loader
    accepts) and run `teach.py validate` until it is silent. The lessons panel and
    `learn.py` both read that one file, so nothing else needs registering.
@@ -240,9 +240,10 @@ maximum-contrast variant of the active theme; it does not replace it.
 3. **A program that runs and draws nothing is the bug users report.** Never assume a
    silent success is a success: `example_smoke.py` exists because 5 languages once ran
    "successfully" and produced no ink at all.
-4. **Bridge path discovery is explicit, not clever.** `locateWorker()` tries the paths
-   in `native/src/bridge/python_worker.cpp` in order; a moved worker that is not added
-   there fails only at run time. `TIME_WARP_WORKER` overrides it for debugging.
+4. **A path search that guesses fails at run time, not at build time.** That is why the
+   launcher this build used to need was an *ordered* list rather than a clever search,
+   and why `native/tools/harness.py` is the single place the two remaining harnesses
+   ask where `time_warp_check` is.
 5. **Deleting Python needs a dependency check that an import trace cannot give you.**
    The engine reaches `any(Features)` through imports *inside functions* (BASIC's
    SOUND/SAY/GAMEPAD, and the evaluator's TIMER), so a module can be invisible to a
@@ -258,7 +259,7 @@ native/                        - the Qt application (the product)
     sql/                       - SQLite connection and result type
     api/                       - JSON-RPC 2.0 dispatcher (server.cpp)
   bridge/                      - the Python reference engine (gates, lesson check)
-    worker.py                  - the JSON-lines worker the IDE spawns for a lesson check
+    worker.py                  - the JSON-lines protocol it answered (gone at 18.0)
     pyproject.toml             - ruff/mypy config for the engine
     time_warp/
       core/                    - interpreter.py, language_registry.py, config.py, sandbox.py
@@ -305,18 +306,16 @@ Scripts/                       - audit_interpreters.py, generate_icon.py,
   (`Chip8Window`, the 60 Hz `Chip8Emulator`, the screen, the ROM library). Manuals:
   `docs/chip8/`. Both machines are introduced, and the design premise stated, in
   `docs/MACHINES.md` — the two machines are a centrepiece, not a demo.
-- **The bridge**: `native/bridge/worker.py` + `native/src/bridge/python_worker.cpp` —
-  runs programs *and* checks lessons, so a learner's verdict and a teacher's mark are
-  one function's answer
-- **Lessons**: `native/bridge/time_warp/features/lesson_system.py` (the curriculum and
-  the verifier), `classroom_mode.py` (rosters, handouts, marking, bundles),
-  `native/src/ui/panels.cpp` (`LessonPanel`), `native/tools/learn.py` and
-  `native/tools/teach.py` (the two CLIs)
+- **Lessons**: `native/src/lessons/` (`timewarp_lessons`: the curriculum, the verifier,
+  progress, and the classroom with rosters, handouts, marking and bundles),
+  `native/src/ui/panels.cpp` (`LessonPanel`), and the two commands
+  `native/tools/{learn,teach}.cpp`
+- **The run report**: `native/tools/check.cpp` (`time_warp_check`) — one program through
+  the native engines, with what it printed and what it drew. This is what the example
+  and command harnesses drive, and what a person at a terminal can ask.
 - **Inspection panels**: `native/src/ui/panels.cpp` — `VariablesPanel`,
-  `TelemetryPanel`, `DebugPanel`. The bridge sends both tables in its `done` message
-  (`variables` and `telemetry_rows`, both built by `time_warp/utils/inspection.py`);
-  `PythonWorker` re-emits them as `variablesReported`/`telemetryReported` *before*
-  `finished`. Scheme has no bridge payload, so its tables come from
+  `TelemetryPanel`, `DebugPanel`. The native runners report both tables to the window
+  before `finished`. Scheme has no executor in that path, so its tables come from
   `DebuggerRunner::snapshot()` — including the final snapshot taken when a run ends
   without pausing. `DebugPanel`'s buttons forward to whichever runner is paused:
   Scheme through `DebuggerRunner`, every other language through `NativeRunner` and the

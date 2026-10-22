@@ -356,9 +356,11 @@ one deliberate addition: bundles are written and read with zlib, so they stay th
 plain zips `teach.py` writes and any school can open. `classroom_tests` covers the
 promises a teacher relies on, and a bundle made by either side opens in the other.
 
+<!-- history -->
 The worker classes (`PythonWorker`, `locateWorker`, the `timewarp_bridge` target and
-its suite) are deleted, and `native/bridge/` is no longer installed: a staged
-`cmake --install` contains **no Python file at all**.
+its suite) were deleted at 17.0, and `native/bridge/` has not been installed since: a
+staged `cmake --install` contains **no Python file at all**.
+<!-- /history -->
 
 The parity gates' remaining dependency is done too: the reference's answers to
 470 programs are frozen in
@@ -537,9 +539,9 @@ caller the program's own prompt (`"NAME "`), that the answer lands in the variab
 at its type, and that an answer nobody gave leaves a numeric variable at 0 instead
 of stopping the program; `ui_layout_tests` drives `NativeRunner` end to end, so the
 `inputRequested` → `answerInput` pair the dialog sits on is exercised and the value
-shows up in the Variables snapshot; and `python_bridge_tests` runs a program through
-the real worker and answers its `in`, which is the path the Lessons panel's check
-uses. The dialog itself is still modal and is verified by hand — what is covered is
+shows up in the Variables snapshot; and `lessons_tests` runs a program through the
+same verifier the Lessons panel asks, so the panel's verdict and a teacher's mark are
+one function's answer. The dialog itself is still modal and is verified by hand — what is covered is
 everything on either side of it.
 
 ---

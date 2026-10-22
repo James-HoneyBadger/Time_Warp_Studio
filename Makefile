@@ -13,7 +13,8 @@ FORWARDED := build run test test-debug asan clean distclean info test-list \
              screenshot reset-layout
 
 .PHONY: help $(FORWARDED) engine-test smoke command-matrix repl-matrix \
-        golden-record golden-check teach-check test-all lint lint-md doc-links
+        golden-record golden-check teach-check test-all lint lint-md doc-links \
+        doc-claims
 
 help:
 	@echo "Time Warp Studio"
@@ -36,7 +37,8 @@ help:
 	@echo "  test-all      All of the above"
 	@echo "  lint          Ruff over the bridge"
 	@echo "  lint-md       Markdownlint over every tracked Markdown file
-	@echo "  doc-links     Every relative link and #anchor in the guides resolves""
+	@echo "  doc-links     Every relative link and #anchor in the guides resolves"
+	@echo "  doc-claims    Every path, name and make target the guides name exists""
 	@echo ""
 	@echo "See 'make -C $(NATIVE) help' for everything the native tree offers."
 
@@ -88,7 +90,7 @@ golden-check:
 teach-check:
 	@$(MAKE) --no-print-directory -C $(NATIVE) teach-check
 
-test-all: test engine-test smoke command-matrix repl-matrix golden-check doc-links
+test-all: test smoke command-matrix repl-matrix golden-check doc-links doc-claims
 
 lint:
 	@$(PYTHON) -m ruff check $(NATIVE)/bridge
@@ -97,6 +99,13 @@ lint:
 # Python only, because the documentation job must not need the C++ build.
 doc-links:
 	@$(PYTHON) $(NATIVE)/tools/check_doc_links.py
+
+# A link that resolves can still be a false claim: a sentence can name a file that
+# moved, a symbol that was deleted, or a `make` target that never existed. Nothing
+# else checks that, and three such claims survived a release.
+doc-claims:
+	@$(PYTHON) $(NATIVE)/tools/check_doc_claims.py --self-test
+	@$(PYTHON) $(NATIVE)/tools/check_doc_claims.py
 
 # Markdown lint over the repository's own Markdown. `git ls-files` is what keeps the
 # virtual environment, the build trees and node_modules out of the run without a

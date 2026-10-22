@@ -1254,8 +1254,9 @@ That last one is not a detail. The reference's pen is white and its canvas is
 `(10, 10, 20)`; a client that ignored the background would draw white ink on its own
 white canvas and show nothing -- the exact symptom this bridge was built to fix.
 
-The reference engine's harness protocol still lives in `native/bridge/worker.py` and is
-documented at the top of that file; the application no longer speaks it.
+The reference engine's harness protocol was documented at the top of
+`native/bridge/worker.py`; that file is development tooling, it is deleted at 18.0, and
+neither the application nor the gates spoke it after 17.2.
 
 #### The conventions are the reference's, not the obvious ones
 
@@ -1370,8 +1371,8 @@ application rather than to the engines.
    `Procedure` cache, so a program is compiled once at load time rather than re-read per
    call.
 
-Landed since this file was first written: the runner bridge (`worker.py` behind a
-`QProcess`, since removed), the real output console and turtle canvas on top of
+Landed since this file was first written: the runner bridge (a `QProcess` running
+`worker.py`, since removed), the real output console and turtle canvas on top of
 `CanvasCommandQueue`, the two-row toolbar, `native/` under the repository Makefile and
 CI, the function-key row, the lesson and classroom panels, projects, the REPL bar,
 watch expressions and data breakpoints, SQL, the JSON-RPC API, the `twc` compiler and

@@ -241,11 +241,15 @@ counter being cumulative is how the leak was noticed.
 
 ## 8. The reference harness protocol
 
+<!-- history -->
 The IDE and the two commands drive all of this through `timewarp_lessons`, in
-process. What follows is the *reference engine's* harness protocol: `worker.py` in
-`native/bridge/` still speaks it, and the example and command harnesses still drive
-that. It is development tooling — nothing installed speaks it — and it is documented
-because a change to the lesson data has to be visible to the harness that checks it.
+process. What follows is the *reference engine's* harness protocol, recorded for
+anyone reading how the port was checked. Nothing drives it any more: the example and
+command harnesses spawn `native/tools/check.cpp` (`time_warp_check`), which asks the
+same questions of the engines the product ships, and `worker.py` goes when
+`native/bridge/` does.
+<!-- /history -->
+
 Requests and replies, one JSON object per line:
 
 | Request | Reply | Notes |
@@ -294,6 +298,6 @@ is [`timewarp_lessons`](../../native/include/timewarp/lessons/progress.hpp).
 | ---- | -------------- |
 | `test_lessons.py` | The curriculum is sound; the verifier's rules; progress; hint clamping; the validator's refusals |
 | `test_classroom.py` | Roster, handouts, marking, roll-up, bundles, presentation, path escapes |
-| `python_bridge_tests` (`lesson` filter) | The protocol end to end through the real worker |
+| `lessons_tests` (C++) | The same curriculum, verifier, progress and classroom, through the library the IDE and both commands call |
 | `ui_layout_tests` (`lesson panel`) | The panel's widgets, its place as the fifth right-column tab, and that it starts empty |
 | `teach.py validate` | The same curriculum pass as a standalone command, for an author |

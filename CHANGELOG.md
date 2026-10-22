@@ -1,5 +1,48 @@
 # Changelog
 
+<!-- history: all -->
+
+## [17.2.1] - 2026-10-22
+
+The documentation gate checked links, and a link that resolves can still be a false
+claim: `docs/ARCHITECTURE.md` documented `locateWorker()`, a function 17.0 deleted;
+`native/README.md` said a harness protocol "still lives in `native/bridge/worker.py`";
+`docs/ROADMAP.md` owed a device allow-list that has been in `ports.cpp` for several
+releases; and every generated lesson plan named the curriculum at its pre-17.0 path.
+None of that was reachable by a link checker.
+
+### Added
+
+- **`native/tools/check_doc_claims.py`** (`make doc-claims`, `.github/workflows/docs.yml`):
+  three rules that settle a class of defect a machine can settle — a repository path
+  named in backticks exists, a retired name is discussed in the past tense, and a
+  `make <target>` is a target of the Makefile the command would consult. Two escapes,
+  both deliberate: `<!-- history -->` ... `<!-- /history -->` for a record that has to
+  name what it records, `<!-- history: all -->` for a whole file, and
+  `<!-- doc-claims: ignore -->` for a path that is an example rather than a claim.
+  `--self-test` proves the rules fire and both escapes suppress them, which is the
+  only way to know a checker that passes is not a checker that cannot fail.
+
+### Fixed
+
+Thirty false claims, found by the new gate on its first run:
+
+- **`native/share/lessons.json` is where the curriculum lives**, and every generated
+  lesson plan said `native/bridge/time_warp/features/lessons.json` — the path it had
+  before 17.0 moved it. `teach.py write-plans` writes the new one and the plans are
+  regenerated; the docs job's `git diff --exit-code` is what keeps them that way.
+- **The bridge is described as live in five files**: `docs/ARCHITECTURE.md`'s
+  "Finding the worker" section is now a history region in the past tense followed by
+  what replaced it; `docs/lessons/FORMAT.md` §8 says nothing drives the protocol any
+  more and its gate table names `lessons_tests` instead of a deleted C++-era suite;
+  `native/README.md`, `CONTRIBUTING.md`'s tree diagram and `.github/copilot-
+  instructions.md`'s architecture map say the same.
+- **`docs/ARCHITECTURE.md`'s "Adding a language"** put the reference executor first.
+  Since 17.0 the native executor is what a language is; the old steps are kept as a
+  history region so the record of how the ten were ported survives.
+- `.github/DEPLOYMENT.md` said the docs job watches the moved curriculum path and that
+  `native.yml` runs examples "through the reference engine".
+
 ## [17.2.0] - 2026-10-22
 
 `make smoke` and `make command-matrix` used to ask `native/bridge/worker.py` what a

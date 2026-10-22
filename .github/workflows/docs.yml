@@ -19,6 +19,7 @@ on:
       - 'native/bridge/time_warp/features/lessons.json'
       - 'native/tools/teach.py'
       - 'native/tools/check_doc_links.py'
+      - 'native/tools/check_doc_claims.py'
       - '.github/workflows/docs.yml'
   pull_request:
     branches: [ main ]
@@ -29,6 +30,7 @@ on:
       - 'native/bridge/time_warp/features/lessons.json'
       - 'native/tools/teach.py'
       - 'native/tools/check_doc_links.py'
+      - 'native/tools/check_doc_claims.py'
       - '.github/workflows/docs.yml'
 
 jobs:
@@ -100,6 +102,15 @@ jobs:
       # documentation pull request does not depend on the C++ build.
       - name: Every relative link and anchor resolves
         run: python3 native/tools/check_doc_links.py
+
+      # The stronger property: a path named in backticks exists, a name that was
+      # deleted is discussed in the past tense, and a `make <target>` is a target.
+      # Three claims of that shape went stale after 17.0 and no gate noticed, which
+      # is what this step is for.
+      - name: Every claim in the guides is still true
+        run: |
+          python3 native/tools/check_doc_claims.py --self-test
+          python3 native/tools/check_doc_claims.py
 
       # The plans are generated from the curriculum. Regenerating them and finding
       # a diff means somebody changed a lesson and did not update the document a

@@ -1,5 +1,7 @@
 # Porting plan: what the PySide6 application had and this one does not
 
+<!-- history: all -->
+
 The PySide6 application was removed at commit `c30e76a` — 36 modules under
 `Platforms/Python/time_warp/ui/`, 15 under `features/`, about 17.5k lines of UI.
 This is the plan for the features it had that the Qt application does not, in the

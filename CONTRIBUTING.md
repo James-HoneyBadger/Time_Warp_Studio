@@ -273,7 +273,7 @@ Branch naming:
 
 - Feature: `feature/description`
 - Bug: `fix/description`
-- Docs: `docs/description`
+- Docs: `docs/description`<!-- doc-claims: ignore -->
 - Test: `test/description`
 
 ### 2. Make Changes
@@ -487,7 +487,7 @@ cannot open.
 
 ### 1. Create the executor
 
-File: `native/bridge/time_warp/languages/newlang.py`
+File: `native/bridge/time_warp/languages/newlang.py`<!-- doc-claims: ignore -->
 
 ```python
 from __future__ import annotations
@@ -533,7 +533,7 @@ set, so half an entry fails the suite rather than shipping.
 
 ### 3. Test it
 
-File: `native/bridge/time_warp/tests/test_lang_newlang.py`
+File: `native/bridge/time_warp/tests/test_lang_newlang.py`<!-- doc-claims: ignore -->
 
 ```python
 from time_warp.core.interpreter import Language
@@ -555,13 +555,13 @@ on a command in the inventory that has no row.
 
 ### 4. Add examples
 
-Directory: `Examples/newlang/`, starting with `hello`. Add any program that draws
+Directory: `Examples/newlang/`, starting with `hello`.<!-- doc-claims: ignore --> Add any program that draws
 to `DRAWING_EXAMPLES` in `native/tools/example_smoke.py`, or a program that draws
 nothing passes by being silent.
 
 ### 5. Teach it
 
-Two lessons in `native/bridge/time_warp/features/lessons.json`:
+Two lessons in `native/share/lessons.json`:
 `python3 native/tools/teach.py new <id> --language NEWLANG` prints a skeleton the
 loader accepts. Then run `teach.py validate`, which refuses a solution that does
 not pass its own checkpoint, a starter that already passes, and a starter that
@@ -570,7 +570,7 @@ fails unless `starter_is_broken` says the failure is the lesson.
 ### 6. Document it
 
 - `docs/LANGUAGE_GUIDE.md` — a reference section
-- `docs/tutorials/newlang.md` — a tutorial; `.github/workflows/docs.yml` requires
+- `docs/tutorials/newlang.md` — a tutorial<!-- doc-claims: ignore -->; `.github/workflows/docs.yml` requires
   one per language
 - `README.md` — the row in the language table
 - `Examples/CATALOG.md` — one line per example
@@ -634,9 +634,10 @@ Time_Warp_Studio/
 │   │                             #   and the gates: learn.py, teach.py,
 │   │                             #   command_matrix.py, repl_matrix.py,
 │   │                             #   example_smoke.py, differential_check.py
-│   └── bridge/                   # The Python reference engine: parity gates, command
-│       │                         #   matrix and lesson checks; no language runs in it
-│       ├── worker.py             #   the JSON-lines worker the Lessons panel spawns
+│   └── bridge/                   # The Python reference engine, kept only as the
+│       │                         #   record the frozen corpus was recorded from;
+│       │                         #   nothing in the product or the gates runs it
+│       ├── worker.py             #   the JSON-lines protocol it answered (gone at 18.0)
 │       └── time_warp/            #   the engine itself
 │           ├── core/             #     interpreter.py, language_registry.py
 │           ├── languages/        #     one stateless function per language
