@@ -29,7 +29,7 @@ machine is real software — everything in this book happens when you type it.
 | ROM socket | Ten language ROMs: BASIC, APL, Logo, PILOT, FOCAL, Scheme, CHIP-8, COMAL, REXX, Smalltalk |
 | Program memory | 64K, one buffer per ROM, kept when you switch away |
 | Display | One CRT, three modes: TEXT, SPLIT (the default), GRAPHICS |
-| Text side | PROGRAM (a real code editor) and OUTPUT (the machine's screen) |
+| Text side | PROGRAM (a real code editor) and SCREEN (the tube, painted from memory) |
 | Graphics side | The turtle canvas: the same drawing surface the IDE uses |
 | Keyboard | The prompt line, with history; function keys below |
 | Disk | HB DOS 1.0: one volume, 512 sectors of 256 bytes, 30-character names |
@@ -51,7 +51,7 @@ otherwise — and prints the banner above. Then:
    prompt stores line 10 on the PROGRAM page. `20 GOTO 10` stores another.
 2. **Press Return.** Nothing runs yet; a numbered line is a program line, and
    storing it is the whole action.
-3. **Press F9**, or type `RUN`. The program runs. Its output appears on OUTPUT;
+3. **Press F9**, or type `RUN`. The program runs. Its output appears on SCREEN;
    its drawing appears on the right of the screen.
 4. **Switch ROMs.** Choose **Logo** in the ROM selector. The machine cold-boots:
    the screen clears, the banner names Logo, and the prompt becomes `?`. The
@@ -84,7 +84,7 @@ Under the screen:
 | The prompt | Everything typed here is remembered in history and echoed in the ROM's voice |
 | **RUN** | Runs the program on the PROGRAM page (F9) |
 | **STOP** | Stops a running program (Shift+F9) |
-| **CLS** | Clears OUTPUT and the drawing (Ctrl+L) |
+| **CLS** | Clears the screen and the drawing (Ctrl+L) |
 
 The status line along the bottom is a machine readout, not decoration:
 
@@ -107,12 +107,49 @@ The text side has two pages:
 - **PROGRAM** — a `CodeEditor`, the same widget the IDE uses: gutter, current
   line, syntax colouring, undo, selection, search. A listing is not pasted into
   a text box here.
-- **OUTPUT** — the machine's screen: the banner, prompt echoes, program output
-  and errors.
+- **SCREEN** — the machine's screen: the tube, painted from the memory map below, with
+  the banner, prompt echoes, program output and errors written into its cells
 
 A program that draws while the machine is in TEXT switches to SPLIT once, so the
 ink cannot land somewhere it cannot be seen. CONFIG can turn that off for a
 learner who wants to watch the drawing arrive deliberately.
+
+### The screen is memory
+
+The SCREEN page is not a text box that the machine appends lines to. It is a window
+onto the machine's own 64K, and that is the difference between a picture of a home
+computer and one:
+
+| Range | What it is |
+| --- | --- |
+| `$0000`–`$7FFF` | **Free RAM**, 32768 bytes, for `POKE` and for machine code |
+| `$8000`–`$8FFF` | **Screen cells**: 80 × 25 character codes, row-major, 2000 bytes |
+| `$9000`–`$9FFF` | **Colours**: one ink/paper nibble pair per cell, in the same order |
+| `$A000`–`$A0FF` | **I/O registers**: cursor column, cursor row, border, ink, paper, sound latch, frame counter, scrolled flag |
+| `$F000`–`$FFFF` | **ROM**: readable, and a `POKE` into it is refused out loud |
+
+So a character is a byte at an address, and the machine shows it:
+
+```basic
+10 POKE 32768, 72                 ' 'H' in the top-left corner
+20 POKE 32848, 73                 ' 'I' at row 1, column 0
+30 LOCATE 5, 10                   ' the cursor, as a register
+40 PRINT "HERE"                   ' so this lands at row 5, column 10
+50 POKE 32768 + 24 * 80 + 3, 128  ' a graphics character on the bottom row
+```
+
+`POKE` and `PEEK` take **expressions** — a program writes the cell it computed —
+and the tube scrolls by moving *cells*, so `PEEK` of the top row after a scroll
+answers with what is on the screen now. `CLS` clears cells; `COLOR ink, paper` sets
+the nibble pair the next characters use; the border is register two.
+
+The status line's `MEM` is a reading rather than a badge: 32K is the free RAM this
+machine actually has, and it says so because the number comes from the map.
+
+A machine of 1982 could not show a character the tube has no glyph for, and neither
+can this one: the Studio's engines prefix messages with an emoji, and the tube drops
+that prefix and transliterates the typographic punctuation in the banner. What is
+left is ASCII, which is what the machine's character set is.
 
 ### Keys
 
@@ -145,11 +182,11 @@ a keyword is a program line, not a command — see [direct mode](roms.md#basic).
 | Word | What it does |
 | --- | --- |
 | `RUN` | Run the program on the PROGRAM page. With a name, `RUN "NAME"`, load that file and run it |
-| `LIST` | Print the program to OUTPUT |
+| `LIST` | Print the program to the screen |
 | `NEW` | Erase the program and end the prompt session |
 | `EDIT` | Move to the PROGRAM page |
 | `TEXT`, `GFX`/`GRAPHICS`, `SPLIT` | Change the screen mode |
-| `CLS`/`CLEAR` | Clear OUTPUT and the drawing |
+| `CLS`/`CLEAR` | Clear the screen and the drawing |
 | `ROMS` | List the language ROMs, marking the one in the socket |
 | `CONFIG`/`SETUP` | Open the settings screen |
 | `HELP`, or a bare `?` | Print the machine's vocabulary |
@@ -260,7 +297,8 @@ control, or make one by hand:
 ```
 
 `language` is a ROM's protocol key (`basic`, `logo`, `pilot`, … — the ten the Studio
-has), `mode` is `0` TEXT, `1` SPLIT or `2` GRAPHICS, and `volume` is the HB DOS volume
+has), `mode` is `0` TEXT, `1` GRAPHICS or `2` SPLIT (the order of the machine's own
+`ScreenMode`, which is what the number is), and `volume` is the HB DOS volume
 itself — the file it lives in is the reader's business, so a disk handed to somebody
 else is a volume rather than a path on this machine.
 

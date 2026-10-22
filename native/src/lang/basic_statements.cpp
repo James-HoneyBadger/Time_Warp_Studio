@@ -487,6 +487,9 @@ std::string Machine::execute(std::string_view command) {
     if (cmd == "CLS") {
         turtle_.clear();
         state_.raster.clear(state_.raster.background());
+        // On a machine the screen is memory: clearing it is clearing cells, which is
+        // what the tube then shows.
+        interpreter_.machine_clear_screen();
         return "🎨 Screen cleared\n";
     }
     if (starts_with(cmd, "SCREEN ")) {

@@ -42,6 +42,12 @@ ReplRunner::ReplRunner(timewarp::lang::Language language,
     setObjectName(QStringLiteral("replRunner"));
 }
 
+void ReplRunner::setMachineBus(timewarp::lang::Interpreter::MachineBus bus) {
+    if (session_ != nullptr) {
+        session_->set_machine_bus(std::move(bus));
+    }
+}
+
 ReplRunner::~ReplRunner() {
     requestStop();
     wait();

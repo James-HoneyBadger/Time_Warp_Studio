@@ -28,7 +28,11 @@
 
 #include <memory>
 
+#include "timewarp/lang/interpreter.hpp"
+
 #include "timewarp/ui/hb_dos.hpp"
+#include "timewarp/ui/hb_memory.hpp"
+#include "timewarp/ui/hb_tube.hpp"
 #include "timewarp/ui/language.hpp"
 #include "timewarp/ui/machine_image.hpp"
 #include "timewarp/ui/retro_settings.hpp"
@@ -117,7 +121,10 @@ public:
     [[nodiscard]] QLineEdit* promptInput() const noexcept { return input_; }
     [[nodiscard]] QPushButton* configButton() const noexcept { return config_button_; }
     [[nodiscard]] QLabel* promptLabel() const noexcept { return prompt_label_; }
-    [[nodiscard]] QPlainTextEdit* consoleView() const noexcept { return console_; }
+    /// The machine's screen: the tube, painted from `memory()`.
+    [[nodiscard]] HbTube* consoleView() const noexcept { return tube_; }
+    /// The machine's 64K. `POKE` writes it, the tube paints it, and the tests read it.
+    [[nodiscard]] const HbMemory& memory() const noexcept { return memory_; }
     [[nodiscard]] CodeEditor* programEditor() const noexcept { return program_; }
     [[nodiscard]] TurtleCanvas* graphicsCanvas() const noexcept { return canvas_; }
     [[nodiscard]] QTabWidget* textTabs() const noexcept { return text_tabs_; }
@@ -226,6 +233,10 @@ private:
     /// belongs to the language's REPL.
     bool handleMachineCommand(const QString& command);
 
+    /// The bus a language reaches the machine through. One definition, so the prompt
+    /// session and a whole-program run cannot disagree about what a POKE means.
+    [[nodiscard]] timewarp::lang::Interpreter::MachineBus machineBus();
+
     void ensureRepl();
     void stopRepl();
     void stopRunner();
@@ -280,7 +291,7 @@ private:
     QLabel* lamp_label_ = nullptr;
     QTabWidget* text_tabs_ = nullptr;
     CodeEditor* program_ = nullptr;
-    QPlainTextEdit* console_ = nullptr;
+    HbTube* tube_ = nullptr;
     TurtleCanvas* canvas_ = nullptr;
     QSplitter* screen_splitter_ = nullptr;
     CrtOverlay* overlay_ = nullptr;
@@ -291,6 +302,10 @@ private:
     QLabel* status_label_ = nullptr;
 
     HbDos dos_;
+    /// The machine's address space. One 64K, cleared by a cold boot: a machine of
+    /// 1982 had one bank of RAM, and the per-ROM program buffer is a convenience of
+    /// the PROGRAM page rather than a second memory.
+    HbMemory memory_;
     /// `AUTO`'s next line number and step. `auto_active_` is what the prompt asks
     /// before it decides whether to end.
     bool auto_active_ = false;

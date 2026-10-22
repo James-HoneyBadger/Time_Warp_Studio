@@ -41,6 +41,10 @@ public:
     void set_sql_callback(Interpreter::SqlCallback callback) {
         interpreter_.set_sql_callback(std::move(callback));
     }
+    /// The machine a `POKE` in a prompt line reaches. See `Interpreter::MachineBus`.
+    void set_machine_bus(Interpreter::MachineBus bus) {
+        interpreter_.set_machine_bus(std::move(bus));
+    }
 
     [[nodiscard]] Language language() const noexcept { return interpreter_.language(); }
     [[nodiscard]] const std::map<std::string, Value>& variables() const noexcept {

@@ -419,6 +419,7 @@ measuring the wrong machine.
 | 19.2 ✓ | Every command the canvas declares, a program can ask for: Logo's `BEZIER`, BASIC's `SPRITE`/`SPRITEMOVE`/`SPRITESHOW`/`SPRITEHIDE`/`GRADIENT`/`ELLIPSEGRADIENT` — and the three statements that had been acknowledging work they never did now do it |
 | 19.3 ✓ | The HB-1 is a file: `SAVE MACHINE`/`LOAD MACHINE` write and boot one `.hb1` holding the ROM, the screen, every program, the phosphor and the disk; `--machine` boots one from a terminal |
 | 20.0 ✓ | The HB-1's line editor: `AUTO`, `RENUM` (which rewrites every jump), `DELETE a-b`, `LIST a-b`, `UNDO` after `NEW`, and `TRON`/`TROFF` — the first release of HB-1 2.0, where the machine's insides stop being decoration |
+| 20.1 ✓ | The 64K is real and the screen is memory: `POKE` a character into `$8000` and the tube shows it, `LOCATE` moves the cursor `PRINT` writes at, `CLS` clears cells, `MEM` reports the map, and a `POKE` into ROM is refused out loud |
 
 Smaller items belong in one of those releases rather than a release of their own: a
 Smalltalk call stack shown as frames rather than a Program Counter; Flatpak and an

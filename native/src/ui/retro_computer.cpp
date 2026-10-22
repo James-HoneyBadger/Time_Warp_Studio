@@ -468,13 +468,10 @@ void RetroComputerWindow::buildScreen(QVBoxLayout* column) {
     // program text".
     text_tabs_->addTab(program_, QStringLiteral("PROGRAM"));
 
-    console_ = new QPlainTextEdit{text_tabs_};
-    console_->setObjectName(QStringLiteral("retroConsole"));
-    console_->setAccessibleName(tr("Computer Screen"));
-    console_->setReadOnly(true);
-    console_->setLineWrapMode(QPlainTextEdit::NoWrap);
-    console_->setMaximumBlockCount(kConsoleBlockLimit);
-    text_tabs_->addTab(console_, QStringLiteral("OUTPUT"));
+    tube_ = new HbTube{text_tabs_};
+    tube_->setObjectName(QStringLiteral("retroConsole"));
+    tube_->setMemory(&memory_);
+    text_tabs_->addTab(tube_, QStringLiteral("SCREEN"));
     screen_splitter_->addWidget(text_tabs_);
     screen_splitter_->setStretchFactor(0, kScreenTextStretch);
 
@@ -595,8 +592,15 @@ void RetroComputerWindow::applyMachineLook() {
 
     QFont screen_font = machine_font;
     screen_font.setPointSize(settings_.screen_text_size);
-    if (console_ != nullptr) {
-        console_->setFont(screen_font);
+    if (tube_ != nullptr) {
+        const RetroPalette colours = retroPalette(settings_.tint);
+        TubePalette tube;
+        tube.background = colours.canvas;
+        tube.border = colours.border;
+        tube.bright = colours.bright;
+        tube.dim = colours.dim;
+        tube_->setPalette(tube);
+        tube_->setTextSize(settings_.screen_text_size);
     }
     if (input_ != nullptr) {
         input_->setFont(screen_font);
@@ -643,19 +647,14 @@ void RetroComputerWindow::applyMachineLook() {
     }
 }
 void RetroComputerWindow::appendConsole(const QString& text) {
-    if (console_ == nullptr) {
+    if (tube_ == nullptr) {
         return;
     }
-    QString body = text;
-    while (body.endsWith(QLatin1Char('\n')) || body.endsWith(QLatin1Char('\r'))) {
-        body.chop(1);
-    }
-    if (!body.isEmpty()) {
-        console_->appendPlainText(body);
-    }
-    if (console_->verticalScrollBar() != nullptr) {
-        console_->verticalScrollBar()->setValue(console_->verticalScrollBar()->maximum());
-    }
+    // One sink, and since 20.1 it writes *into screen memory*: the row lands where the
+    // cursor register says, with the ink and paper registers' colours, and a full tube
+    // scrolls by moving cells. Everything the machine says -- banner, prompt echo,
+    // program output, errors, listings, HB DOS -- goes through here.
+    tube_->append(text);
 }
 
 void RetroComputerWindow::appendBootBanner() {
@@ -717,9 +716,12 @@ void RetroComputerWindow::updateStatus() {
         return;
     }
     const RomInfo rom = romFor(language_);
-    QString line = tr("ROM %1 %2   MEM 64K   MODE %3")
+    // `MEM` is a reading, not a badge: the free bytes of the address space this
+    // machine actually has, which is what stopped being a string literal in 20.1.
+    QString line = tr("ROM %1 %2   MEM %4K   MODE %3")
                        .arg(displayName(language_), QString::fromUtf8(rom.version),
-                            modeName(mode_));
+                            modeName(mode_))
+                       .arg(HbMemory::kUserRamSize / 1024);
     if (program_ != nullptr) {
         const QTextCursor cursor = program_->textCursor();
         line += tr("   LINE %1:%2")
@@ -1248,7 +1250,7 @@ bool RetroComputerWindow::handleBasicEditor(const QString& command) {
             // A bare `LIST` is the machine's word, which every ROM has.
             return false;
         }
-        text_tabs_->setCurrentWidget(console_);
+        text_tabs_->setCurrentWidget(tube_);
         int shown = 0;
         for (const BasicLine& line : basicLines()) {
             if (line.number < range.first || line.number > range.last) {
@@ -1304,7 +1306,7 @@ bool RetroComputerWindow::handleMachineCommand(const QString& command) {
         return true;
     }
     if (word == QStringLiteral("LIST")) {
-        text_tabs_->setCurrentWidget(console_);
+        text_tabs_->setCurrentWidget(tube_);
         const QString source = program_->toPlainText();
         if (source.trimmed().isEmpty()) {
             appendConsole(QStringLiteral("?NO PROGRAM"));
@@ -1363,7 +1365,7 @@ bool RetroComputerWindow::handleMachineCommand(const QString& command) {
         return true;
     }
     if (word == QStringLiteral("ROMS")) {
-        text_tabs_->setCurrentWidget(console_);
+        text_tabs_->setCurrentWidget(tube_);
         for (const Language language : allLanguages()) {
             appendConsole(QStringLiteral("%1 %2")
                               .arg(language == language_ ? QLatin1Char('>')
@@ -1427,7 +1429,7 @@ bool RetroComputerWindow::handleMachineCommand(const QString& command) {
         return true;
     }
     if (word == QStringLiteral("HELP") || command.trimmed() == QStringLiteral("?")) {
-        text_tabs_->setCurrentWidget(console_);
+        text_tabs_->setCurrentWidget(tube_);
         appendConsole(QStringLiteral("RUN [\"N\"]  run the program; with a name, load N and run it"));
         appendConsole(QStringLiteral("LIST         list the program"));
         appendConsole(QStringLiteral("NEW          erase the program and the variables"));
@@ -1505,6 +1507,44 @@ void RetroComputerWindow::loadMachineFrom(const QString& name) {
     appendConsole(QStringLiteral("MACHINE LOADED: %1").arg(path));
 }
 
+timewarp::lang::Interpreter::MachineBus RetroComputerWindow::machineBus() {
+    // The engine runs on the runner's thread and the tube paints on the GUI thread.
+    // A character cell is one byte and a register is one byte, so a write landing
+    // while a frame is painted is a byte the next frame shows -- a tearing screen,
+    // which is a thing the hardware this imitates also did. Nothing here can
+    // half-update a value.
+    timewarp::lang::Interpreter::MachineBus bus;
+    bus.peek = [this](int address) { return memory_.peek(address); };
+    bus.poke = [this](int address, std::uint8_t value) { return memory_.poke(address, value); };
+    bus.set_cursor = [this](int row, int column) {
+        memory_.setCursor(row, column);
+        // The cursor moved, so the picture changed: a queued update is cheaper than
+        // a repaint per statement and still reaches the eye on the next frame.
+        if (tube_ != nullptr) {
+            QMetaObject::invokeMethod(tube_, [this] { tube_->update(); }, Qt::QueuedConnection);
+        }
+    };
+    bus.set_ink = [this](int index) { memory_.setInk(static_cast<std::uint8_t>(index)); };
+    bus.set_paper = [this](int index) { memory_.setPaper(static_cast<std::uint8_t>(index)); };
+    bus.write_text = [this](const std::string& line) {
+        // On the engine's thread, in order with the POKEs around it. The GPU-side
+        // repaint is queued; the bytes are what matter and they are already right.
+        memory_.writeText(HbTube::toCharset(
+                              QString::fromUtf8(line.data(), static_cast<int>(line.size()))),
+                          true);
+        if (tube_ != nullptr) {
+            QMetaObject::invokeMethod(tube_, [this] { tube_->update(); }, Qt::QueuedConnection);
+        }
+    };
+    bus.clear_screen = [this] {
+        memory_.clear();
+        if (tube_ != nullptr) {
+            QMetaObject::invokeMethod(tube_, [this] { tube_->update(); }, Qt::QueuedConnection);
+        }
+    };
+    return bus;
+}
+
 void RetroComputerWindow::ensureRepl() {
     if (repl_ != nullptr) {
         return;
@@ -1522,8 +1562,13 @@ void RetroComputerWindow::ensureRepl() {
         }
     });
     repl_->setSurfaceColor(toRgb(retroPalette(settings_.tint).canvas));
-    connect(repl_, &ReplRunner::outputAvailable, this,
-            [this](const QString& text) { appendConsole(text); });
+    repl_->setMachineBus(machineBus());
+    connect(repl_, &ReplRunner::outputAvailable, this, [this](const QString& text) {
+        // The bus wrote it to the screen; this is the scrollback. See `machineBus()`.
+        if (tube_ != nullptr) {
+            tube_->remember(text);
+        }
+    });
     connect(repl_, &ReplRunner::commandFinished, this,
             [this](bool /*ok*/, const QString& error) {
                 if (runner_ == nullptr && canvas_ != nullptr) {
@@ -1582,7 +1627,7 @@ void RetroComputerWindow::runProgram() {
     // One engine at a time: a REPL command in flight would be a second program
     // drawing into the same tube.
     stopRepl();
-    text_tabs_->setCurrentWidget(console_);
+    text_tabs_->setCurrentWidget(tube_);
     appendConsole(QStringLiteral("* RUN *"));
     if (bridge_ != nullptr) {
         bridge_->drainNow();
@@ -1606,6 +1651,7 @@ void RetroComputerWindow::runProgram() {
     // the same stream as the program's output so the tube shows them interleaved the
     // way a reader of a 1982 listing expects.
     runner->set_tracing(trace_on_);
+    runner->set_machine_bus(machineBus());
     runner->load_program(source);
 
     connect(runner, &NativeRunner::outputAvailable, this,
@@ -1613,7 +1659,11 @@ void RetroComputerWindow::runProgram() {
                 if (runner_ != runner) {
                     return;
                 }
-                appendConsole(text);
+                // The screen already has it: the machine bus wrote the line into
+                // memory in the program's own order. This is the scrollback.
+                if (tube_ != nullptr) {
+                    tube_->remember(text);
+                }
             });
     connect(runner, &NativeRunner::inputRequested, this,
             [this, runner](const QString& prompt) {
@@ -1670,8 +1720,8 @@ void RetroComputerWindow::stopProgram() {
 }
 
 void RetroComputerWindow::clearScreenAndCanvas() {
-    if (console_ != nullptr) {
-        console_->clear();
+    if (tube_ != nullptr) {
+        tube_->clear();
     }
     if (bridge_ != nullptr) {
         bridge_->drainNow();
@@ -1693,7 +1743,7 @@ void RetroComputerWindow::clearScreenAndCanvas() {
 // ---------------------------------------------------------------------------
 
 void RetroComputerWindow::listDisk() {
-    text_tabs_->setCurrentWidget(console_);
+    text_tabs_->setCurrentWidget(tube_);
     appendConsole(QStringLiteral("DISK VOLUME %1   %2   %3 SECTORS")
                       .arg(HbDos::kVolumeNumber)
                       .arg(dos_.volumeName())
@@ -1719,7 +1769,7 @@ void RetroComputerWindow::listDisk() {
 }
 
 void RetroComputerWindow::showDiskStatus() {
-    text_tabs_->setCurrentWidget(console_);
+    text_tabs_->setCurrentWidget(tube_);
     appendConsole(QStringLiteral("HB DOS 1.0   VOLUME %1").arg(dos_.volumeName()));
     appendConsole(QStringLiteral("%1 SECTORS   %2 USED   %3 FREE")
                       .arg(HbDos::kTotalSectors)
@@ -1764,7 +1814,7 @@ void RetroComputerWindow::loadFromDisk(const QString& name) {
         setLanguage(language);
     }
     loadProgram(file.source);
-    text_tabs_->setCurrentWidget(console_);
+    text_tabs_->setCurrentWidget(tube_);
     appendConsole(QStringLiteral("%1 LOADED").arg(file.name));
     updateStatus();
 }
@@ -1851,7 +1901,7 @@ void RetroComputerWindow::typeFromDisk(const QString& name) {
         appendConsole(QStringLiteral("?%1").arg(error));
         return;
     }
-    text_tabs_->setCurrentWidget(console_);
+    text_tabs_->setCurrentWidget(tube_);
     appendConsole(QStringLiteral("%1  %2  %3 SECTORS")
                       .arg(file.name, dosTypeName(file.language))
                       .arg(HbDos::sectorsFor(file.source), 3, 10, QLatin1Char('0')));
@@ -1895,8 +1945,8 @@ void RetroComputerWindow::setLanguage(Language language) {
         program_->setPlainText(programs_.value(static_cast<int>(language_)));
     }
     updatePrompt();
-    if (console_ != nullptr) {
-        console_->clear();
+    if (tube_ != nullptr) {
+        tube_->clear();
     }
     if (bridge_ != nullptr) {
         bridge_->drainNow();
@@ -1906,7 +1956,7 @@ void RetroComputerWindow::setLanguage(Language language) {
     }
     auto_shown_graphics_ = false;
     appendBootBanner();
-    text_tabs_->setCurrentWidget(console_);
+    text_tabs_->setCurrentWidget(tube_);
     booted_ = true;
     prepared_ = true;
     updateModeControls();
@@ -1952,6 +2002,12 @@ void RetroComputerWindow::applyMachineImage(const MachineImage& image, bool boot
         appendConsole(QStringLiteral("?UNKNOWN ROM IN IMAGE: %1").arg(image.language));
     }
 
+    // The editor's text belongs to the ROM the machine is *in now*, so it is written
+    // back before the image replaces every ROM's memory -- otherwise the image's
+    // program for this ROM would be overwritten by the session's on the way in.
+    if (booted_) {
+        saveCurrentProgram();
+    }
     programs_.clear();
     for (auto it = image.programs.cbegin(); it != image.programs.cend(); ++it) {
         const std::optional<Language> rom = languageFromKey(it.key());
@@ -1960,14 +2016,11 @@ void RetroComputerWindow::applyMachineImage(const MachineImage& image, bool boot
         }
     }
 
-    // The configuration first, because the boot ROM and the boot screen in it decide
+    // The configuration next, because the boot ROM and the boot screen in it decide
     // what a cold boot does -- and a machine that is being *booted* has to be set up
     // before it starts.
     applySettings(image.config, false);
 
-    if (booted_) {
-        saveCurrentProgram();
-    }
     if (language.has_value()) {
         language_ = *language;
         if (language_selector_ != nullptr) {
@@ -2040,8 +2093,8 @@ void RetroComputerWindow::loadProgram(const QString& source) {
 void RetroComputerWindow::reboot() {
     stopRunner();
     stopRepl();
-    if (console_ != nullptr) {
-        console_->clear();
+    if (tube_ != nullptr) {
+        tube_->clear();
     }
     if (bridge_ != nullptr) {
         bridge_->drainNow();
@@ -2051,7 +2104,7 @@ void RetroComputerWindow::reboot() {
     }
     auto_shown_graphics_ = false;
     appendBootBanner();
-    text_tabs_->setCurrentWidget(console_);
+    text_tabs_->setCurrentWidget(tube_);
     updateStatus();
 }
 

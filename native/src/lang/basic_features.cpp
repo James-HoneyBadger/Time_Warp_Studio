@@ -185,11 +185,45 @@ std::string Machine::locate(const std::string& args) {
         if (column < 1 || column > 80) {
             return "❌ Value " + std::to_string(column) + " for column is outside 1-80\n";
         }
+        // Until 20.1 this validated the range and returned: the statement said it
+        // had positioned the cursor and had not. With a machine attached it moves
+        // the cursor register, and the next PRINT lands there.
+        if (interpreter_.machine_attached()) {
+            interpreter_.machine_locate(static_cast<int>(row) - 1,
+                                        static_cast<int>(column) - 1);
+        }
     } catch (const std::exception& error) {
         return "❌ LOCATE error: " + std::string{error.what()} + "\n";
     }
     return {};
 }
+
+namespace {
+
+/// A bare palette number in a `COLOR` argument. Absent for a colour name or a hex
+/// value, which are the turtle's business rather than the tube's.
+[[nodiscard]] std::optional<int> palette_index(const std::vector<std::string>& parts,
+                                               std::size_t index) {
+    if (index >= parts.size()) {
+        return std::nullopt;
+    }
+    const std::string text = trim(parts[index]);
+    if (text.empty()) {
+        return std::nullopt;
+    }
+    for (const char character : text) {
+        if (!std::isdigit(static_cast<unsigned char>(character))) {
+            return std::nullopt;
+        }
+    }
+    const int value = std::stoi(text);
+    if (value < 0 || value > 255) {
+        return std::nullopt;
+    }
+    return value;
+}
+
+}  // namespace
 
 std::string Machine::color(const std::string& args) {
     if (trim(args).empty()) {
@@ -199,6 +233,17 @@ std::string Machine::color(const std::string& args) {
     if (!parts.empty() && !trim(parts[0]).empty()) {
         const Rgb colour = resolve_colour(trim(parts[0]), turtle_.pen_colour());
         turtle_.set_color(colour);
+    }
+    // A machine's `COLOR` is two *palette numbers*, because a screen of the period
+    // stored a nibble per cell and not a colour. The turtle colour above is the
+    // drawing surface; these are the tube.
+    if (interpreter_.machine_attached()) {
+        if (const std::optional<int> ink = palette_index(parts, 0); ink.has_value()) {
+            interpreter_.machine_ink(*ink);
+        }
+        if (const std::optional<int> paper = palette_index(parts, 1); paper.has_value()) {
+            interpreter_.machine_paper(*paper);
+        }
     }
     if (parts.size() >= 2 && !trim(parts[1]).empty()) {
         const Rgb background = resolve_colour(trim(parts[1]), Rgb{10, 10, 20});
@@ -1430,14 +1475,9 @@ std::string Machine::poke(const std::string& args) {
     const std::size_t comma = args.find(',');
     const std::string address_text = trim(args.substr(0, comma));
     const std::string value_text = trim(args.substr(comma + 1));
-    double address_number = 0.0;
-    double value_number = 0.0;
-    if (!parse_float(address_text, address_number)) {
-        return "❌ Expected numeric value for memory address, got '" + address_text + "'\n";
-    }
-    if (!parse_float(value_text, value_number)) {
-        return "❌ Expected numeric value for memory value, got '" + value_text + "'\n";
-    }
+    // The arguments are *expressions*, as they are on every machine that had a POKE:
+    // `POKE 32768 + 4 * 80 + 5, 65` is how a program writes a cell it computed. They
+    // were bare literals until 20.1, which made a computed address an error.
     try {
         const auto address = static_cast<long>(eval(address_text));
         const auto value = static_cast<long>(eval(value_text));
@@ -1447,6 +1487,17 @@ std::string Machine::poke(const std::string& args) {
         if (value < 0 || value > 255) {
             return "❌ POKE value must be 0-255\n";
         }
+        if (interpreter_.machine_attached()) {
+            // A machine has real memory, and a POKE into a cell draws. Refusing a
+            // write into ROM is the one case a program has to be told about: the
+            // byte cannot land and pretending it did would be the silent failure
+            // this project treats as the bug.
+            if (!interpreter_.machine_poke(static_cast<int>(address),
+                                           static_cast<std::uint8_t>(value))) {
+                return "❌ POKE " + std::to_string(address) + " is ROM: it cannot be written\n";
+            }
+            return {};
+        }
         state_.memory[static_cast<int>(address)] = static_cast<int>(value);
     } catch (const std::exception& error) {
         return "❌ POKE error: " + std::string{error.what()} + "\n";
@@ -1455,17 +1506,21 @@ std::string Machine::poke(const std::string& args) {
 }
 
 std::string Machine::peek(const std::string& args) {
-    double address_number = 0.0;
-    if (!parse_float(trim(args), address_number)) {
-        return "❌ Expected numeric value for memory address, got '" + trim(args) + "'\n";
-    }
+    // An expression, for the same reason `POKE`'s address is one: a program reads the
+    // cell it computed.
     try {
         const auto address = static_cast<long>(eval(trim(args)));
         if (address < 0 || address > 65535) {
             return "❌ PEEK address must be 0-65535: got " + std::to_string(address) + "\n";
         }
-        const auto found = state_.memory.find(static_cast<int>(address));
-        const int value = found == state_.memory.end() ? 0 : found->second;
+        const int value = interpreter_.machine_attached()
+                              ? static_cast<int>(
+                                    interpreter_.machine_peek(static_cast<int>(address)))
+                              : [this, address] {
+                                    const auto found =
+                                        state_.memory.find(static_cast<int>(address));
+                                    return found == state_.memory.end() ? 0 : found->second;
+                                }();
         return "ℹ️ PEEK(" + std::to_string(address) + ") = " + std::to_string(value) + "\n";
     } catch (const std::exception& error) {
         return "❌ PEEK error: " + std::string{error.what()} + "\n";

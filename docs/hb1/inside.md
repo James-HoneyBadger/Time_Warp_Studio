@@ -14,6 +14,14 @@ The whole machine is four translation units:
 | [`hb_dos.hpp`](../../native/include/timewarp/ui/hb_dos.hpp) / [`hb_dos.cpp`](../../native/src/ui/hb_dos.cpp) | The disk: a widget-free class, one JSON image |
 | [`panels.hpp`](../../native/include/timewarp/ui/panels.hpp) | `CrtOverlay`, the glass, shared with the IDE |
 
+The machine's **insides** are two more translation units, added in 20.1 because a
+machine whose memory is a map nothing reads is a costume:
+
+| File | What it is |
+| --- | --- |
+| [`hb_memory.hpp`](../../native/include/timewarp/ui/hb_memory.hpp) / [`hb_memory.cpp`](../../native/src/ui/hb_memory.cpp) | The 64K: one address space, screen cells, colour attributes, I/O registers, and a scroll that moves memory |
+| [`hb_tube.hpp`](../../native/include/timewarp/ui/hb_tube.hpp) / [`hb_tube.cpp`](../../native/src/ui/hb_tube.cpp) | The screen: a widget that paints that memory, with a cursor, a scrollback and a character set |
+
 It is tested by [`retro_computer_tests.cpp`](../../native/tests/retro_computer_tests.cpp),
 which opens real windows and drives the same public methods a user's hands reach.
 
@@ -27,13 +35,14 @@ RetroComputerWindow
 ├── QSplitter
 │   ├── QTabWidget
 │   │   ├── PROGRAM   CodeEditor (the same widget the IDE uses)
-│   │   └── OUTPUT    QPlainTextEdit (the machine's screen)
+│   │   └── SCREEN    HbTube, painting HbMemory: the machine's screen
 │   └── TurtleCanvas  the same canvas the IDE drains
 ├── prompt            QLineEdit + RUN / STOP / CLS
 ├── status            ROM · MEM · MODE · LINE · HB DOS · READY
 ├── CanvasCommandQueue + CanvasBridge
 ├── ReplRunner        one persistent session per ROM visit
 ├── NativeRunner      one whole-program run
+├── HbMemory          the 64K: RAM, screen cells, attributes, registers
 ├── HbDos             HBWARP.dsk
 └── programs_         one QString per Language, the ROM memories
 ```
@@ -163,6 +172,32 @@ Two invariants are worth naming because they are easy to break:
 - **A file that does not fit is refused before anything changes.** The check is
   against the volume *after* the write (`used - old + new`), so replacing a file
   with a larger one is judged correctly.
+
+---
+
+## How a statement reaches the screen
+
+`POKE` is not a language feature that happens to draw; it is an output to the machine.
+
+```text
+a program's POKE 32768, 72
+   └── BasicMachine::poke            (native/src/lang/basic_features.cpp)
+        └── Interpreter::machine_poke           the bus
+             └── RetroComputerWindow's lambda   (machineBus())
+                  └── HbMemory::poke            one byte at $8000
+                       └── HbTube::paintEvent   reads the cell, paints the glyph
+```
+
+The bus is `Interpreter::MachineBus` -- five hooks: peek, poke, set the cursor, set
+the ink and paper, clear the screen. **Unset**, the same statement falls back to the
+sparse map a language carries, which is what the IDE editor, `time_warp_check` and
+the parity corpora see; that is why a language feature can gain machine hardware
+without changing a single recorded answer.
+
+Two threads meet here. The engine calls the bus on the runner's thread and the tube
+paints on the GUI thread, so a byte can land while a frame is being drawn. That is
+deliberate and it is what the hardware did: a character cell is one byte, so the
+worst case is a frame that shows the previous character, never a half-written value.
 
 ---
 

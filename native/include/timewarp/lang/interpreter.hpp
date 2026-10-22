@@ -255,6 +255,48 @@ public:
     void set_sql_callback(SqlCallback callback) { sql_callback_ = std::move(callback); }
     [[nodiscard]] bool sql_available() const noexcept { return static_cast<bool>(sql_callback_); }
 
+    /// The machine underneath the language: the address space `POKE` writes and
+    /// `PEEK` reads, the cursor `LOCATE` moves, the ink and paper `COLOR` sets and
+    /// the screen `CLS` clears.
+    ///
+    /// Without a bus -- the IDE editor, `time_warp_check`, the parity gates -- a
+    /// program gets `State::memory`, the sparse map a language may carry, and the
+    /// statements behave exactly as they did. With one, a statement reaches real
+    /// hardware, which is the difference between the HB-1 and an editor tab.
+    ///
+    /// Each hook returns false when the machine refused: a `poke` into ROM is the
+    /// case that matters, because the program has to be told.
+    struct MachineBus {
+        std::function<std::uint8_t(int address)> peek;
+        std::function<bool(int address, std::uint8_t value)> poke;
+        std::function<void(int row, int column)> set_cursor;
+        std::function<void(int index)> set_ink;
+        std::function<void(int index)> set_paper;
+        std::function<void()> clear_screen;
+        /// A line of program output, on the engine's thread and in order with the
+        /// `POKE`s around it. A machine's teletype printed what the program said when
+        /// the program said it; a queued callback to the GUI would print it later,
+        /// after a program that pokes the screen had already overwritten the cells.
+        std::function<void(const std::string& line)> write_text;
+    };
+    void set_machine_bus(MachineBus bus) { machine_bus_ = std::move(bus); }
+    [[nodiscard]] bool machine_attached() const noexcept {
+        return static_cast<bool>(machine_bus_.poke);
+    }
+    /// Reads `address` from the machine. An executor that wants the sparse map a
+    /// language carries instead asks `machine_attached()` first, which is what keeps
+    /// the editor and the parity gates on the behaviour they have always had.
+    [[nodiscard]] std::uint8_t machine_peek(int address);
+    /// Writes `value`. False when the machine refused the address.
+    bool machine_poke(int address, std::uint8_t value);
+    void machine_locate(int row, int column);
+    void machine_ink(int index);
+    void machine_paper(int index);
+    void machine_clear_screen();
+    /// Sends one output line to the machine, if there is one. The caller still emits
+    /// through `output_callback_`: this is the screen, that is the console.
+    void machine_write_text(const std::string& line);
+
     /// Runs SQL on the IDE's connection and returns what it says. Executors that
     /// own their statement loop call this rather than reaching the IDE directly.
     [[nodiscard]] std::string run_sql(std::string_view sql);
@@ -349,6 +391,7 @@ private:
     double elapsed_ms_ = 0.0;
     bool profiling_ = false;
     bool tracing_ = false;
+    MachineBus machine_bus_;
     std::map<std::size_t, LineProfile> profile_;
     bool timed_out_ = false;
     bool iteration_capped_ = false;

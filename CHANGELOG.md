@@ -2,6 +2,69 @@
 
 <!-- history: all -->
 
+## [20.1.0] - 2026-10-22
+
+The 64K is real, and the screen is memory. Until this release `POKE` wrote into a map
+nothing read, `LOCATE` validated its arguments and returned, and `MEM 64K` on the
+status line was a string literal: a machine whose memory is inert is a costume with a
+keyboard.
+
+### Added
+
+- **`HbMemory`** — one 64 KiB address space with a documented map: 32K of free RAM,
+  2000 screen cells at `$8000`, a nibble pair of ink and paper per cell at `$9000`, a
+  page of I/O registers at `$A000` (cursor, border, ink, paper, sound latch, frame
+  counter, scrolled flag), ROM at `$F000` where a write is refused out loud. A scroll
+  moves *cells*, so `PEEK` of the top row after a scroll answers with what is on the
+  screen.
+- **`HbTube`** — the machine's screen, painted from that memory: a cell grid, the
+  phosphor's brightness ramp for the sixteen palette numbers, a blinking cursor, the
+  border register as a bezel, a scrollback (wheel, `Ctrl+PageUp`) and a translation
+  table. The SCREEN page replaces the old OUTPUT log; the PROGRAM page is unchanged.
+- **The sixteen graphics characters** at codes 128–143 — solid block, halves,
+  quadrants, checkerboard, three rules and three bars — as eight bytes of bitmap
+  each. A font cannot draw those, and they are how a machine with only a text screen
+  drew a picture: `POKE 32768, 128` is a solid block.
+- **`Interpreter::MachineBus`** — five hooks (peek, poke, cursor, ink/paper, clear
+  screen). Unset, every statement keeps the sparse map it has always used, which is
+  what the IDE, `time_warp_check` and the parity corpora see: a language gained
+  hardware without a recorded answer changing.
+- `POKE`, `PEEK`, `LOCATE`, `COLOR` and `CLS` now mean what they say on the machine.
+  `MEM` on the status line reports the free RAM the map actually has (32K) instead of
+  a badge.
+
+### Fixed
+
+- **`POKE` and `PEEK` took literals, not expressions.** `POKE 32768 + 4 * 80 + 5, 65`
+  was an error on every machine that ever had a POKE; a program that computes the cell
+  it writes is the normal case, not the exotic one.
+- **`--machine` could load an image and then run the *previous session's* program.**
+  The editor's text was written back into the ROM's memory *after* the image filled it,
+  so the session's program won. Found by screenshotting the machine rather than by a
+  test, which is why the release also asserts the round trip.
+- **The 19.3 manual had the screen-mode numbers backwards** (`mode` is the machine's
+  `ScreenMode`: 0 TEXT, 1 GRAPHICS, 2 SPLIT). Corrected in the manual, and the image
+  round-trip test pins it.
+
+### Fixed (second pass, found by looking at the screen)
+
+- **Program output could be written after the `POKE`s that followed it.** Output
+  reached the tube through a queued GUI callback while `POKE` wrote memory from the
+  engine's thread, so a program's `CLS` message landed on top of the cells it had
+  just poked. The output now goes through the bus *on the engine's thread, in order*,
+  and the queued signal only fills the scrollback -- which is what a machine's
+  teletype did: print when the program says it.
+
+### Anachronisms, stated
+
+- **The scrollback.** A 25-row tube of 1982 ate everything above it. This one keeps the
+  rows it has written, because a learner reading a listing needs them, and the manual
+  says so rather than pretending.
+- **A translation table.** The tube has 256 character codes and no glyph for an emoji,
+  so an engine's message prefix is dropped and the banner's typographic dash becomes a
+  hyphen -- exactly what a machine of the period did with a character it could not
+  spell.
+
 ## [20.0.0] - 2026-10-22
 
 The HB-1's line editor, which is the part of a 1982 BASIC people actually spent their
