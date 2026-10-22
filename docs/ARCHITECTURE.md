@@ -1,6 +1,6 @@
 # Architecture Guide
 
-## Time Warp Studio v18.1.0 — System Design and Implementation
+## Time Warp Studio v19.0.0 — System Design and Implementation
 
 > **This page describes the shipping product.** It was rewritten alongside the move
 > to C++20 / Qt6. Earlier revisions documented the PySide6 implementation, which has
@@ -289,6 +289,12 @@ touches it.
 - **A display list, not a pixmap.** Repainting on resize, on zoom and on pan needs the
   drawing again, so the ink is kept as geometry in world coordinates. A pixmap would go
   blurry when zoomed and could not be re-projected at all.
+- **Everything the vocabulary declares, it draws.** 46 commands; 44 are painted here
+  and 2 — the 3-D `Pitch`/`Roll`, workstream W19.2 — are listed in a `kNotDrawn` table
+  with reasons. `turtle_canvas_tests` walks the enum and refuses a command that is
+  neither drawn nor waived, because a vocabulary that outruns the surface is a promise
+  the product cannot keep: fills, pen styles, gradients, bezier curves, sprite objects
+  and palette cycling were declared for several releases and silently dropped.
 - **The turtle state is mirrored here.** The host adapter translates turtle calls
   one-to-one and statelessly — a `Forward` command carries a distance, not the heading
   to move along or the pen colour to draw with — so something has to replay the sequence

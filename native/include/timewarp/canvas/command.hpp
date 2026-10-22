@@ -98,9 +98,12 @@ enum class CanvasCommandKind : std::uint8_t {
     /// row-major with the top row first. `PUT` emits it, so a captured sprite
     /// is visible and not merely remembered.
     PutPixels,
-    DefineSprite,  ///< trailing name; x, y, w, h
-    PlaceSprite,   ///< trailing name; x, y
-    MoveSprite,    ///< trailing name; x, y = delta
+    /// trailing name; x, y = the hotspot (pivot) in pixels from the sprite's
+    /// top-left, w, h its size, and the trailing doubles one packed
+    /// `0x00RRGGBB` per pixel, row-major with the top row first.
+    DefineSprite,
+    PlaceSprite,   ///< trailing name; x, y = where the hotspot goes
+    MoveSprite,    ///< trailing name; x, y = delta, applied to the last placement
     ShowSprite,    ///< trailing name
     HideSprite,    ///< trailing name
 };
@@ -226,10 +229,18 @@ struct CanvasCommandView {
 }
 
 /// True when a command carries a trailing point list.
+///
+/// `DefineSprite` is here because a sprite is a *bitmap*: its payload is one
+/// packed `0x00RRGGBB` per pixel, exactly like `PutPixels`, and it is counted in
+/// doubles rather than in (x, y) pairs for the same reason. Making the sprite a
+/// named region instead would have made a "define" cheap and a "place" a
+/// re-render of the display list, which is neither what the reference's
+/// `TurtleSprite` was nor what a sprite is for.
 [[nodiscard]] constexpr bool has_points(CanvasCommandKind kind) noexcept {
     switch (kind) {
         case CanvasCommandKind::DrawPolyline:
         case CanvasCommandKind::BezierCurve:
+        case CanvasCommandKind::DefineSprite:
             return true;
         default:
             return false;
@@ -315,6 +326,94 @@ struct CanvasCommandView {
     command.x = width;
     command.y = height;
     return command;
+}
+
+[[nodiscard]] constexpr CanvasCommand make_clear_svga_mode() noexcept {
+    return make_command(CanvasCommandKind::ClearSvgaMode);
+}
+
+/// A palette slot's colour. `CyclePalette` then rotates every ink colour that
+/// matches a slot through the slots, which is what palette cycling *is*.
+[[nodiscard]] constexpr CanvasCommand make_cycle_palette(int steps) noexcept {
+    CanvasCommand command = make_command(CanvasCommandKind::CyclePalette);
+    command.index = static_cast<std::uint32_t>(steps < 0 ? -steps : steps);
+    command.a = steps < 0 ? -1.0 : 1.0;
+    return command;
+}
+
+[[nodiscard]] constexpr CanvasCommand make_fill_begin() noexcept {
+    return make_command(CanvasCommandKind::BeginFill);
+}
+
+[[nodiscard]] constexpr CanvasCommand make_fill_end() noexcept {
+    return make_command(CanvasCommandKind::EndFill);
+}
+
+/// Fills the shape drawn last with `rgb`. The polygon a `BeginFill`/`EndFill`
+/// pair produced is the usual subject; a rect or an ellipse works too.
+[[nodiscard]] constexpr CanvasCommand make_fill_last(std::uint32_t rgb) noexcept {
+    return make_color(CanvasCommandKind::FillLastShape, rgb);
+}
+
+/// A gradient-filled rectangle. `angle` is degrees, measured like everything
+/// else here: 0 runs left-to-right, 90 bottom-to-top.
+[[nodiscard]] constexpr CanvasCommand make_rect_gradient(double x, double y,
+                                                         double w, double h,
+                                                         double angle,
+                                                         std::uint32_t from,
+                                                         std::uint32_t to) noexcept {
+    CanvasCommand command = make_command(CanvasCommandKind::DrawRectGradient);
+    command.x = x;
+    command.y = y;
+    command.w = w;
+    command.h = h;
+    command.a = angle;
+    command.color = from;
+    command.b = static_cast<double>(to);
+    return command;
+}
+
+[[nodiscard]] constexpr CanvasCommand make_ellipse_gradient(double x, double y,
+                                                            double w, double h,
+                                                            std::uint32_t from,
+                                                            std::uint32_t to) noexcept {
+    CanvasCommand command = make_command(CanvasCommandKind::DrawEllipseGradient);
+    command.x = x;
+    command.y = y;
+    command.w = w;
+    command.h = h;
+    command.color = from;
+    command.b = static_cast<double>(to);
+    return command;
+}
+
+/// The second colour of a gradient, which rides in `b` because the record is a
+/// fixed 72 bytes and `b` is the only slot a gradient does not otherwise use.
+[[nodiscard]] constexpr std::uint32_t gradient_second(const CanvasCommand& command) noexcept {
+    return static_cast<std::uint32_t>(command.b);
+}
+
+/// Placement of a defined sprite, with the hotspot at (x, y). The sprite's *name*
+/// travels in the command's trailing text -- `queue.push(command, name)` -- the
+/// same way a `DrawText`'s string does, because a name is variable-length and the
+/// record is a fixed 72 bytes.
+[[nodiscard]] constexpr CanvasCommand make_sprite_place(double x, double y) noexcept {
+    CanvasCommand command = make_command(CanvasCommandKind::PlaceSprite);
+    command.x = x;
+    command.y = y;
+    return command;
+}
+
+[[nodiscard]] constexpr CanvasCommand make_sprite_move(double dx, double dy) noexcept {
+    CanvasCommand command = make_command(CanvasCommandKind::MoveSprite);
+    command.x = dx;
+    command.y = dy;
+    return command;
+}
+
+[[nodiscard]] constexpr CanvasCommand make_sprite_visible(bool visible) noexcept {
+    return make_command(visible ? CanvasCommandKind::ShowSprite
+                                : CanvasCommandKind::HideSprite);
 }
 
 /// A fixed-pixel screen of `width x height`.

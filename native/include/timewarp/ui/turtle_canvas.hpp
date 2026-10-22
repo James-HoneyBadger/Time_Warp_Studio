@@ -29,8 +29,10 @@
 #include <QColor>
 #include <QImage>
 #include <QLineF>
+#include <QMap>
 #include <QPointF>
 #include <QRectF>
+#include <QSizeF>
 #include <QString>
 #include <QVector>
 #include <QWidget>
@@ -280,6 +282,22 @@ private:
         QLineF line;
         QColor color;
         double width = 1.0;
+        /// The pen style in force when it was drawn: 0 solid, 1 dashed,
+        /// 2 dotted, 3 dash-dot, 4 invisible. Stored per stroke rather than read
+        /// from the live pen, because the scrubber replays old ink and old ink
+        /// must keep the line it was drawn with.
+        int style = 0;
+    };
+
+    /// A named bitmap the canvas keeps, and the placements that refer to it.
+    ///
+    /// This is the reference's `TurtleSprite` -- a pixel grid with a hotspot --
+    /// because a sprite is a bitmap and not a region of the display list. The
+    /// engine emits `DefineSprite` with the pixels, `PlaceSprite` puts the
+    /// hotspot at a point, and `MoveSprite` shifts the newest placement.
+    struct Sprite {
+        QImage image;
+        QPointF hotspot;
     };
 
     /// A shape primitive. One struct for all of them: they differ in which
@@ -294,8 +312,15 @@ private:
         double a = 0.0;       ///< arcs: start angle (degrees)
         double b = 0.0;       ///< arcs: extent (degrees)
         QColor color;
+        /// A gradient's second colour. Invalid for every other kind.
+        QColor color2;
         double width = 1.0;
         bool filled = false;
+        bool closed = false;
+        /// Polygons and bezier curves carry their points here; the rest use `rect`
+        /// and `at`. One struct for all of them, so a variant would cost more in
+        /// ceremony than it saves.
+        QVector<QPointF> points;
         QString text;
     };
 
@@ -314,6 +339,17 @@ private:
     /// Appends a shape and its history entry, so no draw path can add one
     /// without the other.
     void appendShape(const Shape& shape);
+    /// Builds and appends the polygon a `BeginFill`/`EndFill` pair enclosed: the
+    /// points of every stroke drawn between them, closed and filled with the pen
+    /// colour -- the reference's `end_fill`, which is a polygon and not a paint
+    /// bucket.
+    void closeFill();
+    /// The colour an ink colour is drawn as, after palette cycling. Identity for
+    /// every colour that is not in a palette slot.
+    [[nodiscard]] QColor paletteMapped(const QColor& colour) const;
+    /// A pen for `color`/`width`/`style` at the current scale. The dash pattern is
+    /// scaled with the line, so a dashed ink stays dashed at every zoom.
+    [[nodiscard]] QPen penFor(const QColor& color, double width, int style) const;
 
     /// Unit vector the turtle is facing, in world coordinates.
     [[nodiscard]] QPointF headingVector() const;
@@ -350,6 +386,31 @@ private:
     bool turtle_visible_ = true;
     QColor pen_color_{0, 0, 0};
     double pen_width_ = 1.0;
+    /// 0 solid, 1 dashed, 2 dotted, 3 dash-dot, 4 invisible. The reference's
+    /// `pen_dash` was a dash list; this is the four styles a retro turtle has, and
+    /// `pen_style_parameter_` scales the dash length.
+    int pen_style_ = 0;
+    double pen_style_parameter_ = 1.0;
+
+    /// Fill recording: `BeginFill` notes which stroke it started at, `EndFill`
+    /// turns the strokes since into one filled polygon.
+    bool filling_ = false;
+    std::size_t fill_start_ = 0;
+
+    /// Named bitmaps and the placements that refer to them. Placements are
+    /// `Shape`s in `shapes_` (so the scrubber sees them); this is where the pixels
+    /// live, because a bitmap in every placement would be a copy per draw.
+    QMap<QString, Sprite> sprites_;
+
+    /// Palette slots, as `SetPaletteColor` fills them, and the rotation
+    /// `CyclePalette` applies to them.
+    QMap<int, QColor> palette_;
+    int palette_offset_ = 0;
+
+    /// `SetSvgaMode`: a fixed world extent instead of a fit to the content, which
+    /// is what a virtual 800x600 surface means to a program that positions things.
+    bool svga_ = false;
+    QSizeF svga_size_{800.0, 600.0};
     QColor background_{255, 255, 255};
     /// What `reset()` puts in `background_`. Set from the theme; white by
     /// default, which is what the canvas shipped with.

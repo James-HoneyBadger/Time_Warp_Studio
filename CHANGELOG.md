@@ -2,6 +2,65 @@
 
 <!-- history: all -->
 
+## [19.0.0] - 2026-10-22
+
+The canvas now draws everything the vocabulary declares. Of the 46 commands the
+command stream can carry, 28 were drawn and **18 fell into a `default:` that counted
+them and dropped them** — fills, pen styles, bezier curves, gradients, sprite objects,
+palette cycling and a virtual-screen mode. There were makers for exactly one of the
+eighteen, and no engine emitted any of them, so nothing was broken *today* and nothing
+could be built, either: the vocabulary made a promise the surface could not keep, and
+no gate noticed.
+
+### Added
+
+- **Sixteen of the eighteen now draw.** Fills (`BeginFill`/`EndFill` as the
+  reference's polygon walk, not a paint bucket, plus `FillLastShape`), pen styles
+  (dashed, dotted, dash-dot and an invisible pen that leaves no ink *and* no history
+  entry), cubic and quadratic `BezierCurve`, rectangle and ellipse **gradients** with
+  the angle honoured, **named sprite objects** (`DefineSprite` carries a pixel grid and
+  a hotspot; `PlaceSprite`, `MoveSprite`, `ShowSprite` and `HideSprite` act on the
+  newest placement), `SetPaletteColor` plus **`CyclePalette`** — which recolours every
+  stroke using a slot, the effect a C64 border is made of — and `SetSvgaMode` as a
+  fixed world extent instead of a fit to the content.
+- **Makers for all of them** (`make_fill_begin`, `make_rect_gradient`,
+  `make_sprite_place`, `make_cycle_palette`, …), because a kind with no way to be
+  constructed is a declaration, not a command. The sprite's *name* travels in the
+  trailing text, like a `DrawText`'s string, so the 72-byte record stays fixed.
+- **The gate: a vocabulary walk** (`turtle_canvas_tests`). It enumerates every kind,
+  pushes a minimal command of that kind through the real widget, and requires it to be
+  **drawn** or named in a `kNotDrawn` table with a written reason. The count is pinned,
+  so a command added to the vocabulary fails the suite until somebody says, in writing,
+  whether it draws. Two kinds are waived: `Pitch` and `Roll`, the 3-D camera, which is
+  workstream W19.2.
+- **A pixel test for fill colour**, because "a shape exists" was already true.
+
+### Fixed
+
+- **A filled polygon was painted in the pen's colour, not its own.** `FILLED "red"
+  [fd 100 rt 90 …]` carries the fill in `b` beside the flag that says there is one, and
+  the painter filled with the stroke — so every filled Logo polygon was one colour.
+  The command-table row passed throughout, because it asks whether the command *did*
+  something, not what colour it did it in. Both paint paths now use the requested fill,
+  and the new test fails against the old line.
+
+### Changed
+
+- The raster path (a program that names a `SCREEN`) learns the same shapes, so a screen
+  program is not silently lossy where a drawing one is not: gradients, ellipses, sprite
+  definitions and placements, and filled polygons all reach the framebuffer.
+- `reset()` clears the pen style, the palette, the sprite definitions and the virtual
+  screen, so a program cannot inherit the previous one's dash pattern or palette slots.
+
+### Still open, and stated
+
+- **The engines do not emit the new kinds yet.** There is no `PENSTYLE`, `GRADIENT`,
+  `BEZIER` or sprite-object syntax in any of the ten languages, and `TurtleHost` has no
+  methods for them. Exposing them is the next slice: it touches `TurtleHost`, three
+  languages' parsers, the guide, the command table and the corpus. What this release
+  fixes is the part the surface was lying about.
+- `Pitch`/`Roll` stay undrawn, in `kNotDrawn`, until W19.2.
+
 ## [18.1.0] - 2026-10-22
 
 A program now leaves the workshop as a program. `--compile` writes a copy of

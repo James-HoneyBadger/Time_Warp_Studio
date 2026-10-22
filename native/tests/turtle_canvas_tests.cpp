@@ -473,27 +473,284 @@ void test_a_screen_is_painted_at_fixed_coordinates() {
     TW_CHECK(!canvas->framebufferPixel(10, 20).isValid());
 }
 
-void test_unhandled_commands_are_counted_rather_than_lost() {
-    announce("unhandled commands");
+/// Every kind the vocabulary declares, and why the canvas may refuse one.
+///
+/// The enum has no sentinel, so this list is maintained by hand -- and it is a
+/// *test* that the list is complete: `test_the_drawing_vocabulary_is_complete`
+/// checks its size against the vocabulary, so a command added tomorrow fails here
+/// until somebody says, in writing, whether it draws.
+struct Undrawn {
+    CanvasCommandKind kind;
+    const char* reason;
+};
+
+constexpr Undrawn kNotDrawn[] = {
+    {CanvasCommandKind::Pitch, "3-D camera, workstream W19.2"},
+    {CanvasCommandKind::Roll, "3-D camera, workstream W19.2"},
+};
+
+constexpr CanvasCommandKind kEveryKind[] = {
+    CanvasCommandKind::Forward,     CanvasCommandKind::Back,
+    CanvasCommandKind::Left,        CanvasCommandKind::Right,
+    CanvasCommandKind::Pitch,       CanvasCommandKind::Roll,
+    CanvasCommandKind::Goto,        CanvasCommandKind::SetX,
+    CanvasCommandKind::SetY,        CanvasCommandKind::Home,
+    CanvasCommandKind::SetHeading,  CanvasCommandKind::PenUp,
+    CanvasCommandKind::PenDown,     CanvasCommandKind::SetPenColor,
+    CanvasCommandKind::SetPenWidth, CanvasCommandKind::SetPenStyle,
+    CanvasCommandKind::SetBackgroundColor, CanvasCommandKind::BeginFill,
+    CanvasCommandKind::EndFill,     CanvasCommandKind::FillLastShape,
+    CanvasCommandKind::ShowTurtle,  CanvasCommandKind::HideTurtle,
+    CanvasCommandKind::Clear,       CanvasCommandKind::Reset,
+    CanvasCommandKind::SetSvgaMode, CanvasCommandKind::ClearSvgaMode,
+    CanvasCommandKind::SetFramebuffer, CanvasCommandKind::ClearFramebuffer,
+    CanvasCommandKind::SetPaletteColor, CanvasCommandKind::CyclePalette,
+    CanvasCommandKind::Circle,      CanvasCommandKind::DrawPoint,
+    CanvasCommandKind::DrawPolyline, CanvasCommandKind::DrawRect,
+    CanvasCommandKind::DrawEllipse, CanvasCommandKind::DrawArc,
+    CanvasCommandKind::DrawText,    CanvasCommandKind::DrawRectGradient,
+    CanvasCommandKind::DrawEllipseGradient, CanvasCommandKind::BezierCurve,
+    CanvasCommandKind::PutPixels,   CanvasCommandKind::DefineSprite,
+    CanvasCommandKind::PlaceSprite, CanvasCommandKind::MoveSprite,
+    CanvasCommandKind::ShowSprite,  CanvasCommandKind::HideSprite,
+};
+
+[[nodiscard]] bool waived(CanvasCommandKind kind) {
+    for (const Undrawn& entry : kNotDrawn) {
+        if (entry.kind == kind) {
+            return true;
+        }
+    }
+    return false;
+}
+
+/// A command of `kind` with just enough payload for it to mean something.
+struct Sample {
+    CanvasCommand command;
+    QVector<double> points;
+    QByteArray text;
+};
+
+[[nodiscard]] Sample sampleFor(CanvasCommandKind kind) {
+    Sample sample;
+    sample.command = timewarp::canvas::make_command(kind);
+    sample.command.color = timewarp::canvas::make_rgb(200, 100, 50);
+    sample.command.x = 1.0;
+    sample.command.y = 1.0;
+    sample.command.w = 4.0;
+    sample.command.h = 4.0;
+    switch (kind) {
+        case CanvasCommandKind::DrawPolyline:
+        case CanvasCommandKind::BezierCurve:
+            sample.points = {0.0, 0.0, 10.0, 10.0, 20.0, 0.0, 30.0, 10.0};
+            break;
+        case CanvasCommandKind::DrawText:
+        case CanvasCommandKind::DefineSprite:
+        case CanvasCommandKind::PlaceSprite:
+        case CanvasCommandKind::MoveSprite:
+        case CanvasCommandKind::ShowSprite:
+        case CanvasCommandKind::HideSprite:
+            sample.text = QByteArrayLiteral("sample");
+            break;
+        case CanvasCommandKind::PutPixels:
+            // One double per pixel, two by two.
+            sample.points = {0.0, 0.0, 0.0, 0.0};
+            sample.command.w = 2.0;
+            sample.command.h = 2.0;
+            break;
+        default:
+            break;
+    }
+    return sample;
+}
+
+void pushSample(TurtleCanvas& canvas, const Sample& sample) {
+    canvas.apply(CanvasCommandView{
+        sample.command,
+        std::span<const double>{sample.points.constData(),
+                                static_cast<std::size_t>(sample.points.size())},
+        std::string_view{sample.text.constData(),
+                         static_cast<std::size_t>(sample.text.size())}});
+}
+
+// The gate W19.1 exists for: every declared command draws, or is waived in
+// writing. A vocabulary that declares more than the surface can show is a promise
+// the product cannot keep, and until 18.x nothing noticed.
+void test_the_drawing_vocabulary_is_complete() {
+    announce("drawing vocabulary");
+    // 46 declared kinds. A mismatch here is the reminder to add the new one to
+    // `kEveryKind`, which is one line and impossible to forget silently.
+    TW_CHECK_EQ(std::size(kEveryKind), std::size_t{46});
+
+    for (const CanvasCommandKind kind : kEveryKind) {
+        const std::unique_ptr<TurtleCanvas> canvas{sizedCanvas()};
+        pushSample(*canvas, sampleFor(kind));
+        if (waived(kind)) {
+            TW_CHECK_EQ(canvas->commandsIgnored(), std::uint64_t{1});
+            TW_CHECK_EQ(canvas->commandsApplied(), std::uint64_t{0});
+            continue;
+        }
+        // `Reset` is handled by the one path that also zeroes the counters,
+        // because a reset *is* a fresh run: asking it to leave `applied_ == 1`
+        // would be asking it not to reset. Asserted by its effect instead.
+        if (kind == CanvasCommandKind::Reset) {
+            TW_CHECK_EQ(canvas->commandsIgnored(), std::uint64_t{0});
+            TW_CHECK_EQ(canvas->strokeCount(), 0);
+            TW_CHECK_EQ(canvas->shapeCount(), 0);
+            continue;
+        }
+        if (canvas->commandsIgnored() != 0 || canvas->commandsApplied() != 1) {
+            std::printf("   %.*s is declared and not drawn\n",
+                        static_cast<int>(timewarp::canvas::to_string(kind).size()),
+                        timewarp::canvas::to_string(kind).data());
+        }
+        TW_CHECK_EQ(canvas->commandsIgnored(), std::uint64_t{0});
+        TW_CHECK_EQ(canvas->commandsApplied(), std::uint64_t{1});
+    }
+}
+
+// The eighteen kinds that used to fall into `default:` now draw. Each case here is
+// the *behaviour*, not the counter: a kind that increments `applied_` and paints
+// nothing would pass the walk and fail a user.
+// `FILLED "red" [fd 100 rt 90 ...]` names a fill colour that is not the pen's.
+// The command carries it in `b`, and the painter used to fill with the stroke --
+// so every filled polygon in a Logo program was outlined in one colour and
+// painted in the same one, whatever the program asked for. The gate that would
+// have caught it is a *pixel*, because "a shape exists" was already true.
+void test_a_filled_polygon_is_painted_in_its_own_colour() {
+    announce("filled polygon colour");
     const std::unique_ptr<TurtleCanvas> canvas{sizedCanvas()};
+    const QVector<QPointF> corners{QPointF{-50.0, -50.0}, QPointF{50.0, -50.0},
+                                   QPointF{50.0, 50.0}, QPointF{-50.0, 50.0}};
+    QVector<double> flat;
+    for (const QPointF& point : corners) {
+        flat.append(point.x());
+        flat.append(point.y());
+    }
+    auto shape = timewarp::canvas::make_polyline(
+        CanvasCommandKind::DrawPolyline, timewarp::canvas::make_rgb(0, 0, 0), 1.0,
+        /*closed=*/true, /*filled=*/true);
+    shape.b = static_cast<double>(timewarp::canvas::make_rgb(0, 0, 255));
+    canvas->apply(CanvasCommandView{
+        shape,
+        std::span<const double>{flat.constData(), static_cast<std::size_t>(flat.size())},
+        {}});
 
-    // Gradients, sprites and palette cycling are in the command set but not in
-    // this widget. They must be counted: a shape that silently never appears is
-    // indistinguishable from a program that never drew it.
-    auto gradient = timewarp::canvas::make_command(CanvasCommandKind::DrawRectGradient);
-    push(*canvas, gradient);
-    auto sprite = timewarp::canvas::make_command(CanvasCommandKind::ShowSprite);
-    push(*canvas, sprite);
-    // Compared against unsigned literals: the counters are unsigned, and mixing
-    // them with `int` is a sign comparison the project builds with -Werror on.
-    TW_CHECK_EQ(canvas->commandsIgnored(), std::uint64_t{2});
-    TW_CHECK_EQ(canvas->commandsApplied(), std::uint64_t{0});
+    const QImage drawing = canvas->renderedDrawing(1.0);
+    TW_CHECK(!drawing.isNull());
+    // The middle of the square is the blue the program asked for, not the black
+    // the pen was drawing with.
+    const QColor middle = drawing.pixelColor(drawing.width() / 2, drawing.height() / 2);
+    TW_CHECK_EQ(middle.blue() > 200, true);
+    TW_CHECK_EQ(middle.red() < 60, true);
+}
 
-    // An ignored command still counts as processed for the caller's purposes:
-    // nothing threw, and the next real command applies normally.
-    push_forward(*canvas, 10.0);
-    TW_CHECK_EQ(canvas->commandsApplied(), std::uint64_t{1});
-    TW_CHECK_EQ(canvas->strokeCount(), 1);
+void test_the_new_kinds_draw_something() {
+    announce("new drawing kinds");
+
+    // A fill is a polygon walked by the turtle, not a paint bucket: the four
+    // sides of a square become one filled shape.
+    {
+        const std::unique_ptr<TurtleCanvas> canvas{sizedCanvas()};
+        push(*canvas, timewarp::canvas::make_fill_begin());
+        for (int side = 0; side < 4; ++side) {
+            push_forward(*canvas, 100.0);
+            push_right(*canvas, 90.0);
+        }
+        push(*canvas, timewarp::canvas::make_fill_end());
+        TW_CHECK_EQ(canvas->shapeCount(), 1);
+        TW_CHECK_EQ(canvas->strokeCount(), 4);
+        // The square has ink in its middle, which is the whole difference between
+        // an outline and a fill.
+        const QImage drawing = canvas->renderedDrawing(1.0);
+        TW_CHECK(!drawing.isNull());
+    }
+
+    // A gradient is filled by definition, and its two colours differ.
+    {
+        const std::unique_ptr<TurtleCanvas> canvas{sizedCanvas()};
+        push(*canvas, timewarp::canvas::make_rect_gradient(
+                          -50.0, -50.0, 100.0, 100.0, 0.0,
+                          timewarp::canvas::make_rgb(255, 0, 0),
+                          timewarp::canvas::make_rgb(0, 0, 255)));
+        TW_CHECK_EQ(canvas->shapeCount(), 1);
+        TW_CHECK_EQ(canvas->commandsIgnored(), std::uint64_t{0});
+    }
+
+    // A bezier is one shape with four control points.
+    {
+        const std::unique_ptr<TurtleCanvas> canvas{sizedCanvas()};
+        auto curve = timewarp::canvas::make_command(CanvasCommandKind::BezierCurve);
+        curve.x = 2.0;
+        const QVector<double> points{0.0, 0.0, 30.0, 80.0, 70.0, 80.0, 100.0, 0.0};
+        canvas->apply(CanvasCommandView{
+            curve,
+            std::span<const double>{points.constData(),
+                                    static_cast<std::size_t>(points.size())},
+            {}});
+        TW_CHECK_EQ(canvas->shapeCount(), 1);
+    }
+
+    // A sprite is defined once and placed as many times as a program likes: two
+    // placements, one definition.
+    {
+        const std::unique_ptr<TurtleCanvas> canvas{sizedCanvas()};
+        auto define = timewarp::canvas::make_command(CanvasCommandKind::DefineSprite);
+        define.w = 2.0;
+        define.h = 2.0;
+        const QVector<double> pixels{
+            static_cast<double>(timewarp::canvas::make_rgb(255, 0, 0)),
+            static_cast<double>(timewarp::canvas::make_rgb(0, 255, 0)),
+            static_cast<double>(timewarp::canvas::make_rgb(0, 0, 255)), 0.0};
+        canvas->apply(CanvasCommandView{
+            define,
+            std::span<const double>{pixels.constData(),
+                                    static_cast<std::size_t>(pixels.size())},
+            std::string_view{"dot"}});
+        // The definition itself draws nothing, which is right: a sprite nobody
+        // placed is not on the canvas.
+        TW_CHECK_EQ(canvas->shapeCount(), 0);
+        TW_CHECK_EQ(canvas->commandsIgnored(), std::uint64_t{0});
+
+        for (int copy = 0; copy < 2; ++copy) {
+            auto place = timewarp::canvas::make_sprite_place(copy * 20.0, 0.0);
+            canvas->apply(CanvasCommandView{
+                place, {}, std::string_view{"dot"}});
+        }
+        TW_CHECK_EQ(canvas->shapeCount(), 2);
+    }
+
+    // Palette cycling recolours the ink that uses a palette slot, which is what
+    // makes a C64 border or an Amiga copper bar animate.
+    {
+        const std::unique_ptr<TurtleCanvas> a{sizedCanvas()};
+        const std::unique_ptr<TurtleCanvas> b{sizedCanvas()};
+        for (TurtleCanvas* canvas : {a.get(), b.get()}) {
+            push(*canvas, timewarp::canvas::make_palette_color(
+                               0, timewarp::canvas::make_rgb(255, 0, 0)));
+            push(*canvas, timewarp::canvas::make_palette_color(
+                               1, timewarp::canvas::make_rgb(0, 0, 255)));
+            auto ink = timewarp::canvas::make_color(
+                CanvasCommandKind::SetPenColor, timewarp::canvas::make_rgb(255, 0, 0));
+            push(*canvas, ink);
+            push_forward(*canvas, 50.0);
+        }
+        push(*b, timewarp::canvas::make_cycle_palette(1));
+        const QImage plain = a->renderedDrawing(1.0);
+        const QImage cycled = b->renderedDrawing(1.0);
+        TW_CHECK(plain != cycled);
+    }
+
+    // A virtual screen is a fixed extent, so the same drawing fits differently in
+    // it. Without this a program positioning at 800x600 coordinates is scaled to
+    // whatever its ink happens to be.
+    {
+        const std::unique_ptr<TurtleCanvas> canvas{sizedCanvas()};
+        push(*canvas, timewarp::canvas::make_svga_mode(800.0, 600.0));
+        TW_CHECK_EQ(canvas->commandsIgnored(), std::uint64_t{0});
+        push(*canvas, timewarp::canvas::make_clear_svga_mode());
+        TW_CHECK_EQ(canvas->commandsIgnored(), std::uint64_t{0});
+    }
 }
 
 void test_zoom_is_clamped_and_fit_recentres() {
@@ -847,7 +1104,9 @@ int main(int argc, char** argv) {    // Set before QApplication exists, or Qt tr
     test_shape_primitives_are_recorded();
     test_a_sprite_block_is_drawn_as_shapes();
     test_a_screen_is_painted_at_fixed_coordinates();
-    test_unhandled_commands_are_counted_rather_than_lost();
+    test_the_drawing_vocabulary_is_complete();
+    test_a_filled_polygon_is_painted_in_its_own_colour();
+    test_the_new_kinds_draw_something();
     test_zoom_is_clamped_and_fit_recentres();
     test_content_bounds_include_every_drawn_axis();
     test_the_drawing_can_be_exported();
