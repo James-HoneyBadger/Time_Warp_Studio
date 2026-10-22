@@ -161,6 +161,18 @@ public:
         jumped_ = true;
     }
 
+    /// Puts the program counter back on `line` *without* recording a jump.
+    ///
+    /// For an executor that ran another line's statements inside the one it was
+    /// given -- BASIC's user `FUNCTION` does, because a function body is statements
+    /// -- and has to leave the run loop believing nothing happened. `jump_to` would
+    /// make it see a jump to the line already executing, which is how `10 GOTO 10`
+    /// loops: the statement would be run again.
+    void resume_line(std::size_t line) noexcept {
+        current_line = line;
+        jumped_ = false;
+    }
+
     /// Cleared by QUIT/STOP and by the budget. An executor must not keep
     /// running once this is false.
     bool running = false;

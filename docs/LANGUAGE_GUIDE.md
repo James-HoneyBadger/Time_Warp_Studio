@@ -224,6 +224,45 @@ DEF FNA(N) = N * N
 PRINT FNA(5)
 ```
 
+A `FUNCTION ... END FUNCTION` block is the other spelling, for a body that needs more
+than one line. Its answer is whatever the variable named after it holds when `END
+FUNCTION` is reached, and a `$` on the name makes it a text function:
+
+```basic
+FUNCTION TWICE(N)
+  TWICE = N * 2
+END FUNCTION
+
+FUNCTION GRADE$(MARK)
+  IF MARK >= 50 THEN GRADE$ = "pass"
+  IF MARK < 50 THEN GRADE$ = "fail"
+END FUNCTION
+
+PRINT TWICE(21); " "; GRADE$(64)
+```
+
+Subroutines can also be named blocks, called with `CALL`:
+
+```basic
+CALL GREET("Ann")
+END
+
+SUB GREET(NAME$)
+  PRINT "Hello "; NAME$
+END SUB
+```
+
+`EXIT FUNCTION`, `EXIT SUB`, `EXIT FOR`, `EXIT DO` and `EXIT WHILE` leave that block
+immediately — how a function returns early, and how a loop stops without a flag
+variable:
+
+```basic
+FOR I = 1 TO 100
+  IF I * I > 50 THEN EXIT FOR
+NEXT I
+PRINT "the first square over 50 is "; I
+```
+
 ### String Operations
 
 ```basic

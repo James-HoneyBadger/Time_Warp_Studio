@@ -16,6 +16,7 @@
 #include "timewarp/lang/interpreter.hpp"
 #include "timewarp/lang/raster.hpp"
 #include "timewarp/lang/turtle_host.hpp"
+#include <span>
 #include "timewarp/lang/value.hpp"
 
 #include <cstdio>
@@ -170,6 +171,14 @@ struct State {
     std::map<std::string, std::map<std::string, Value>> records;
     std::map<std::string, Definition> subs;
     std::map<std::string, Definition> functions;
+    /// How deep a user FUNCTION is in calling itself, so a body that recurses
+    /// forever stops with a message instead of the stack.
+    int function_depth = 0;
+    /// What a user FUNCTION body printed. A function is called from inside an
+    /// expression, so its output has nowhere to go but here until the statement that
+    /// called it finishes -- at which point it is emitted ahead of that statement's
+    /// own text, which is the order the program wrote them in.
+    std::string function_output;
     /// `DEF FNA(X) = ...`: the parameters and the body expression.
     std::map<std::string, std::pair<std::vector<std::string>, std::string>> user_fns;
     std::vector<std::string> data;
@@ -225,9 +234,11 @@ struct State {
 /// because the reference's behaviour *is* this shape: it returns `str(expr)`
 /// for anything it cannot read, which is why an unknown name can reach a
 /// learner as source text rather than as an error.
+class Machine;
+
 class Strings {
 public:
-    Strings(Interpreter& interpreter, const State& state);
+    Strings(Interpreter& interpreter, const State& state, Machine* machine = nullptr);
 
     /// Evaluates *expression* to text. Throws `BasicError` on a malformed call.
     [[nodiscard]] std::string evaluate(std::string_view expression);
@@ -245,9 +256,15 @@ private:
     [[nodiscard]] static std::string as_text(const Argument& argument);
     [[nodiscard]] std::string string_variable(std::string_view name) const;
     [[nodiscard]] std::string array_element(std::string_view name, std::string_view index) const;
+    [[nodiscard]] std::optional<Argument> element_of(std::string_view head,
+                                                     std::string_view expression);
 
     Interpreter& interpreter_;
     const State& state_;
+    /// The statement machine, when there is one: an argument like `A(1) * 2` needs
+    /// the numeric evaluator, and the numeric evaluator needs the machine's
+    /// `VAR.FIELD` expansion. Null when a caller has only an interpreter.
+    Machine* machine_ = nullptr;
 };
 
 // -- the statement machine -------------------------------------------------
@@ -257,10 +274,23 @@ public:
     Machine(Interpreter& interpreter, TurtleHost& turtle, State& state);
 
     std::string execute(std::string_view command);
+    /// One statement, without the output a called FUNCTION collected. `execute` is
+    /// the entry point; this is the part the run loop's statements go through.
+    std::string execute_statement(std::string_view command);
 
     [[nodiscard]] Interpreter& interpreter() noexcept { return interpreter_; }
     [[nodiscard]] TurtleHost& turtle() noexcept { return turtle_; }
     [[nodiscard]] State& state() noexcept { return state_; }
+
+    /// Runs a `FUNCTION ... END FUNCTION` body for one call and answers the value it
+    /// left in the variable named after it. Null when the body ran away -- there is a
+    /// depth limit for that.
+    std::optional<Value> run_function(const std::string& name,
+                                      const std::vector<Value>& arguments);
+    /// The same, for a function whose name ends in `$`: its answer is text, which is
+    /// what the text expression evaluator asks for when it meets `GRADE$(77)`.
+    std::optional<std::string> invoke_text_function(const std::string& name,
+                                                    const std::vector<Value>& arguments);
 
     /// Arithmetic with `VAR.FIELD` expanded, as the reference rewrites the
     /// expression before handing it to its evaluator.
@@ -314,6 +344,8 @@ private:
     std::string end_sub();
     std::string function_definition(const std::string& args);
     std::string end_function();
+    /// `EXIT FOR` / `EXIT DO` / `EXIT WHILE`: leave the innermost loop of that kind.
+    std::string exit_loop(const std::string& kind);
     std::string call(const std::string& args);
     std::string type_definition(const std::string& args);
     std::string dim(const std::string& args);

@@ -2214,9 +2214,38 @@ void test_basic_string_array_index_is_an_expression() {
 // and that evaluator's own message is the answer -- an empty line would hide a
 // typo behind a plausible result.
 void test_basic_unreadable_print_reports_the_evaluator_message() {
-    const BasicRun run = run_basic("DIM N(3)\nPRINT \"X\" + STR$(N(1))");
+    const BasicRun run = run_basic("PRINT \"X\" + FLUMMOX$(\"a\")");
     TW_CHECK(any_error(run.output));
     TW_CHECK(contains(run.output, "Unexpected character"));
+}
+
+// `STR$` of an array element is arithmetic with a string around it. This used to be
+// reported as `Unknown function: STR`, because the element looked like a call to a
+// function named after the array and the whole item then fell through to the numeric
+// evaluator, which has no `STR$`.
+void test_basic_str_of_an_array_element_is_printed() {
+    const BasicRun run =
+        run_basic("DIM N(3)\nN(2) = 7\nPRINT \"X\" + STR$(N(2))\nPRINT STR$(N(2) * 2)");
+    TW_CHECK_EQ(run.output.size(), std::size_t{2});
+    TW_CHECK_EQ(run.output.at(0), std::string{"X7"});
+    TW_CHECK_EQ(run.output.at(1), std::string{"14"});
+}
+
+// A `FUNCTION ... END FUNCTION` the program defined is callable from an expression:
+// the body's statements are run by the machine, parameters are bound and restored,
+// and what the body printed appears before the line that called it.
+void test_basic_user_functions_run_their_bodies() {
+    const BasicRun run = run_basic(
+        "PRINT TWICE(21)\nPRINT TOTAL(4)\nPRINT GRADE$(77)\nEND\n"
+        "FUNCTION TWICE(X)\nTWICE = X * 2\nEND FUNCTION\n"
+        "FUNCTION TOTAL(N)\nSUM = 0\nFOR K = 1 TO N\nSUM = SUM + K\nNEXT K\n"
+        "PRINT \"inside\"\nTOTAL = SUM\nEND FUNCTION\n"
+        "FUNCTION GRADE$(M)\nGRADE$ = \"C\"\nEND FUNCTION");
+    TW_CHECK_EQ(run.output.size(), std::size_t{4});
+    TW_CHECK_EQ(run.output.at(0), std::string{"42"});
+    TW_CHECK_EQ(run.output.at(1), std::string{"inside"});
+    TW_CHECK_EQ(run.output.at(2), std::string{"10"});
+    TW_CHECK_EQ(run.output.at(3), std::string{"C"});
 }
 
 // The reference forwards a statement it does not recognise to the Logo
@@ -3078,6 +3107,8 @@ int main() {
     test_basic_dollar_string_functions_are_calls_not_array_reads();
     test_basic_string_array_index_is_an_expression();
     test_basic_unreadable_print_reports_the_evaluator_message();
+    test_basic_str_of_an_array_element_is_printed();
+    test_basic_user_functions_run_their_bodies();
     test_basic_logo_words_draw_through_the_fallback();
     test_basic_unknown_word_is_still_an_error();
     test_basic_say_refuses_without_a_backend();

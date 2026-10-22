@@ -2,6 +2,50 @@
 
 <!-- history: all -->
 
+## [22.4.1] - 2026-10-22
+
+Eight defects in the interpreters, found by writing programs rather than by reading
+code, and fixed. Two of them were documented features that could not be used at all.
+
+### Fixed
+
+- **BASIC's `FUNCTION ... END FUNCTION` could not be called.** The definition parsed
+  and the call threw `Unknown function: TWICE`, in either order. A function body is
+  statements, so the expression evaluator could not run it; the machine now does --
+  parameters are bound and restored, the body's lines are driven to its `END
+  FUNCTION`, loops and nested `IF`s inside it work, and what the body printed is
+  emitted ahead of the line that called it. Text functions (`FUNCTION GRADE$(M)`)
+  answer text instead of being coerced to 0.
+- **`STR$` refused an array element.** `STR$(7)` worked, `STR$(A(1))` raised `Unknown
+  function: STR`: the element looked like a call to a function named after the array,
+  so the string side gave up and the arithmetic side, which has no `STR$`, answered.
+  `STR$(A(1) * 2)` is fixed with it.
+- **`PRINT USING` printed only its first value**, and a space between two `#` fields
+  was swallowed into the first one, so `PRINT USING "## ##"; 3; 7` printed `3`.
+- **`EXIT FOR`, `EXIT DO`, `EXIT WHILE`, `EXIT FUNCTION` and `EXIT SUB` did not
+  exist.** A function could not return early, and a loop could only be left with a
+  flag variable -- in a dialect whose `FUNCTION` is otherwise complete.
+- **Smalltalk's `at:`, `at:put:`, `first` and `last` were on `Array` but not on
+  `Collection`**, so a program that built an `OrderedCollection` was told it "does not
+  understand at:".
+- **FOCAL's `;` separated commands only inside a `FOR`.** Anywhere else it reached the
+  expression tokenizer as an unexpected character. Fixing it exposed a second defect
+  in the fix itself -- a `;` inside a string made the splitter recurse on the whole
+  statement -- which the same example caught before it left the machine.
+
+### Changed
+
+- Twelve command rows and 560 in the table, run as programs and through the REPL.
+  `docs/LANGUAGE_GUIDE.md` documents block functions, named subroutines and `EXIT`,
+  and every sample in it was run.
+- `docs/ROADMAP.md` records what is still open -- COMAL's single-expression `FUNC`,
+  FOCAL's `DO` group running to the end of the program -- and the COMAL array read
+  that stopped reproducing and cannot be explained.
+- One corpus entry, `space_simulation.bas`, now carries a divergence note: the
+  recorded reference could not print a formatted table through `STR$` into an array
+  element and every row was an error line, so the port's complete table is a
+  difference worth writing down rather than a regression to chase.
+
 ## [22.4.0] - 2026-10-22
 
 The examples were the part of the tree nobody had asked whether it was good. Six new

@@ -600,6 +600,34 @@ public:
         // space, not at a tab. A listing that uses a tab is malformed in the
         // reference too, and the error naming the whole token is the useful
         // half of that.
+        // `;` separates commands on a line: `S A=1;S B=2` is two statements, and a
+        // FOR keeps its own, because its first `;` introduces the body. Before this,
+        // a `;` anywhere but inside a FOR reached the expression tokenizer, which
+        // reported it as an unexpected character.
+        const std::string word_before = upper(stripped.substr(0, stripped.find(' ')));
+        if (stripped.find(';') != std::string::npos && alias(word_before) != "FOR" &&
+            turtle_action(word_before).empty()) {
+            // Only a *top-level* `;` separates statements. The test above finds any of
+            // them, which includes the one inside `"; this draws a "`, so the split has
+            // to speak for itself: when it finds nothing to split, this is an ordinary
+            // statement and recursing on it would not terminate.
+            const std::vector<std::string> parts = split_top_level(stripped, ';');
+            if (parts.size() > 1) {
+                StatementResult combined;
+                for (const std::string& part : parts) {
+                    if (trim(part).empty()) {
+                        continue;
+                    }
+                    StatementResult piece = statement(part);
+                    combined.output += piece.output;
+                    if (piece.target.has_value()) {
+                        combined.target = piece.target;
+                    }
+                }
+                return combined;
+            }
+        }
+
         const std::size_t space = stripped.find(' ');
         const std::string head = stripped.substr(0, space);
         const std::string rest =

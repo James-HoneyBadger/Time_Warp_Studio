@@ -115,8 +115,118 @@ void Machine::install_functions() {
     interpreter_.function_hook = [this](std::string_view name) { return user_function(name); };
 }
 
+/// A value the way the evaluator wants it: text that is not a number is zero, which
+/// is what an unset numeric variable is in this dialect.
+double string_as_number(const std::string& text) {
+    double value = 0.0;
+    (void)parse_float(text, value);
+    return value;
+}
+
+std::optional<Value> Machine::run_function(const std::string& name,
+                                          const std::vector<Value>& arguments) {
+    const auto definition = state_.functions.find(name);
+    if (definition == state_.functions.end()) {
+        return std::nullopt;
+    }
+    // A FUNCTION body is statements, not an expression, so calling one means running
+    // the machine for the lines between this FUNCTION and its END FUNCTION. The
+    // caller is mid-statement, so its line is put back afterwards without recording a
+    // jump: `END FUNCTION` jumps to `return_line + 1`, and the run loop must not see
+    // that -- it would run the caller's statement a second time.
+    constexpr int kMaxDepth = 64;
+    if (state_.function_depth >= kMaxDepth) {
+        return std::nullopt;
+    }
+    const std::size_t caller_line = interpreter_.current_line;
+
+    CallFrame frame;
+    frame.return_line = caller_line;
+    frame.function_name = name;
+    const Definition& body = definition->second;
+    for (std::size_t index = 0; index < body.parameters.size(); ++index) {
+        const std::string& parameter = body.parameters[index];
+        const auto existing = interpreter_.variables().find(parameter);
+        frame.saved.emplace_back(parameter, existing == interpreter_.variables().end()
+                                                 ? std::nullopt
+                                                 : std::optional<Value>{existing->second});
+        const bool wants_text = !parameter.empty() && parameter.back() == '$';
+        const Value argument = index < arguments.size() ? arguments[index] : Value{0.0};
+        if (wants_text) {
+            assign(parameter, argument.is_text() ? argument.text() : printed_number(argument.number()));
+        } else {
+            assign(parameter, argument.is_text() ? string_as_number(argument.text()) : argument.number());
+        }
+    }
+    state_.calls.push_back(std::move(frame));
+    const std::size_t depth = state_.calls.size();
+    ++state_.function_depth;
+
+    const auto& lines = interpreter_.program_lines();
+    // Drive the body's lines here, because the run loop is the caller's and it will
+    // not do it: a statement that jumps moves `current_line`, and one that does not
+    // leaves it where it was, so the next line is this loop's business.
+    std::size_t line = body.start;
+    // The bound is the program's own length: a body that loops without a FOR cannot
+    // otherwise be told from one that is merely slow, and a hung IDE reports nothing.
+    std::size_t guard = 0;
+    const std::size_t limit = lines.size() * 1000 + 1000;
+    while (state_.calls.size() >= depth && interpreter_.running && guard++ < limit) {
+        if (line >= lines.size() || line > body.end) {
+            break;
+        }
+        interpreter_.resume_line(line);
+        state_.function_output += execute(lines[line].text);
+        const std::size_t next = interpreter_.current_line;
+        line = next == line ? line + 1 : next;
+    }
+    --state_.function_depth;
+
+    const bool finished = state_.calls.size() < depth;
+    while (state_.calls.size() >= depth) {
+        state_.calls.pop_back();  // a body that never reached its END FUNCTION
+    }
+    interpreter_.resume_line(caller_line);
+    if (!finished) {
+        return std::nullopt;
+    }
+    const auto found = interpreter_.variables().find(name);
+    if (found == interpreter_.variables().end()) {
+        return Value{0.0};
+    }
+    return found->second;
+}
+
+std::optional<std::string> Machine::invoke_text_function(const std::string& name,
+                                                         const std::vector<Value>& arguments) {
+    const std::optional<Value> result = run_function(name, arguments);
+    if (!result.has_value()) {
+        return std::nullopt;
+    }
+    return result->is_text() ? result->text() : printed_number(result->number());
+}
+
 std::optional<expr::UserFunction> Machine::user_function(std::string_view raw_name) {
     const std::string name = upper(raw_name);
+    if (const auto definition = state_.functions.find(name); definition != state_.functions.end()) {
+        // A `FUNCTION ... END FUNCTION` the program defined. Its arity is the number
+        // of parameters the header named, and the call runs the body -- see
+        // `invoke_function` for why that is the machine's job and not a lambda's.
+        return expr::UserFunction{
+            definition->second.parameters.size(),
+            [this, name](std::span<const double> arguments) {
+                std::vector<Value> values;
+                values.reserve(arguments.size());
+                for (const double argument : arguments) {
+                    values.emplace_back(argument);
+                }
+                const std::optional<Value> result = run_function(name, values);
+                if (!result.has_value()) {
+                    return 0.0;
+                }
+                return result->is_text() ? string_as_number(result->text()) : result->number();
+            }};
+    }
     if (name == "PEEK") {
         return expr::UserFunction{1, [this](std::span<const double> arguments) {
                                       const int address = static_cast<int>(arguments[0]);

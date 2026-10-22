@@ -76,7 +76,10 @@
 675   PRINT "  "; i; "  "; mark(i); "  "; letter$
 680 NEXT i
 690 PRINT
-695 PRINT "Sorted, so the table begins with the best paper: "; mark(1)
+692 top := mark(1)
+694 bottom := mark(8)
+695 PRINT "Top mark:  "; top
+696 PRINT "Lowest:    "; bottom
 
 710 REM --- 3. The same numbers as bars ---------------------------
 720 CALL banner("THE SHAPE OF THE CLASS")

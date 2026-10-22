@@ -570,8 +570,8 @@ std::string printed_number(double value) {
 
 // -- the string evaluator --------------------------------------------------
 
-Strings::Strings(Interpreter& interpreter, const State& state)
-    : interpreter_{interpreter}, state_{state} {}
+Strings::Strings(Interpreter& interpreter, const State& state, Machine* machine)
+    : interpreter_{interpreter}, state_{state}, machine_{machine} {}
 
 bool Strings::looks_numeric(std::string_view text) {
     double value = 0.0;
@@ -620,6 +620,63 @@ std::string Strings::array_element(std::string_view name, std::string_view index
         return {};
     }
     return array->second[static_cast<std::size_t>(slot)];
+}
+
+/// The value of an array element, or nothing when `head` is not a DIMensioned
+/// array. Both kinds are read the same way: the index is a literal or a variable,
+/// which is what a BASIC loop hands it.
+std::optional<Strings::Argument> Strings::element_of(std::string_view head,
+                                                     std::string_view expression) {
+    const std::string name = upper(head);
+    const auto numbers = interpreter_.arrays.find(name);
+    if (numbers != interpreter_.arrays.end()) {
+        // A numeric array element is arithmetic, and the arithmetic evaluator is the
+        // one place that knows how: `A(1)`, `A(I)` and `A(1) * 2` all arrive here.
+        if (machine_ != nullptr) {
+            return machine_->eval(expression);
+        }
+        const std::size_t open = expression.find('(');
+        if (open == std::string_view::npos || expression.back() != ')') {
+            return std::nullopt;
+        }
+        const std::string index = trim(expression.substr(open + 1, expression.size() - open - 2));
+        double position = 0.0;
+        const auto variable = interpreter_.variables().find(upper(index));
+        if (variable != interpreter_.variables().end() && variable->second.is_number()) {
+            position = variable->second.number();
+        } else if (!parse_float(index, position)) {
+            return std::nullopt;
+        }
+        const auto slot = static_cast<long>(position);
+        if (slot < 0 || static_cast<std::size_t>(slot) >= numbers->second.size()) {
+            throw BasicError("Array index out of bounds: " + std::to_string(slot));
+        }
+        return numbers->second[static_cast<std::size_t>(slot)];
+    }
+
+    const auto texts = state_.string_arrays.find(name);
+    if (texts == state_.string_arrays.end()) {
+        return std::nullopt;
+    }
+    const std::size_t open = expression.find('(');
+    if (open == std::string_view::npos || expression.back() != ')') {
+        return std::nullopt;
+    }
+    const std::string index = trim(expression.substr(open + 1, expression.size() - open - 2));
+    double position = 0.0;
+    const auto variable = interpreter_.variables().find(upper(index));
+    if (variable != interpreter_.variables().end() && variable->second.is_number()) {
+        position = variable->second.number();
+    } else if (!parse_float(index, position) && machine_ != nullptr) {
+        position = machine_->eval(index);
+    } else if (!parse_float(index, position)) {
+        return std::nullopt;
+    }
+    const auto slot = static_cast<long>(position);
+    if (slot < 0 || static_cast<std::size_t>(slot) >= texts->second.size()) {
+        throw BasicError("Array index out of bounds: " + std::to_string(slot));
+    }
+    return texts->second[static_cast<std::size_t>(slot)];
 }
 
 std::string Strings::evaluate(std::string_view expression) {
@@ -710,7 +767,17 @@ std::vector<std::string> Strings::parse_arguments(std::string_view text) const {
 
 Strings::Argument Strings::evaluate_arg(std::string_view input) {
     const std::string argument = trim(input);
-    if (!function_head(argument).empty()) {
+    const std::string head = function_head(argument);
+    if (!head.empty()) {
+        // `A(1)` looks exactly like a call and is not one: a name the program
+        // DIMensioned, followed by a parenthesised index, reads that element.
+        // Letting the call path have it is why `STR$(A(1))` answered
+        // `Unknown function: STR` -- the array read failed as a function, the
+        // expression fell through to the numeric evaluator, and that one has no
+        // `STR$` because the string functions live on this side.
+        if (const std::optional<Argument> element = element_of(head, argument)) {
+            return *element;
+        }
         return evaluate_function(argument);
     }
     double number = 0.0;
@@ -769,7 +836,11 @@ std::string Strings::evaluate_function(std::string_view input) {
     if (open == std::string::npos) {
         return expr;
     }
-    std::string name = upper(trim(expr.substr(0, open)));
+    // The `$` is part of a function's name -- `GRADE$` and `GRADE` are different
+    // functions -- so it is kept here and dropped only for the builtin table below,
+    // which is keyed without it.
+    const std::string full_name = upper(trim(expr.substr(0, open)));
+    std::string name = full_name;
     if (!name.empty() && name.back() == '$') {
         name.pop_back();
     }
@@ -801,6 +872,25 @@ std::string Strings::evaluate_function(std::string_view input) {
         return fallback;
     };
 
+    // A `FUNCTION GRADE$(M) ... END FUNCTION` the program defined: its body is
+    // statements, so the machine runs it and the answer is whatever the variable
+    // named after the function holds when END FUNCTION is reached.
+    if (state_.functions.find(full_name) != state_.functions.end() && machine_ != nullptr) {
+        std::vector<Value> values;
+        for (const std::string& argument : arguments) {
+            const Argument value = evaluate_arg(argument);
+            if (const auto* number = std::get_if<double>(&value)) {
+                values.emplace_back(*number);
+            } else {
+                values.emplace_back(std::get<std::string>(value));
+            }
+        }
+        if (const std::optional<std::string> answer =
+                machine_->invoke_text_function(full_name, values)) {
+            return *answer;
+        }
+        return "";
+    }
     if (name == "LEN") {
         if (arguments.empty()) {
             throw BasicError("LEN requires 1 argument");

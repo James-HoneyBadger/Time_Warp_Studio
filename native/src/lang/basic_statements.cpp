@@ -143,7 +143,7 @@ std::optional<std::string> string_operand(Machine& machine, std::string_view exp
     }
     if (expr.find("$(") != std::string::npos) {
         try {
-            Strings strings{machine.interpreter(), machine.state()};
+            Strings strings{machine.interpreter(), machine.state(), &machine};
             return strings.evaluate(expr);
         } catch (const BasicError&) {
             return std::nullopt;
@@ -263,6 +263,20 @@ std::string tail(std::string_view text, std::size_t from) {
 // -- the dispatch ----------------------------------------------------------
 
 std::string Machine::execute(std::string_view command) {
+    // A user FUNCTION runs inside an expression, so anything it prints is collected
+    // and handed back with the statement that called it -- ahead of that statement's
+    // own text, which is the order the program wrote them in.
+    const std::size_t output_mark = state_.function_output.size();
+    std::string own = execute_statement(command);
+    if (state_.function_output.size() == output_mark) {
+        return own;
+    }
+    std::string printed = state_.function_output.substr(output_mark);
+    state_.function_output.erase(output_mark);
+    return printed + own;
+}
+
+std::string Machine::execute_statement(std::string_view command) {
     scan_program();
     install_functions();
     // `ON TIMER` is a real interrupt: checked at every statement boundary, which is
@@ -399,6 +413,23 @@ std::string Machine::execute(std::string_view command) {
     }
     if (is_keyword(cmd, "LOOP")) {
         return loop(strip_comment(tail(text, 5)));
+    }
+    // `EXIT FOR` / `EXIT DO` / `EXIT WHILE` leave the innermost loop of that kind
+    // and land on the line after its terminator; `EXIT FUNCTION` and `EXIT SUB` return
+    // from the block. Without these a function could not return early, which is the
+    // one thing a function is most often wanted for.
+    if (starts_with(cmd, "EXIT ")) {
+        const std::string what = trim(cmd.substr(5));
+        if (what == "FUNCTION") {
+            return end_function();
+        }
+        if (what == "SUB") {
+            return end_sub();
+        }
+        if (what == "FOR" || what == "DO" || what == "WHILE") {
+            return exit_loop(what);
+        }
+        return "❌ EXIT needs FUNCTION, SUB, FOR, DO or WHILE\n";
     }
     if (starts_with(cmd, "SELECT ")) {
         return select_case(strip_comment(tail(text, 11)));
@@ -793,9 +824,21 @@ std::string Machine::print(const std::string& args_in) {
         const std::string item = trim(raw);
         const std::string item_upper = upper(item);
 
-        if (has_string_concat(item) || mentions_string_function(item_upper)) {
+        // A `FUNCTION GRADE$(M)` is a text function too, and its name is not in the
+        // builtin list this test knows about.
+        const auto user_text_function = [this](const std::string& upper_item) {
+            const std::size_t open = upper_item.find('(');
+            if (open == std::string::npos) {
+                return false;
+            }
+            const std::string head = upper_item.substr(0, open);
+            return !head.empty() && head.back() == '$' &&
+                   state_.functions.find(head) != state_.functions.end();
+        };
+        if (has_string_concat(item) || mentions_string_function(item_upper) ||
+            user_text_function(item_upper)) {
             try {
-                Strings strings{interpreter_, state_};
+                Strings strings{interpreter_, state_, this};
                 items.push_back(strings.evaluate(item));
                 continue;
             } catch (const BasicError&) {
@@ -872,7 +915,7 @@ std::string Machine::print(const std::string& args_in) {
         }
         if (mentions_string_function(item_upper)) {
             try {
-                Strings strings{interpreter_, state_};
+                Strings strings{interpreter_, state_, this};
                 items.push_back(strings.evaluate(item));
             } catch (const BasicError&) {
                 std::string error;
@@ -940,8 +983,11 @@ std::string Machine::print_using(const std::string& args) {
         }
     }
 
+    // Values are separated by `;` as well as `,`: `PRINT USING "##  ##"; 3; 7` is
+    // the documented spelling, and splitting on commas alone made the whole tail one
+    // expression, which then evaluated to zero.
     std::vector<std::string> expressions;
-    for (const std::string& field : split_plain(values_part, ',')) {
+    for (const std::string& field : split_top(values_part, ";,")) {
         if (!trim(field).empty()) {
             expressions.push_back(trim(field));
         }
@@ -970,8 +1016,10 @@ std::string Machine::print_using(const std::string& args) {
         if (std::strchr("#+-$*", character) != nullptr) {
             std::size_t scan = index;
             bool has_decimal = false;
+            // A space is a separator, not part of the mask: `## ##` is two fields,
+            // and swallowing the space made it one field that ate both values.
             while (scan < format.size() &&
-                   std::strchr("#.,+-$* ", format[scan]) != nullptr) {
+                   std::strchr("#.,+-$*", format[scan]) != nullptr) {
                 if (format[scan] == '.') {
                     has_decimal = true;
                 }
@@ -1082,7 +1130,7 @@ std::string Machine::let(const std::string& args) {
             if (array != state_.string_arrays.end()) {
                 std::string value;
                 try {
-                    Strings strings{interpreter_, state_};
+                    Strings strings{interpreter_, state_, this};
                     value = strings.evaluate(expr);
                 } catch (const BasicError&) {
                     value = expr;
@@ -1153,7 +1201,7 @@ std::string Machine::let(const std::string& args) {
             assign(var_name, clock_date_text());
         } else {
             try {
-                Strings strings{interpreter_, state_};
+                Strings strings{interpreter_, state_, this};
                 assign(var_name, strings.evaluate(expr));
             } catch (const BasicError&) {
                 assign(var_name, expr);
@@ -1169,7 +1217,7 @@ std::string Machine::let(const std::string& args) {
 
     if (!expr.empty() && expr.front() == '"') {
         try {
-            Strings strings{interpreter_, state_};
+            Strings strings{interpreter_, state_, this};
             assign(var_name, strings.evaluate(expr));
         } catch (const BasicError&) {
             assign(var_name, strip_quotes(expr));
@@ -1189,7 +1237,7 @@ std::string Machine::let(const std::string& args) {
         }
         // A string function that returns a number (`LEN`, `INSTR`, `VAL`).
         try {
-            Strings strings{interpreter_, state_};
+            Strings strings{interpreter_, state_, this};
             const std::string text = strings.evaluate(expr);
             double value = 0.0;
             if (parse_float(text, value)) {
@@ -1578,13 +1626,72 @@ std::string Machine::function_definition(const std::string& args) {
     return {};
 }
 
+/// The line index of the terminator that closes the block opened at `from`, counting
+/// nesting of the same kind. A `FOR` closes at its `NEXT`, a `DO` at its `LOOP` and a
+/// `WHILE` at its `WEND`.
+std::optional<std::size_t> matching_terminator(Interpreter& interpreter, std::size_t from,
+                                               const std::string& opener,
+                                               const std::string& closer) {
+    const auto& lines = interpreter.program_lines();
+    int depth = 1;
+    for (std::size_t index = from + 1; index < lines.size(); ++index) {
+        const std::string code = upper(trim(lines[index].text));
+        if (code.rfind(opener + " ", 0) == 0 || code == opener) {
+            ++depth;
+        } else if (code.rfind(closer, 0) == 0) {
+            --depth;
+            if (depth == 0) {
+                return index;
+            }
+        }
+    }
+    return std::nullopt;
+}
+
+std::string Machine::exit_loop(const std::string& kind) {
+    const std::string opener = kind;
+    const std::string closer = kind == "FOR" ? "NEXT" : (kind == "DO" ? "LOOP" : "WEND");
+    if (kind == "FOR") {
+        if (state_.fors.empty()) {
+            return "❌ EXIT FOR outside a FOR\n";
+        }
+        state_.fors.pop_back();
+    } else if (kind == "DO") {
+        if (state_.dos.empty()) {
+            return "❌ EXIT DO outside a DO\n";
+        }
+        state_.dos.pop_back();
+    } else {
+        if (state_.whiles.empty()) {
+            return "❌ EXIT WHILE outside a WHILE\n";
+        }
+        state_.whiles.pop_back();
+    }
+    const std::optional<std::size_t> end =
+        matching_terminator(interpreter_, interpreter_.current_line, opener, closer);
+    if (!end.has_value()) {
+        return "❌ " + closer + " is missing for this " + kind + "\n";
+    }
+    interpreter_.jump_to(*end + 1);
+    return {};
+}
+
 std::string Machine::end_function() {
     if (state_.calls.empty()) {
         return {};
     }
     CallFrame frame = std::move(state_.calls.back());
     state_.calls.pop_back();
-    const double result = number_of(frame.function_name).value_or(0.0);
+    // The answer is whatever the variable named after the function holds -- text for
+    // `FUNCTION GRADE$`, a number otherwise. Coercing it to a number here is what made
+    // a `$` function answer 0: the text was read as a double and written back as one.
+    Value result{0.0};
+    if (!frame.function_name.empty()) {
+        if (const auto found = interpreter_.variables().find(frame.function_name);
+            found != interpreter_.variables().end()) {
+            result = found->second;
+        }
+    }
     for (const auto& [name, value] : frame.saved) {
         if (value.has_value()) {
             interpreter_.variables()[name] = *value;
@@ -1592,7 +1699,9 @@ std::string Machine::end_function() {
             interpreter_.remove_variable(name);
         }
     }
-    interpreter_.set_number(frame.function_name, result);
+    if (!frame.function_name.empty()) {
+        interpreter_.variables()[frame.function_name] = result;
+    }
     interpreter_.jump_to(frame.return_line + 1);
     return {};
 }

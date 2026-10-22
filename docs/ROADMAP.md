@@ -42,7 +42,7 @@ derived rather than remembered.
 | Database | A SQLite-backed Database tab, the shared `SQL` statement in nine languages, scripts, tables and schema; compiled programs link SQLite |
 | Automation | JSON-RPC over stdin/stdout (`language.run`, `repl.*`, `debug.*`, `sql.*`, `project.*`, `watch.evaluate`) and the `twc` terminal compiler |
 | Packaging | `make install`; tagged releases build a Windows installer and portable ZIP (Qt 6), a second Windows installer for Windows 7 (Qt 5.15), a universal macOS disk image, `.deb`, `.rpm`, AppImage, tarball and container artifacts |
-| Quality gates | 24 CTest suites in 4 build configurations and on four platforms (Linux, Windows, Windows with Qt 5.15, macOS); the frozen-corpus gate over 662 programs (470 language, 192 Scheme); 550 command rows run as programs and through the REPL; 69 example programs through the smoke gate; and the documentation gates (links, claims, version, Markdown lint) |
+| Quality gates | 24 CTest suites in 4 build configurations and on four platforms (Linux, Windows, Windows with Qt 5.15, macOS); the frozen-corpus gate over 662 programs (470 language, 192 Scheme); 560 command rows run as programs and through the REPL; 69 example programs through the smoke gate; and the documentation gates (links, claims, version, Markdown lint) |
 
 ---
 
@@ -57,32 +57,39 @@ written down in `WAIVERS`.
 
 **Still open**
 
-Four, all found by writing the new examples at 22.4.0 rather than by reading the code.
-They are listed because a language the IDE offers should not have a documented feature
-that cannot be used, and each is small enough to be somebody's afternoon:
+Two, both about a structured block that cannot do what its name suggests:
 
-- **BASIC's `FUNCTION ... END FUNCTION` cannot be called.** The definition parses and is
-  skipped, and a call in an expression throws `Unknown function: TWICE`, whichever order
-  the definition and the call appear in. The pieces exist — `Machine::function_definition`,
-  `Machine::end_function` and a `CallFrame` — but nothing registers a `FunctionHook`, which
-  is how COMAL's `FUNC` reaches the evaluator; BASIC's bodies are statements, so the hook
-  would have to run the machine rather than a lambda. The example that found it
-  (`basic/gradebook.bas`) uses `GOSUB` instead, which is what BASIC did for thirty years.
-- **`STR$` and `PRINT ... +` reject an array element**: `STR$(7)` works, `STR$(A(1))`
-  raises `Unknown function: STR`.
-- **`PRINT USING` prints only its first value** when two are given on one line; `FORMAT$`
-  in a concatenation is the working form.
-- **A COMAL program can read an array element inside a loop and get zero for the same
-  index outside it.** `comal/results_table.comal` reads `mark(i)` correctly for all eight
-  `i` and reports `mark(8)` as 0 four lines later; nothing in isolation reproduces it, so
-  it is written down here rather than worked around silently.
+- **A COMAL `FUNC` body must be a single expression**, and `LOCAL` is not
+  implemented, so a function cannot hold a working variable of its own. A four-way
+  choice has to be a `PROC` that leaves its answer in a global, which is what
+  `comal/results_table.comal` does and comments on.
+- **A FOCAL `DO` group runs to the end of the program**: there is no `RETURN`, so a
+  group cannot hand control back to its caller. `focal/showcase.foc` works around it
+  by putting its group last and saying so.
+
+One gap closed itself: at 22.4.0 a COMAL program read `mark(8)` as zero four lines
+after reading it correctly inside a loop. It has not reproduced since, in the program
+or in any isolation, and `comal/results_table.comal` reads the extremes directly now
+with the smoke gate behind it. It is recorded here because a symptom nobody can
+explain is worth knowing about.
 
 Every defect below has a regression row in `native/share/command_rows.json` and, where the
 behaviour is expressible in a unit test, a case in the language's test module. The
 section stays because the next port has to keep them fixed: a port that quietly
 restores one of these is a regression even though it is new code.
 
-**Fixed during the examination** (each has a regression row, and the first two also a
+**Fixed while writing the examples at 22.4.1**, all found by programs rather than by
+reading, and each with a command row: BASIC's `FUNCTION ... END FUNCTION` could not be
+called at all (the body's statements now run, text answers and printed output
+included); `STR$` refused an array element; `PRINT USING` printed only its first value
+and swallowed the space that separates two fields; `EXIT FOR`, `EXIT DO`, `EXIT WHILE`,
+`EXIT FUNCTION` and `EXIT SUB` did not exist, so a function could not return early;
+`at:`, `at:put:`, `first` and `last` were on `Array` but not on `Collection`, so an
+`OrderedCollection` "did not understand at:"; FOCAL's `;` separated commands only
+inside a `FOR`. One corpus entry (`space_simulation.bas`) carries a divergence note as
+a result: the reference printed error lines where the program asked for a table.
+
+**Fixed during the earlier examination** (each has a regression row, and the first two also a
 unit test)
 
 - **An unresolved name is reported, not echoed.** `PRINT UNSET` printed `UNSET`,

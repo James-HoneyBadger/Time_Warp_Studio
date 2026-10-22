@@ -3697,6 +3697,69 @@
    "command": "ARG reads a call's argument",
    "source": "CALL echo 'hello', 'world'\nEXIT\necho:\nSAY ARG(1) || ' ' || ARG(2)\nRETURN",
    "expect": "prints:hello world"
+  },
+  {
+   "language": "BASIC",
+   "command": "FUNCTION called from an expression",
+   "source": "PRINT TWICE(21)\nEND\nFUNCTION TWICE(X)\nTWICE = X * 2\nEND FUNCTION",
+   "expect": "prints:42",
+   "also": [
+    "FUNCTION / END FUNCTION"
+   ]
+  },
+  {
+   "language": "BASIC",
+   "command": "STR$ of an array element",
+   "source": "DIM N(3)\nN(2) = 7\nPRINT STR$(N(2))",
+   "expect": "prints:7"
+  },
+  {
+   "language": "BASIC",
+   "command": "PRINT USING with two values",
+   "source": "PRINT USING \"## ##\"; 3; 7",
+   "expect": "prints: 3  7"
+  },
+  {
+   "language": "FOCAL",
+   "command": "; separates commands on a line",
+   "source": "01.10 S A=1;S B=2\n01.20 T \"A=\",A,\" B=\",B\n01.30 Q",
+   "expect": "prints:A=1.00 B=2.00"
+  },
+  {
+   "language": "FOCAL",
+   "command": "a semicolon inside a string is text",
+   "source": "01.10 T \"; this is text\"\n01.20 Q",
+   "expect": "prints:; this is text"
+  },
+  {
+   "language": "Smalltalk",
+   "command": "at: on a collection",
+   "source": "| c |\nc := OrderedCollection new.\nc add: 'a'.\nc add: 'b'.\nTranscript show: (c at: 2); cr.\nnil.",
+   "expect": "prints:b"
+  },
+  {
+   "language": "Smalltalk",
+   "command": "first and last on a collection",
+   "source": "| c |\nc := OrderedCollection new.\nc add: 'a'.\nc add: 'b'.\nTranscript show: c first; show: c last; cr.\nnil.",
+   "expect": "prints:ab"
+  },
+  {
+   "language": "BASIC",
+   "command": "EXIT FOR leaves the loop",
+   "source": "FOR I = 1 TO 5\nIF I = 3 THEN EXIT FOR\nPRINT I\nNEXT I\nPRINT \"done\"",
+   "expect": "prints:done"
+  },
+  {
+   "language": "BASIC",
+   "command": "EXIT FUNCTION returns early",
+   "source": "PRINT FIRST(9)\nEND\nFUNCTION FIRST(N)\nFIRST = 1\nEXIT FUNCTION\nFIRST = 2\nEND FUNCTION",
+   "expect": "prints:1"
+  },
+  {
+   "language": "BASIC",
+   "command": "EXIT DO leaves the loop",
+   "source": "N = 0\nDO\nN = N + 1\nIF N >= 3 THEN EXIT DO\nLOOP\nPRINT N",
+   "expect": "prints:3"
   }
  ],
  "waivers": [

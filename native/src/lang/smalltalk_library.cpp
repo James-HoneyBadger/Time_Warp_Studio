@@ -660,6 +660,46 @@ const Library& library() {
         add(result.collection, "notEmpty", {}, [](Ptr receiver, std::vector<Ptr>, FramePtr) {
             return Value::of_boolean(!items_of(receiver).empty());
         });
+        // Indexed access belongs to every sequence, not only to `Array`. Without
+        // these, a program that built an `OrderedCollection` and then asked it for
+        // its first element was told it "does not understand at:", which is the kind
+        // of gap that makes a language feel half-built.
+        add(result.collection, "at:", {"index"},
+            [](Ptr receiver, std::vector<Ptr> arguments, FramePtr) -> Ptr {
+                const std::vector<Ptr> items = items_of(receiver);
+                const long long index = integer_of(arguments.at(0));
+                if (index < 1 || index > static_cast<long long>(items.size())) {
+                    throw StError("index " + std::to_string(index) +
+                                  " is out of range for a collection of " +
+                                  std::to_string(items.size()));
+                }
+                return items[static_cast<std::size_t>(index - 1)];
+            });
+        add(result.collection, "at:put:", {"index", "value"},
+            [](Ptr receiver, std::vector<Ptr> arguments, FramePtr) -> Ptr {
+                const long long index = integer_of(arguments.at(0)) - 1;
+                if (index < 0 || index >= static_cast<long long>(receiver->items.size())) {
+                    throw StError("index " + print_string(arguments.at(0)) +
+                                  " is out of range for a collection of " +
+                                  std::to_string(receiver->items.size()));
+                }
+                receiver->items[static_cast<std::size_t>(index)] = arguments.at(1);
+                return arguments.at(1);
+            });
+        add(result.collection, "first", {}, [](Ptr receiver, std::vector<Ptr>, FramePtr) -> Ptr {
+            const std::vector<Ptr> items = items_of(receiver);
+            if (items.empty()) {
+                throw StError("an empty collection has no first element");
+            }
+            return items.front();
+        });
+        add(result.collection, "last", {}, [](Ptr receiver, std::vector<Ptr>, FramePtr) -> Ptr {
+            const std::vector<Ptr> items = items_of(receiver);
+            if (items.empty()) {
+                throw StError("an empty collection has no last element");
+            }
+            return items.back();
+        });
         add(result.collection, "do:", {"aBlock"},
             [](Ptr receiver, std::vector<Ptr> arguments, FramePtr) -> Ptr {
                 for (const Ptr& item : items_of(receiver)) {
