@@ -125,23 +125,62 @@ target_link_libraries(scheme_bench PRIVATE timewarp::scheme)
 timewarp_enable_warnings(scheme_bench)
 
 # ---------------------------------------------------------------------------
-# Native language executors
-#
-# One executor per line-by-line or whole-program language, plus the shared
-# expression evaluator, canvas host and I/O ports they run against. This is why
-# the library is separate from `timewarp_scheme`: Scheme has its own machine,
-# while these share one interpreter loop and one executor interface. Forth is
-# whole-program like Logo and Smalltalk, and it lives here too.
-#
-# `executor_for()` answers for every language in this library and returns null
-# only for Scheme, which is the machine rather than an executor.
+# Audio and I/O: two libraries that used to be inside the language one
 # ---------------------------------------------------------------------------
+#
+# They were files in `timewarp_lang`'s source list, which meant a change to BASIC's
+# `PRINT` recompiled the mixer and the gamepad reader. They are separate libraries
+# now, both Qt-free, and the executors that reach them link them: `music.cpp` is
+# where `SOUND` and `PLAY` get their tones, `ports.cpp` is `SERIAL`, `gamepad.cpp`
+# is `STICK`/`STRIG`. A consumer of the language library still sees their symbols,
+# because the link is PUBLIC -- nothing else had to change.
 
-add_library(timewarp_lang
+add_library(timewarp_audio
     src/audio/music.cpp
     src/audio/mixer.cpp
+)
+add_library(timewarp::audio ALIAS timewarp_audio)
+target_include_directories(timewarp_audio
+    PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+)
+target_compile_features(timewarp_audio PUBLIC cxx_std_20)
+timewarp_enable_warnings(timewarp_audio)
+
+add_library(timewarp_io
     src/io/ports.cpp
     src/io/gamepad.cpp
+)
+add_library(timewarp::io ALIAS timewarp_io)
+target_include_directories(timewarp_io
+    PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+)
+target_compile_features(timewarp_io PUBLIC cxx_std_20)
+timewarp_enable_warnings(timewarp_io)
+if(NOT MSVC)
+    # The two flags the rest of the engine needs and the warnings function cannot
+    # know about: `-ffp-contract=off` because a fused multiply-add moves a vertex by
+    # 6e-17 and the drawings are compared with the reference, and the GCC-only
+    # warnings that Clang rejects.
+    target_compile_options(timewarp_audio PRIVATE ${TIME_WARP_GNU_WARNING_FLAGS}
+        ${TIME_WARP_NULL_DEREFERENCE} -ffp-contract=off)
+    target_compile_options(timewarp_io PRIVATE ${TIME_WARP_GNU_WARNING_FLAGS}
+        ${TIME_WARP_NULL_DEREFERENCE})
+endif()
+
+# ---------------------------------------------------------------------------
+# The language core, and one object library per language
+# ---------------------------------------------------------------------------
+#
+# The library is the interpreter loop, the value type, dispatch and the registry.
+# Each language is an OBJECT library: the same link structure as before, but editing
+# the Logo executor recompiles the Logo executor instead of every language in the
+# tree, and adding a language is a block of three lines in the list below rather
+# than a line in the middle of one long source list.
+#
+# `executor_for()` answers for every language here and returns null only for Scheme,
+# which is the machine rather than an executor.
+
+add_library(tw_lang_core OBJECT
     src/lang/value.cpp
     src/lang/raster.cpp
     src/lang/screen_mode.cpp
@@ -151,53 +190,78 @@ add_library(timewarp_lang
     src/lang/repl.cpp
     src/lang/interpreter.cpp
     src/lang/mersenne_random.cpp
+)
+
+add_library(tw_lang_basic OBJECT
     src/lang/basic.cpp
     src/lang/basic_statements.cpp
     src/lang/basic_features.cpp
     src/lang/basic_library.cpp
     src/lang/basic_text.cpp
-    src/lang/chip8.cpp
-    src/lang/focal.cpp
-    src/lang/forth.cpp
-    src/lang/pilot.cpp
-    src/lang/comal.cpp
-    src/lang/apl.cpp
-    src/lang/rexx.cpp
+)
+add_library(tw_lang_logo OBJECT src/lang/logo.cpp)
+add_library(tw_lang_chip8 OBJECT src/lang/chip8.cpp)
+add_library(tw_lang_focal OBJECT src/lang/focal.cpp)
+add_library(tw_lang_pilot OBJECT src/lang/pilot.cpp)
+add_library(tw_lang_comal OBJECT src/lang/comal.cpp)
+add_library(tw_lang_apl OBJECT src/lang/apl.cpp)
+add_library(tw_lang_rexx OBJECT src/lang/rexx.cpp)
+add_library(tw_lang_smalltalk OBJECT
     src/lang/smalltalk.cpp
     src/lang/smalltalk_library.cpp
     src/lang/smalltalk_driver.cpp
-    src/lang/logo.cpp
 )
-add_library(timewarp::lang ALIAS timewarp_lang)
-# A statement's arithmetic is the ported expression evaluator, not a second
-# parser inside every executor.
-target_link_libraries(timewarp_lang PUBLIC timewarp::expr)
+add_library(tw_lang_forth OBJECT src/lang/forth.cpp)
 
-target_include_directories(timewarp_lang
-    PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+set(TIME_WARP_LANGUAGE_OBJECTS
+    tw_lang_core
+    tw_lang_basic
+    tw_lang_logo
+    tw_lang_chip8
+    tw_lang_focal
+    tw_lang_pilot
+    tw_lang_comal
+    tw_lang_apl
+    tw_lang_rexx
+    tw_lang_smalltalk
+    tw_lang_forth
 )
 
-target_compile_features(timewarp_lang PUBLIC cxx_std_20)
-
-if(MSVC)
-    target_compile_options(timewarp_lang PRIVATE /W4 /permissive- /fp:precise)
-else()
-    target_compile_options(timewarp_lang PRIVATE
-        -Wall -Wextra -Wpedantic -Wshadow -Wcast-qual ${TIME_WARP_GNU_WARNING_FLAGS}
-        ${TIME_WARP_NULL_DEREFERENCE}
-        # No fused multiply-add. The reference is CPython, which rounds every
-        # multiplication and addition separately; contracting `start + i*step`
-        # into one fma changes the last bits of a shape's vertices, and a
-        # vertex that is 6e-17 away from where Python puts it is a different
-        # drawing. Compiling without contraction is what makes the comparison
-        # about behaviour rather than about rounding.
-        -ffp-contract=off
-    )
-    if(TIME_WARP_EXPR_WERROR)
-        target_compile_options(timewarp_lang PRIVATE -Werror)
+# One loop over the object libraries so the include path, the standard and the
+# warnings are said once. A new language adds a name to the list above and nothing
+# else.
+foreach(objects IN LISTS TIME_WARP_LANGUAGE_OBJECTS)
+    target_include_directories(${objects} PUBLIC
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>)
+    target_compile_features(${objects} PUBLIC cxx_std_20)
+    target_link_libraries(${objects} PUBLIC timewarp::expr timewarp::audio timewarp::io)
+    timewarp_enable_warnings(${objects})
+    if(MSVC)
+        target_compile_options(${objects} PRIVATE /permissive- /fp:precise)
+    else()
+        target_compile_options(${objects} PRIVATE ${TIME_WARP_GNU_WARNING_FLAGS}
+            ${TIME_WARP_NULL_DEREFERENCE}
+            # No fused multiply-add. The reference rounds every multiplication and
+            # addition separately; contracting `start + i*step` into one fma changes
+            # the last bits of a shape's vertices, and a vertex 6e-17 away from where
+            # the reference puts it is a different drawing.
+            -ffp-contract=off)
     endif()
-endif()
+endforeach()
 
+# The library itself is the union of those objects: one link target for everything
+# that consumes the engines, and the same symbols as before. A static library whose
+# only sources are the object files is the shape CMake expects -- an INTERFACE
+# library cannot carry them.
+add_library(timewarp_lang STATIC)
+add_library(timewarp::lang ALIAS timewarp_lang)
+target_link_libraries(timewarp_lang PUBLIC timewarp::expr timewarp::audio timewarp::io)
+target_include_directories(timewarp_lang PUBLIC
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>)
+target_compile_features(timewarp_lang PUBLIC cxx_std_20)
+foreach(objects IN LISTS TIME_WARP_LANGUAGE_OBJECTS)
+    target_sources(timewarp_lang PRIVATE $<TARGET_OBJECTS:${objects}>)
+endforeach()
 if(TIME_WARP_EXPR_BUILD_TESTS)
     add_executable(lang_tests tests/lang_tests.cpp)
     target_link_libraries(lang_tests PRIVATE timewarp::lang)
