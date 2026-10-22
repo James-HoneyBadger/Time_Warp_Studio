@@ -1456,8 +1456,9 @@ void MainWindow::buildMenuBar() {
         QMessageBox::about(
             this, tr("About Time Warp Studio"),
             tr("<b>Time Warp Studio</b> %1"
-               "<p>An old-school programming environment for ten languages: BASIC, "
-               "APL, Logo, PILOT, FOCAL, Scheme, CHIP-8, COMAL, REXX and Smalltalk, "
+               "<p>An old-school programming environment for eleven languages: BASIC, "
+               "APL, Logo, PILOT, FOCAL, Scheme, CHIP-8, COMAL, REXX, Smalltalk and "
+               "Forth, "
                "with an integrated turtle graphics canvas — and two complete "
                "machines inside it: the HB-1 home computer and a live CHIP-8."
                "<p>Built with C++20 and Qt6. Every language runs natively; the "

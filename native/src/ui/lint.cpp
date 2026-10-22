@@ -445,7 +445,7 @@ constexpr BlockRule kRexxBlocks[] = {
 
 /// Brackets, across the whole program.
 ///
-/// Every one of the ten languages pairs them, and in every one of them a bracket
+/// Every one of the eleven languages pairs them, and in every one of them a bracket
 /// left open means the rest of the program is misread -- which is the single most
 /// common beginner mistake and the one worth reporting at the bracket rather than
 /// at the end of the file.

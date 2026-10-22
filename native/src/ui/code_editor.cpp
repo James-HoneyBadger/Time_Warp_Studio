@@ -835,7 +835,7 @@ bool CodeEditor::lineOpensBlock(const QString& line) const {
     if (trimmed.isEmpty()) {
         return false;
     }
-    // The words that begin a block in any of the ten languages, plus the bracket
+    // The words that begin a block in any of the eleven languages, plus the bracket
     // that begins one in six of them. Checked case-insensitively because most of
     // the languages are, and a false positive only costs one indent level.
     static const QStringList openers{QStringLiteral("FOR"),   QStringLiteral("WHILE"),
