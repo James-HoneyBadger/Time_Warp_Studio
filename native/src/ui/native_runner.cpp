@@ -773,6 +773,7 @@ void NativeRunner::run() {
         [this](const std::string& prompt) { return read_input(prompt); });
     engine->set_sql_callback(sql_callback_);
     engine->set_profiling(profiling_);
+    engine->set_tracing(tracing_);
 
     // A binary ROM was decoded through the codec that preserves every byte
     // (including 0x0D, which a QTextDocument would normalise); a listing is

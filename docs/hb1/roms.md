@@ -97,6 +97,16 @@ Stored lines appear on the PROGRAM page as you type them, with the cursor left o
 the line you just entered. A bare number that is not in the program refuses with
 `?LINE 15 NOT FOUND` rather than doing nothing.
 
+**The line editor is the machine's**, not the language's: `AUTO`, `RENUM`,
+`DELETE a-b`, `LIST a-b`, `UNDO` and `TRON` live at the prompt and act on the
+listing on the PROGRAM page, whichever engine would run it. The owner's manual has
+[the table](../hb1/README.md#the-prompt); `RENUM` is the one worth reading about,
+because it rewrites the jumps as well as the numbers.
+
+`TRON` is the machine's window into a run: each statement's line number is printed
+as the program reaches it, through the same output stream as the program's own
+`PRINT`, so a trace and a result interleave the way they do on paper.
+
 **Start with:** `Examples/basic/hello.bas`, then `Examples/basic/showcase.bas`.
 
 ---

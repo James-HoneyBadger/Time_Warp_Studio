@@ -284,6 +284,16 @@ public:
     void set_profiling(bool on) noexcept { profiling_ = on; }
     [[nodiscard]] bool profiling() const noexcept { return profiling_; }
 
+    /// Prints `[line]` before each statement, which is what a 1982 machine's
+    /// `TRON` did and the only way to see which arm of a `GOTO` a program took.
+    ///
+    /// It goes through `log_output`, so a trace arrives in the same stream as
+    /// the program's own output -- no second channel, no second thread, and a
+    /// caller that already streams output gets tracing for one flag. Off by
+    /// default, and a whole-program language has no statements to trace.
+    void set_tracing(bool on) noexcept { tracing_ = on; }
+    [[nodiscard]] bool tracing() const noexcept { return tracing_; }
+
     /// Per-line totals for the last profiled run, longest first. Lines that
     /// never ran are left out; ties are ordered by source line so the report is
     /// stable between runs that measure the same times.
@@ -338,6 +348,7 @@ private:
     std::uint64_t steps_used_ = 0;
     double elapsed_ms_ = 0.0;
     bool profiling_ = false;
+    bool tracing_ = false;
     std::map<std::size_t, LineProfile> profile_;
     bool timed_out_ = false;
     bool iteration_capped_ = false;

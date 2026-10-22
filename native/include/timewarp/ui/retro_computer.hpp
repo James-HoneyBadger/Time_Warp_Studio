@@ -22,6 +22,7 @@
 #pragma once
 
 #include <QHash>
+#include <QList>
 #include <QMainWindow>
 #include <QStringList>
 
@@ -80,6 +81,10 @@ public:
     void setLanguage(Language language);
     /// The current ROM's program.
     [[nodiscard]] QString program() const;
+    /// True while `AUTO` is numbering lines.
+    [[nodiscard]] bool autoNumbering() const noexcept { return auto_active_; }
+    /// True while `TRON` is on: each statement's line is printed as it runs.
+    [[nodiscard]] bool tracing() const noexcept { return trace_on_; }
     /// Replaces the current ROM's program without booting.
     void loadProgram(const QString& source);
     /// Raises the PROGRAM page, the place to read or edit the program. The
@@ -179,6 +184,43 @@ private:
     void handlePromptLine();
     /// Handles a numbered BASIC line. Returns false when `command` is not one.
     bool handleBasicLine(const QString& command);
+
+    // -- the BASIC ROM's line editor --------------------------------------
+    //
+    // A 1982 machine's BASIC is judged by its editor, and this one had only
+    // numbered lines. `AUTO` is almost pure prompt behaviour, `RENUM` renumbers
+    // *and rewrites every jump*, and the range forms of `LIST` and `DELETE` are
+    // what a listing of more than one screen needs.
+
+    /// The words below, which only make sense with line numbers. Called before
+    /// `handleMachineCommand`, because `DELETE 20-30` must not reach HB DOS's
+    /// `DELETE "NAME"`. False for anything it does not own.
+    bool handleBasicEditor(const QString& command);
+
+    /// One line of the listing, as the machine parsed it.
+    struct BasicLine {
+        int number = 0;
+        QString body;
+    };
+    /// The listing, in the order it is stored.
+    [[nodiscard]] QList<BasicLine> basicLines() const;
+    void setBasicLines(const QList<BasicLine>& lines);
+
+    /// Renumbers from `start` by `step`, rewriting the targets in every line.
+    /// `dangling` counts targets that named a line the program does not have;
+    /// they are left alone, because changing a number a program cannot resolve
+    /// would turn a runtime error into a different runtime error.
+    bool renumberBasic(int start, int step, int* dangling);
+
+    /// `AUTO`: the prompt offers the next line number, and the line that is typed
+    /// carries it. An empty line ends it, which is what the period's machines did.
+    void startAuto(int start, int step);
+    void endAuto();
+    void advanceAuto(int stored);
+
+    /// The one-deep backup `NEW` leaves behind. `UNDO` puts it back.
+    void rememberForUndo();
+    void restoreUndo();
     /// Handles the machine's own words (`RUN`, `LIST`, `NEW`, `CLS`, `EDIT`,
     /// `TEXT`, `GRAPHICS`, `SPLIT`, `HELP`, `ROMS`). Returns false when the line
     /// belongs to the language's REPL.
@@ -249,6 +291,17 @@ private:
     QLabel* status_label_ = nullptr;
 
     HbDos dos_;
+    /// `AUTO`'s next line number and step. `auto_active_` is what the prompt asks
+    /// before it decides whether to end.
+    bool auto_active_ = false;
+    int auto_next_ = 10;
+    int auto_step_ = 10;
+    /// `TRON`/`TROFF`, passed to the runner of the next run.
+    bool trace_on_ = false;
+    /// What `NEW` erased, once. A 1982 machine had no undo and every owner of one
+    /// learned to regret it; this machine keeps one listing and says so.
+    QString undo_text_;
+    bool undo_available_ = false;
     /// `INIT` erases a disk, so it is the one word that has to be said twice.
     bool init_pending_ = false;
 

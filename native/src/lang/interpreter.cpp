@@ -374,9 +374,16 @@ void Interpreter::run() {
         // Before the statement, not after: a pause that lands once the statement
         // has run is an inspector, not a debugger. `note_line` blocks while the
         // session is paused, and returning false means the user stopped the run.
+        // The line as the program numbers it, computed once: the trace, the debug
+        // session and the profile all report the same number, which is the one a
+        // reader has in front of them.
+        const int traced_line = program_lines_[current_line].number.value_or(
+            static_cast<int>(current_line) + 1);
+        if (tracing_) {
+            log_output("[" + std::to_string(traced_line) + "]");
+        }
         if (debug_ != nullptr) {
-            const int source_line = program_lines_[current_line].number.value_or(
-                static_cast<int>(current_line) + 1);
+            const int source_line = traced_line;
             if (!debug_->note_line(current_line, source_line)) {
                 running = false;
                 break;

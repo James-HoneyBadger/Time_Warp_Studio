@@ -214,6 +214,9 @@ public:
     /// Records per-line hits and time for this run. Set before `start()`. Off by
     /// default because it costs a clock read around every statement.
     void set_profiling(bool on) noexcept { profiling_ = on; }
+    /// Prints `[line]` before each statement of a line-loop program — the machine's
+    /// `TRON`. Set before `start()`; a whole-program language ignores it.
+    void set_tracing(bool on) noexcept { tracing_ = on; }
 
     /// Zero-based statement indices this run may pause on. Set before `start()`.
     void set_breakpoints(const std::set<std::size_t>& lines);
@@ -297,6 +300,7 @@ private:
     std::uint64_t steps_ = 0;
     double elapsed_ms_ = 0.0;
     bool profiling_ = false;
+    bool tracing_ = false;
 
     std::mutex input_mutex_;
     std::condition_variable input_ready_;

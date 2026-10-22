@@ -155,6 +155,24 @@ a keyword is a program line, not a command — see [direct mode](roms.md#basic).
 | `HELP`, or a bare `?` | Print the machine's vocabulary |
 | `CATALOG`, `SAVE`, `LOAD`, `DELETE`, `RENAME`, `LOCK`, `UNLOCK`, `VERIFY`, `TYPE`, `STATUS`, `INIT` | [HB DOS](hb-dos.md) |
 
+In the BASIC ROM, the prompt also has the machine's **line editor**, which is the
+part of a 1982 BASIC people actually spent their evenings in:
+
+| Word | What it does |
+| --- | --- |
+| `AUTO [start[, step]]` | Puts the next line number in the prompt and advances it after every line you type; an empty line ends it. With no argument it continues after the listing |
+| `RENUM [start[, step]]` | Renumbers the listing **and every jump in it** — `GOTO`, `GOSUB`, `THEN`, `ELSE`, `RESTORE`, `GO TO`, `GO SUB`, including the list after `ON x GOTO 10, 20, 30` |
+| `DELETE 20-30` | Deletes a range (`DELETE 20` is one line, `DELETE 20-` is everything from 20) |
+| `LIST 20-30` | Lists a range; a bare `LIST` still lists the whole program |
+| `UNDO` | Puts back the listing `NEW` erased. One deep, and it says so |
+| `TRON` / `TROFF` | Prints each line's number as it runs — `[10]`, `[20]`, … — which is the only way to see which arm of a `GOTO` a program took |
+
+`RENUM` is careful on purpose. A comment (`REM GOTO 40`) and a string
+(`PRINT "GOTO 40"`) are prose and are left byte for byte; a target that names a line
+the program does not have is **left alone and counted**, because it was already a
+runtime error and renumbering it would make it a different one. `DELETE "NAME"` is
+still the disk, because a file name is in quotes and a line range is not.
+
 ### Two ways to run
 
 There are two execution paths behind the machine, and the difference matters:

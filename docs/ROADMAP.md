@@ -418,6 +418,7 @@ measuring the wrong machine.
 | 19.1 ✓ | The vocabulary closes at 44 of 44 with no waivers — `Pitch`/`Roll` deleted because the camera lives in `TurtlePose` — and two of those commands reach a program: Logo's `PENSTYLE`, and BASIC's `PALETTE CYCLE`, which had been moving a palette nobody was looking at |
 | 19.2 ✓ | Every command the canvas declares, a program can ask for: Logo's `BEZIER`, BASIC's `SPRITE`/`SPRITEMOVE`/`SPRITESHOW`/`SPRITEHIDE`/`GRADIENT`/`ELLIPSEGRADIENT` — and the three statements that had been acknowledging work they never did now do it |
 | 19.3 ✓ | The HB-1 is a file: `SAVE MACHINE`/`LOAD MACHINE` write and boot one `.hb1` holding the ROM, the screen, every program, the phosphor and the disk; `--machine` boots one from a terminal |
+| 20.0 ✓ | The HB-1's line editor: `AUTO`, `RENUM` (which rewrites every jump), `DELETE a-b`, `LIST a-b`, `UNDO` after `NEW`, and `TRON`/`TROFF` — the first release of HB-1 2.0, where the machine's insides stop being decoration |
 
 Smaller items belong in one of those releases rather than a release of their own: a
 Smalltalk call stack shown as frames rather than a Program Counter; Flatpak and an

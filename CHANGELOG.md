@@ -2,6 +2,52 @@
 
 <!-- history: all -->
 
+## [20.0.0] - 2026-10-22
+
+The HB-1's line editor, which is the part of a 1982 BASIC people actually spent their
+evenings in. The machine had numbered lines and nothing else: no `AUTO`, no `RENUM`,
+no ranges, no trace, and a `NEW` that was one keystroke of regret.
+
+This is the first release of **HB-1 2.0** — the series that makes the machine's insides
+load-bearing rather than decorative. See `docs/ROADMAP.md` for the ladder and
+`docs/hb1/inside.md` for what the machine is made of.
+
+### Added
+
+- **`AUTO [start[, step]]`** — the next line number is *in the prompt*, so the line a
+  reader types already carries it and the ordinary numbered-line path stores it. AUTO
+  therefore needs no second parser, and the prompt looks the way a machine of the period
+  looked. An empty line ends it; with no argument it continues after the listing.
+- **`RENUM [start[, step]]`** — renumbers the listing **and every jump in it**: `GOTO`,
+  `GOSUB`, `THEN`, `ELSE`, `RESTORE`, the two-word `GO TO`/`GO SUB`, and the list after
+  `ON x GOTO 10, 20, 30`. A comment or a string literal that looks like a jump is left
+  byte for byte, and a target that names a line the program does not have is left alone
+  and **counted** — it was already a runtime error, and rewriting it would have made it a
+  different one.
+- **`DELETE a-b`** (`DELETE 20`, `DELETE 20-`, `DELETE -30`) and **`LIST a-b`**.
+  `DELETE "NAME"` is still HB DOS's, because a file name is in quotes and a range is not.
+- **`UNDO`** — `NEW` now keeps the listing it erased, once, and says so. A machine of the
+  period said nothing and meant it; a learner losing an afternoon to a two-key mistake is
+  not a lesson worth teaching.
+- **`TRON`/`TROFF`** — each statement's line number is printed as the program reaches it,
+  through the same output stream as `PRINT`, so a trace and a result interleave.
+  `Interpreter::set_tracing` is the engine half: one flag, no second channel and no second
+  thread, and the IDE can have a trace panel later for the same price.
+
+### Fixed
+
+- **`RESTORED 0 LINE(S)`** in the first draft of `UNDO`: the count was taken from the
+  PROGRAM page, which is empty by definition at that moment, instead of from the listing
+  being put back. The test asserts the number, which is what caught it.
+
+### Note on the series
+
+HB-1 2.0 lands as **20.0–20.2** first — the editor, then real memory and a
+memory-mapped screen, then the clock, the voice and the power switch — before the V20
+workshop items (Forth, i18n, the quality floor, packaging, the documentation book) move
+to 21.0. The machine work continues afterwards with the processor, the tape, the printer
+and the second drive.
+
 ## [19.3.0] - 2026-10-22
 
 The HB-1 is a file you can hand to somebody.

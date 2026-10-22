@@ -744,6 +744,12 @@ void RetroComputerWindow::handlePromptLine() {
 void RetroComputerWindow::submitCommand(const QString& command) {
     const QString trimmed = command.trimmed();
     if (trimmed.isEmpty()) {
+        // An empty line is the way out of AUTO, which is the one thing a user types
+        // at this prompt that means something precisely because it is empty.
+        if (auto_active_) {
+            endAuto();
+            emit commandFinished();
+        }
         return;
     }
 
@@ -764,6 +770,13 @@ void RetroComputerWindow::submitCommand(const QString& command) {
                       .arg(QString::fromUtf8(rom.prompt), trimmed));
 
     if (language_ == Language::Basic && handleBasicLine(trimmed)) {
+        emit commandFinished();
+        return;
+    }
+    // Before the machine words, so `DELETE 20-30` reaches the line editor and
+    // `DELETE "NAME"` falls through to HB DOS. `LIST 10-20` likewise; a bare `LIST`
+    // returns false here and is the machine's word.
+    if (language_ == Language::Basic && handleBasicEditor(trimmed)) {
         emit commandFinished();
         return;
     }
@@ -854,7 +867,416 @@ bool RetroComputerWindow::handleBasicLine(const QString& command) {
     program_->setTextCursor(cursor);
     text_tabs_->setCurrentWidget(program_);
     status_label_->setText(tr("LINE %1 STORED").arg(number));
+    if (auto_active_) {
+        advanceAuto(wanted);
+    }
     return true;
+}
+
+// ---------------------------------------------------------------------------
+// The BASIC ROM's line editor
+// ---------------------------------------------------------------------------
+
+namespace {
+
+constexpr auto kNoProgram = "?NO PROGRAM";
+
+/// One line of a listing, matched the same way the machine stores one.
+[[nodiscard]] QRegularExpression numberedLine() {
+    static const QRegularExpression pattern{QStringLiteral(R"(^\s*(\d+)\s*(.*)$)")};
+    return pattern;
+}
+
+/// A line range as the period's machines spelled it: `20`, `20-30`, `20-`, `-30`.
+struct LineRange {
+    bool valid = false;
+    int first = 0;
+    int last = std::numeric_limits<int>::max();
+};
+
+[[nodiscard]] LineRange parseLineRange(const QString& text) {
+    static const QRegularExpression single{QStringLiteral(R"(^\s*(\d+)\s*$)")};
+    static const QRegularExpression span{
+        QStringLiteral(R"(^\s*(\d*)\s*-\s*(\d*)\s*$)")};
+    LineRange range;
+    const QRegularExpressionMatch one = single.match(text);
+    if (one.hasMatch()) {
+        range.valid = true;
+        range.first = one.captured(1).toInt();
+        range.last = range.first;
+        return range;
+    }
+    const QRegularExpressionMatch both = span.match(text);
+    if (both.hasMatch() && (!both.captured(1).isEmpty() || !both.captured(2).isEmpty())) {
+        range.valid = true;
+        range.first = both.captured(1).isEmpty() ? 0 : both.captured(1).toInt();
+        range.last = both.captured(2).isEmpty() ? std::numeric_limits<int>::max()
+                                                : both.captured(2).toInt();
+    }
+    return range;
+}
+
+/// True for the words whose following number is a *line number*.
+[[nodiscard]] bool isTargetWord(const QString& word) {
+    return word == QLatin1String("GOTO") || word == QLatin1String("GOSUB") ||
+           word == QLatin1String("THEN") || word == QLatin1String("ELSE") ||
+           word == QLatin1String("RESTORE");
+}
+
+/// Rewrites the line numbers a statement jumps to, leaving everything else alone.
+///
+/// String literals are copied verbatim and a comment stops the rewrite, because
+/// `PRINT "GOTO 10"` and `REM GOTO 10` are not jumps. A number that names a line
+/// the program does not have is counted in `dangling` and left as it is.
+[[nodiscard]] QString renumberTargets(const QString& body, const QMap<int, int>& map,
+                                      int* dangling) {
+    QString out;
+    auto readTargets = [&](int& index) {
+        while (true) {
+            const int before = index;
+            while (index < body.size() && body[index] == QLatin1Char(' ')) {
+                ++index;
+            }
+            out += body.mid(before, index - before);
+            const int digits = index;
+            while (index < body.size() && body[index].isDigit()) {
+                ++index;
+            }
+            if (index == digits) {
+                return;
+            }
+            const int found = body.mid(digits, index - digits).toInt();
+            const auto renamed = map.constFind(found);
+            if (renamed == map.constEnd()) {
+                ++(*dangling);
+                out += body.mid(digits, index - digits);
+            } else {
+                out += QString::number(*renamed);
+            }
+            // `ON X GOTO 10, 20, 30` is one keyword and a list.
+            int look = index;
+            while (look < body.size() && body[look] == QLatin1Char(' ')) {
+                ++look;
+            }
+            if (look < body.size() && body[look] == QLatin1Char(',')) {
+                out += body.mid(index, look + 1 - index);
+                index = look + 1;
+                continue;
+            }
+            return;
+        }
+    };
+
+    int index = 0;
+    while (index < body.size()) {
+        const QChar character = body[index];
+        if (character == QLatin1Char('"')) {
+            const int start = index++;
+            while (index < body.size() && body[index] != QLatin1Char('"')) {
+                ++index;
+            }
+            if (index < body.size()) {
+                ++index;
+            }
+            out += body.mid(start, index - start);
+            continue;
+        }
+        if (character == QLatin1Char('\'')) {
+            out += body.mid(index);
+            break;
+        }
+        if (!character.isLetter()) {
+            out += character;
+            ++index;
+            continue;
+        }
+        const int start = index;
+        while (index < body.size() &&
+               (body[index].isLetterOrNumber() || body[index] == QLatin1Char('$') ||
+                body[index] == QLatin1Char('_'))) {
+            ++index;
+        }
+        const QString word = body.mid(start, index - start);
+        const QString upper = word.toUpper();
+        out += word;
+        if (upper == QLatin1String("REM")) {
+            out += body.mid(index);
+            break;
+        }
+        if (isTargetWord(upper)) {
+            readTargets(index);
+            continue;
+        }
+        // `GO TO` and `GO SUB` are the two-word spellings of the same jump.
+        if (upper == QLatin1String("GO")) {
+            int look = index;
+            while (look < body.size() && body[look] == QLatin1Char(' ')) {
+                ++look;
+            }
+            const int wordStart = look;
+            while (look < body.size() && body[look].isLetter()) {
+                ++look;
+            }
+            const QString second = body.mid(wordStart, look - wordStart).toUpper();
+            if (second == QLatin1String("TO") || second == QLatin1String("SUB")) {
+                out += body.mid(index, look - index);
+                index = look;
+                readTargets(index);
+            }
+        }
+    }
+    return out;
+}
+
+}  // namespace
+
+QList<RetroComputerWindow::BasicLine> RetroComputerWindow::basicLines() const {
+    QList<BasicLine> lines;
+    if (program_ == nullptr) {
+        return lines;
+    }
+    const QRegularExpression pattern = numberedLine();
+    const QStringList text = program_->toPlainText().split(QLatin1Char('\n'));
+    for (const QString& line : text) {
+        const QRegularExpressionMatch match = pattern.match(line);
+        if (!match.hasMatch()) {
+            continue;
+        }
+        BasicLine entry;
+        entry.number = match.captured(1).toInt();
+        entry.body = match.captured(2).trimmed();
+        lines.append(entry);
+    }
+    return lines;
+}
+
+void RetroComputerWindow::setBasicLines(const QList<BasicLine>& lines) {
+    if (program_ == nullptr) {
+        return;
+    }
+    QStringList text;
+    text.reserve(lines.size());
+    for (const BasicLine& line : lines) {
+        text << (line.body.isEmpty() ? QString::number(line.number)
+                                     : QStringLiteral("%1 %2").arg(line.number).arg(line.body));
+    }
+    program_->setPlainText(text.join(QLatin1Char('\n')));
+    program_->document()->setModified(true);
+}
+
+bool RetroComputerWindow::renumberBasic(int start, int step, int* dangling) {
+    const QList<BasicLine> lines = basicLines();
+    if (lines.isEmpty()) {
+        appendConsole(QString::fromLatin1(kNoProgram));
+        return false;
+    }
+    QMap<int, int> renamed;
+    for (int index = 0; index < lines.size(); ++index) {
+        renamed.insert(lines.at(index).number, start + index * step);
+    }
+    QList<BasicLine> updated;
+    int unresolved = 0;
+    for (const BasicLine& line : lines) {
+        BasicLine entry;
+        entry.number = renamed.value(line.number);
+        entry.body = renumberTargets(line.body, renamed, &unresolved);
+        updated.append(entry);
+    }
+    setBasicLines(updated);
+    if (dangling != nullptr) {
+        *dangling = unresolved;
+    }
+    return true;
+}
+
+void RetroComputerWindow::startAuto(int start, int step) {
+    auto_active_ = true;
+    auto_next_ = start;
+    auto_step_ = step <= 0 ? 10 : step;
+    if (input_ != nullptr) {
+        // The number is *in* the prompt, so the line the user types already carries
+        // it and the ordinary numbered-line path stores it. AUTO needs no second
+        // parser and the line looks the way a machine of the period looked.
+        input_->setText(QString::number(auto_next_));
+        input_->setCursorPosition(input_->text().size());
+    }
+    appendConsole(QStringLiteral("AUTO %1, %2   [AN EMPTY LINE ENDS IT]")
+                      .arg(auto_next_)
+                      .arg(auto_step_));
+}
+
+void RetroComputerWindow::endAuto() {
+    auto_active_ = false;
+    if (input_ != nullptr) {
+        input_->clear();
+    }
+    appendConsole(QStringLiteral("READY."));
+}
+
+void RetroComputerWindow::advanceAuto(int stored) {
+    if (!auto_active_) {
+        return;
+    }
+    // Continue from the line that was just stored, so a numbered line typed in
+    // the middle of an AUTO run moves the sequence rather than fighting it.
+    auto_next_ = stored + auto_step_;
+    if (input_ != nullptr) {
+        input_->setText(QString::number(auto_next_));
+        input_->setCursorPosition(input_->text().size());
+    }
+}
+
+void RetroComputerWindow::rememberForUndo() {
+    if (program_ == nullptr) {
+        return;
+    }
+    const QString text = program_->toPlainText();
+    undo_available_ = !text.trimmed().isEmpty();
+    undo_text_ = undo_available_ ? text : QString{};
+}
+
+void RetroComputerWindow::restoreUndo() {
+    if (!undo_available_ || program_ == nullptr) {
+        appendConsole(QStringLiteral("?NOTHING TO UNDO"));
+        return;
+    }
+    // The count is of the listing being put *back*, which is not what is on the
+    // PROGRAM page now -- that is the empty page `NEW` left behind.
+    int restored = 0;
+    for (const QString& line : undo_text_.split(QLatin1Char('\n'))) {
+        if (!line.trimmed().isEmpty()) {
+            ++restored;
+        }
+    }
+    program_->setPlainText(undo_text_);
+    program_->document()->setModified(true);
+    undo_available_ = false;
+    undo_text_.clear();
+    appendConsole(QStringLiteral("RESTORED %1 LINE(S)").arg(restored));
+}
+
+bool RetroComputerWindow::handleBasicEditor(const QString& command) {
+    const QString trimmed = command.trimmed();
+    const QString word = headWord(trimmed);
+    const QString rest = trimmed.mid(word.size()).trimmed();
+
+    if (word == QLatin1String("RENUM") || word == QLatin1String("RENUMBER")) {
+        const QStringList parts = rest.split(QLatin1Char(','), Qt::SkipEmptyParts);
+        bool ok = true;
+        const int start = parts.isEmpty() ? 10 : parts.at(0).trimmed().toInt(&ok);
+        if (!ok || start < 0) {
+            appendConsole(QStringLiteral("?SYNTAX ERROR: RENUM [START[, STEP]]"));
+            return true;
+        }
+        const int step =
+            parts.size() > 1 ? parts.at(1).trimmed().toInt(&ok) : 10;
+        if (!ok || step <= 0) {
+            appendConsole(QStringLiteral("?SYNTAX ERROR: RENUM [START[, STEP]]"));
+            return true;
+        }
+        int dangling = 0;
+        if (!renumberBasic(start, step, &dangling)) {
+            return true;
+        }
+        appendConsole(QStringLiteral("RENUMBERED FROM %1 BY %2").arg(start).arg(step));
+        if (dangling > 0) {
+            // Leaving an unresolvable target alone is the only honest choice: it was
+            // already a runtime error and renumbering it would make it a different one.
+            appendConsole(QStringLiteral("?%1 TARGET(S) NOT IN THE PROGRAM, LEFT ALONE")
+                              .arg(dangling));
+        }
+        updateStatus();
+        return true;
+    }
+
+    if (word == QLatin1String("AUTO")) {
+        const QStringList parts = rest.split(QLatin1Char(','), Qt::SkipEmptyParts);
+        bool ok = true;
+        int start = 10;
+        int step = 10;
+        if (!parts.isEmpty()) {
+            start = parts.at(0).trimmed().toInt(&ok);
+        }
+        if (ok && parts.size() > 1) {
+            step = parts.at(1).trimmed().toInt(&ok);
+        }
+        if (!ok || start < 0 || step <= 0) {
+            appendConsole(QStringLiteral("?SYNTAX ERROR: AUTO [START[, STEP]]"));
+            return true;
+        }
+        // With no number given, continue after the listing: what a reader wants
+        // when they type AUTO to add to a program they already have.
+        if (parts.isEmpty()) {
+            const QList<BasicLine> lines = basicLines();
+            if (!lines.isEmpty()) {
+                start = lines.last().number + 10;
+            }
+        }
+        startAuto(start, step);
+        return true;
+    }
+
+    if (word == QLatin1String("DELETE") || word == QLatin1String("DEL")) {
+        const LineRange range = parseLineRange(rest);
+        if (!range.valid) {
+            // HB DOS's `DELETE "NAME"` is another word entirely, and reaches it.
+            return false;
+        }
+        QList<BasicLine> lines = basicLines();
+        int removed = 0;
+        for (int index = lines.size(); index-- > 0;) {
+            const int number = lines.at(index).number;
+            if (number < range.first || number > range.last) {
+                continue;
+            }
+            lines.removeAt(index);
+            ++removed;
+        }
+        if (removed == 0) {
+            appendConsole(QStringLiteral("?NO LINES IN RANGE"));
+            return true;
+        }
+        setBasicLines(lines);
+        appendConsole(QStringLiteral("%1 LINE(S) DELETED").arg(removed));
+        updateStatus();
+        return true;
+    }
+
+    if (word == QLatin1String("LIST") || word == QLatin1String("L")) {
+        const LineRange range = parseLineRange(rest);
+        if (!range.valid) {
+            // A bare `LIST` is the machine's word, which every ROM has.
+            return false;
+        }
+        text_tabs_->setCurrentWidget(console_);
+        int shown = 0;
+        for (const BasicLine& line : basicLines()) {
+            if (line.number < range.first || line.number > range.last) {
+                continue;
+            }
+            appendConsole(QStringLiteral("%1 %2").arg(line.number).arg(line.body));
+            ++shown;
+        }
+        if (shown == 0) {
+            appendConsole(QStringLiteral("?NO LINES IN RANGE"));
+        }
+        return true;
+    }
+
+    if (word == QLatin1String("TRON") || word == QLatin1String("TROFF")) {
+        trace_on_ = word == QLatin1String("TRON");
+        appendConsole(trace_on_ ? QStringLiteral("TRACE ON")
+                                : QStringLiteral("TRACE OFF"));
+        return true;
+    }
+
+    if (word == QLatin1String("UNDO")) {
+        restoreUndo();
+        updateStatus();
+        return true;
+    }
+
+    return false;
 }
 
 bool RetroComputerWindow::handleMachineCommand(const QString& command) {
@@ -896,9 +1318,18 @@ bool RetroComputerWindow::handleMachineCommand(const QString& command) {
     }
     if (word == QStringLiteral("NEW")) {
         stopRepl();
+        rememberForUndo();
+        const int erased = basicLines().size();
         program_->clear();
         programs_.remove(static_cast<int>(language_));
         clearScreenAndCanvas();
+        if (erased > 0) {
+            // The period's machines said nothing and meant it. This one keeps the
+            // listing for one `UNDO`, and says so, because a learner losing an
+            // afternoon to a two-key mistake is not a lesson worth teaching.
+            appendConsole(QStringLiteral("?NEW ERASED %1 LINE(S) -- TYPE UNDO TO GET THEM BACK")
+                              .arg(erased));
+        }
         appendConsole(QStringLiteral("READY."));
         updateStatus();
         return true;
@@ -1023,6 +1454,13 @@ bool RetroComputerWindow::handleMachineCommand(const QString& command) {
         appendConsole(QStringLiteral("SAVE MACHINE \"N\"  write the whole machine to N.hb1"));
         appendConsole(QStringLiteral("LOAD MACHINE \"N\"  boot from N.hb1"));
         appendConsole(QStringLiteral("STATUS       volume and free space"));
+        appendConsole(QString());
+        appendConsole(QStringLiteral("THE BASIC LINE EDITOR"));
+        appendConsole(QStringLiteral("AUTO [S[,N]]  number lines for you; an empty line ends it"));
+        appendConsole(QStringLiteral("RENUM [S[,N]] renumber the listing and every jump in it"));
+        appendConsole(QStringLiteral("DELETE 20-30  delete a range;  LIST 20-30  list one"));
+        appendConsole(QStringLiteral("UNDO          put back the listing NEW erased"));
+        appendConsole(QStringLiteral("TRON / TROFF  print each line's number as it runs"));
         appendConsole(QString());
         appendConsole(QStringLiteral("F9 runs; Shift+F9 stops; Ctrl+L clears; Ctrl+, configures."));
         return true;
@@ -1164,6 +1602,10 @@ void RetroComputerWindow::runProgram() {
         sound_ = new SoundPlayer{this};
     }
     runner->set_sound_player(sound_);
+    // `TRON` is the machine's word; the trace itself is the engine's, printed through
+    // the same stream as the program's output so the tube shows them interleaved the
+    // way a reader of a 1982 listing expects.
+    runner->set_tracing(trace_on_);
     runner->load_program(source);
 
     connect(runner, &NativeRunner::outputAvailable, this,
