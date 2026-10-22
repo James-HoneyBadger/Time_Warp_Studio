@@ -5745,16 +5745,12 @@ void MainWindow::requestLessonHint(const QString& lesson, int checkpoint) {
     }
     // The panel asks for the next hint it has not shown: the count in the
     // progress file is what makes "hint 2 of 3" survive closing the window.
-    const int number = lessons_->hints_used(found->id);
-    const std::string text = lessons_->hint(found->id, checkpoint, number);
-    if (text.empty()) {
-        lesson_panel_->setHint(tr("That is every hint for this checkpoint."), number,
-                               number);
-        return;
-    }
+    const int already = lessons_->hints_used(found->id);
+    const std::string text = lessons_->hint(found->id, checkpoint, already);
     const int total = timewarp::core::intLength(
         found->checkpoints[static_cast<std::size_t>(checkpoint)].hints.size());
-    lesson_panel_->setHint(QString::fromStdString(text), number + 1, total);
+    lesson_panel_->setHint(QString::fromStdString(text),
+                           std::min(already + 1, std::max(1, total)), total);
 }
 
 void MainWindow::requestLessonSolution(const QString& lesson, int checkpoint) {

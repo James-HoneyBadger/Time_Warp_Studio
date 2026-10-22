@@ -58,8 +58,22 @@ from the desktop menu, or run the `time_warp_ide` binary directly.
 | Answer an input prompt | Type it into the dialog and press Return |
 | Open a file | **File → Open** (`Ctrl+O`) or pass it on the command line |
 
-The engine stops a runaway program after its own step and time budget; Stop ends
-it sooner, at the next statement or instruction.
+The engine stops a runaway program after its own step and time budget — 10
+seconds, two million statements, a hundred thousand program steps — with a
+sentence in the console rather than a hung window; Stop ends it sooner, at the next
+statement or instruction.
+
+### A program with a screen
+
+The canvas normally fits itself to what a program drew. A BASIC program that names
+a screen — `SCREEN 13`, `SCREEN 12`, and the rest of the numbered modes — gets the
+opposite: a fixed-pixel surface shown at whole-number scale, where `PSET (10, 20)`
+is ten pixels right and twenty down from the top-left corner, and `fit to content`
+leaves it alone. `POINT` reads a pixel back, `GET`/`PUT` move a sprite, and the
+drawing exports at the screen's own size. `SCREEN 0` gives the fitted canvas back.
+
+`Examples/basic/star_patrol.bas` is a program built on it. The mode table is in
+[the language guide](LANGUAGE_GUIDE.md#graphics).
 
 ---
 

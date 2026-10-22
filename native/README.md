@@ -1349,6 +1349,11 @@ strokes a circle costs.
   256-byte sectors and a JSON image under `~/.time_warp/disks`. Its manuals are
   `docs/hb1/README.md` and the rest of `docs/hb1/`; the premise behind both
   machines is `docs/MACHINES.md`.
+* **The curriculum** is `timewarp_lessons` (`include/timewarp/lessons/`): it reads
+  `share/lessons.json`, judges a learner's program with the engines and a recording
+  host, and keeps the learner's place in `~/.time_warp/progress.json`. The Lessons
+  panel, `time_warp_teach` and `time_warp_learn` all ask it, so a verdict has one
+  author.
 * **The Database tab** is `SqlPanel` over `timewarp_sql`, sharing its connection with
   every program's `SQL` statement.
 * **Automation** is `time_warp_api` (`api::Server`) and the linkable libraries behind

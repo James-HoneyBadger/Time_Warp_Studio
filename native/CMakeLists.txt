@@ -1221,6 +1221,13 @@ if(TIME_WARP_QT_FOUND)
             install(TARGETS time_warp_ide
                     RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
         endif()
+        # The teacher's and the learner's commands, beside the IDE. A package that
+        # shipped only the window would make "the panel and the tool agree" a
+        # claim about a checkout.
+        if(TARGET time_warp_teach)
+            install(TARGETS time_warp_teach RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
+            install(TARGETS time_warp_learn RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
+        endif()
         install(TARGETS time_warp_api
                 RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
         install(

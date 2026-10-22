@@ -26,6 +26,7 @@ smaller examples beside them each teach one idea; the showcases are the tour.
 | File | Description |
 | --- | --- |
 | `basic/showcase.bas` | The weather station: strings, arrays, all three loops, procedures, error handling, turtle graphics and sound |
+| `basic/star_patrol.bas` | A small game on `SCREEN 13`: a captured sprite ship, a star field, a shot whose hits are found with `POINT`, and a score bar |
 | `basic/hello.bas` | Hello World and basic output |
 | `basic/adventure.bas` | Text adventure control flow |
 | `basic/budget_tracker.bas` | Variables and tabular calculations |

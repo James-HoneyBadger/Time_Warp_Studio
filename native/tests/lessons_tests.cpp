@@ -197,21 +197,32 @@ void test_progress_follows_the_learners_place() {
                            directory.path() + QStringLiteral("/progress.json"), &error));
     TW_CHECK_EQ(reopened.current_index(id), 1);
 
-    // Finishing the last checkpoint completes the lesson.
+    // Finishing the last checkpoint completes the lesson -- and says so, in the
+    // wording a learner is already used to.
+    std::string final_message;
     for (int index = 1; index < static_cast<int>(lesson->checkpoints.size()); ++index) {
-        TW_CHECK(store
-                     .check(id, index,
-                            lesson->checkpoints[static_cast<std::size_t>(index)].solution)
-                     .passed);
+        const auto result =
+            store.check(id, index,
+                        lesson->checkpoints[static_cast<std::size_t>(index)].solution);
+        TW_CHECK(result.passed);
+        final_message = result.message;
     }
     TW_CHECK(store.status(id) == LessonStatus::Completed);
+    TW_CHECK(final_message.find("🏆 Lesson complete:") == 0);
     TW_CHECK_EQ(store.completed_count().first, 1);
 
-    // A hint is counted, and there is nothing past the last one.
-    const std::string hint = store.hint(id, 0, 0);
-    TW_CHECK(!hint.empty());
+    // A hint is counted per request and clamped to the last one: a learner who
+    // keeps asking keeps getting the last hint rather than a refusal.
+    const std::string first = store.hint(id, 0, 0);
+    TW_CHECK(!first.empty());
     TW_CHECK_EQ(store.hints_used(id), 1);
-    TW_CHECK(store.hint(id, 0, 99).empty());
+    const std::string past_the_end = store.hint(id, 0, 99);
+    TW_CHECK(!past_the_end.empty());
+    TW_CHECK_EQ(store.hints_used(id), 2);
+    // Asking past the end gives the last hint, not a refusal: the panel asks for
+    // hint number `hints_used`, so a learner who keeps pressing gets the last one.
+    TW_CHECK(past_the_end != first);
+    TW_CHECK_EQ(store.hint(id, 0, 1), past_the_end);
 
     store.reset(id);
     TW_CHECK(store.status(id) == LessonStatus::NotStarted);

@@ -198,6 +198,12 @@ VerifyResult ProgressStore::check(const std::string& lesson_id, int index,
     } else {
         found->second = entry;
     }
+    if (entry.completed) {
+        // The last checkpoint passing is the lesson finishing, and saying so is
+        // what a learner remembers. The reference's wording, kept: the panel is
+        // read by the same people.
+        result.message = "🏆 Lesson complete: " + lesson->title;
+    }
     // A progress write that fails must not turn a passed checkpoint into a
     // failed one: the verdict is about the learner's program. The next save
     // tries again.
@@ -212,8 +218,8 @@ std::string ProgressStore::hint(const std::string& lesson_id, int index, int num
         return {};
     }
     const Checkpoint& checkpoint = lesson->checkpoints[static_cast<std::size_t>(index)];
-    if (number < 0 || number >= static_cast<int>(checkpoint.hints.size())) {
-        return {};
+    if (checkpoint.hints.empty()) {
+        return "This checkpoint has no hints. Read the description again.";
     }
     auto found = std::find_if(progress_.begin(), progress_.end(),
                               [&](const auto& row) { return row.first == lesson_id; });
@@ -221,9 +227,13 @@ std::string ProgressStore::hint(const std::string& lesson_id, int index, int num
         progress_.emplace_back(lesson_id, Entry{});
         found = std::prev(progress_.end());
     }
-    found->second.hints_used = std::max(found->second.hints_used, number + 1);
+    // Every request counts, and past the last hint the last one is repeated:
+    // "hint 3 of 3" is where a learner who keeps asking ends up, rather than a
+    // refusal to answer that leaves them with nothing to read.
+    found->second.hints_used += 1;
     (void)save();  // see `check`: the hint is still the answer
-    return checkpoint.hints[static_cast<std::size_t>(number)];
+    const int clamped = std::clamp(number, 0, static_cast<int>(checkpoint.hints.size()) - 1);
+    return checkpoint.hints[static_cast<std::size_t>(clamped)];
 }
 
 void ProgressStore::reset(const std::string& lesson_id) {
