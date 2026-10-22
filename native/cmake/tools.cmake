@@ -42,6 +42,7 @@ timewarp_enable_warnings(time_warp_check)
 add_executable(time_warp_gates
     tools/gates/main.cpp
     tools/gates/locate.cpp
+    tools/gates/report.cpp
     tools/gates/runner.cpp
     tools/gates/judge.cpp
     tools/gates/smoke.cpp
@@ -76,6 +77,8 @@ timewarp_enable_warnings(time_warp_gates)
 # a release can assert the committed icons are current.
 
 add_executable(time_warp_icon tools/icon/main.cpp)
+# The tools' shared command line, which is a header with no library behind it.
+target_include_directories(time_warp_icon PRIVATE include)
 target_compile_definitions(time_warp_icon PRIVATE
     TIME_WARP_SOURCE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/..")
 target_link_libraries(time_warp_icon PRIVATE ZLIB::ZLIB)

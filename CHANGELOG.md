@@ -5,9 +5,10 @@
 ## [23.0.0] - 2026-10-22
 
 The infrastructure, made modular: one home for the language table, a build that is
-read one part at a time, three libraries where there was one doing twelve jobs, and
-the two monoliths split along the sections that were already commented inside them.
-Two new gates keep each of those from growing back.
+read one part at a time, three libraries where there was one doing twelve jobs, every
+monolith in the tree split along the sections that were already commented inside it,
+the two largest suites split one file per subject, and one command-line vocabulary for
+the five tools. Two new gates keep each of those from growing back.
 
 ### Changed
 
@@ -31,6 +32,23 @@ Two new gates keep each of those from growing back.
 - **`main_window.cpp` (6,245 lines) is eight files**, one per section that was already
   commented in it, over `main_window_internal.hpp` for the keys and helpers they share.
 - **`panels.cpp` (2,047 lines) is six files**, one per panel group.
+- **`basic_statements.cpp` (2,066 lines) is seven**, and `logo.cpp` (3,548) is six over
+  `logo_internal.hpp`, and `retro_computer.cpp` (2,472) is seven over
+  `retro_computer_internal.hpp`. The Logo class moved from an anonymous namespace into
+  a named one, because a type several translation units define methods for needs one
+  definition they all agree on.
+- **The two largest suites are one file per subject.** `ui_layout_tests` (4,010 lines,
+  85 cases) is eight files under `tests/ui_layout/` and `lang_tests` (3,150, 191) is
+  eight under `tests/lang/`, each with a `support.hpp` for what they share and a
+  `cases.hpp` for the order `main` runs them in -- written down rather than discovered,
+  because the cases share a `QSettings` store, a snippet catalogue and a seeded
+  generator.
+- **One command-line vocabulary.** `native/include/timewarp/tools/cli.hpp` gives all
+  five tools `--root`, `--json PATH`, `--quiet` and `--help` in any position, a
+  `cli::Command` table per tool so the usage message comes from the list that
+  dispatches, status 2 for a line that cannot be used and 1 for a check that failed, and
+  a `cli::Report` that prints findings as prose or as one JSON object. The documentation
+  gates' own argument parser is gone with it.
 
 ### Added
 
@@ -41,7 +59,10 @@ Two new gates keep each of those from growing back.
 - **`time_warp_gates structure`** fails on a source file past 2,000 lines that is not on
   a waiver list, on a build file past 200, and on a waiver that is no longer needed --
   the list may only shrink, which is how `main_window.cpp` and `panels.cpp` left it.
-- Both are in `make test-all`.
+- **`cli_tests`** pins that vocabulary: the two spellings of `--root`, an option after
+  the command, `--`, a dangling value, the JSON escaping, and that a command's own value
+  options do not come back as positionals.
+- The three gates are in `make test-all`, and `structure`'s waiver list is now **empty**.
 
 ### Fixed
 
@@ -49,7 +70,12 @@ Two new gates keep each of those from growing back.
   lenient: the first version of the registry broke all 560 command rows by making the
   UI lookup accept `BASIC`, and the suite caught it before the split was believed.
 - Five documents named `main_window.cpp` and `panels.cpp` after they were split; the
-  claims gate refused to let a path that moved pass.
+  claims gate refused to let a path that moved pass, and it caught
+  `retro_computer.cpp` in `copilot-instructions.md` too.
+- **A language test that had never run.** Splitting `lang_tests` into
+  `tests/lang/cases.hpp` made the count visible: 191 cases were defined and 190 were
+  called, so `test_basic_sprite_statements_refuse_a_name_they_never_captured` had been
+  dead since it was written. It is registered, and it passes.
 
 ## [22.4.1] - 2026-10-22
 

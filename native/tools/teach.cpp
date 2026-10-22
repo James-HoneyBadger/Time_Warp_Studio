@@ -24,6 +24,9 @@
 // because data is not exercised by anything unless something exercises it
 // deliberately.
 //
+// The command line is `timewarp::cli`'s: `--root`, `--json PATH`, `--quiet` and
+// `--help` in any position, and status 2 for a line it cannot use.
+//
 // It is the C++ counterpart of `native/tools/teach.py`, and the two are the same
 // verdict because they are the same function's answer: this one calls
 // `timewarp::lessons`, which is what the IDE's panels call too. `bundle` and
@@ -34,10 +37,13 @@
 // nothing, because listing a class must not run thirty programs.
 
 #include <algorithm>
-#include <cstdio>
+#include <array>
 #include <cctype>
+#include <cstdio>
 #include <cstring>
+#include <optional>
 #include <string>
+#include <string_view>
 #include <vector>
 
 #include <QDir>
@@ -50,36 +56,13 @@
 #include "timewarp/lessons/classroom.hpp"
 #include "timewarp/lessons/curriculum.hpp"
 #include "timewarp/lang/language.hpp"
+#include "timewarp/tools/cli.hpp"
 #include "timewarp/lessons/plans.hpp"
 #include "timewarp/lessons/verify.hpp"
 
 namespace {
 
 using timewarp::lessons::Lesson;
-
-int usage() {
-    std::printf("usage: time_warp_teach <command> [arguments]\n\n"
-                "The curriculum:\n"
-                "  validate            every solution passes, every starter fails\n"
-                "  list                the lessons, in teaching order\n"
-                "  outline             the scheme of work, grouped by language\n"
-                "  plans               a lesson plan per language, on stdout\n"
-                "  plans --write <dir> write them as documents (docs/lessons/plans)\n"
-                "  answers             the worked answers, for a teacher's eye\n"
-                "  new <id>            scaffold a lesson (--language NAME [--title])\n\n"
-                "The class:\n"
-                "  roster              the class, and what it has been set\n"
-                "  roster add \"Name\"   add a learner (a stable id is derived)\n"
-                "  roster remove <id>  take one off the list\n"
-                "  assign <lesson>...  set the work\n"
-                "  distribute          hand the starter files out\n"
-                "  collect             mark what has been handed in\n"
-                "  report              where each learner has got to\n"
-                "  present [<size>]    the size a lesson is projected at (--windowed)\n"
-                "  bundle <out.zip>    zip the classroom, work and all\n"
-                "  unbundle <in.zip>   unpack a class bundle (--replace to overwrite)\n");
-    return 2;
-}
 
 QString curriculum_path(const std::vector<std::string>& arguments) {
     for (const std::string& argument : arguments) {
@@ -576,127 +559,214 @@ int present(timewarp::lessons::Classroom& room, const std::vector<std::string>& 
     return 0;
 }
 
+
+using timewarp::cli::Invocation;
+
+int runValidate(const Invocation& invocation);
+int runList(const Invocation& invocation);
+int runOutline(const Invocation& invocation);
+int runPlans(const Invocation& invocation);
+int runAnswers(const Invocation& invocation);
+int runNew(const Invocation& invocation);
+int runRoster(const Invocation& invocation);
+int runAssign(const Invocation& invocation);
+int runDistribute(const Invocation& invocation);
+int runCollect(const Invocation& invocation);
+int runReport(const Invocation& invocation);
+int runPresent(const Invocation& invocation);
+int runBundle(const Invocation& invocation);
+int runUnbundle(const Invocation& invocation);
+
+constexpr std::string_view kSynopsis{"<command> [arguments]"};
+
+constexpr std::array<timewarp::cli::Command, 14> kCommands{{
+    {"validate", "every solution passes, every starter fails", runValidate},
+    {"list", "the lessons, in teaching order", runList},
+    {"outline", "the scheme of work, grouped by language", runOutline},
+    {"plans", "a lesson plan per language (--write DIR to write them)", runPlans},
+    {"answers", "the worked answers, for a teacher's eye", runAnswers},
+    {"new", "scaffold a lesson (--language NAME [--title])", runNew},
+    {"roster", "the class; `roster add \"Name\"` or `roster remove <id>`", runRoster},
+    {"assign", "set the work: `assign <lesson>...`", runAssign},
+    {"distribute", "hand the starter files out", runDistribute},
+    {"collect", "mark what has been handed in", runCollect},
+    {"report", "where each learner has got to", runReport},
+    {"present", "the size a lesson is projected at (--windowed)", runPresent},
+    {"bundle", "zip the classroom, work and all: `bundle <out.zip>`", runBundle},
+    {"unbundle", "unpack a class bundle (--replace to overwrite)", runUnbundle},
+}};
+
+/// The curriculum the command works on, or nothing after saying why. `plans --write`
+/// names a directory and `--language` names a language; only a bare word can be the
+/// curriculum, and reading the directory as one was how `plans --write` first failed.
+std::optional<std::vector<Lesson>> load(const Invocation& invocation) {
+    const QString path = curriculum_path(
+        plain(invocation.arguments, {"--write", "--language", "--lang", "--lesson"}));
+    if (path.isEmpty()) {
+        return std::nullopt;
+    }
+    std::vector<Lesson> lessons;
+    QString error;
+    if (!timewarp::lessons::load_curriculum(path, lessons, &error)) {
+        std::printf("❌ %s\n", error.toStdString().c_str());
+        return std::nullopt;
+    }
+    return lessons;
+}
+
+/// The class the command works on. Its argument is a bundle or a name, not a
+/// curriculum, so it comes from the default location.
+std::optional<timewarp::lessons::Classroom> load_room() {
+    timewarp::lessons::Classroom room;
+    QString error;
+    if (!room.load(&error)) {
+        std::printf("❌ %s\n", error.toStdString().c_str());
+        return std::nullopt;
+    }
+    return room;
+}
+
+int runValidate(const Invocation& invocation) {
+    const std::optional<std::vector<Lesson>> lessons = load(invocation);
+    return lessons ? validate(*lessons, invocation.quiet) : 1;
+}
+
+int runList(const Invocation& invocation) {
+    const std::optional<std::vector<Lesson>> lessons = load(invocation);
+    if (!lessons) {
+        return 1;
+    }
+    list(*lessons);
+    return 0;
+}
+
+int runOutline(const Invocation& invocation) {
+    const std::optional<std::vector<Lesson>> lessons = load(invocation);
+    return lessons ? outline(*lessons) : 1;
+}
+
+int runPlans(const Invocation& invocation) {
+    const std::optional<std::vector<Lesson>> lessons = load(invocation);
+    if (!lessons) {
+        return 1;
+    }
+    const std::string language = flag(invocation.arguments, "--language");
+    const std::string language_short = flag(invocation.arguments, "--lang");
+    return plans(*lessons, language.empty() ? language_short : language,
+                 flag(invocation.arguments, "--write"));
+}
+
+int runAnswers(const Invocation& invocation) {
+    const std::optional<std::vector<Lesson>> lessons = load(invocation);
+    if (!lessons) {
+        return 1;
+    }
+    return answers(*lessons, flag(invocation.arguments, "--language"),
+                   flag(invocation.arguments, "--lesson"));
+}
+
+int runNew(const Invocation& invocation) {
+    // `new` needs no curriculum: it is the command that puts a lesson into one.
+    const std::vector<std::string> values =
+        plain(invocation.arguments, {"--language", "--title"});
+    if (values.empty()) {
+        return timewarp::cli::usage_error(invocation, "new needs a lesson id", kSynopsis,
+                                          kCommands);
+    }
+    return new_lesson(values.front(), flag(invocation.arguments, "--language"),
+                      flag(invocation.arguments, "--title"));
+}
+
+int runRoster(const Invocation& invocation) {
+    std::optional<timewarp::lessons::Classroom> room = load_room();
+    return room ? roster(*room, invocation.arguments) : 1;
+}
+
+int runAssign(const Invocation& invocation) {
+    std::optional<timewarp::lessons::Classroom> room = load_room();
+    return room ? assign(*room, invocation.arguments) : 1;
+}
+
+int runDistribute(const Invocation& invocation) {
+    std::optional<timewarp::lessons::Classroom> room = load_room();
+    return room ? distribute(*room, invocation.arguments) : 1;
+}
+
+int runCollect(const Invocation& invocation) {
+    std::optional<timewarp::lessons::Classroom> room = load_room();
+    return room ? collect(*room, invocation.arguments) : 1;
+}
+
+int runReport(const Invocation& invocation) {
+    (void)invocation;  // the report is the whole class; it takes no argument.
+    std::optional<timewarp::lessons::Classroom> room = load_room();
+    return room ? report(*room) : 1;
+}
+
+int runPresent(const Invocation& invocation) {
+    std::optional<timewarp::lessons::Classroom> room = load_room();
+    return room ? present(*room, invocation.arguments) : 1;
+}
+
+int runBundle(const Invocation& invocation) {
+    std::optional<timewarp::lessons::Classroom> room = load_room();
+    if (!room) {
+        return 1;
+    }
+    const std::vector<std::string> words = plain(invocation.arguments, {"--replace"});
+    if (words.empty()) {
+        return timewarp::cli::usage_error(invocation, "bundle needs a file to write",
+                                          kSynopsis, kCommands);
+    }
+    const QString bundle = QString::fromStdString(words.front());
+    QString error;
+    if (!room->createBundle(bundle, &error)) {
+        std::printf("❌ %s\n", error.toStdString().c_str());
+        return 1;
+    }
+    std::printf("✅ wrote %s\n", bundle.toStdString().c_str());
+    return 0;
+}
+
+int runUnbundle(const Invocation& invocation) {
+    std::optional<timewarp::lessons::Classroom> room = load_room();
+    if (!room) {
+        return 1;
+    }
+    const bool replace =
+        std::find(invocation.arguments.begin(), invocation.arguments.end(),
+                  std::string{"--replace"}) != invocation.arguments.end();
+    const std::vector<std::string> words = plain(invocation.arguments, {"--replace"});
+    if (words.empty()) {
+        return timewarp::cli::usage_error(invocation, "unbundle needs a file to read",
+                                          kSynopsis, kCommands);
+    }
+    QString error;
+    if (!room->importBundle(QString::fromStdString(words.front()), replace, &error)) {
+        std::printf("❌ %s\n", error.toStdString().c_str());
+        return 1;
+    }
+    std::printf("✅ %zu student(s) in the class\n", room->students().size());
+    return 0;
+}
+
 }  // namespace
 
 int main(int argc, char** argv) {
     // Qt Core only, and only so the default curriculum can be found beside the
     // binary: nothing here opens a window.
     QCoreApplication app{argc, argv};
-    if (argc < 2) {
-        return usage();
-    }
-    const std::string command{argv[1]};
-    std::vector<std::string> arguments;
-    for (int index = 2; index < argc; ++index) {
-        arguments.emplace_back(argv[index]);
-    }
+    const Invocation invocation = timewarp::cli::parse("time_warp_teach", argc, argv);
 
-    // The class first: its path argument is a bundle or a name, not a curriculum,
-    // and the class carries its own curriculum in the default location.
-    const bool class_command = command == "roster" || command == "bundle" ||
-                               command == "unbundle" || command == "assign" ||
-                               command == "distribute" || command == "collect" ||
-                               command == "report" || command == "present";
-    if (class_command) {
-        timewarp::lessons::Classroom room;
-        QString error;
-        if (!room.load(&error)) {
-            std::printf("❌ %s\n", error.toStdString().c_str());
-            return 1;
-        }
-        if (command == "roster") {
-            return roster(room, arguments);
-        }
-        if (command == "assign") {
-            return assign(room, arguments);
-        }
-        if (command == "distribute") {
-            return distribute(room, arguments);
-        }
-        if (command == "collect") {
-            return collect(room, arguments);
-        }
-        if (command == "report") {
-            return report(room);
-        }
-        if (command == "present") {
-            return present(room, arguments);
-        }
-        QString bundle;
-        bool replace = false;
-        for (const std::string& argument : arguments) {
-            if (argument == "--replace") {
-                replace = true;
-            } else if (bundle.isEmpty()) {
-                bundle = QString::fromStdString(argument);
-            }
-        }
-        if (bundle.isEmpty()) {
-            return usage();
-        }
-        if (command == "bundle") {
-            if (!room.createBundle(bundle, &error)) {
-                std::printf("❌ %s\n", error.toStdString().c_str());
-                return 1;
-            }
-            std::printf("✅ wrote %s\n", bundle.toStdString().c_str());
-            return 0;
-        }
-        if (!room.importBundle(bundle, replace, &error)) {
-            std::printf("❌ %s\n", error.toStdString().c_str());
-            return 1;
-        }
-        std::printf("✅ %zu student(s) in the class\n", room.students().size());
-        return 0;
+    int status = 0;
+    {
+        const timewarp::cli::ProseToStderr prose{invocation.wants_json()};
+        status = timewarp::cli::dispatch(invocation, kSynopsis, kCommands);
     }
-
-    // `new` needs no curriculum: it is the command that puts a lesson into one.
-    if (command == "new") {
-        const std::vector<std::string> values = plain(arguments, {"--language", "--title"});
-        if (values.empty()) {
-            std::printf("❌ new needs a lesson id\n");
-            return 2;
-        }
-        return new_lesson(values.front(), flag(arguments, "--language"),
-                           flag(arguments, "--title"));
+    if (!invocation.wants_json()) {
+        return status;
     }
-
-    // Only a bare argument can be the curriculum: `--write dir` and `--language X`
-    // name something else, and reading the directory as the curriculum was how
-    // `plans --write` first failed.
-    const QString path =
-        curriculum_path(plain(arguments, {"--write", "--language", "--lang", "--lesson"}));
-    if (path.isEmpty()) {
-        return 1;
-    }
-    std::vector<Lesson> lessons;
-    QString error;
-    if (!timewarp::lessons::load_curriculum(path, lessons, &error)) {
-        std::printf("❌ %s\n", error.toStdString().c_str());
-        return 1;
-    }
-
-    if (command == "outline") {
-        return outline(lessons);
-    }
-    if (command == "plans") {
-        const std::string language = flag(arguments, "--language");
-        const std::string language_short = flag(arguments, "--lang");
-        return plans(lessons, language.empty() ? language_short : language,
-                     flag(arguments, "--write"));
-    }
-    if (command == "answers") {
-        return answers(lessons, flag(arguments, "--language"),
-                       flag(arguments, "--lesson"));
-    }
-    if (command == "validate") {
-        return validate(lessons,
-                        std::find(arguments.begin(), arguments.end(),
-                                  std::string{"--quiet"}) != arguments.end());
-    }
-    if (command == "list") {
-        list(lessons);
-        return 0;
-    }
-    return usage();
+    timewarp::cli::Report report{"time_warp_teach", invocation};
+    report.check(invocation.command, status == 0, status == 0 ? "" : "the command said no");
+    return report.finish();
 }

@@ -16,7 +16,7 @@
 #include <system_error>
 #include <vector>
 
-#include "docs/cli.hpp"
+#include "timewarp/tools/cli.hpp"
 #include "docs/pipes.hpp"
 #include "docs/text.hpp"
 
@@ -517,33 +517,23 @@ int self_test(const fs::path& root) {
 
 }  // namespace
 
-int run_claims_command(int argc, char** argv) {
-    const Arguments arguments =
-        parse_arguments(argc, argv, 2, {"--root"}, {"--quiet", "--self-test"});
-    if (!arguments.error.empty()) {
-        std::cerr << "time_warp_docs: " << arguments.error << '\n';
-        return 2;
-    }
-    if (!arguments.positionals.empty()) {
+int run_claims_command(const timewarp::cli::Invocation& invocation) {
+    if (!invocation.positionals().empty()) {
         std::cerr << "time_warp_docs: claims takes no files\n";
         return 2;
     }
+    const fs::path& root = invocation.root;
+
+    if (invocation.has("--self-test")) {
+        return self_test(root);
+    }
+
+    const std::set<std::string> top_level = top_level_directories(root);
+    const std::set<std::string> root_targets = make_targets(root / "Makefile");
+    const std::set<std::string> native_targets = make_targets(root / "native" / "Makefile");
+
     std::string error;
-    const std::optional<fs::path> root = root_of(arguments, error);
-    if (!root) {
-        std::cerr << "time_warp_docs: " << error << '\n';
-        return 2;
-    }
-
-    if (arguments.has("self-test")) {
-        return self_test(*root);
-    }
-
-    const std::set<std::string> top_level = top_level_directories(*root);
-    const std::set<std::string> root_targets = make_targets(*root / "Makefile");
-    const std::set<std::string> native_targets = make_targets(*root / "native" / "Makefile");
-
-    const std::optional<std::vector<fs::path>> files = tracked_files(*root, error);
+    const std::optional<std::vector<fs::path>> files = tracked_files(root, error);
     if (!files) {
         std::cerr << "❌ " << error << '\n';
         return 1;
@@ -555,13 +545,13 @@ int run_claims_command(int argc, char** argv) {
         if (!content) {
             // The Python lets `read_text` raise here; the verdict is the same --
             // the run fails -- without the traceback.
-            std::cerr << "❌ " << report_path(path, *root) << ": cannot be read\n";
+            std::cerr << "❌ " << report_path(path, root) << ": cannot be read\n";
             return 1;
         }
-        for (const Problem& problem : check_text(*content, *root, top_level, root_targets,
+        for (const Problem& problem : check_text(*content, root, top_level, root_targets,
                                                  native_targets)) {
             ++failures;
-            std::cout << report_path(path, *root) << ":" << problem.line << ": "
+            std::cout << report_path(path, root) << ":" << problem.line << ": "
                       << problem.message << '\n';
         }
     }
@@ -574,7 +564,7 @@ int run_claims_command(int argc, char** argv) {
                   << kHistoryOpen << " ... " << kHistoryClose << ".\n";
         return 1;
     }
-    if (!arguments.has("quiet")) {
+    if (!invocation.quiet) {
         std::cout << "doc claims: " << files->size() << " files, no false claims\n";
     }
     return 0;

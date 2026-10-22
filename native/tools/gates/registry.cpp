@@ -150,15 +150,17 @@ int runRegistry(const QStringList& arguments) {
     }
 
     if (failures.isEmpty()) {
-        std::printf("registry: one table, %d source file(s) checked\n", checked);
+        if (!quiet()) {
+            std::fprintf(out(), "registry: one table, %d source file(s) checked\n", checked);
+        }
         return 0;
     }
-    std::printf("registry: %d second copy/copies of the language table:\n",
+    std::fprintf(out(), "registry: %d second copy/copies of the language table:\n",
                 static_cast<int>(failures.size()));
     for (const QString& failure : failures) {
-        std::printf("  %s\n", qPrintable(failure));
+        std::fprintf(out(), "  %s\n", qPrintable(failure));
     }
-    std::printf("\nA language's display name, key and extensions live in\n"
+    std::fprintf(out(), "\nA language's display name, key and extensions live in\n"
                 "native/include/timewarp/lang/registry.hpp and nowhere else. Ask the table:\n"
                 "`language_row`, `language_row_for_key`, `language_row_for_extension`.\n");
     return 1;

@@ -1423,31 +1423,24 @@ int run(const std::vector<std::string>& files, bool quiet) {
     return 1;
 }
 
-int run_md_command(int argc, char** argv) {
-    std::string root;
-    bool quiet = false;
+int run_md_command(const timewarp::cli::Invocation& invocation) {
+    // `--explain` is this command's own; everything else it takes -- the root, the
+    // quiet, the files -- is the shared vocabulary, already parsed.
     bool explain = false;
     std::vector<std::string> files;
-    for (int index = 2; index < argc; ++index) {
-        const std::string_view argument = argv[index];
-        if (argument == "--quiet") {
-            quiet = true;
-        } else if (argument == "--explain") {
+    for (const std::string& argument : invocation.arguments) {
+        if (argument == "--explain") {
             explain = true;
-        } else if (argument == "--root" && index + 1 < argc) {
-            root = argv[++index];
-        } else if (argument.rfind("--root=", 0) == 0) {
-            root = std::string{argument.substr(7)};
-        } else if (argument == "--help" || argument == "-h") {
-            std::printf("usage: time_warp_docs md [--root DIR] [--quiet] [FILE ...]\n");
-            return 0;
-        } else if (argument.rfind("--", 0) == 0) {
-            std::fprintf(stderr, "md: unknown option %s\n", std::string{argument}.c_str());
+        } else if (argument.size() > 1 && argument.front() == '-' && argument != "-") {
+            std::fprintf(stderr, "md: unknown option %s\n", argument.c_str());
             return 2;
         } else {
             files.emplace_back(argument);
         }
     }
+    const std::string root = invocation.root_given ? invocation.root.string()
+                                                   : std::string{};
+    const bool quiet = invocation.quiet;
 
     if (files.empty()) {
         // The tracked files, so a build tree or a vendored directory stays out of

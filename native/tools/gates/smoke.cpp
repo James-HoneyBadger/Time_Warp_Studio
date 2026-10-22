@@ -224,17 +224,17 @@ int runSmoke(const QStringList& arguments) {
 
             ++counts[key].passed;
             if (verbose) {
-                std::printf("  ok  %s  (%d strokes)\n", qPrintable(identifier),
+                std::fprintf(out(), "  ok  %s  (%d strokes)\n", qPrintable(identifier),
                             outcome.drawings);
             }
         }
     }
 
-    std::printf("%-10s %6s %6s %8s\n", "language", "passed", "failed", "strokes");
+    std::fprintf(out(), "%-10s %6s %6s %8s\n", "language", "passed", "failed", "strokes");
     for (const LanguageExamples& language : language_examples()) {
         const QString key = QString::fromStdString(language.key);
         const Counts& entry = counts[key];
-        std::printf("%-10s %6d %6d %8lld\n", language.key.c_str(), entry.passed,
+        std::fprintf(out(), "%-10s %6d %6d %8lld\n", language.key.c_str(), entry.passed,
                     entry.failed, entry.strokes);
     }
 
@@ -245,7 +245,9 @@ int runSmoke(const QStringList& arguments) {
         }
         return 1;
     }
-    std::printf("\nall %d example programs ran\n", ran);
+    if (!quiet()) {
+        std::fprintf(out(), "\nall %d example programs ran\n", ran);
+    }
     return 0;
 }
 

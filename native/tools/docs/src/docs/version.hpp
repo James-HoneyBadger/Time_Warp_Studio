@@ -18,9 +18,11 @@
 
 #pragma once
 
+#include "timewarp/tools/cli.hpp"
+
 namespace docs {
 
 /// Parses `version [--root DIR] [--write]` from `argv[first:]` and runs it.
-[[nodiscard]] int run_version_command(int argc, char** argv);
+[[nodiscard]] int run_version_command(const timewarp::cli::Invocation& invocation);
 
 }  // namespace docs

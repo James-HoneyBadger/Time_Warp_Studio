@@ -39,6 +39,8 @@
 
 #pragma once
 
+#include "timewarp/tools/cli.hpp"
+
 #include <cstddef>
 #include <string>
 #include <string_view>
@@ -61,6 +63,6 @@ struct Issue {
 
 /// The `md` command line: `[--root DIR] [--quiet] [FILE ...]`. With no files it
 /// lints every tracked Markdown file, which is what `make lint-md` asks for.
-[[nodiscard]] int run_md_command(int argc, char** argv);
+[[nodiscard]] int run_md_command(const timewarp::cli::Invocation& invocation);
 
 }  // namespace docs::md

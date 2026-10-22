@@ -15,7 +15,8 @@
 #include <system_error>
 #include <vector>
 
-#include "docs/cli.hpp"
+#include "timewarp/tools/cli.hpp"
+
 #include "docs/text.hpp"
 
 namespace docs {
@@ -154,24 +155,14 @@ fs::path resolve_against(const fs::path& document, std::string_view relative) {
 
 }  // namespace
 
-int run_links_command(int argc, char** argv) {
-    const Arguments arguments = parse_arguments(argc, argv, 2, {"--root"}, {});
-    if (!arguments.error.empty()) {
-        std::cerr << "time_warp_docs: " << arguments.error << '\n';
-        return 2;
-    }
-    std::string error;
-    const std::optional<fs::path> root = root_of(arguments, error);
-    if (!root) {
-        std::cerr << "time_warp_docs: " << error << '\n';
-        return 2;
-    }
+int run_links_command(const timewarp::cli::Invocation& invocation) {
+    const fs::path& root = invocation.root;
 
     std::vector<std::string> failures;
     std::map<fs::path, std::set<std::string>> anchor_cache;
     std::size_t checked = 0;
 
-    for (const fs::path& document : documents(*root, arguments.positionals)) {
+    for (const fs::path& document : documents(root, invocation.positionals())) {
         std::error_code failure;
         if (!fs::is_regular_file(document, failure)) {
             failures.push_back(document.string() + ": is not a file");
@@ -247,7 +238,9 @@ int run_links_command(int argc, char** argv) {
         std::cout << "doc links: " << failures.size() << " broken of " << checked << " checked\n";
         return 1;
     }
-    std::cout << "doc links: " << checked << " checked, all resolve\n";
+    if (!invocation.quiet) {
+        std::cout << "doc links: " << checked << " checked, all resolve\n";
+    }
     return 0;
 }
 

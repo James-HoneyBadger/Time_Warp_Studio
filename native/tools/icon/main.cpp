@@ -33,6 +33,8 @@
 
 #include <zlib.h>
 
+#include "timewarp/tools/cli.hpp"
+
 #include <algorithm>
 #include <array>
 #include <cmath>
@@ -466,72 +468,49 @@ constexpr std::array<int, 6> kIcnsSizes{16, 32, 64, 128, 256, 512};
     return std::nullopt;
 }
 
-void usage() {
-    std::fprintf(stderr,
-                 "usage: time_warp_icon [--root DIR] [--check]\n"
-                 "\n"
-                 "  --root DIR   write the icons under DIR (default: the checkout)\n"
-                 "  --check      compare with the files on disk, write nothing,\n"
-                 "               and exit 1 if any is stale or missing\n");
-}
-
-struct Options {
-    fs::path root;
-    bool check = false;
-    bool help = false;
-};
-
-[[nodiscard]] std::optional<Options> parseArguments(int argc, char** argv) {
-    Options options;
-    bool rootGiven = false;
-    for (int index = 1; index < argc; ++index) {
-        const std::string_view argument{argv[index]};
-        if (argument == "--help" || argument == "-h") {
-            options.help = true;
-            continue;
-        }
-        if (argument == "--check") {
-            options.check = true;
-            continue;
-        }
-        if (argument == "--root") {
-            if (index + 1 >= argc) {
-                std::fprintf(stderr, "time_warp_icon: --root needs a directory\n");
-                return std::nullopt;
-            }
-            options.root = fs::path{argv[++index]};
-            rootGiven = true;
-            continue;
-        }
-        std::fprintf(stderr, "time_warp_icon: unknown argument '%s'\n",
-                     std::string{argument}.c_str());
-        return std::nullopt;
-    }
-    if (options.help) {
-        return options;
-    }
-    if (!rootGiven) {
-        const std::optional<fs::path> root = locateRoot(argv[0]);
-        if (!root) {
-            std::fprintf(stderr, "time_warp_icon: cannot find the checkout; pass --root DIR\n");
-            return std::nullopt;
-        }
-        options.root = *root;
-    }
-    return options;
-}
+constexpr std::string_view kUsage{
+    "usage: time_warp_icon [--check]\n"
+    "\n"
+    "  --check      compare with the files on disk, write nothing, and exit 1 if\n"
+    "               any is stale or missing\n"
+    "\n"
+    "With no --root the checkout is found from the executable's own location, so a\n"
+    "build tree anywhere still writes the icons the packages carry.\n"};
 
 }  // namespace
 
 int main(int argc, char** argv) {
-    const std::optional<Options> options = parseArguments(argc, argv);
-    if (!options) {
-        usage();
+    const timewarp::cli::Invocation invocation =
+        timewarp::cli::parse("time_warp_icon", argc, argv, /*expects_command=*/false);
+    if (invocation.help) {
+        std::cout << kUsage;
+        std::printf("\n  --root DIR    the checkout to write under\n"
+                    "  --json PATH   write the machine report to PATH (\"-\" for stdout)\n"
+                    "  --quiet       only what failed\n"
+                    "  --help        this message\n");
+        return 0;
+    }
+    if (!invocation.ok()) {
+        std::fprintf(stderr, "time_warp_icon: %s\n", invocation.error.c_str());
+        std::cout << kUsage;
         return 2;
     }
-    if (options->help) {
-        usage();
-        return 0;
+
+    const bool check = invocation.has("--check");
+    for (const std::string& argument : invocation.positionals()) {
+        std::fprintf(stderr, "time_warp_icon: unknown argument '%s'\n", argument.c_str());
+        std::cout << kUsage;
+        return 2;
+    }
+
+    // The default root, in order: what the caller said, then the checkout the
+    // executable sits in, then where the command was run.
+    fs::path root = invocation.root;
+    if (!invocation.root_given) {
+        const std::optional<fs::path> located = locateRoot(argv[0]);
+        if (located) {
+            root = *located;
+        }
     }
 
     std::string error;
@@ -541,29 +520,30 @@ int main(int argc, char** argv) {
         return 3;
     }
 
+    timewarp::cli::Report report{"time_warp_icon", invocation};
     int exitCode = 0;
     for (const IconFile& icon : *icons) {
-        const fs::path target = options->root / icon.relative;
-        if (options->check) {
+        const fs::path target = root / icon.relative;
+        const std::string name = icon.relative.generic_string();
+        if (check) {
             const std::optional<Bytes> committed = readFile(target);
             if (!committed) {
-                std::cout << "missing " << icon.relative.generic_string() << '\n';
-                exitCode = 1;
+                report.check(name, false, "missing");
                 continue;
             }
             if (*committed != icon.contents) {
-                std::cout << "stale " << icon.relative.generic_string() << '\n';
-                exitCode = 1;
+                report.check(name, false, "stale");
                 continue;
             }
-            std::cout << "current " << icon.relative.generic_string() << '\n';
+            report.check(name, true);
             continue;
         }
         if (!writeFile(target, icon.contents, error)) {
             std::fprintf(stderr, "❌ %s\n", error.c_str());
             return 3;
         }
-        std::cout << "wrote " << icon.relative.generic_string() << '\n';
+        report.check(name, true);
     }
-    return exitCode;
+    exitCode = report.finish();
+    return exitCode == 2 ? 3 : exitCode;
 }

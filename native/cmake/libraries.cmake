@@ -304,6 +304,16 @@ if(TIME_WARP_EXPR_BUILD_TESTS)
     target_include_directories(audio_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/tests)
     timewarp_enable_warnings(audio_tests)
     add_test(NAME audio_tests COMMAND audio_tests)
+
+    # The command-line convention every tool in tools/ speaks. It is a header with
+    # no library behind it -- the documentation gates build without Qt, and they
+    # include it -- so this suite links nothing but its own source.
+    add_executable(cli_tests tests/cli_tests.cpp)
+    target_include_directories(cli_tests PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}/tests
+        ${CMAKE_CURRENT_SOURCE_DIR}/include)
+    timewarp_enable_warnings(cli_tests)
+    add_test(NAME cli_tests COMMAND cli_tests)
 endif()
 
 # One native program in, what it printed and drew out, for the differential

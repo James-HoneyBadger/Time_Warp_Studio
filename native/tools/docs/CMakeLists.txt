@@ -44,7 +44,6 @@ endif()
 
 add_executable(time_warp_docs
     src/main.cpp
-    src/docs/cli.cpp
     src/docs/text.cpp
     src/docs/pipes.cpp
     src/docs/links.cpp
@@ -53,7 +52,9 @@ add_executable(time_warp_docs
     src/docs/md.cpp
 )
 
-target_include_directories(time_warp_docs PRIVATE src)
+# `../../include` is where the tools' shared command line lives
+# (`timewarp/tools/cli.hpp`); `src` is this project's own headers.
+target_include_directories(time_warp_docs PRIVATE src ${CMAKE_CURRENT_SOURCE_DIR}/../../include)
 target_compile_features(time_warp_docs PRIVATE cxx_std_20)
 
 if(MSVC)

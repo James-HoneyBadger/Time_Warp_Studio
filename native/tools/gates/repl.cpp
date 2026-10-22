@@ -303,12 +303,12 @@ int runRepl(const QStringList& arguments) {
 
             if (verdict.ok) {
                 if (verbose) {
-                    std::printf("  ok   %-10s %-28s %s\n", qPrintable(row.language),
+                    std::fprintf(out(), "  ok   %-10s %-28s %s\n", qPrintable(row.language),
                                 qPrintable(row.command), qPrintable(row.expect));
                 }
             } else {
                 failures.emplace_back(row, std::make_pair(verdict.why, answer));
-                std::printf("  FAIL %-10s %-28s %s\n", qPrintable(row.language),
+                std::fprintf(out(), "  FAIL %-10s %-28s %s\n", qPrintable(row.language),
                             qPrintable(row.command), qPrintable(verdict.why));
             }
             if (index % kProgressEvery == 0) {
@@ -321,14 +321,14 @@ int runRepl(const QStringList& arguments) {
     removeScratch(table->scratch);
     const double elapsed = static_cast<double>(clock.elapsed()) / 1000.0;
 
-    std::printf("\n%-12s %7s %7s\n", "language", "passed", "failed");
+    std::fprintf(out(), "\n%-12s %7s %7s\n", "language", "passed", "failed");
     QStringList languages = buckets.keys();
     languages.sort();
     for (const QString& language : languages) {
         const Bucket& bucket = buckets[language];
-        std::printf("%-12s %7d %7d\n", qPrintable(language), bucket.passed, bucket.failed);
+        std::fprintf(out(), "%-12s %7d %7d\n", qPrintable(language), bucket.passed, bucket.failed);
     }
-    std::printf("rows: %d   elapsed: %.1fs\n", static_cast<int>(rows.size()), elapsed);
+    std::fprintf(out(), "rows: %d   elapsed: %.1fs\n", static_cast<int>(rows.size()), elapsed);
 
     if (!json_path.isEmpty()) {
         QFile file{json_path};
@@ -338,27 +338,30 @@ int runRepl(const QStringList& arguments) {
     }
 
     if (!failures.empty()) {
-        std::printf("\n");
+        std::fprintf(out(), "\n");
         int shown = 0;
         for (const auto& failure : failures) {
             if (shown++ >= kCloseLookLimit) {
                 break;
             }
-            std::printf("%s / %s: %s\n", qPrintable(failure.first.language),
+            std::fprintf(out(), "%s / %s: %s\n", qPrintable(failure.first.language),
                         qPrintable(failure.first.command),
                         qPrintable(failure.second.first));
-            std::printf("    source: %s\n", qPrintable(failure.first.source));
-            std::printf("    output: %s\n",
+            std::fprintf(out(), "    source: %s\n", qPrintable(failure.first.source));
+            std::fprintf(out(), "    output: %s\n",
                         qPrintable(failure.second.second.output.left(160)));
         }
         if (static_cast<int>(failures.size()) > kCloseLookLimit) {
-            std::printf("... and %d more\n",
+            std::fprintf(out(), "... and %d more\n",
                         static_cast<int>(failures.size()) - kCloseLookLimit);
         }
         return 1;
     }
 
-    std::printf("\nall %d rows behaved through the REPL\n", static_cast<int>(rows.size()));
+    if (!quiet()) {
+        std::fprintf(out(), "\nall %d rows behaved through the REPL\n",
+                     static_cast<int>(rows.size()));
+    }
     return 0;
 }
 

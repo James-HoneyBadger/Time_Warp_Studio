@@ -30,10 +30,20 @@
 #include <QString>
 #include <QStringList>
 
+#include <cstdio>
 #include <optional>
 #include <vector>
 
 namespace timewarp::gates {
+
+/// Where a gate writes what it found: `stdout`, unless the run is writing a machine
+/// report, in which case the prose goes to stderr and stdout carries only the object.
+[[nodiscard]] FILE* out();
+
+/// Whether `--quiet` was given. Set once by `main` from the shared command line.
+[[nodiscard]] bool quiet();
+void setQuiet(bool quiet);
+void setProseToStderr(bool to_stderr);
 
 /// The checkout these tools belong to, found from the executable's own location.
 /// A gate run from another directory must still find the repository it is about.

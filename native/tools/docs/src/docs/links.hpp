@@ -13,9 +13,11 @@
 
 #pragma once
 
+#include "timewarp/tools/cli.hpp"
+
 namespace docs {
 
 /// Parses `links [--root DIR] [FILE ...]` from `argv[first:]` and runs it.
-[[nodiscard]] int run_links_command(int argc, char** argv);
+[[nodiscard]] int run_links_command(const timewarp::cli::Invocation& invocation);
 
 }  // namespace docs

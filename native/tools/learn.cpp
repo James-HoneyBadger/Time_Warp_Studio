@@ -11,13 +11,19 @@
 //   time_warp_learn progress
 //   time_warp_learn reset <lesson>
 //
+// The command line is `timewarp::cli`'s: `--root`, `--json PATH`, `--quiet` and
+// `--help` in any position, and status 2 for a line it cannot use.
+//
 // It is the C++ counterpart of `native/tools/learn.py`, and the two give the same
 // verdicts because they are the same library: `timewarp_lessons`, which is what the
 // IDE's Lessons panel calls too. A learner who prefers a terminal is not a
 // second-class client.
 
+#include <array>
 #include <cstdio>
+#include <optional>
 #include <string>
+#include <string_view>
 #include <vector>
 
 #include <QCoreApplication>
@@ -27,6 +33,7 @@
 #include <QTextStream>
 
 #include "timewarp/lang/language.hpp"
+#include "timewarp/tools/cli.hpp"
 #include "timewarp/lessons/progress.hpp"
 #include "timewarp/lessons/verify.hpp"
 
@@ -35,21 +42,6 @@ namespace {
 using timewarp::lessons::Lesson;
 using timewarp::lessons::LessonStatus;
 using timewarp::lessons::ProgressStore;
-
-int usage() {
-    std::printf(
-        "usage: time_warp_learn <command> [lesson] [file]\n\n"
-        "  list              the lessons, and where you are in them\n"
-        "  show <lesson>     one lesson: every checkpoint and its objective\n"
-        "  start <lesson>    write the current checkpoint's starter to a file\n"
-        "  check <lesson> <file>  run a file against the current checkpoint\n"
-        "  hint <lesson>     the next hint for the current checkpoint\n"
-        "  solution <lesson> the worked answer\n"
-        "  progress          what you have finished\n"
-        "  reset <lesson>    start a lesson again\n\n"
-        "A lesson may be named by its id or by an unambiguous prefix of one.\n");
-    return 2;
-}
 
 QString status_text(LessonStatus status) {
     switch (status) {
@@ -179,79 +171,176 @@ int check(ProgressStore& store, const Lesson& lesson, const QString& path) {
     return result.passed ? 0 : 1;
 }
 
-}  // namespace
+int runList(const timewarp::cli::Invocation& invocation);
+int runShow(const timewarp::cli::Invocation& invocation);
+int runStart(const timewarp::cli::Invocation& invocation);
+int runCheck(const timewarp::cli::Invocation& invocation);
+int runHint(const timewarp::cli::Invocation& invocation);
+int runSolution(const timewarp::cli::Invocation& invocation);
+int runProgress(const timewarp::cli::Invocation& invocation);
+int runReset(const timewarp::cli::Invocation& invocation);
 
-int main(int argc, char** argv) {
-    QCoreApplication app{argc, argv};
-    if (argc < 2) {
-        return usage();
-    }
-    const std::string command{argv[1]};
-    const std::string subject = argc > 2 ? argv[2] : std::string{};
+constexpr std::string_view kSynopsis{"<command> [lesson] [file]"};
 
+constexpr std::array<timewarp::cli::Command, 8> kCommands{{
+    {"list", "the lessons, and where you are in them", runList},
+    {"show", "one lesson: every checkpoint and its objective", runShow},
+    {"start", "write the current checkpoint's starter to a file", runStart},
+    {"check", "run a file against the current checkpoint", runCheck},
+    {"hint", "the next hint for the current checkpoint", runHint},
+    {"solution", "the worked answer", runSolution},
+    {"progress", "what you have finished", runProgress},
+    {"reset", "start a lesson again", runReset},
+}};
+
+/// The store, loaded once per command. A command that cannot read it says so and
+/// answers 1, which is what the panel would show too.
+std::optional<ProgressStore> load_store() {
     ProgressStore store;
     QString error;
     if (!store.load_default(&error)) {
         std::printf("❌ %s\n", error.toStdString().c_str());
+        return std::nullopt;
+    }
+    return store;
+}
+
+/// The lesson a command names, or nullptr when it named none and has already been
+/// told so.
+const Lesson* named(const ProgressStore& store, const timewarp::cli::Invocation& invocation) {
+    const std::vector<std::string> words = invocation.positionals();
+    if (words.empty()) {
+        return nullptr;
+    }
+    return resolve(store, words.front());
+}
+
+int runList(const timewarp::cli::Invocation& invocation) {
+    (void)invocation;  // `list` takes no lesson: everything it has is in the store.
+    std::optional<ProgressStore> store = load_store();
+    return store ? list(*store) : 1;
+}
+
+int runProgress(const timewarp::cli::Invocation& invocation) {
+    (void)invocation;
+    std::optional<ProgressStore> store = load_store();
+    if (!store) {
         return 1;
     }
-
-    if (command == "list") {
-        return list(store);
-    }
-    if (command == "progress") {
-        const auto [finished, total] = store.completed_count();
-        std::printf("%d of %d lesson(s) finished\n", finished, total);
-        for (const Lesson& lesson : store.lessons()) {
-            if (store.status(lesson.id) == LessonStatus::InProgress) {
-                std::printf("  in progress: %s (checkpoint %d)\n", lesson.id.c_str(),
-                            store.current_index(lesson.id) + 1);
-            }
+    const auto [finished, total] = store->completed_count();
+    std::printf("%d of %d lesson(s) finished\n", finished, total);
+    for (const Lesson& lesson : store->lessons()) {
+        if (store->status(lesson.id) == LessonStatus::InProgress) {
+            std::printf("  in progress: %s (checkpoint %d)\n", lesson.id.c_str(),
+                        store->current_index(lesson.id) + 1);
         }
-        return 0;
     }
-    if (subject.empty()) {
-        return usage();
+    return 0;
+}
+
+int runShow(const timewarp::cli::Invocation& invocation) {
+    std::optional<ProgressStore> store = load_store();
+    if (!store) {
+        return 1;
     }
-    const Lesson* lesson = resolve(store, subject);
+    const Lesson* lesson = named(*store, invocation);
+    return lesson != nullptr ? show(*store, *lesson) : 1;
+}
+
+int runStart(const timewarp::cli::Invocation& invocation) {
+    std::optional<ProgressStore> store = load_store();
+    if (!store) {
+        return 1;
+    }
+    const Lesson* lesson = named(*store, invocation);
+    return lesson != nullptr ? start(*store, *lesson) : 1;
+}
+
+int runCheck(const timewarp::cli::Invocation& invocation) {
+    std::optional<ProgressStore> store = load_store();
+    if (!store) {
+        return 1;
+    }
+    const Lesson* lesson = named(*store, invocation);
     if (lesson == nullptr) {
         return 1;
     }
-    if (command == "show") {
-        return show(store, *lesson);
+    const std::vector<std::string> words = invocation.positionals();
+    if (words.size() < 2) {
+        return timewarp::cli::usage_error(invocation, "check needs a lesson and a file",
+                                          kSynopsis, kCommands);
     }
-    if (command == "start") {
-        return start(store, *lesson);
+    return check(*store, *lesson, QString::fromStdString(words.at(1)));
+}
+
+int runHint(const timewarp::cli::Invocation& invocation) {
+    std::optional<ProgressStore> store = load_store();
+    if (!store) {
+        return 1;
     }
-    if (command == "check") {
-        if (argc < 4) {
-            return usage();
-        }
-        return check(store, *lesson, QString::fromLocal8Bit(argv[3]));
+    const Lesson* lesson = named(*store, invocation);
+    if (lesson == nullptr) {
+        return 1;
     }
-    if (command == "hint") {
-        const int index = store.current_index(lesson->id);
-        const std::string text = store.hint(lesson->id, index, store.hints_used(lesson->id));
-        if (text.empty()) {
-            std::printf("That is every hint for this checkpoint.\n");
-            return 0;
-        }
-        std::printf("%s\n", text.c_str());
+    const int index = store->current_index(lesson->id);
+    const std::string text = store->hint(lesson->id, index, store->hints_used(lesson->id));
+    if (text.empty()) {
+        std::printf("That is every hint for this checkpoint.\n");
         return 0;
     }
-    if (command == "solution") {
-        const int index = store.current_index(lesson->id);
-        if (index >= static_cast<int>(lesson->checkpoints.size())) {
-            return 0;
-        }
-        std::printf("%s\n",
-                    lesson->checkpoints[static_cast<std::size_t>(index)].solution.c_str());
+    std::printf("%s\n", text.c_str());
+    return 0;
+}
+
+int runSolution(const timewarp::cli::Invocation& invocation) {
+    std::optional<ProgressStore> store = load_store();
+    if (!store) {
+        return 1;
+    }
+    const Lesson* lesson = named(*store, invocation);
+    if (lesson == nullptr) {
+        return 1;
+    }
+    const int index = store->current_index(lesson->id);
+    if (index >= static_cast<int>(lesson->checkpoints.size())) {
         return 0;
     }
-    if (command == "reset") {
-        store.reset(lesson->id);
-        std::printf("%s starts again at checkpoint 1.\n", lesson->id.c_str());
-        return 0;
+    std::printf("%s\n", lesson->checkpoints[static_cast<std::size_t>(index)].solution.c_str());
+    return 0;
+}
+
+int runReset(const timewarp::cli::Invocation& invocation) {
+    std::optional<ProgressStore> store = load_store();
+    if (!store) {
+        return 1;
     }
-    return usage();
+    const Lesson* lesson = named(*store, invocation);
+    if (lesson == nullptr) {
+        return 1;
+    }
+    store->reset(lesson->id);
+    std::printf("%s starts again at checkpoint 1.\n", lesson->id.c_str());
+    return 0;
+}
+
+}  // namespace
+
+int main(int argc, char** argv) {
+    // Qt Core only, and only so a lesson's default data directory can be found
+    // beside the binary: nothing here opens a window.
+    QCoreApplication app{argc, argv};
+    const timewarp::cli::Invocation invocation =
+        timewarp::cli::parse("time_warp_learn", argc, argv);
+
+    int status = 0;
+    {
+        const timewarp::cli::ProseToStderr prose{invocation.wants_json()};
+        status = timewarp::cli::dispatch(invocation, kSynopsis, kCommands);
+    }
+    if (!invocation.wants_json()) {
+        return status;
+    }
+    timewarp::cli::Report report{"time_warp_learn", invocation};
+    report.check(invocation.command, status == 0, status == 0 ? "" : "the command said no");
+    return report.finish();
 }

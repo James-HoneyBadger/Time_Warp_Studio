@@ -166,12 +166,12 @@ int runCommands(const QStringList& arguments) {
 
         if (verdict.ok) {
             if (verbose) {
-                std::printf("  ok   %-6s %-16s %s\n", qPrintable(row.language),
+                std::fprintf(out(), "  ok   %-6s %-16s %s\n", qPrintable(row.language),
                             qPrintable(row.command), qPrintable(row.expect));
             }
         } else {
             failures.emplace_back(row, std::make_pair(verdict.why, outcome));
-            std::printf("  FAIL %-6s %-16s %s\n", qPrintable(row.language),
+            std::fprintf(out(), "  FAIL %-6s %-16s %s\n", qPrintable(row.language),
                         qPrintable(row.command), qPrintable(verdict.why));
         }
         if (explain) {
@@ -191,7 +191,7 @@ int runCommands(const QStringList& arguments) {
                 notes.append(
                     QStringLiteral("err='%1'").arg(outcome.errors.first().left(40)));
             }
-            std::printf("       %-18s expect=%-14s %s\n", qPrintable(row.command),
+            std::fprintf(out(), "       %-18s expect=%-14s %s\n", qPrintable(row.command),
                         qPrintable(row.expect),
                         qPrintable(notes.isEmpty() ? QStringLiteral("silent")
                                                    : notes.join(QStringLiteral("  "))));
@@ -200,14 +200,14 @@ int runCommands(const QStringList& arguments) {
 
     removeScratch(table->scratch);
 
-    std::printf("\n%-10s %7s %7s\n", "language", "passed", "failed");
+    std::fprintf(out(), "\n%-10s %7s %7s\n", "language", "passed", "failed");
     QStringList languages = by_language.keys();
     languages.sort();
     for (const QString& language : languages) {
         const Bucket& bucket = by_language[language];
-        std::printf("%-10s %7d %7d\n", qPrintable(language), bucket.passed, bucket.failed);
+        std::fprintf(out(), "%-10s %7d %7d\n", qPrintable(language), bucket.passed, bucket.failed);
     }
-    std::printf("rows: %d   waived: %d\n", static_cast<int>(rows.size()),
+    std::fprintf(out(), "rows: %d   waived: %d\n", static_cast<int>(rows.size()),
                 static_cast<int>(table->waivers.size()));
 
     // The completeness check. Read the numbers with their scope in mind: the table
@@ -219,9 +219,9 @@ int runCommands(const QStringList& arguments) {
     if (wanted.isEmpty()) {
         const QMap<QString, inventory::Entry> found = inventory::collect();
         const QSet<QString> effective = coveredLabels(table->rows, table->waivers);
-        std::printf("\n  Coverage of the *statement* table against what the executors "
+        std::fprintf(out(), "\n  Coverage of the *statement* table against what the executors "
                     "dispatch on.\n");
-        std::printf("  Functions and library selectors are counted here too, and are "
+        std::fprintf(out(), "  Functions and library selectors are counted here too, and are "
                     "covered by lang_tests.\n");
         for (auto it = found.cbegin(); it != found.cend(); ++it) {
             QSet<QString> missing;
@@ -230,48 +230,57 @@ int runCommands(const QStringList& arguments) {
                     missing.insert(name);
                 }
             }
-            std::printf("  %s: %d command-shaped candidate(s) with no row (statements "
+            std::fprintf(out(), "  %s: %d command-shaped candidate(s) with no row (statements "
                         "only are rows)\n",
                         qPrintable(it.key()), static_cast<int>(missing.size()));
             if (verbose) {
                 QStringList names = missing.values();
                 names.sort();
                 for (const QString& name : names) {
-                    std::printf("      %s\n", qPrintable(name));
+                    std::fprintf(out(), "      %s\n", qPrintable(name));
                 }
             }
         }
     }
 
     if (!json_path.isEmpty()) {
-        QFile file{json_path};
-        if (file.open(QIODevice::WriteOnly | QIODevice::Truncate)) {
-            file.write(QJsonDocument{results}.toJson(QJsonDocument::Indented));
+        const QByteArray report = QJsonDocument{results}.toJson(QJsonDocument::Indented);
+        if (json_path == QLatin1String("-")) {
+            // The shared `--json -` means stdout, and this is the one gate with a
+            // per-row report of its own.
+            std::fwrite(report.constData(), 1, static_cast<std::size_t>(report.size()), stdout);
+        } else {
+            QFile file{json_path};
+            if (file.open(QIODevice::WriteOnly | QIODevice::Truncate)) {
+                file.write(report);
+            }
         }
     }
 
     if (!failures.empty()) {
-        std::printf("\n");
+        std::fprintf(out(), "\n");
         int shown = 0;
         for (const auto& failure : failures) {
             if (shown++ >= kCloseLookLimit) {
                 break;
             }
-            std::printf("%s / %s: %s\n", qPrintable(failure.first.language),
+            std::fprintf(out(), "%s / %s: %s\n", qPrintable(failure.first.language),
                         qPrintable(failure.first.command),
                         qPrintable(failure.second.first));
-            std::printf("    source: %s\n", qPrintable(failure.first.source));
-            std::printf("    output: %s\n",
+            std::fprintf(out(), "    source: %s\n", qPrintable(failure.first.source));
+            std::fprintf(out(), "    output: %s\n",
                         qPrintable(failure.second.second.output.left(120)));
         }
         if (static_cast<int>(failures.size()) > kCloseLookLimit) {
-            std::printf("... and %d more\n",
+            std::fprintf(out(), "... and %d more\n",
                         static_cast<int>(failures.size()) - kCloseLookLimit);
         }
         return 1;
     }
 
-    std::printf("\nall %d command rows behaved\n", static_cast<int>(rows.size()));
+    if (!quiet()) {
+        std::fprintf(out(), "\nall %d command rows behaved\n", static_cast<int>(rows.size()));
+    }
     return 0;
 }
 

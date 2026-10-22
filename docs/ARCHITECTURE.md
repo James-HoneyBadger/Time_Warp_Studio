@@ -897,6 +897,35 @@ thousands of `src/…` paths in those files relative to `native/`, which is what
 assume. `time_warp_gates structure` fails if `CMakeLists.txt` grows past 200 lines or a
 source file past 2,000 without being named on a waiver list that may only shrink.
 
+### The command line
+
+Every tool in `native/tools/` speaks one vocabulary, defined once in
+`native/include/timewarp/tools/cli.hpp`:
+
+| Option | Meaning |
+| --- | --- |
+| `--root DIR`, `--root=DIR` | the checkout to work on; defaults to the working directory |
+| `--json PATH`, `--json=PATH` | write the machine report to `PATH`; `-` means stdout |
+| `--quiet` | only what failed |
+| `--help`, `-h` | the usage message, status 0 |
+
+They are accepted in any position, before or after the command, and every tool answers
+a command line it cannot use with status 2 — "you asked wrongly" — while status 1 means
+the checks ran and something failed. Each tool's commands are a `cli::Command` table,
+so its usage message is generated from the same list that dispatches.
+
+`--json` writes one object, `{"tool":…,"command":…,"ok":…,"checks":[…]}`; while it is
+written, the prose a command prints goes to stderr, via `cli::ProseToStderr`, which moves
+the file descriptor rather than a stream buffer so that a tool printing with `printf` does
+not slip past it. `time_warp_gates commands` keeps a richer per-row report of its own, and
+writes it to the same `PATH`.
+
+The header links nothing, not even Qt, because the documentation gates build in a project
+of their own with no desktop stack. `cli_tests` pins the vocabulary: the two spellings of
+`--root`, an option after the command, `--`, a dangling value, a command-less tool, the
+report's JSON escaping, and the argument that a command's own value options do not become
+positionals.
+
 ---
 
 ## Configuration and persistence

@@ -14,7 +14,7 @@
 #include <system_error>
 #include <vector>
 
-#include "docs/cli.hpp"
+#include "timewarp/tools/cli.hpp"
 #include "docs/text.hpp"
 
 namespace docs {
@@ -170,25 +170,15 @@ bool has_changelog_section(std::string_view content, std::string_view version) {
 
 }  // namespace
 
-int run_version_command(int argc, char** argv) {
-    const Arguments arguments =
-        parse_arguments(argc, argv, 2, {"--root", "--release-date"}, {"--write"});
-    if (!arguments.error.empty()) {
-        std::cerr << "time_warp_docs: " << arguments.error << '\n';
-        return 2;
-    }
-    if (!arguments.positionals.empty()) {
+int run_version_command(const timewarp::cli::Invocation& invocation) {
+    if (!invocation.positionals({"--release-date"}).empty()) {
         std::cerr << "time_warp_docs: version takes no files\n";
         return 2;
     }
-    std::string error;
-    const std::optional<fs::path> root = root_of(arguments, error);
-    if (!root) {
-        std::cerr << "time_warp_docs: " << error << '\n';
-        return 2;
-    }
+    const fs::path& root = invocation.root;
 
-    std::optional<std::string> version = read_version(*root / "VERSION", error);
+    std::string error;
+    std::optional<std::string> version = read_version(root / "VERSION", error);
     if (!version) {
         std::cerr << "❌ " << error << '\n';
         return 2;
@@ -199,7 +189,7 @@ int run_version_command(int argc, char** argv) {
         std::string content;
     };
 
-    const std::vector<Copy> copies = copies_of(*root);
+    const std::vector<Copy> copies = copies_of(root);
 
     // Read and match everything before writing anything. Writing as each target was
     // reached left a half-applied bump behind when a target went missing.
@@ -207,11 +197,11 @@ int run_version_command(int argc, char** argv) {
     for (const Copy& copy : copies) {
         const std::optional<std::string> content = read_text(copy.path);
         if (!content) {
-            std::cerr << "❌ cannot read " << relative_to(copy.path, *root) << '\n';
+            std::cerr << "❌ cannot read " << relative_to(copy.path, root) << '\n';
             return 2;
         }
         const std::optional<std::string> updated =
-            updated_text(copy, *content, *version, *root, error);
+            updated_text(copy, *content, *version, root, error);
         if (!updated) {
             std::cerr << "❌ " << error << '\n';
             return 2;
@@ -221,7 +211,7 @@ int run_version_command(int argc, char** argv) {
         }
     }
 
-    const bool write = arguments.has("write");
+    const bool write = invocation.has("--write");
     if (write) {
         // Editing each file's current text in order: a file that carries two copies
         // would otherwise come out with one of them updated. (The two copies live in
@@ -233,7 +223,7 @@ int run_version_command(int argc, char** argv) {
             }
             const std::optional<std::string> current = read_text(update.copy.path);
             if (!current) {
-                std::cerr << "❌ cannot read " << relative_to(update.copy.path, *root) << '\n';
+                std::cerr << "❌ cannot read " << relative_to(update.copy.path, root) << '\n';
                 return 2;
             }
             std::string content = *current;
@@ -242,7 +232,7 @@ int run_version_command(int argc, char** argv) {
                     continue;
                 }
                 const std::optional<std::string> next =
-                    updated_text(other.copy, content, *version, *root, error);
+                    updated_text(other.copy, content, *version, root, error);
                 if (!next) {
                     std::cerr << "❌ " << error << '\n';
                     return 2;
@@ -250,7 +240,7 @@ int run_version_command(int argc, char** argv) {
                 content = *next;
             }
             if (!write_text(update.copy.path, content)) {
-                std::cerr << "❌ cannot write " << relative_to(update.copy.path, *root) << '\n';
+                std::cerr << "❌ cannot write " << relative_to(update.copy.path, root) << '\n';
                 return 2;
             }
         }
@@ -269,7 +259,7 @@ int run_version_command(int argc, char** argv) {
         }
         for (const Update& update : updates) {
             std::cout << "   - " << update.copy.description << " ("
-                      << relative_to(update.copy.path, *root) << ")\n";
+                      << relative_to(update.copy.path, root) << ")\n";
         }
     } else {
         std::cout << "✅ All " << copies.size() << " hand-written copies match " << *version
@@ -277,10 +267,10 @@ int run_version_command(int argc, char** argv) {
     }
 
     std::size_t missing = 0;
-    for (const Requirement& requirement : requirements_of(*root, *version)) {
+    for (const Requirement& requirement : requirements_of(root, *version)) {
         const std::optional<std::string> content = read_text(requirement.path);
         if (!content) {
-            std::cerr << "❌ cannot read " << relative_to(requirement.path, *root) << '\n';
+            std::cerr << "❌ cannot read " << relative_to(requirement.path, root) << '\n';
             ++missing;
             continue;
         }

@@ -127,15 +127,17 @@ int runTree(const QStringList& arguments) {
     }
 
     if (leftovers.isEmpty()) {
-        std::printf("tree: no Python in the %s (%d file(s) checked)\n",
-                    qPrintable(source), static_cast<int>(files.size()));
+        if (!quiet()) {
+            std::fprintf(out(), "tree: no Python in the %s (%d file(s) checked)\n",
+                         qPrintable(source), static_cast<int>(files.size()));
+        }
         return 0;
     }
-    std::printf("tree: %d Python leftover(s) are back:\n", static_cast<int>(leftovers.size()));
+    std::fprintf(out(), "tree: %d Python leftover(s) are back:\n", static_cast<int>(leftovers.size()));
     for (const QString& file : leftovers) {
-        std::printf("  %s\n", qPrintable(file));
+        std::fprintf(out(), "  %s\n", qPrintable(file));
     }
-    std::printf("\nThe product is built, tested and checked without an interpreter. If a\n"
+    std::fprintf(out(), "\nThe product is built, tested and checked without an interpreter. If a\n"
                 "script is genuinely needed, port it -- the gates in native/tools/gates/\n"
                 "and the documentation tools in native/tools/docs/ are the two shapes one\n"
                 "takes.\n");

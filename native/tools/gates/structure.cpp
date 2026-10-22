@@ -161,17 +161,20 @@ int runStructure(const QStringList& arguments) {
     }
 
     if (failures.isEmpty()) {
-        std::printf("structure: %d allowlisted file(s), none over budget; CMakeLists.txt %d "
-                    "lines, %d source file(s) checked\n",
-                    static_cast<int>(waived.size()), build_lines,
-                    static_cast<int>(sizes.size()));
+        if (!quiet()) {
+            std::fprintf(out(),
+                         "structure: %d allowlisted file(s), none over budget; "
+                         "CMakeLists.txt %d lines, %d source file(s) checked\n",
+                         static_cast<int>(waived.size()), build_lines,
+                         static_cast<int>(sizes.size()));
+        }
         return 0;
     }
-    std::printf("structure: %d problem(s):\n", static_cast<int>(failures.size()));
+    std::fprintf(out(), "structure: %d problem(s):\n", static_cast<int>(failures.size()));
     for (const QString& failure : failures) {
-        std::printf("  %s\n", qPrintable(failure));
+        std::fprintf(out(), "  %s\n", qPrintable(failure));
     }
-    std::printf("\nA file grows for one of two reasons: it does more than one thing, or it\n"
+    std::fprintf(out(), "\nA file grows for one of two reasons: it does more than one thing, or it\n"
                 "has not been split yet. The waiver list in tools/gates/structure.cpp names\n"
                 "the second kind and may only shrink.\n");
     return 1;

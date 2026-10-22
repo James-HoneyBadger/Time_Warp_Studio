@@ -22,10 +22,12 @@
 
 #pragma once
 
+#include "timewarp/tools/cli.hpp"
+
 namespace docs {
 
 /// Parses `claims [--root DIR] [--quiet] [--self-test]` from `argv[first:]` and
 /// runs it.
-[[nodiscard]] int run_claims_command(int argc, char** argv);
+[[nodiscard]] int run_claims_command(const timewarp::cli::Invocation& invocation);
 
 }  // namespace docs

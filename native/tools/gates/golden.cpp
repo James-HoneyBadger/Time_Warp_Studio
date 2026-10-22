@@ -308,11 +308,15 @@ int runSchemeHalf(const QString& root, const QString& corpus_path) {
         ++agree;
     }
     for (const QString& failure : failures) {
-        std::printf("DIFFER %s\n", qPrintable(failure));
+        std::fprintf(out(), "DIFFER %s\n", qPrintable(failure));
     }
     const int total = agree + static_cast<int>(failures.size()) + diverged;
-    std::printf("scheme: %d agreed, %d differed, %d documented divergence(s) (%d programs)\n",
-                agree, static_cast<int>(failures.size()), diverged, total);
+    if (!quiet()) {
+        std::fprintf(out(),
+                     "scheme: %d agreed, %d differed, %d documented divergence(s) "
+                     "(%d programs)\n",
+                     agree, static_cast<int>(failures.size()), diverged, total);
+    }
     return failures.isEmpty() ? 0 : 1;
 }
 
@@ -397,7 +401,7 @@ int runGolden(const QStringList& arguments) {
         const QString source = entry.value(QStringLiteral("source")).toString();
         const QString reason = hardwareReason(source);
         if (!reason.isEmpty()) {
-            std::printf("skip   %s: %s (%s)\n", qPrintable(key), qPrintable(name),
+            std::fprintf(out(), "skip   %s: %s (%s)\n", qPrintable(key), qPrintable(name),
                         qPrintable(reason));
             ++skipped;
             continue;
@@ -439,7 +443,7 @@ int runGolden(const QStringList& arguments) {
         if (same) {
             ++agree;
             if (verbose) {
-                std::printf("agree  %s: %s\n", qPrintable(key), qPrintable(name));
+                std::fprintf(out(), "agree  %s: %s\n", qPrintable(key), qPrintable(name));
             }
             continue;
         }
@@ -492,18 +496,22 @@ int runGolden(const QStringList& arguments) {
     // the point: silence would read as agreement.
     for (const QString& key : chosen) {
         if (seen.value(key) == 0) {
-            std::printf("note   %s: no recorded corpus -- this gate says nothing "
+            std::fprintf(out(), "note   %s: no recorded corpus -- this gate says nothing "
                         "about it; the command matrix and lang_tests do\n",
                         qPrintable(key));
         }
     }
 
     for (const QString& failure : failures) {
-        std::printf("DIFFER %s\n", qPrintable(failure));
+        std::fprintf(out(), "DIFFER %s\n", qPrintable(failure));
     }
-    std::printf("\n%d agreed, %d differed, %d skipped, %d documented divergence(s) (%s)\n",
-                agree, static_cast<int>(failures.size()), skipped, diverged,
-                qPrintable(chosen.join(QStringLiteral(", "))));
+    if (!quiet()) {
+        std::fprintf(out(),
+                     "\n%d agreed, %d differed, %d skipped, %d documented divergence(s) "
+                     "(%s)\n",
+                     agree, static_cast<int>(failures.size()), skipped, diverged,
+                     qPrintable(chosen.join(QStringLiteral(", "))));
+    }
     return failures.isEmpty() ? 0 : 1;
 }
 
