@@ -23,6 +23,7 @@
 
 #include <QColor>
 #include <QDialog>
+#include <QJsonObject>
 #include <QList>
 #include <QString>
 
@@ -112,6 +113,15 @@ struct RetroComputerSettings {
     [[nodiscard]] static RetroComputerSettings load();
     /// Writes the same group. The caller owns the rest of the machine's state.
     void save() const;
+
+    /// The same fields as a document, and back. A machine image embeds the
+    /// configuration, and the field list belongs here with the two functions above
+    /// rather than in the image's file: three copies of one list is how a field
+    /// ends up in the dialog and in neither of the other two.
+    [[nodiscard]] QJsonObject toJson() const;
+    /// Missing keys keep their defaults and out-of-range numbers are clamped, so a
+    /// hand-edited image is a machine with a setting changed rather than a refusal.
+    static RetroComputerSettings fromJson(const QJsonObject& root);
 };
 
 /// The machine's configuration screen: three pages of settings with a live

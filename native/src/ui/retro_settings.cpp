@@ -9,6 +9,7 @@
 #include <QDialogButtonBox>
 #include <QFormLayout>
 #include <QHBoxLayout>
+#include <QJsonObject>
 #include <QLabel>
 #include <QPushButton>
 #include <QSettings>
@@ -139,6 +140,69 @@ void RetroComputerSettings::save() const {
     settings.setValue(configGroup("crtCurvature"), crt.curvature);
     settings.setValue(configGroup("crtFlicker"), crt.flicker);
     settings.setValue(configGroup("crtTint"), crt.phosphor);
+}
+
+QJsonObject RetroComputerSettings::toJson() const {
+    QJsonObject root;
+    root.insert(QStringLiteral("bootLanguage"), boot_language);
+    root.insert(QStringLiteral("bootScreen"), boot_mode);
+    root.insert(QStringLiteral("banner"), static_cast<int>(banner));
+    root.insert(QStringLiteral("rememberPrograms"), remember_programs);
+    root.insert(QStringLiteral("switchToSplit"), switch_to_split);
+    root.insert(QStringLiteral("historyDepth"), history_depth);
+    root.insert(QStringLiteral("phosphor"), static_cast<int>(tint));
+    root.insert(QStringLiteral("screenTextSize"), screen_text_size);
+    root.insert(QStringLiteral("editorTextSize"), editor_text_size);
+    root.insert(QStringLiteral("crtScanlines"), crt.scanlines);
+    root.insert(QStringLiteral("crtVignette"), crt.vignette);
+    root.insert(QStringLiteral("crtCurvature"), crt.curvature);
+    root.insert(QStringLiteral("crtFlicker"), crt.flicker);
+    root.insert(QStringLiteral("crtTint"), crt.phosphor);
+    root.insert(QStringLiteral("crtTintColour"), crt.phosphor_colour.name());
+    return root;
+}
+
+RetroComputerSettings RetroComputerSettings::fromJson(const QJsonObject& root) {
+    RetroComputerSettings result;
+    result.boot_language =
+        root.value(QStringLiteral("bootLanguage")).toInt(result.boot_language);
+    result.boot_mode = root.value(QStringLiteral("bootScreen")).toInt(result.boot_mode);
+    result.banner = static_cast<BootBanner>(clampTo(
+        root.value(QStringLiteral("banner")).toInt(static_cast<int>(result.banner)),
+        static_cast<int>(BootBanner::Full), static_cast<int>(BootBanner::Off)));
+    result.remember_programs =
+        root.value(QStringLiteral("rememberPrograms")).toBool(result.remember_programs);
+    result.switch_to_split =
+        root.value(QStringLiteral("switchToSplit")).toBool(result.switch_to_split);
+    result.history_depth = clampTo(
+        root.value(QStringLiteral("historyDepth")).toInt(result.history_depth), 0,
+        kHistoryMaximum);
+    result.tint = static_cast<PhosphorTint>(clampTo(
+        root.value(QStringLiteral("phosphor")).toInt(static_cast<int>(result.tint)),
+        static_cast<int>(PhosphorTint::Green), static_cast<int>(PhosphorTint::Ice)));
+    result.screen_text_size = clampTo(
+        root.value(QStringLiteral("screenTextSize")).toInt(result.screen_text_size),
+        kTextSizeMinimum, kTextSizeMaximum);
+    result.editor_text_size = clampTo(
+        root.value(QStringLiteral("editorTextSize")).toInt(result.editor_text_size),
+        kTextSizeMinimum, kTextSizeMaximum);
+    result.crt.scanlines = clampTo(
+        root.value(QStringLiteral("crtScanlines")).toInt(result.crt.scanlines), 0,
+        kCrtMaximum);
+    result.crt.vignette = clampTo(
+        root.value(QStringLiteral("crtVignette")).toInt(result.crt.vignette), 0, kCrtMaximum);
+    result.crt.curvature = clampTo(
+        root.value(QStringLiteral("crtCurvature")).toInt(result.crt.curvature), 0,
+        kCrtMaximum);
+    result.crt.flicker = clampTo(
+        root.value(QStringLiteral("crtFlicker")).toInt(result.crt.flicker), 0, kCrtMaximum);
+    result.crt.phosphor = clampTo(
+        root.value(QStringLiteral("crtTint")).toInt(result.crt.phosphor), 0, kCrtMaximum);
+    const QColor tinted{root.value(QStringLiteral("crtTintColour")).toString()};
+    if (tinted.isValid()) {
+        result.crt.phosphor_colour = tinted;
+    }
+    return result;
 }
 
 RetroComputerSettingsDialog::RetroComputerSettingsDialog(const RetroComputerSettings& start,

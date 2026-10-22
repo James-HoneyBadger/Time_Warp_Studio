@@ -193,6 +193,13 @@ int main(int argc, char* argv[]) {
                        "file's language (or BASIC), and raise it. With --run, "
                        "run the computer's program.")};
     parser.addOption(computerOption);
+    const QCommandLineOption machineOption{
+        QStringLiteral("machine"),
+        QStringLiteral("Boot the HB-1 from a machine image (.hb1) and raise it: the "
+                       "ROM, the screen, every ROM's program, the phosphor and the "
+                       "disk, as one file."),
+        QStringLiteral("file")};
+    parser.addOption(machineOption);
 
     const QCommandLineOption compileOption{
         QStringLiteral("compile"),
@@ -350,8 +357,23 @@ int main(int argc, char* argv[]) {
     openArguments(&window, arguments);
     window.show();
 
-    if (parser.isSet(computerOption)) {
+    if (parser.isSet(computerOption) || parser.isSet(machineOption)) {
         window.openRetroComputer();
+    }
+    if (parser.isSet(machineOption)) {
+        const QString image = parser.value(machineOption);
+        auto* machine = window.findChild<timewarp::ui::RetroComputerWindow*>();
+        if (machine == nullptr) {
+            std::fprintf(stderr, "time_warp_ide: the computer did not open\n");
+            return 2;
+        }
+        QString machine_error;
+        if (!machine->loadMachine(image, &machine_error)) {
+            std::fprintf(stderr, "time_warp_ide: %s\n", qPrintable(machine_error));
+            return 2;
+        }
+        machine->raise();
+        machine->activateWindow();
     }
 
     // A screenshot without --computer photographs the IDE. With it, the picture
@@ -360,7 +382,7 @@ int main(int argc, char* argv[]) {
     // top of it.
     QWidget* screenshot_target = &window;
     timewarp::ui::RetroComputerWindow* computer_window = nullptr;
-    if (parser.isSet(computerOption)) {
+    if (parser.isSet(computerOption) || parser.isSet(machineOption)) {
         computer_window = window.findChild<timewarp::ui::RetroComputerWindow*>();
         if (computer_window != nullptr) {
             if (!screenshotPath.isEmpty()) {

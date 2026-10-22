@@ -23,6 +23,7 @@
 
 #pragma once
 
+#include <QJsonObject>
 #include <QList>
 #include <QString>
 
@@ -70,6 +71,16 @@ public:
     [[nodiscard]] const DosFile* find(const QString& name) const;
     [[nodiscard]] int usedSectors() const;
     [[nodiscard]] int freeSectors() const;
+
+    /// The volume as the document this class reads and writes. Public because a
+    /// machine image embeds one: `SAVE MACHINE` writes the disk, the ROMs, the
+    /// programs and the configuration as one file, and a disk that could only be
+    /// serialised by writing it to its own path first would have made that two
+    /// files pretending to be one.
+    [[nodiscard]] QJsonObject toJson() const;
+    /// Replaces the volume with `root`'s. False with a reason for a document that
+    /// is not a volume at all; the volume in memory is left alone in that case.
+    bool fromJson(const QJsonObject& root, QString* error = nullptr);
 
     /// Reads the image. A missing image is a blank, formatted volume rather than
     /// an error; an unreadable one is an error and leaves the volume empty.

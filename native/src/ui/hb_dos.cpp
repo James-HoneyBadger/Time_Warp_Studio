@@ -137,7 +137,32 @@ bool HbDos::open(QString* error) {
         return fail(error, kUnreadable);
     }
 
-    const QJsonObject root = document.object();
+    return fromJson(document.object(), error);
+}
+
+QJsonObject HbDos::toJson() const {
+    QJsonArray entries;
+    for (const DosFile& file : files_) {
+        QJsonObject entry;
+        entry.insert(QStringLiteral("name"), file.name);
+        entry.insert(QStringLiteral("language"), file.language);
+        entry.insert(QStringLiteral("source"), file.source);
+        entry.insert(QStringLiteral("locked"), file.locked);
+        entries.append(entry);
+    }
+    QJsonObject root;
+    root.insert(QStringLiteral("dos"), QString::fromLatin1(kDosName));
+    root.insert(QStringLiteral("volume"), volume_name_);
+    root.insert(QStringLiteral("files"), entries);
+    return root;
+}
+
+bool HbDos::fromJson(const QJsonObject& root, QString* error) {
+    if (!root.contains(QStringLiteral("files")) && !root.contains(QStringLiteral("volume"))) {
+        return fail(error, kUnreadable);
+    }
+    volume_name_ = QString::fromLatin1(kDefaultVolume);
+    files_.clear();
     const QString volume = root.value(QStringLiteral("volume")).toString();
     if (!volume.isEmpty()) {
         volume_name_ = volume;
@@ -161,19 +186,7 @@ bool HbDos::commit(QString* error) {
         return fail(error, kNoDisk);
     }
 
-    QJsonArray entries;
-    for (const DosFile& file : files_) {
-        QJsonObject entry;
-        entry.insert(QStringLiteral("name"), file.name);
-        entry.insert(QStringLiteral("language"), file.language);
-        entry.insert(QStringLiteral("source"), file.source);
-        entry.insert(QStringLiteral("locked"), file.locked);
-        entries.append(entry);
-    }
-    QJsonObject root;
-    root.insert(QStringLiteral("dos"), QString::fromLatin1(kDosName));
-    root.insert(QStringLiteral("volume"), volume_name_);
-    root.insert(QStringLiteral("files"), entries);
+    const QJsonObject root = toJson();
 
     const QFileInfo info{image_path_};
     if (!QDir{}.mkpath(info.absolutePath())) {

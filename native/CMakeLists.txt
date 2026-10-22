@@ -1006,6 +1006,7 @@ if(TIME_WARP_QT_FOUND)
             src/ui/formatter.cpp
             src/ui/gif_encoder.cpp
             src/ui/hb_dos.cpp
+    src/ui/machine_image.cpp
             src/ui/help_browser.cpp
             src/ui/lint.cpp
             src/ui/main_window.cpp

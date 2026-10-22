@@ -303,7 +303,9 @@ Every control, its default and its stored key is in the
 first file's language if one is named; `--run` then runs its program.
 `--screenshot` photographs the machine and `--export` saves the drawing on its
 canvas rather than the editor's, so a lesson handout or an automation script sees
-the machine.
+the machine. `--machine <file.hb1>` boots from a **[machine image](hb1/README.md#the-whole-machine-as-one-file)**:
+the ROM, the screen, every ROM's program, the phosphor and the disk as one file,
+written by `SAVE MACHINE` at the machine's own prompt.
 
 ### The CHIP-8 machine
 

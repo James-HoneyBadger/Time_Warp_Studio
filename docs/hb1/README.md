@@ -208,6 +208,46 @@ The disk is separate from both, because it is: one image file,
 
 ---
 
+## The whole machine as one file
+
+A machine is more than a program: it is the ROM it is left in, the screen, every
+ROM's program, the phosphor and the configuration, and the disk. Two words write that
+as one document and boot from it:
+
+```basic
+SAVE MACHINE "HV"          ' writes HV.hb1 in the Studio's data directory
+LOAD MACHINE "HV"          ' cold-boots from it
+SAVE MACHINE "hv.hb1"      ' a name with a .hb1 on it, or a path, is used as given
+```
+
+`SAVE MACHINE` reports how many programs and how many files it wrote, because a
+machine that saved nothing and said "OK" is the failure this project keeps guarding
+against. `LOAD MACHINE` refuses — with a sentence, leaving the machine as it was —
+a file that is not a machine image or one written by a newer Studio
+(`this machine image is format 3; this build reads up to format 1`).
+
+The image is JSON and reads like one, so a teacher can inspect it, put it in version
+control, or make one by hand:
+
+```json
+{
+  "format": 1,
+  "name": "HV",
+  "language": "logo",
+  "mode": 1,
+  "programs": { "logo": "REPEAT 4 [FD 60 RT 90]" },
+  "config": { "phosphor": 1, "screenTextSize": 14 },
+  "volume": { "volume": "HBWARP", "files": [] }
+}
+```
+
+`language` is a ROM's protocol key (`basic`, `logo`, `pilot`, … — the ten the Studio
+has), `mode` is `0` TEXT, `1` SPLIT or `2` GRAPHICS, and `volume` is the HB DOS volume
+itself — the file it lives in is the reader's business, so a disk handed to somebody
+else is a volume rather than a path on this machine.
+
+---
+
 ## Running the machine from a terminal
 
 ```bash
@@ -215,6 +255,8 @@ The disk is separate from both, because it is: one image file,
 ./run.sh --computer Examples/basic/hello.bas --run    # boot its language and run it
 ./run.sh --computer --screenshot hb1.png             # photograph the machine
 ./run.sh --computer Examples/logo/mandala.logo --run --export mandala.png
+./run.sh --machine hv.hb1                            # boot a machine image
+./run.sh --machine hv.hb1 --screenshot hv.png        # photograph that machine
 ```
 
 With `--computer`, `--run`, `--screenshot` and `--export` act on the machine

@@ -2,6 +2,51 @@
 
 <!-- history: all -->
 
+## [19.3.0] - 2026-10-22
+
+The HB-1 is a file you can hand to somebody.
+
+Its configuration was in QSettings, its disk in `~/.time_warp/disks` and each ROM's
+program in the settings too — the right shape for a machine you own and the wrong one
+for a machine you give away. That is now one document: the ROM it is left in, the
+screen, every ROM's program, the phosphor and configuration, and the volume.
+
+### Added
+
+- **`SAVE MACHINE "NAME"` and `LOAD MACHINE "NAME"`** at the machine's prompt (also
+  spelled `SAVEMACHINE`). A bare name is `<data dir>/machines/<NAME>.hb1`; a name
+  ending in `.hb1`, or a path, is used as given. Saving reports how many programs and
+  how many files went into the image, because a save that wrote nothing and said "OK"
+  is the failure that keeps recurring here.
+- **`time_warp_ide --machine <file.hb1>`** boots one and raises the machine: the ROM
+  socket, the screen mode, the programs, the phosphor and the disk, with no IDE
+  document around it.
+- `MachineImage` (`native/include/timewarp/ui/machine_image.hpp`): the format, its
+  versioning, and `resolvePath`. `HbDos` gained `toJson`/`fromJson`, and
+  `RetroComputerSettings` gained the same pair, so the field list lives next to the
+  two functions that already own it rather than in a third place.
+- The CONFIG help page lists the two new words, and `docs/hb1/README.md` documents the
+  format with an example a reader can edit by hand.
+
+### Fixed
+
+- **`SAVE MACHINE "HV"` wrote `MACHINE.hb1`.** The argument reader starts after the
+  first word, so the two-word spelling handed `MACHINE` to the file name and the name
+  that was typed went nowhere. The test asserts the file exists at the path the name
+  asks for, which is what caught it.
+
+### Refused, deliberately
+
+- A machine image from a **newer** build is refused with both format numbers in the
+  sentence rather than half-read. A machine that silently dropped the fields it did
+  not understand — and then saved itself back over the file — would be worse than one
+  that said no.
+- `time_warp_player --machine` is **not** in this release. The player links
+  `timewarp::ui_core` and not the IDE's window layer, which is where the HB-1 lives;
+  booting a machine there would have meant a 2.3 MB artifact becoming 4.5 MB again or
+  a machine subsystem split out of the UI. The IDE takes `--machine` instead, so the
+  feature exists and the player stays the size it was.
+
 ## [19.2.0] - 2026-10-22
 
 Every command the canvas declares, a program can now ask for — and three statements

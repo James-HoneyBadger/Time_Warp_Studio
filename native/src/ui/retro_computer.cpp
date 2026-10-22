@@ -8,6 +8,7 @@
 
 #include <QCloseEvent>
 #include <QComboBox>
+#include <QFileInfo>
 #include <QFont>
 #include <QFrame>
 #include <QHBoxLayout>
@@ -267,6 +268,21 @@ struct RomInfo {
 [[nodiscard]] QString firstArgument(const QString& command) {
     const QStringList arguments = dosArguments(command);
     return arguments.isEmpty() ? QString{} : arguments.first();
+}
+
+/// The name at the end of `SAVE MACHINE "N"` or `SAVEMACHINE "N"`.
+///
+/// `dosArguments` reads from the second word, which for the two-word spelling is
+/// `MACHINE` itself -- so the volume this wrote was called `MACHINE.hb1` and the
+/// name that was typed went nowhere.
+[[nodiscard]] QString machineArgument(const QString& command) {
+    const QString trimmed = command.trimmed();
+    QString rest = trimmed.mid(headWord(trimmed).size()).trimmed();
+    const QString machine = QStringLiteral("MACHINE");
+    if (rest.toUpper().startsWith(machine)) {
+        rest = rest.mid(machine.size()).trimmed();
+    }
+    return firstArgument(QStringLiteral("X ") + rest);
 }
 
 /// The catalogue's type column: the ROM the file belongs to, in capitals.
@@ -933,6 +949,19 @@ bool RetroComputerWindow::handleMachineCommand(const QString& command) {
         showDiskStatus();
         return true;
     }
+    // `SAVE MACHINE "N` and `LOAD MACHINE "N` are checked before `SAVE`/`LOAD`,
+    // because the word splitter would otherwise read them as those two words with a
+    // file called MACHINE.
+    if (word == QStringLiteral("SAVEMACHINE") ||
+        command.trimmed().startsWith(QStringLiteral("SAVE MACHINE"))) {
+        saveMachineTo(machineArgument(command));
+        return true;
+    }
+    if (word == QStringLiteral("LOADMACHINE") ||
+        command.trimmed().startsWith(QStringLiteral("LOAD MACHINE"))) {
+        loadMachineFrom(machineArgument(command));
+        return true;
+    }
     if (word == QStringLiteral("SAVE")) {
         saveToDisk(firstArgument(command));
         return true;
@@ -990,12 +1019,52 @@ bool RetroComputerWindow::handleMachineCommand(const QString& command) {
         appendConsole(QStringLiteral("VERIFY \"N\"   compare memory with the disk"));
         appendConsole(QStringLiteral("TYPE \"N\"     print a file"));
         appendConsole(QStringLiteral("INIT         erase the whole disk (asks twice)"));
+        appendConsole(QString());
+        appendConsole(QStringLiteral("SAVE MACHINE \"N\"  write the whole machine to N.hb1"));
+        appendConsole(QStringLiteral("LOAD MACHINE \"N\"  boot from N.hb1"));
         appendConsole(QStringLiteral("STATUS       volume and free space"));
         appendConsole(QString());
         appendConsole(QStringLiteral("F9 runs; Shift+F9 stops; Ctrl+L clears; Ctrl+, configures."));
         return true;
     }
     return false;
+}
+
+void RetroComputerWindow::saveMachineTo(const QString& name) {
+    const QString path = MachineImage::resolvePath(name);
+    if (path.isEmpty()) {
+        appendConsole(QStringLiteral("?SAVE MACHINE \"NAME\""));
+        return;
+    }
+    QString error;
+    if (!saveMachine(path, &error)) {
+        appendConsole(QStringLiteral("?%1").arg(error.toUpper()));
+        return;
+    }
+    appendConsole(QStringLiteral("MACHINE SAVED: %1").arg(path));
+    appendConsole(QStringLiteral("%1 PROGRAM(S), %2 FILE(S) ON THE DISK")
+                      .arg(machineImage().programs.size())
+                      .arg(dos_.files().size()));
+}
+
+void RetroComputerWindow::loadMachineFrom(const QString& name) {
+    const QString path = MachineImage::resolvePath(name);
+    if (path.isEmpty()) {
+        appendConsole(QStringLiteral("?LOAD MACHINE \"NAME\""));
+        return;
+    }
+    if (!QFileInfo::exists(path)) {
+        appendConsole(QStringLiteral("?NO MACHINE IMAGE: %1").arg(path.toUpper()));
+        return;
+    }
+    // The console is cleared by the reboot that follows, so the line that says what
+    // was loaded is printed by `reboot`'s banner path instead of here.
+    QString error;
+    if (!loadMachine(path, &error)) {
+        appendConsole(QStringLiteral("?%1").arg(error.toUpper()));
+        return;
+    }
+    appendConsole(QStringLiteral("MACHINE LOADED: %1").arg(path));
 }
 
 void RetroComputerWindow::ensureRepl() {
@@ -1407,6 +1476,103 @@ void RetroComputerWindow::setScreenMode(ScreenMode mode) {
     mode_ = mode;
     updateModeControls();
     updateStatus();
+}
+
+MachineImage RetroComputerWindow::machineImage() const {
+    MachineImage image;
+    image.name = machine_label_ != nullptr ? machine_label_->text() : QStringLiteral("HB-1");
+    image.language = settingsKey(language_);
+    image.mode = static_cast<int>(mode_);
+    // The program in the editor is the current ROM's, and it is the newest thing
+    // the machine knows: the copy in `programs_` is what was there when the ROM was
+    // last switched away from.
+    QHash<int, QString> programs = programs_;
+    if (program_ != nullptr) {
+        programs.insert(static_cast<int>(language_), program_->toPlainText());
+    }
+    for (auto it = programs.cbegin(); it != programs.cend(); ++it) {
+        const QString key = settingsKey(static_cast<Language>(it.key()));
+        if (!it.value().isEmpty()) {
+            image.programs.insert(key, it.value());
+        }
+    }
+    image.config = settings_;
+    image.volume = dos_.toJson();
+    return image;
+}
+
+void RetroComputerWindow::applyMachineImage(const MachineImage& image, bool boot) {
+    const std::optional<Language> language = languageFromKey(image.language);
+    if (!language.has_value()) {
+        // A ROM this build does not have: keep the one that is in the socket rather
+        // than emptying it. The image is still applied in every other respect, so a
+        // machine from a build with one more language is usable rather than refused.
+        appendConsole(QStringLiteral("?UNKNOWN ROM IN IMAGE: %1").arg(image.language));
+    }
+
+    programs_.clear();
+    for (auto it = image.programs.cbegin(); it != image.programs.cend(); ++it) {
+        const std::optional<Language> rom = languageFromKey(it.key());
+        if (rom.has_value()) {
+            programs_.insert(static_cast<int>(*rom), it.value());
+        }
+    }
+
+    // The configuration first, because the boot ROM and the boot screen in it decide
+    // what a cold boot does -- and a machine that is being *booted* has to be set up
+    // before it starts.
+    applySettings(image.config, false);
+
+    if (booted_) {
+        saveCurrentProgram();
+    }
+    if (language.has_value()) {
+        language_ = *language;
+        if (language_selector_ != nullptr) {
+            const QSignalBlocker blocker{language_selector_};
+            const int index = language_selector_->findData(static_cast<int>(language_));
+            if (index >= 0) {
+                language_selector_->setCurrentIndex(index);
+            }
+        }
+        if (program_ != nullptr) {
+            program_->setLanguage(*language);
+            program_->setPlainText(programs_.value(static_cast<int>(*language)));
+        }
+    }
+    setScreenMode(static_cast<ScreenMode>(std::clamp(image.mode, 0, 2)));
+
+    QString volume_error;
+    if (!dos_.fromJson(image.volume, &volume_error)) {
+        appendConsole(QStringLiteral("?%1").arg(volume_error));
+    } else if (!dos_.commit(&volume_error)) {
+        // A machine whose disk could not be written still works; the volume is in
+        // memory and the next `SAVE` tries again. Saying so is the point.
+        appendConsole(QStringLiteral("?%1").arg(volume_error));
+    }
+
+    if (boot) {
+        if (booted_) {
+            stopRunner();
+            stopRepl();
+        }
+        reboot();
+    }
+    updatePrompt();
+    updateStatus();
+}
+
+bool RetroComputerWindow::saveMachine(const QString& path, QString* error) const {
+    return machineImage().save(path, error);
+}
+
+bool RetroComputerWindow::loadMachine(const QString& path, QString* error) {
+    MachineImage image;
+    if (!MachineImage::load(path, &image, error)) {
+        return false;
+    }
+    applyMachineImage(image, true);
+    return true;
 }
 
 QString RetroComputerWindow::program() const {

@@ -29,6 +29,7 @@
 
 #include "timewarp/ui/hb_dos.hpp"
 #include "timewarp/ui/language.hpp"
+#include "timewarp/ui/machine_image.hpp"
 #include "timewarp/ui/retro_settings.hpp"
 
 class QComboBox;
@@ -131,6 +132,25 @@ public:
     /// prompt session, and prints the boot message again.
     void reboot();
 
+    // -- the machine as a file --------------------------------------------
+    //
+    // A machine is the ROM it is left in, the screen, every ROM's program, the
+    // phosphor and configuration, and the disk. `MachineImage` is that as one
+    // versioned document, `SAVEMACHINE`/`LOADMACHINE` are the words, and the
+    // player's `--machine` boots one with no IDE around it.
+
+    /// Everything this machine is, right now.
+    [[nodiscard]] MachineImage machineImage() const;
+    /// Makes this machine that one: the ROM, the screen, the programs, the
+    /// configuration, the palette and the volume. The caller still owns the
+    /// window's geometry and the settings file, which are not a machine.
+    void applyMachineImage(const MachineImage& image, bool boot);
+    /// Writes one. A bare name is `<data dir>/machines/<NAME>.hb1`, which is the
+    /// path `SAVEMACHINE` uses. False with a reason in `error`.
+    [[nodiscard]] bool saveMachine(const QString& path, QString* error = nullptr) const;
+    /// Reads one and applies it. A refusal leaves the machine exactly as it was.
+    bool loadMachine(const QString& path, QString* error = nullptr);
+
     [[nodiscard]] bool isRunning() const noexcept { return runner_ != nullptr; }
 
 signals:
@@ -185,6 +205,12 @@ private:
     void verifyOnDisk(const QString& name);
     void typeFromDisk(const QString& name);
     void formatDisk();
+
+    /// `SAVE MACHINE` and `LOAD MACHINE`: the words, which report into the console the
+    /// way every other machine word does. The window API above is what a test and the
+    /// player use.
+    void saveMachineTo(const QString& name);
+    void loadMachineFrom(const QString& name);
 
     /// The visual half of a settings change: palette, text sizes, canvas surface
     /// and the glass over the screen.
