@@ -853,9 +853,19 @@ double ExpressionEvaluator::evaluate_rpn(std::span<const Token> rpn) const {
                 break;
             }
 
-            case TokenType::Function:
-                apply_function(context_, token.text, stack);
+            case TokenType::Function: {
+                // The array and builtin tables are keyed in upper case and BASIC
+                // is case-insensitive, which the two paths disagreed about: the
+                // assignment statement upper-cased a name before storing it and
+                // the `Variable` branch above upper-cases before reading, but a
+                // call arrived here spelled exactly as it was written. So
+                // `DIM dat(3)` then `PRINT dat(0)` was "Unknown function: dat"
+                // while `PRINT DAT(0)` worked -- and `Examples/basic/
+                // math_explorer.bas` is written in lower case.
+                std::array<char, 96> scratch{};
+                apply_function(context_, normalize_name(token.text, scratch), stack);
                 break;
+            }
 
             case TokenType::LeftParen:
             case TokenType::RightParen:

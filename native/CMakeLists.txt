@@ -470,6 +470,26 @@ set(TIME_WARP_QT_FOUND "${${TIME_WARP_QT}_FOUND}")
 set(TIME_WARP_QT_CORE_VERSION "${${TIME_WARP_QT}Core_VERSION}")
 
 # ---------------------------------------------------------------------------
+# The run report the gates drive
+# ---------------------------------------------------------------------------
+#
+# `time_warp_check` runs one program through the native engines and says what it
+# did. The example, command and REPL harnesses used to ask `native/bridge/worker.py`
+# instead, which made a Python interpreter part of this repository's test suite.
+# The engines are the same ones the IDE runs, so a question about what a program
+# did is answered by running it here rather than by asking a second interpreter.
+
+add_executable(time_warp_check tools/check.cpp)
+target_link_libraries(time_warp_check PRIVATE ${TIME_WARP_QT}::Core timewarp::lang timewarp::scheme)
+if(NOT MSVC)
+    target_compile_options(time_warp_check PRIVATE -Wall -Wextra -Wpedantic -Wshadow)
+    if(TIME_WARP_EXPR_WERROR)
+        target_compile_options(time_warp_check PRIVATE -Werror)
+    endif()
+endif()
+
+
+# ---------------------------------------------------------------------------
 # Qt bridge (optional)
 #
 # Built only when Qt is present.  The core queue above never depends on this,
@@ -1184,6 +1204,10 @@ if(TIME_WARP_QT_FOUND)
             install(TARGETS time_warp_teach RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
             install(TARGETS time_warp_learn RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
         endif()
+        # A command, not development scaffolding: "check this program" is one of the
+        # things a person who writes programs in ten languages wants from a terminal,
+        # and it is the same report the gates read.
+        install(TARGETS time_warp_check RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
         install(TARGETS time_warp_api
                 RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
         # `native/bridge/` is deliberately not installed. It is the reference the

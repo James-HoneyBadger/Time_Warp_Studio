@@ -52,6 +52,12 @@ sys.path.insert(0, str(BRIDGE))
 
 from time_warp.tests.command_table import ROWS, SCRATCH, WAIVERS  # noqa: E402
 
+from harness import locate_check, repository_root  # noqa: E402
+
+#: A command that hangs must fail the run rather than wedge it.
+ROW_TIMEOUT_SECONDS = 20.0
+
+
 #: A command that hangs must fail the run rather than wedge it.
 ROW_TIMEOUT_SECONDS = 20.0
 
@@ -61,112 +67,88 @@ def repository_root() -> pathlib.Path:
 
 
 class Worker:
-    """One long-lived worker process, driven over the documented protocol."""
+    """One `time_warp_check` process per row.
 
-    def __init__(self, worker: pathlib.Path, interpreter: str) -> None:
-        environment = dict(os.environ)
-        environment["PYTHONPATH"] = str(BRIDGE)
-        environment.setdefault("PYTHONUNBUFFERED", "1")
-        self._process = subprocess.Popen(
-            [interpreter, str(worker)],
-            stdin=subprocess.PIPE,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.DEVNULL,
-            text=True,
-            bufsize=1,
-            env=environment,
-        )
-        self._lines: collections.deque[str] = collections.deque()
-        self._lock = threading.Lock()
-        self._reader = threading.Thread(target=self._pump, daemon=True)
-        self._reader.start()
-        self._await_ready()
+    This used to keep a long-lived `native/bridge/worker.py` alive and drive it
+    over the documented protocol. The engine is gone, so each row is a program and
+    each program is a process: the report arrives as the same `out`/`canvas`/`done`
+    messages, from the engines the IDE actually runs.
 
-    def _pump(self) -> None:
-        assert self._process.stdout is not None
-        for line in self._process.stdout:
-            with self._lock:
-                self._lines.append(line)
+    The name is kept because a row's result is still "what the worker said", and
+    renaming the seam would rewrite twenty call sites to no purpose.
+    """
 
-    def _drain(self) -> list[dict]:
-        with self._lock:
-            lines, self._lines = list(self._lines), collections.deque()
-        messages = []
-        for line in lines:
-            line = line.strip()
-            if line:
-                try:
-                    messages.append(json.loads(line))
-                except json.JSONDecodeError:
-                    # The protocol is JSON lines: anything else is a defect worth
-                    # surfacing rather than skipping over.
-                    messages.append({"t": "malformed", "raw": line[:200]})
-        return messages
-
-    def _await_ready(self) -> None:
-        deadline = threading.Event()
-        while not deadline.wait(0.05):
-            for message in self._drain():
-                if message.get("t") == "ready":
-                    return
-                if message.get("t") == "malformed":
-                    raise RuntimeError(
-                        f"worker emitted a non-JSON line: {message['raw']}"
-                    )
-            if self._process.poll() is not None:
-                raise RuntimeError("the worker exited during handshake")
+    def __init__(self, check: pathlib.Path, timeout: float = 180.0) -> None:
+        self._check = check
+        self._timeout = timeout
 
     def run(self, language: str, source: str, name: str) -> dict:
         """Runs one source and returns what came back."""
-        payload = json.dumps(
-            {"t": "run", "language": language, "source": source, "name": name}
-        )
-        assert self._process.stdin is not None
-        self._process.stdin.write(payload + "\n")
-        self._process.stdin.flush()
+        try:
+            completed = subprocess.run(
+                [str(self._check), "--language", language, "--json", "-"],
+                input=source,
+                capture_output=True,
+                text=True,
+                timeout=self._timeout,
+                check=False,
+            )
+        except subprocess.TimeoutExpired:
+            return {
+                "output": "",
+                "drawings": 0,
+                "errors": [f"{name} timed out after {self._timeout:.0f}s"],
+                "prompts": 0,
+                "done": {"ok": False, "error": "timed out"},
+                "malformed": [],
+            }
 
         output: list[str] = []
         drawings = 0
         errors: list[str] = []
         malformed: list[str] = []
-        prompts = 0
         done: dict | None = None
+        for line in completed.stdout.splitlines():
+            if not line.strip():
+                continue
+            try:
+                message = json.loads(line)
+            except json.JSONDecodeError:
+                # The protocol is JSON lines: anything else is a defect worth
+                # surfacing rather than skipping over.
+                malformed.append(line[:200])
+                continue
+            kind = message.get("t")
+            if kind == "out":
+                output.append(str(message.get("text", "")))
+            elif kind == "canvas":
+                # Ink plus the turtle operations that change the drawing without
+                # adding to it: a row is "the command did something", and `RIGHT
+                # 90` is a command that did something.
+                drawings += sum(int(count) for count in message.get("kinds", {}).values())
+                drawings += int(message.get("actions", 0))
+            elif kind == "err":
+                errors.append(str(message.get("text", "")))
+            elif kind == "done":
+                done = message
 
-        waiting = threading.Event()
-        while not waiting.wait(0.02):
-            for message in self._drain():
-                kind = message.get("t")
-                if kind == "out":
-                    output.append(str(message.get("text", "")))
-                elif kind == "canvas":
-                    drawings += len(message.get("cmds", []))
-                elif kind == "err":
-                    errors.append(str(message.get("text", "")))
-                elif kind == "in":
-                    # Nothing here answers prompts; unblock the worker so one bad
-                    # row cannot hang the whole run.
-                    prompts += 1
-                    self._process.stdin.write(
-                        json.dumps({"t": "in-reply", "text": ""}) + "\n"
-                    )
-                    self._process.stdin.flush()
-                elif kind == "done":
-                    done = message
-                elif kind == "malformed":
-                    malformed.append(str(message.get("raw", "")))
-            if done is not None:
-                break
+        if done is None:
+            detail = completed.stderr.strip().splitlines()
+            errors.append(detail[-1] if detail else "the run produced no result")
 
         return {
-            "output": "".join(output),
+            "output": "".join(output) + "\n" if output else "",
             "drawings": drawings,
             "errors": errors,
-            "prompts": prompts,
+            "prompts": 0,
             "done": done,
             "malformed": malformed,
         }
 
     def close(self) -> None:
+        """Nothing to close: a run is a process that has already exited."""
+
+def close(self) -> None:
         self._process.terminate()
         try:
             self._process.wait(timeout=5)
@@ -310,14 +292,6 @@ def main(argv: list[str] | None = None) -> int:
         help="print what each row actually did, for authoring new rows from evidence",
     )
     parser.add_argument("--json", help="write the full results to this path")
-    parser.add_argument(
-        "--python",
-        help=(
-            "interpreter for the language worker (default: .venv/bin/python3 when "
-            "present, else python3). Point this at an interpreter without the "
-            "optional backends to exercise their refusal paths."
-        ),
-    )
     options = parser.parse_args(argv)
 
     # Compared with punctuation removed, because a row labels its language the way
@@ -330,22 +304,21 @@ def main(argv: list[str] | None = None) -> int:
         return 1
 
     root = repository_root()
-    worker = root / "native" / "bridge" / "worker.py"
-    if not worker.is_file():
-        print(f"the language worker was not found at {worker}", file=sys.stderr)
+    worker = locate_check(root)
+    if worker is None:
+        print(
+            "time_warp_check was not found; build it with"
+            " `cmake --build native/build --target time_warp_check`",
+            file=sys.stderr,
+        )
         return 1
-    interpreter = root / ".venv/bin/python3"
-    interpreter = str(interpreter) if interpreter.is_file() else "python3"
-    if options.python:
-        interpreter = options.python
-
     by_language: dict[str, dict[str, int]] = collections.defaultdict(
         lambda: {"passed": 0, "failed": 0}
     )
     failures: list[tuple] = []
     results: list[dict] = []
 
-    bridge = Worker(worker, interpreter)
+    bridge = Worker(worker)
     try:
         for row in rows:
             outcome = bridge.run(row.language, row.source, f"matrix:{row.command}")

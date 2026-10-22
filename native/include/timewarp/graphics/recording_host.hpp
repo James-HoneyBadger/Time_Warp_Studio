@@ -184,7 +184,25 @@ public:
     [[nodiscard]] timewarp::lang::Rgb pen_colour() const override { return pen_; }
     void show_turtle() override { ++actions_; }
     void hide_turtle() override { ++actions_; }
-    void set_svga_mode(int, int) override { ++actions_; }
+    void set_svga_mode(int width, int height) override {
+        ++actions_;
+        screen_width_ = width;
+        screen_height_ = height;
+    }
+    /// A program that named a screen asked for it to be shown at its own size.
+    /// Recorded rather than drawn: the recording is what a gate reads, and a
+    /// gate that cannot tell "asked for a 320x200 screen" from "asked for none"
+    /// cannot check the one thing the screen-mode work was for.
+    void set_framebuffer(int width, int height) override {
+        ++actions_;
+        screen_width_ = width;
+        screen_height_ = height;
+    }
+    void clear_framebuffer() override {
+        ++actions_;
+        screen_width_ = 0;
+        screen_height_ = 0;
+    }
     void set_palette_color(int index, timewarp::lang::Rgb colour) override {
         ++actions_;
         palette_[index] = colour;
@@ -227,6 +245,14 @@ public:
     // what was drawn, not by how.
     [[nodiscard]] std::size_t segmentCount() const noexcept { return segments_.size(); }
     [[nodiscard]] std::size_t shapeCount() const noexcept { return shapes_.size(); }
+    /// What was recorded, for a caller that needs it broken down by kind rather
+    /// than counted. `time_warp_check` reports per-kind totals so the example
+    /// and command harnesses can keep measuring ink without a bridge.
+    [[nodiscard]] const std::vector<Segment>& segments() const noexcept { return segments_; }
+    [[nodiscard]] const std::vector<Shape>& shapes() const noexcept { return shapes_; }
+    /// The screen a program asked for, or 0x0 for a drawing.
+    [[nodiscard]] int screenWidth() const noexcept { return screen_width_; }
+    [[nodiscard]] int screenHeight() const noexcept { return screen_height_; }
     [[nodiscard]] double turtleX() const noexcept { return x_; }
     [[nodiscard]] double turtleY() const noexcept { return y_; }
 
@@ -416,6 +442,9 @@ private:
     double heading_ = 0.0;
     bool pen_down_ = true;
     std::size_t drawing_calls_ = 0;
+    /// The screen a program asked for; 0x0 while it is drawing.
+    int screen_width_ = 0;
+    int screen_height_ = 0;
     std::size_t actions_ = 0;
     SqlRunner sql_runner_;
 };

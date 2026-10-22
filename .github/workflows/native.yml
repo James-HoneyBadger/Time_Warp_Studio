@@ -165,18 +165,17 @@ jobs:
         env:
           PYTHONPATH: ${{ github.workspace }}/native/bridge
 
-      # Every example program, in every language, through the bridge. This is the
-      # gate for the failure the unit tests cannot see: a language that runs
+      # Every example program, in every language, through the native engines. This
+      # is the gate for the failure the unit tests cannot see: a language that runs
       # successfully and draws nothing, which is exactly what a user reports as
-      # "the graphics don't show up". Needs only python3 -- the bridge's import
-      # chain is deliberately Qt-free, so this job does not install PySide6.
-      - name: Example programs through the bridge
+      # "the graphics don't show up".
+      - name: Example programs
         run: python3 native/tools/example_smoke.py
 
-      # Every command in the command table, first as a whole program through the
-      # reference engine, then as a REPL submission through the native API. The
-      # REPL is a separate execution path: it preserves bindings, replaces the
-      # program text each time and runs whole-program languages as one entry.
+      # Every command in the command table, first as a whole program, then as a
+      # REPL submission through the native API. The REPL is a separate execution
+      # path: it preserves bindings, replaces the program text each time and runs
+      # whole-program languages as one entry.
       - name: Every language command
         run: python3 native/tools/command_matrix.py
 

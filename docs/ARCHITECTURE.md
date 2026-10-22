@@ -1,6 +1,6 @@
 # Architecture Guide
 
-## Time Warp Studio v17.1.1 — System Design and Implementation
+## Time Warp Studio v17.2.0 — System Design and Implementation
 
 > **This page describes the shipping product.** It was rewritten alongside the move
 > to C++20 / Qt6. Earlier revisions documented the PySide6 implementation, which has
@@ -800,9 +800,9 @@ gates and a command matrix. All of them must stay green, in every build tree.
 | Debug tree | `make -C native test-debug` | Keeps `Q_ASSERT` and standard-library hardening live; a suite green in Release can crash here |
 | Sanitisers | `make -C native asan` | Reads and writes of memory that is no longer valid, which no assertion can see. `ASAN=undefined` for UBSan |
 | Engine tests | `make engine-test` | The bridge engine: the ten executors, the evaluator, the validators, the lesson curriculum and the classroom |
-| Example corpus | `make smoke` | Every `Examples/**` program, through the reference engine, including the 30 that must produce ink |
+| Example corpus | `make smoke` | Every `Examples/**` program, through the native engines, including the 30 that must produce ink |
 | Parity gates | `differential_check.py`, `scheme_differential_check.py`, `lang_differential_check.py` | The ported engines against the Python reference: 0 unexpected mismatches |
-| Command matrix | `native/tools/command_matrix.py` | One row per documented command, through the real bridge |
+| Command matrix | `native/tools/command_matrix.py` | One row per documented command, through `time_warp_check` and then through the REPL |
 | Lesson curriculum | `teach.py validate` (and `test_lessons.py` on every build) | That every checkpoint's own solution passes, that no starter already passes, and that every language has a lesson |
 | Version metadata | `Scripts/version_sync.py` | That every hand-written copy of the version agrees with `VERSION` |
 
@@ -813,8 +813,8 @@ Two of these exist for a failure the others cannot see:
   once did exactly that. It counts the ink present on the final canvas — stable across
   runs — rather than every intermediate frame, because that earlier metric moved by
   hundreds between identical runs and could not be compared with anything.
-- **The command matrix** drives one row per documented command through the real bridge. It
-  is what found the BASIC keyword-boundary bug that silently swallowed assignments to any
+- **The command matrix** drives one row per documented command through `time_warp_check`.
+  It is what found the BASIC keyword-boundary bug that silently swallowed assignments to any
   variable whose name began with a keyword, the `ON TIMER` off-by-one, and Logo's `SHOW`,
   which had never evaluated anything.
 

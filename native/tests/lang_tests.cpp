@@ -2271,6 +2271,29 @@ void test_gamepad_axis_scaling_is_centred() {
 }
 
 
+// BASIC is case-insensitive and the expression evaluator was not: the statement
+// that stored an array upper-cased the name, and the `Variable` branch upper-cased
+// before reading, but a *call* arrived at the lookup spelled exactly as it was
+// written. `DIM dat(3)` then `PRINT dat(0)` was "Unknown function: dat" while
+// `PRINT DAT(0)` worked -- and `Examples/basic/math_explorer.bas` is written in
+// lower case, so the example only ever ran because the smoke harness ran it
+// through the reference engine.
+void test_a_lowercase_array_name_is_the_same_array() {
+    const BasicRun run = run_basic(
+        "10 DIM dat(3)\n"
+        "20 dat(0) = 5\n"
+        "30 PRINT dat(0)\n"
+        "40 PRINT dat(0) - 1\n"
+        "50 d = dat(0) * 2\n"
+        "60 PRINT d\n"
+        "70 PRINT DAT(0)\n");
+    TW_CHECK_EQ(run.output.size(), std::size_t{4});
+    TW_CHECK_EQ(run.output.at(0), std::string{"5"});
+    TW_CHECK_EQ(run.output.at(1), std::string{"4"});
+    TW_CHECK_EQ(run.output.at(2), std::string{"10"});
+    TW_CHECK_EQ(run.output.at(3), std::string{"5"});
+}
+
 // A program's own directory is a fence, and a fence has to be made of
 // components. The check was a string-prefix test, and `/tmp/run` is a prefix of
 // `/tmp/run2` -- so a program confined to the first could reach a sibling whose
@@ -2709,6 +2732,7 @@ int main() {
     test_basic_cls_clears_what_point_reads();
     test_basic_stick_is_neutral_before_joyinit();
     test_gamepad_axis_scaling_is_centred();
+    test_a_lowercase_array_name_is_the_same_array();
     test_file_access_is_confined_to_the_directory();
     test_basic_an_empty_loop_body_does_not_end_its_outer_loop();
     test_the_screen_game_example_runs_and_draws();

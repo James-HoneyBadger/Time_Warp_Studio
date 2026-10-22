@@ -121,10 +121,10 @@ python3 native/tools/differential_check.py native/build/expr_cli
 python3 native/tools/scheme_differential_check.py native/build/scheme_cli
 python3 native/tools/lang_differential_check.py
 
-# Every example program, in every language, through the bridge
+# Every example program, in every language, through the native engines
 python3 native/tools/example_smoke.py
 
-# Every command row: as a program through the bridge, and through a native REPL
+# Every command row: as a program through `time_warp_check`, and through the REPL
 python3 native/tools/command_matrix.py
 python3 native/tools/repl_matrix.py
 

@@ -24,9 +24,13 @@ from __future__ import annotations
 import argparse
 import collections
 import json
+import os
+import shutil
 import pathlib
 import subprocess
 import sys
+
+from harness import locate_check, repository_root
 
 # Language key -> the extension its examples use. The keys are the ones the C++
 # side sends, which are the settings keys from `native/src/ui/language.cpp`.
@@ -101,27 +105,56 @@ DRAWING_EXAMPLES = {
 }
 
 
-def repository_root() -> pathlib.Path:
-    """The checkout this script lives in, so paths do not depend on the cwd."""
-    return pathlib.Path(__file__).resolve().parents[2]
+# What counts as ink. A clear empties the recording, so the total is what is on
+# the canvas at the end rather than a count of every frame that streamed past --
+# the difference used to make an identical drawing report hundreds either way.
+DRAWN_KINDS = ("line", "poly", "rect", "point", "ellipse", "text")
+
+
+# What counts as ink. A clear empties the recording, so the total is what is on
+# the canvas at the end rather than a count of every frame that streamed past --
+# the difference used to make an identical drawing report hundreds either way.
+DRAWN_KINDS = ("line", "poly", "rect", "point", "ellipse", "text")
+
+
+def locate_check(root: pathlib.Path) -> pathlib.Path | None:
+    """The built runner: beside this checkout, or wherever the caller put it."""
+    override = os.environ.get("TIME_WARP_CHECK")
+    if override:
+        candidate = pathlib.Path(override)
+        return candidate if candidate.is_file() else None
+    for candidate in (
+        root / "native" / "build" / "time_warp_check",
+        root / "native" / "build" / "time_warp_check.exe",
+        root / "native" / "build-debug" / "time_warp_check",
+    ):
+        if candidate.is_file():
+            return candidate
+    found = shutil.which("time_warp_check")
+    return pathlib.Path(found) if found else None
 
 
 def run_one(
-    interpreter: str,
-    worker: pathlib.Path,
+    check: pathlib.Path,
     language: str,
     source: str,
-    name: str,
     timeout: float,
 ) -> dict:
-    """Runs one program and returns what came back."""
-    request = json.dumps(
-        {"t": "run", "language": language, "source": source, "name": name}
-    )
+    """Runs one program and returns what came back.
+
+    The runner is `time_warp_check`, which runs the program through the same
+    native engines the IDE runs. It replaced a spawn of `native/bridge/worker.py`
+    for the reason the engine was deleted: every language has an executor, so
+    asking a second interpreter what a program did was asking the most expensive
+    possible source for an answer this build already had.
+
+    The result still says how much ink there is, because "it ran and drew
+    nothing" is the failure this file exists to catch.
+    """
     try:
         completed = subprocess.run(
-            [interpreter, str(worker)],
-            input=request + "\n",
+            [str(check), "--language", language, "--json", "-"],
+            input=source,
             capture_output=True,
             text=True,
             timeout=timeout,
@@ -149,24 +182,8 @@ def run_one(
             continue
         kind = message.get("t")
         if kind == "canvas":
-            for command in message.get("cmds", []):
-                drawn = command.get("k")
-                if drawn == "clear":
-                    # A CLEARSCREEN discards everything drawn so far. Counting every
-                    # frame instead made this total depend on how many intermediate
-                    # frames happened to stream before each clear, so it wavered by
-                    # hundreds between identical runs and could not be compared with
-                    # anything. What matters is the ink that is there at the end.
-                    strokes = 0
-                elif drawn in ("line", "poly", "rect", "point", "ellipse", "text"):
-                    # Every drawing primitive counts, not just the line ones.
-                    # The corpus used only lines and polylines when this metric
-                    # was written, so the narrower test was invisible; a
-                    # pixel-graphics language draws filled rectangles, and its
-                    # ink was then not seen at all. Widening it changed no
-                    # existing total -- 5639, 7840, 29, 67, 43 all stand -- so
-                    # it is the same measurement, made complete.
-                    strokes += 1
+            kinds = message.get("kinds", {})
+            strokes = sum(kinds.get(name, 0) for name in DRAWN_KINDS)
         elif kind == "out":
             output.append(message.get("text", ""))
         elif kind == "err":
@@ -180,7 +197,7 @@ def run_one(
         return {
             "ok": False,
             "strokes": strokes,
-            "error": f"the worker produced no result ({reason})",
+            "error": f"the run produced no result ({reason})",
             "output": "".join(output),
         }
     if not done.get("ok", False) or errors:
@@ -208,17 +225,14 @@ def main(argv: list[str] | None = None) -> int:
     options = parser.parse_args(argv)
 
     root = repository_root()
-    worker = root / "native" / "bridge" / "worker.py"
-    if not worker.is_file():
-        print(f"the language worker was not found at {worker}", file=sys.stderr)
+    check = locate_check(root)
+    if check is None:
+        print(
+            "time_warp_check was not found; build it with"
+            " `cmake --build native/build --target time_warp_check`",
+            file=sys.stderr,
+        )
         return 1
-
-    # The repository's virtual environment first, because that is where this
-    # project's dependencies live; `python3` otherwise. The two names are kept
-    # apart so the type is a `str` at every use, not a Path that sometimes turns
-    # into one.
-    interpreter_path = root / ".venv/bin/python3"
-    interpreter = str(interpreter_path) if interpreter_path.is_file() else "python3"
 
     counts: dict[str, dict[str, int]] = collections.defaultdict(
         lambda: {"passed": 0, "failed": 0, "strokes": 0}
@@ -236,11 +250,9 @@ def main(argv: list[str] | None = None) -> int:
                 continue
             ran += 1
             result = run_one(
-                interpreter,
-                worker,
+                check,
                 language,
                 path.read_text(encoding="utf-8"),
-                path.name,
                 options.timeout,
             )
             counts[language]["strokes"] += result["strokes"]

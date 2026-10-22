@@ -2,12 +2,12 @@
 #
 # The product is the Qt application in native/. The real build, test and run
 # logic lives in native/Makefile; this file exists so that plain `make` at the
-# repository root does the obvious thing, and so the bridge's own tests and
-# checks have one obvious home.
+# repository root does the obvious thing, and so every check has one obvious home.
 
 NATIVE := native
-# The bridge's tooling (pytest, ruff) lives in the repository virtual
-# environment; fall back to whatever `python3` is on PATH.
+# The harness scripts are the only Python left, and they drive `time_warp_check`
+# rather than an engine: they need an interpreter, not a virtual environment. The
+# bridge's own pytest/ruff live in .venv while `native/bridge/` still exists.
 PYTHON ?= $(shell test -x .venv/bin/python3 && echo .venv/bin/python3 || echo python3)
 FORWARDED := build run test test-debug asan clean distclean info test-list \
              screenshot reset-layout
@@ -21,15 +21,15 @@ help:
 	@echo "The IDE is the Qt application in $(NATIVE)/. Targets that forward to it:"
 	@echo "  build         Build the Qt IDE (Release)"
 	@echo "  run           Build it and run it"
-	@echo "  test          Run the 21 C++ suites"
+	@echo "  test          Run the C++ suites"
 	@echo "  test-debug    Run them in the Debug tree"
 	@echo "  asan          Run them under AddressSanitizer (ASAN=undefined for UBSan)"
 	@echo "  screenshot    Capture a window screenshot"
 	@echo "  clean         Remove build output"
 	@echo ""
-	@echo "The reference engine in $(NATIVE)/bridge (development tooling):"
-	@echo "  engine-test   The bridge engine's own pytest suite"
-	@echo "  smoke         Every example program, through the real bridge"
+	@echo "The checks (development tooling):"
+	@echo "  engine-test   The reference engine's own pytest suite"
+	@echo "  smoke         Every example program, through the native engines"
 	@echo "  golden-check  The ports against the frozen reference corpus (no Python)"
 	@echo "  golden-record Freeze the reference's answers again (needs the bridge)"
 	@echo "  teach-check   Every lesson solution passes and every starter fails"
@@ -54,14 +54,23 @@ engine-test:
 	}
 	@PYTHONPATH=$(NATIVE)/bridge $(PYTHON) -m pytest -q $(NATIVE)/bridge/time_warp/tests
 
-smoke:
+# The three harnesses drive what the product drives: `smoke` and `command-matrix`
+# spawn `time_warp_check` (the native engines) and `repl-matrix` speaks the API,
+# so none of them needs the reference engine to be present.
+smoke: check-built
 	@$(PYTHON) $(NATIVE)/tools/example_smoke.py
 
-command-matrix:
+command-matrix: check-built
 	@$(PYTHON) $(NATIVE)/tools/command_matrix.py
 
-repl-matrix:
+repl-matrix: check-built
 	@$(PYTHON) $(NATIVE)/tools/repl_matrix.py
+
+# A harness whose runner is missing reports it as a failing program, so the build
+# is named here instead: `make smoke` on a fresh checkout should build the tool it
+# needs rather than explain that it cannot find it.
+check-built:
+	@$(MAKE) --no-print-directory -C $(NATIVE) check
 
 # The parity gate's answer, frozen. `--record` asks the Python reference and is
 # run only while the reference still exists; `--golden` asks the recorded corpus

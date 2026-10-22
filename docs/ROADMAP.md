@@ -28,7 +28,7 @@ derived rather than remembered.
 | Canvas | Live drawing, zoom, pan, grid, auto-fit, turtle marker, scrubber playback, animated GIF recording, raster and SVG export, the pose strip and the command log, and a fixed-coordinate screen mode (`SCREEN`) with sprites, pixel read-back and a game example; in screen mode the wheel zooms the screen about the pointer and a click reads back the pixel under it |
 | Display | 35 themes, high contrast, A+ text sizes (100/125/150%), focus mode, CRT settings, four Monitor presets |
 | Execution | Run (F9) and Stop; one program at a time; unsaved-change prompts |
-| Input | A program can ask for a line and wait for it — `INPUT`, FOCAL's `ASK`, PILOT's `ACCEPT`, REXX's `PULL` — on whichever engine runs it; BASIC's round trip is asserted on the engine, on `NativeRunner`, and through the bridged worker |
+| Input | A program can ask for a line and wait for it — `INPUT`, FOCAL's `ASK`, PILOT's `ACCEPT`, REXX's `PULL` — on whichever engine runs it; BASIC's round trip is asserted on the engine, on `NativeRunner`, and through the API |
 | HB-1 machine | Tools > HB-1 Computer (`Ctrl+Alt+W`): one CRT with a boot intro, a language ROM socket for all ten languages, TEXT/SPLIT/GRAPHICS modes, a program editor, a turtle canvas, and a prompt with BASIC direct mode; CONFIG (`Ctrl+,`) sets the boot ROM and screen, start-up message, phosphor palette, text sizes and CRT glass; each ROM's program, the ROM, the screen mode and the configuration persist; HB DOS 1.0 stores programs on a 512-sector volume with an Apple DOS-style catalogue, lock bits and a two-step INIT. Manuals: [the machines](MACHINES.md), [HB-1](hb1/README.md) |
 | CHIP-8 machine | Tools > CHIP-8 Emulator (`Ctrl+Shift+M`): a live 60 Hz CHIP-8 with a 64×32 screen (128×64 hi-res), keypad, Run/Pause/Step/Reset, 1–2000 opcodes per frame, register/memory/listing inspector, sound, and a ROM library the user points at a folder. It assembles listings and loads binary ROMs; the editor's CHIP-8 Run is the whole-program path. Manuals: [machine](chip8/README.md), [assembler](chip8/assembly.md), [instruction set](chip8/instruction-set.md) |
 | Languages | 10 languages, 61 verified example programs |
@@ -662,8 +662,8 @@ function-key bar, re-armable from Settings.
 The **lessons system**, with progress tracking and a classroom mode, used to be on this
 list. It is now implemented — see `docs/lessons/`. The class list is in the IDE as
 well: the right column's Classroom page shows the roster, the current assignment
-and one row of marks per learner, read through the bridge from the same files
-`teach.py` writes. Presentation mode (View > Presentation Mode) hides the chrome
+and one row of marks per learner, read from the same files `time_warp_teach`
+writes. Presentation mode (View > Presentation Mode) hides the chrome
 and takes the lesson panel and console to the size and window style
 `teach.py present` sets, a lesson session can be exported as Markdown or PDF with
 its checkpoints, this session's verdicts, the program and the output, and the

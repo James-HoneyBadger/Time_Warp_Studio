@@ -1,5 +1,45 @@
 # Changelog
 
+## [17.2.0] - 2026-10-22
+
+`make smoke` and `make command-matrix` used to ask `native/bridge/worker.py` what a
+program did, which made a Python interpreter part of this repository's test suite
+long after the product stopped needing one. They ask `time_warp_check` now — the
+native engines, through the same recorder the API and the lesson check use.
+
+The change immediately earned its keep: it found a BASIC bug that two releases of
+green gates had not.
+
+### Added
+
+- **`time_warp_check`** (`native/tools/check.cpp`): runs one program through the
+  native engines and reports what it printed and what it drew — as text, or as the
+  `out`/`canvas`/`done` JSON lines the harnesses read. `--language` is required:
+  the extension table lives in the IDE, and a second copy here would be a third
+  statement of one fact. Scheme goes through the Scheme machine, because that is
+  what the IDE does and `executor_for` deliberately does not answer for it.
+- `native/tools/harness.py`: one answer to "which `time_warp_check`, and which
+  checkout?", so the two harnesses cannot disagree about it.
+- `make check` builds the tool; `make smoke` and `make command-matrix` depend on it.
+
+### Fixed
+
+- **A lowercase array name was a different array.** `DIM dat(3)` then
+  `PRINT dat(0)` answered `Unknown function: dat`, while `PRINT DAT(0)` worked:
+  the assignment statement and the `Variable` branch of the evaluator upper-cased
+  a name before use, and a *call* was looked up exactly as written. BASIC is
+  case-insensitive, so this was simply wrong — and `Examples/basic/math_explorer.bas`
+  is written in lower case, which meant the example had only ever run because the
+  smoke harness ran it through the reference engine. `lang_tests` has the case.
+
+### Changed
+
+- The example gate's ink total for Scheme and Logo moved slightly (85 against 121,
+  7868 against 7885). It now counts what the canvas recorder recorded rather than
+  what the bridge streamed, and the two disagree about a handful of operations that
+  change the drawing without adding to it. Every program that must draw still
+  draws, which is what the gate is for; the numbers are a trend, not a contract.
+
 ## [17.1.1] - 2026-10-22
 
 A program confined to a directory could reach a sibling of it. `OPEN` resolved a

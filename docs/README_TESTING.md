@@ -37,9 +37,11 @@ make -C native asan ASAN=undefined SAN_DIR=build-ubsan \
 
 ## The example corpus
 
-Every `Examples/**` program is run through the real bridge. This is the gate for
-the failure the unit tests cannot see — a language that runs "successfully" and
-draws nothing, which is what a user reports as "the graphics don't show up".
+Every `Examples/**` program is run through the native engines, by
+`time_warp_check`, which is the same recorder the API and the lessons use. This is
+the gate for the failure the unit tests cannot see — a language that runs
+"successfully" and draws nothing, which is what a user reports as "the graphics
+don't show up".
 
 ```bash
 python3 native/tools/example_smoke.py

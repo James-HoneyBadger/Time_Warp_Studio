@@ -189,6 +189,13 @@ ctest-run: build
 	@QT_QPA_PLATFORM=$(QT_QPA_PLATFORM) $(CTEST) --test-dir $(BUILD_DIR) \
 		--output-on-failure $(CTEST_ARGS)
 
+# The run report the harnesses and a person both use: one program through the
+# native engines, with what it printed and what it drew. Built on demand so
+# `make smoke` at the top level has something to spawn.
+check: build ## Build the run-report tool the harnesses drive
+	@test -x "$(BUILD_DIR)/time_warp_check" \
+		|| { echo "error: time_warp_check was not built (Qt Core is required)." >&2; exit 1; }
+
 # The curriculum through the same library the Lessons panel asks: every worked
 # answer passes its checkpoint and every starter fails it. Cheap enough to run on
 # every change, and the only thing that keeps lesson data honest -- nothing else
@@ -274,5 +281,5 @@ uninstall: ## Remove what install put in PREFIX
 	@echo "Removed the files listed in $(BUILD_DIR)/install_manifest.txt"
 
 .PHONY: all build configure debug rebuild strict lenient test test-list \
-        test-debug asan ctest-run run screenshot reset-layout info clean \
-        distclean install uninstall help
+        test-debug asan ctest-run check teach-check run screenshot reset-layout \
+        info clean distclean install uninstall help
