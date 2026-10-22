@@ -123,8 +123,8 @@ cd native/tools && python3 scheme_differential_check.py
 python3 native/tools/lang_differential_check.py   # all nine bridged-once languages, 483 programs
 
 # The documentation gates, which .github/workflows/docs.yml runs on every docs
-# change; the teach.py write-plans output is then checked with git diff --exit-code
-python3 native/tools/teach.py validate
+# change; the `time_warp_teach plans --write` output is then checked with git diff --exit-code
+./native/build/time_warp_teach validate
 make lint-md
 ```
 
@@ -187,9 +187,9 @@ make lint-md
    untested forever.
 
 6. Add at least one lesson to `native/share/lessons.json`
-   (`native/tools/teach.py new <id> --language NAME` prints a skeleton the loader
-   accepts) and run `teach.py validate` until it is silent. The lessons panel and
-   `learn.py` both read that one file, so nothing else needs registering.
+   (`./native/build/time_warp_teach new <id> --language NAME` prints a skeleton the loader
+   accepts) and run `time_warp_teach validate` until it is silent. The lessons panel and
+   `time_warp_learn` both read that one file, so nothing else needs registering.
 
 ## Project-Specific Conventions
 

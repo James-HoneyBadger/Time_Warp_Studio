@@ -182,6 +182,23 @@ jobs:
       - name: Every language command through the REPL
         run: python3 native/tools/repl_matrix.py
 
+      # The curriculum is also checked here, not in the documentation job: both
+      # checks need `time_warp_teach`, and this is the job that has built it. The
+      # plans are *generated*, so regenerating them and finding a diff means a
+      # lesson changed and the document a teacher would teach from did not.
+      - name: The curriculum is finishable
+        run: ./native/build/time_warp_teach validate --quiet
+
+      - name: The lesson plans match the curriculum
+        run: |
+          set -euo pipefail
+          ./native/build/time_warp_teach plans --write docs/lessons/plans
+          if ! git diff --exit-code --stat docs/lessons/plans; then
+            echo "::error::docs/lessons/plans is out of date. Run './native/build/time_warp_teach plans --write docs/lessons/plans' and commit the result."
+            exit 1
+          fi
+          echo "The plans are current."
+
       - uses: actions/upload-artifact@v6
         if: failure()
         with:

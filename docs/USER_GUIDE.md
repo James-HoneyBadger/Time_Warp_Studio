@@ -486,9 +486,9 @@ an `ostream`, which is how the tests drive it without a process.
 
 - **Lessons** — the 🎓 Lessons tab lists the curriculum and checks the document in
   front against the current checkpoint. Progress lives in
-  `~/.time_warp/progress.json`; `native/tools/learn.py` reads the same file.
+  `~/.time_warp/progress.json`; `native/tools/learn.cpp` reads the same file.
 - **Classroom** — the 🏫 Classroom tab shows a roster, assignments and marks, and
-  moves a whole class as a ZIP bundle. `native/tools/teach.py` is the teacher's CLI
+  moves a whole class as a ZIP bundle. `native/tools/teach.cpp` is the teacher's CLI
   over the same files; see [lessons/teacher-guide.md](lessons/teacher-guide.md).
 - **Themes** — View → Theme chooses one of the 35 themes; View → Next Theme
   (`Shift+F10`) cycles them. High Contrast derives a maximum-contrast variant of

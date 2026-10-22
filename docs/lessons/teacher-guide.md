@@ -1,11 +1,11 @@
 # Teacher guide: planning, marking and running a class
 
-Everything a teacher needs is in `native/tools/teach.py`. Half of it needs no
+Everything a teacher needs is in `native/tools/teach.cpp`. Half of it needs no
 class at all — it is about the curriculum — and half of it is about the people in
 front of you.
 
 ```text
-python3 native/tools/teach.py --help
+python3 native/tools/teach.cpp --help
 ```
 
 Nothing here is a separate copy of the lessons. The plans are generated from the
@@ -20,7 +20,7 @@ solutions themselves. If a lesson changes, every one of those changes with it.
 Run this first, and again after editing any lesson:
 
 ```text
-$ python3 native/tools/teach.py validate
+$ python3 native/tools/teach.cpp validate
 lessons: 20   checkpoints: 60
 
 ✅ every solution passes its own checkpoint
@@ -47,7 +47,7 @@ quietly offering a language the curriculum does not cover.
 ## 2. The scheme of work
 
 ```text
-python3 native/tools/teach.py outline
+python3 native/tools/teach.cpp outline
 ```
 
 Prints the twenty lessons grouped by language, in teaching order, with each
@@ -57,8 +57,8 @@ view to plan a term from.
 ## 3. Lesson plans
 
 ```text
-python3 native/tools/teach.py plans --lang BASIC
-python3 native/tools/teach.py plans > all-plans.txt
+python3 native/tools/teach.cpp plans --lang BASIC
+python3 native/tools/teach.cpp plans > all-plans.txt
 ```
 
 Each plan carries what you need to teach it and nothing you do not:
@@ -79,7 +79,7 @@ The same plans are committed as documents, one file per language, in
 curriculum:
 
 ```text
-python3 native/tools/teach.py write-plans docs/lessons/plans
+python3 native/tools/teach.cpp write-plans docs/lessons/plans
 ```
 
 They are **generated rather than written**, because two copies of a lesson drift
@@ -88,8 +88,8 @@ and the copy that drifts is always the one being read.
 ## 4. Answer keys
 
 ```text
-python3 native/tools/teach.py answers logo_shapes
-python3 native/tools/teach.py answers --all > answers.txt
+python3 native/tools/teach.cpp answers logo_shapes
+python3 native/tools/teach.cpp answers --all > answers.txt
 ```
 
 Each checkpoint's **worked answer** with what it is checked against, so you can
@@ -138,11 +138,11 @@ Use `--classroom DIR` to keep a class somewhere else.
 ### Adding the class
 
 ```text
-$ python3 native/tools/teach.py roster add "Ada Lovelace"
+$ python3 native/tools/teach.cpp roster add "Ada Lovelace"
 ✅ added Ada Lovelace as ada-lovelace
 
-$ python3 native/tools/teach.py roster add "Grace Hopper"
-$ python3 native/tools/teach.py roster
+$ python3 native/tools/teach.cpp roster add "Grace Hopper"
+$ python3 native/tools/teach.cpp roster
 ```
 
 The id is derived from the name unless you pass `--student-id`. Removing somebody
@@ -152,10 +152,10 @@ must not be able to delete an afternoon's work.
 ### Setting and handing out work
 
 ```text
-$ python3 native/tools/teach.py assign logo_shapes --note "For Tuesday"
+$ python3 native/tools/teach.cpp assign logo_shapes --note "For Tuesday"
 ✅ assigned 1 lesson(s): logo_shapes
 
-$ python3 native/tools/teach.py distribute
+$ python3 native/tools/teach.cpp distribute
   /home/you/.time_warp/classroom/students/ada-lovelace/logo_shapes-1.logo
   ...
 ✅ handed out 6 file(s) to 2 student(s)
@@ -169,7 +169,7 @@ the second run hands out only the files that are not there.
 ### Taking it in
 
 ```text
-$ python3 native/tools/teach.py collect -v
+$ python3 native/tools/teach.cpp collect -v
   … ada-lovelace logo_shapes            2/3 checkpoint(s) passed
         logo_shapes-1.logo           checkpoint 1: pass
         logo_shapes-2.logo           checkpoint 2: pass
@@ -189,7 +189,7 @@ and hiding the third would send you to re-teach something already learnt.
 ### Where each learner has got to
 
 ```text
-$ python3 native/tools/teach.py report
+$ python3 native/tools/teach.cpp report
 student       name                   started  finished  hints
 ada-lovelace  Ada Lovelace                 1         1      2
 grace-hopper  Grace Hopper                 0         0      0
@@ -205,14 +205,14 @@ To read a single progress file with no classroom at all — for instance one cop
 off a learner's machine — point `--progress` at it:
 
 ```text
-python3 native/tools/teach.py --progress /media/usb/progress.json report
+python3 native/tools/teach.cpp --progress /media/usb/progress.json report
 ```
 
 ### Moving a class between machines
 
 ```text
-python3 native/tools/teach.py bundle class.zip
-python3 native/tools/teach.py --classroom /path/new unbundle class.zip
+python3 native/tools/teach.cpp bundle class.zip
+python3 native/tools/teach.cpp --classroom /path/new unbundle class.zip
 ```
 
 A bundle is the whole classroom directory zipped: the roster, the assignment, the
@@ -245,7 +245,7 @@ Both manuals are installed with the application and listed under Help >
 Documentation, so a class can follow along on its own copies.
 
 ```text
-$ python3 native/tools/teach.py present 24
+$ python3 native/tools/teach.cpp present 24
 ✅ presentation size 24, fullscreen True
 ```
 
@@ -280,7 +280,7 @@ class hand-in, and the PDF is the same content on A4.
 ## 7. Writing a new lesson
 
 ```text
-python3 native/tools/teach.py new my_topic --language BASIC
+python3 native/tools/teach.cpp new my_topic --language BASIC
 ```
 
 Prints a lesson skeleton in the shape the **loader accepts**, so an author

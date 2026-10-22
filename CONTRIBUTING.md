@@ -68,12 +68,12 @@ Three recipes cover most contributions:
   produces output, drawing or a reported error — silence is this project's
   characteristic bug. If a row's label is prose, name the command the inventory
   knows in `also=(...)`, or it is reported as untested forever.
-- **A lesson.** `python3 native/tools/teach.py new <id> --language NAME` prints a
+- **A lesson.** `./native/build/time_warp_teach new <id> --language NAME` prints a
   skeleton the loader accepts, `--append` adds it to the curriculum, and
-  `teach.py validate` says what is still missing. It refuses a solution that does
+  `time_warp_teach validate` says what is still missing. It refuses a solution that does
   not pass its own checkpoint and a starter that already passes, unless
   `starter_is_broken` records that the failure *is* the lesson. Then regenerate
-  the plans with `teach.py write-plans docs/lessons/plans`.
+  the plans with `time_warp_teach plans --write docs/lessons/plans`.
 - **Documentation.** `.github/workflows/docs.yml` enforces the parts that can be
   checked: every guide [docs/INDEX.md](docs/INDEX.md) promises exists, every
   relative link and `#anchor` resolves (`make doc-links`), every language has a
@@ -562,8 +562,8 @@ nothing passes by being silent.
 ### 5. Teach it
 
 Two lessons in `native/share/lessons.json`:
-`python3 native/tools/teach.py new <id> --language NEWLANG` prints a skeleton the
-loader accepts. Then run `teach.py validate`, which refuses a solution that does
+`./native/build/time_warp_teach new <id> --language NEWLANG` prints a skeleton the
+loader accepts. Then run `time_warp_teach validate`, which refuses a solution that does
 not pass its own checkpoint, a starter that already passes, and a starter that
 fails unless `starter_is_broken` says the failure is the lesson.
 
@@ -602,7 +602,7 @@ make test-all && make lint && make lint-md
 - [ ] Build is warning-free (`-Werror`)
 - [ ] Bridge code (if touched) is ruff clean and standard-library only
 - [ ] `make smoke` is unchanged — every example still runs, and the 30 that must draw still draw
-- [ ] Lesson changes pass `python3 native/tools/teach.py validate`
+- [ ] Lesson changes pass `./native/build/time_warp_teach validate`
 - [ ] Documentation updated, including anything the change made untrue
 - [ ] No breaking changes (or documented)
 - [ ] Commit messages clear
@@ -631,7 +631,7 @@ Time_Warp_Studio/
 │   │                             #   bridge/, project/, sql/, api/
 │   ├── tests/                    # 20 CTest suites
 │   ├── tools/                    # time_warp_ide.cpp, time_warp_api.cpp, twc.py
-│   │                             #   and the gates: learn.py, teach.py,
+│   │                             #   and the gates: time_warp_learn, time_warp_teach,
 │   │                             #   command_matrix.py, repl_matrix.py,
 │   │                             #   example_smoke.py, differential_check.py
 │   └── bridge/                   # The Python reference engine, kept only as the

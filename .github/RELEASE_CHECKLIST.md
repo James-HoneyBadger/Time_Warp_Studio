@@ -36,8 +36,8 @@ a hand-written copy, kept in step by `Scripts/version_sync.py` and checked by th
 - [ ] Refresh documentation footers (docs/FAQ.md, docs/INDEX.md)
 - [ ] Ensure screenshots or captions reference the new release where applicable
 - [ ] Run spell check / link validation for key documents
-- [ ] `python3 native/tools/teach.py validate` is silent, and regenerating the
-      plans (`teach.py write-plans docs/lessons/plans`) leaves no diff
+- [ ] `./native/build/time_warp_teach validate` is silent, and regenerating the
+      plans (`plans --write docs/lessons/plans`) leaves no diff
 - [ ] Markdown lint is clean — `make lint-md` (the editor lints the same file set;
       see `.vscode/settings.json`). The `Markdown Lint` workflow stays advisory, for
       the reason recorded in `DEPLOYMENT.md`

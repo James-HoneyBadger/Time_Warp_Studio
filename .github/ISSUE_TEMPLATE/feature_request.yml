@@ -42,7 +42,7 @@ body:
         - The IDE (window, editor, canvas, tabs, menus)
         - A language (how it parses, evaluates or prints)
         - The lessons and the lesson panel
-        - The teaching tools (`teach.py`) or the learner tool (`learn.py`)
+        - The teaching tools (`time_warp_teach`) or the learner tool (`time_warp_learn`)
         - Documentation, tutorials or lesson plans
         - Packaging, installing or building
         - Something else

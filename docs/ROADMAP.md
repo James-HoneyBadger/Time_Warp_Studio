@@ -209,9 +209,9 @@ above: nine of them were found by a row that had no answer, not by reading the c
 
 **Lessons now cover all ten languages.** Every language has two, three checkpoints
 each: sixty in all, with a plan, a worked answer and hints for every checkpoint, reachable
-from a terminal (`learn.py`) and from the 🎓 Lessons panel in the IDE.
+from a terminal (`time_warp_learn`) and from the 🎓 Lessons panel in the IDE.
 
-The curriculum is data, and `teach.py validate` **runs all sixty solutions through the
+The curriculum is data, and `time_warp_teach validate` **runs all sixty solutions through the
 engine** and checks that none of the sixty starters already passes. That pass is what makes
 a curriculum maintainable: without it, a lesson whose answer does not work would sit in
 the tree looking correct, because data is not exercised by anything unless something
@@ -256,7 +256,7 @@ depend on:
 1. `lang_differential_check.py` runs every program through both engines.
 2. `command_matrix.py` and `example_smoke.py` drive the reference.
 3. The Lessons panel asks the worker to check a learner's program, so the
-   panel's verdict and `teach.py`'s are one function's answer.
+   panel's verdict and `time_warp_teach`'s are one function's answer.
 
 The IDE itself no longer sends a program to it: `executor_for()` answers for all
 ten languages, so `runInBridge` has no runtime case left.
@@ -353,7 +353,7 @@ with no bridge and asserts the twenty lessons arrive.
 
 The classroom — rosters, handouts, marking, bundles — is `lessons::Classroom`, with
 one deliberate addition: bundles are written and read with zlib, so they stay the
-plain zips `teach.py` writes and any school can open. `classroom_tests` covers the
+plain zips `time_warp_teach` writes and any school can open. `classroom_tests` covers the
 promises a teacher relies on, and a bundle made by either side opens in the other.
 
 <!-- history -->
@@ -408,7 +408,7 @@ measuring the wrong machine.
 | 16.6 ✓ | Audio that mixes — several voices in process, not one `paplay` per note |
 | 17.0 ✓ | No Python in the product: lessons and classroom in C++, the worker deleted, nothing Python installed; `make golden-check` is the parity gate |
 | 17.1 ✓ | A screen you can look at — zoom about the pointer, click for a pixel, the mode named in the strip — sound on Windows through PowerShell, and a file fence made of components rather than a string prefix |
-| 18.0 | `native/bridge/` deleted, the three harnesses that drive it replaced by `timewarp_check`, the teacher's command line complete enough to shed `teach.py`, and `time_warp_player` replacing the copy-of-the-IDE artifact |
+| 18.0 | `native/bridge/` deleted, the three harnesses that drive it replaced by `timewarp_check`, and `time_warp_player` replacing the copy-of-the-IDE artifact |
 
 Smaller items belong in one of those releases rather than a release of their own: a
 Smalltalk call stack shown as frames rather than a Program Counter; Flatpak and an
@@ -667,7 +667,7 @@ well: the right column's Classroom page shows the roster, the current assignment
 and one row of marks per learner, read from the same files `time_warp_teach`
 writes. Presentation mode (View > Presentation Mode) hides the chrome
 and takes the lesson panel and console to the size and window style
-`teach.py present` sets, a lesson session can be exported as Markdown or PDF with
+`time_warp_teach present` sets, a lesson session can be exported as Markdown or PDF with
 its checkpoints, this session's verdicts, the program and the output, and the
 class can be bundled or unpacked from the same page. The **telemetry HUD** was on
 it too and is now the Telemetry tab described above.

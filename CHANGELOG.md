@@ -2,6 +2,45 @@
 
 <!-- history: all -->
 
+## [17.3.0] - 2026-10-22
+
+The teacher's command has every verb the Python one had, and the Python one is gone.
+Ten commands were missing from `time_warp_teach` — `outline`, `plans`, `answers`,
+`new`, `roster add|remove`, `assign`, `distribute`, `collect`, `report`, `present` —
+which is why `teach.py` had to stay. Twelve hundred lines of Python across the two
+CLIs are now none.
+
+### Added
+
+- **`time_warp_teach plans --write <dir>`**, and the renderer behind it
+  (`timewarp::lessons::render_plans`, `native/src/lessons/plans.cpp`). It is verified
+  the hardest way available: the 60 committed lesson plans in `docs/lessons/plans/`
+  were rendered by the Python tool, and the C++ renderer reproduces all eleven files
+  **byte for byte** apart from the sentence that names the command which generated
+  them. Escaped prose, fenced code, prerequisite lines and the index table all came
+  out identical, so the port is not "close enough" — it is the same document.
+- **The other nine verbs**, each a thin call into `timewarp_lessons` — which already
+  had `addStudent`, `distribute`, `collect`, `markAll`, `classProgress` and
+  `setPresentation`, so the work was plumbing and argument handling. `--language`
+  accepts either spelling (`basic`, `BASIC`, `chip8`, `CHIP-8`) because the key and
+  the display name are two facts and a teacher should not have to know which one a
+  given command compares.
+- `time_warp_teach validate --quiet`, which is what the CI step asks for.
+
+### Removed
+
+- `native/tools/teach.py` and `native/tools/learn.py` (1,284 lines). Nothing in the
+  build, the workflows or the guides names them; `time_warp_teach` and
+  `time_warp_learn` are the commands.
+
+### Changed
+
+- **The curriculum gate moved to the job that has the tool.** `docs.yml` used to run
+  `teach.py validate` and regenerate the plans with nothing but `python3`, which is
+  why it answered in seconds; both checks need `time_warp_teach` now, so they run in
+  `native.yml` beside the build, and the documentation job keeps the text checks
+  (index, links, claims, tutorials) that need no compiler.
+
 ## [17.2.1] - 2026-10-22
 
 The documentation gate checked links, and a link that resolves can still be a false

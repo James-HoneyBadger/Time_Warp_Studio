@@ -5,7 +5,7 @@ name: Docs
 # with nothing but python3 from the runner image: it has to answer in seconds, on
 # every documentation change, and it must not depend on the C++ build.
 #
-# It watches `lessons.json` and `teach.py` as well as `docs/`, because the lesson
+# It watches `lessons.json` and the two commands as well as `docs/`, because the lesson
 # plans are *generated* from the curriculum and the failure that matters is
 # somebody editing the curriculum without regenerating them.
 
@@ -17,7 +17,7 @@ on:
       - 'README.md'
       - 'Examples/CATALOG.md'
       - 'native/bridge/time_warp/features/lessons.json'
-      - 'native/tools/teach.py'
+      - 'native/tools/teach.cpp'
       - 'native/tools/check_doc_links.py'
       - 'native/tools/check_doc_claims.py'
       - '.github/workflows/docs.yml'
@@ -28,7 +28,7 @@ on:
       - 'README.md'
       - 'Examples/CATALOG.md'
       - 'native/bridge/time_warp/features/lessons.json'
-      - 'native/tools/teach.py'
+      - 'native/tools/teach.cpp'
       - 'native/tools/check_doc_links.py'
       - 'native/tools/check_doc_claims.py'
       - '.github/workflows/docs.yml'
@@ -112,23 +112,3 @@ jobs:
           python3 native/tools/check_doc_claims.py --self-test
           python3 native/tools/check_doc_claims.py
 
-      # The plans are generated from the curriculum. Regenerating them and finding
-      # a diff means somebody changed a lesson and did not update the document a
-      # teacher would then teach from: two copies of one lesson, and the copy that
-      # drifts is always the one being read.
-      - name: The lesson plans match the curriculum
-        run: |
-          set -euo pipefail
-          python3 native/tools/teach.py write-plans docs/lessons/plans
-          if ! git diff --exit-code --stat docs/lessons/plans; then
-            echo "::error::docs/lessons/plans is out of date. Run 'python3 native/tools/teach.py write-plans docs/lessons/plans' and commit the result."
-            exit 1
-          fi
-          echo "The plans are current."
-
-      # The curriculum is also checked by the engine suite in native.yml. It is
-      # repeated here so a documentation-only pull request that happens to touch a
-      # lesson still runs it, and so the failure is reported against the diff that
-      # caused it.
-      - name: The curriculum is finishable
-        run: python3 native/tools/teach.py validate --quiet

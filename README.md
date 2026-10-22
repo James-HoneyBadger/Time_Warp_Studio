@@ -6,7 +6,7 @@ complete computers inside it.*
 [![C++20](https://img.shields.io/badge/C%2B%2B-20-blue)](https://en.cppreference.com/)
 [![Qt](https://img.shields.io/badge/Qt-6%20%7C%205.15-green)](https://www.qt.io/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/Version-17.2.1-orange)](https://github.com/James-HoneyBadger/Time_Warp_Studio)
+[![Version](https://img.shields.io/badge/Version-17.3.0-orange)](https://github.com/James-HoneyBadger/Time_Warp_Studio)
 
 Time Warp Studio is a native C++20 and Qt workbench for people who like old
 computers. It is the programming environment the 1980s promised and never quite
@@ -248,9 +248,9 @@ The Studio carries a checked curriculum, though it does not require one:
   printing a description of a drawing.
 - **In the IDE**, the 🎓 **Lessons** panel shows the curriculum, the current
   checkpoint, hints and a Check button.
-- **At a terminal**, `learn.py` walks a lesson and `teach.py` writes lesson plans,
+- **At a terminal**, `time_warp_learn` walks a lesson and `time_warp_teach` writes lesson plans,
   answer keys, a class roster, handouts, marking and progress reports.
-- **Self-checking**, because `teach.py validate` runs all sixty solutions and
+- **Self-checking**, because `time_warp_teach validate` runs all sixty solutions and
   refuses a starter that already passes its own checkpoint.
 
 See [docs/lessons/](docs/lessons/README.md) for the student and teacher guides.

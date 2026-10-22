@@ -1,6 +1,6 @@
 # Architecture Guide
 
-## Time Warp Studio v17.2.1 — System Design and Implementation
+## Time Warp Studio v17.3.0 — System Design and Implementation
 
 > **This page describes the shipping product.** It was rewritten alongside the move
 > to C++20 / Qt6. Earlier revisions documented the PySide6 implementation, which has
@@ -766,7 +766,7 @@ that keeps them. `DebugPanel`'s buttons drive whichever runner is paused.
 **The lesson panel was never a placeholder.** `LessonPanel` is fully implemented. It holds no curriculum and runs no program: it
 asks the bridge for the lesson list, displays the checkpoint, and sends the learner's
 source back to be checked. That is deliberate, and it is what makes the panel's green tick
-and `native/tools/learn.py`'s verdict the same function's answer rather than two opinions
+and `native/tools/learn.cpp`'s verdict the same function's answer rather than two opinions
 that drift. The protocol it uses is in [docs/lessons/FORMAT.md](lessons/FORMAT.md).
 
 It also never touches a document. "Open" raises `openCodeRequested` and the *window*

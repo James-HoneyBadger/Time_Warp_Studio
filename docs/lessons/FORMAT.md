@@ -168,7 +168,7 @@ than "the answer is not right yet".
 
 ## 5. What `validate_curriculum` refuses
 
-Run as `teach.py validate`, `learn.py --self-check`, and on every build as
+Run as `time_warp_teach validate`, `time_warp_learn --self-check`, and on every build as
 `native/bridge/time_warp/tests/test_lessons.py::test_the_curriculum_is_sound`.
 
 For each checkpoint:
@@ -221,7 +221,7 @@ counter being cumulative is how the leak was noticed.
 ## 7. The classroom
 
 ```text
-~/.time_warp/classroom/            override with `teach.py --classroom DIR`
+~/.time_warp/classroom/            override with `TEACH_TIME_WARP_CLASSROOM`
   roster.json                      students and where their work lives
   assignment.json                  what was set most recently
   presentation.json                {"font_size": 18, "fullscreen": true}
@@ -285,11 +285,11 @@ is [`timewarp_lessons`](../../native/include/timewarp/lessons/progress.hpp).
 1. Add the language to the engine's `Language` enum and to
    `core/language_registry.py` (the display name comes from there), and to
    `native/src/ui/language.cpp` for the IDE's table.
-2. Add at least one lesson to `lessons.json`. `teach.py new <id> --language NAME`
+2. Add at least one lesson to `lessons.json`. `time_warp_teach new <id> --language NAME`
    prints a skeleton the loader accepts.
-3. Author the checkpoints, then run `teach.py validate` until it is silent.
-4. `teach.py write-plans docs/lessons/plans` to refresh the plan documents.
-5. `learn.py list --lang NAME` and the panel should both offer it — no further
+3. Author the checkpoints, then run `time_warp_teach validate` until it is silent.
+4. `time_warp_teach plans --write docs/lessons/plans` to refresh the plan documents.
+5. `time_warp_learn list` and the panel should both offer it — no further
    registration is needed, because both read the same file.
 
 ## 10. Where this is tested
@@ -300,4 +300,4 @@ is [`timewarp_lessons`](../../native/include/timewarp/lessons/progress.hpp).
 | `test_classroom.py` | Roster, handouts, marking, roll-up, bundles, presentation, path escapes |
 | `lessons_tests` (C++) | The same curriculum, verifier, progress and classroom, through the library the IDE and both commands call |
 | `ui_layout_tests` (`lesson panel`) | The panel's widgets, its place as the fifth right-column tab, and that it starts empty |
-| `teach.py validate` | The same curriculum pass as a standalone command, for an author |
+| `time_warp_teach validate` | The same curriculum pass as a standalone command, for an author |

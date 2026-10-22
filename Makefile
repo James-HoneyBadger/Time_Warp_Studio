@@ -34,11 +34,11 @@ help:
 	@echo "  golden-check  The ports against the frozen reference corpus (no Python)"
 	@echo "  golden-record Freeze the reference's answers again (needs the bridge)"
 	@echo "  teach-check   Every lesson solution passes and every starter fails"
+	@echo "  doc-links     Every relative link and #anchor in the guides resolves"
 	@echo "  test-all      All of the above"
 	@echo "  lint          Ruff over the bridge"
-	@echo "  lint-md       Markdownlint over every tracked Markdown file
-	@echo "  doc-links     Every relative link and #anchor in the guides resolves"
-	@echo "  doc-claims    Every path, name and make target the guides name exists""
+	@echo "  lint-md       Markdownlint over every tracked Markdown file"
+	@echo "  doc-claims    Every path, name and make target the guides name exists"
 	@echo ""
 	@echo "See 'make -C $(NATIVE) help' for everything the native tree offers."
 
@@ -85,12 +85,13 @@ golden-check:
 	@$(PYTHON) $(NATIVE)/tools/lang_differential_check.py --golden
 
 # The curriculum, checked by the same library the Lessons panel asks: every
-# worked answer passes its checkpoint and every starter fails it. `teach-check`
-# needs the build; `teach-check-py` is the reference's answer while it exists.
+# worked answer passes its checkpoint and every starter fails it. Needs the build,
+# because the tool that does it is `time_warp_teach`.
 teach-check:
 	@$(MAKE) --no-print-directory -C $(NATIVE) teach-check
 
-test-all: test smoke command-matrix repl-matrix golden-check doc-links doc-claims
+test-all: test smoke command-matrix repl-matrix teach-check golden-check doc-links \
+          doc-claims
 
 lint:
 	@$(PYTHON) -m ruff check $(NATIVE)/bridge

@@ -61,10 +61,10 @@ lesson. Every language runs in C++ in the application. The Python engine in
 `native/bridge/` is the reference the parity gates compare against and the
 engine a lesson check runs in; it is not a supported API.
 
-**The lessons.** Both tools are supported — `native/tools/learn.py` for a
-learner, `native/tools/teach.py` for a teacher — and so is the curriculum. A
+**The lessons.** Both tools are supported — `native/tools/learn.cpp` for a
+learner, `native/tools/teach.cpp` for a teacher — and so is the curriculum. A
 lesson that cannot be finished, or whose starter already passes, is a bug;
-`teach.py validate` is what proves it either way.
+`time_warp_teach validate` is what proves it either way.
 
 **The automation surface.** `./api` and its JSON-RPC methods are a supported
 surface, as is the `./twc` terminal compiler. `./run.sh` is the supported way to

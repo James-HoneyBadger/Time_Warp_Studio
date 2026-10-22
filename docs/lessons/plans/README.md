@@ -1,7 +1,7 @@
 # Lesson plans
 
 One plan per language, generated from the curriculum by
-`python3 native/tools/teach.py write-plans docs/lessons/plans`. For the
+`time_warp_teach plans --write docs/lessons/plans`. For the
 learner's view of the same material see the tutorials in `docs/tutorials/`,
 and for how the material is delivered see `docs/lessons/README.md`.
 

@@ -6,8 +6,8 @@ each one a sequence of checkpoints that a learner works through and the studio
 **checks by running what they wrote**.
 
 ```text
-python3 native/tools/learn.py list
-python3 native/tools/learn.py walk basic_first_steps
+./native/build/time_warp_learn list
+./native/build/time_warp_learn start basic_first_steps
 ```
 
 Or open the **🎓 Lessons** tab in the IDE and pick one from the list.
@@ -21,7 +21,7 @@ read:
 
 | | Student | Teacher |
 | --- | ------- | ------- |
-| **Tool** | `native/tools/learn.py` | `native/tools/teach.py` |
+| **Tool** | `native/tools/learn.cpp` | `native/tools/teach.cpp` |
 | **In the IDE** | the 🎓 Lessons panel | the same panel, projected |
 | **Wants** | the next checkpoint, a hint, a verdict | the plan, the answer key, who is where |
 | **Guide** | [student-guide.md](student-guide.md) | [teacher-guide.md](teacher-guide.md) |
@@ -87,7 +87,7 @@ every checkpoint's own solution, and every checkpoint's starting code, through
 the engine:
 
 ```text
-$ python3 native/tools/teach.py validate
+$ ./native/build/time_warp_teach validate
 lessons: 20   checkpoints: 60
 
 ✅ every solution passes its own checkpoint

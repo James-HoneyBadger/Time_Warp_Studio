@@ -730,9 +730,11 @@ if(TIME_WARP_QT_FOUND)
         src/lessons/classroom.cpp
         src/lessons/curriculum.cpp
         src/lessons/progress.cpp
+        src/lessons/plans.cpp
         src/lessons/verify.cpp
         include/timewarp/lessons/classroom.hpp
         include/timewarp/lessons/curriculum.hpp
+        include/timewarp/lessons/plans.hpp
         include/timewarp/lessons/progress.hpp
         include/timewarp/lessons/verify.hpp
     )

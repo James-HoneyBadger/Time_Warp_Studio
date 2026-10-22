@@ -13,7 +13,7 @@ Both check your work the same way, so you can switch between them freely.
 ## 1. Seeing what there is
 
 ```text
-$ python3 native/tools/learn.py list
+$ ./native/build/time_warp_learn list
 ────────────────────────────────────────────────────────────────────
 Lessons
 ────────────────────────────────────────────────────────────────────
@@ -23,14 +23,14 @@ Lessons
     ...
   ✓ smalltalk_classes   SMALLTALK intermediate Classes and Blocks in Smalltalk
 
-2 of 20 lessons complete. `learn.py walk <lesson>` to start one.
+2 of 20 lessons complete. `time_warp_learn start <lesson>` to start one.
 ```
 
 `✓` means finished, `…` means started, and a blank means not started. You do not
 have to type a whole lesson id: the start of one is enough, so
-`learn.py walk basic_first` finds `basic_first_steps`.
+`time_warp_learn start basic_first` finds `basic_first_steps`.
 
-Only want one language? `learn.py list --lang logo`.
+Only one language? `time_warp_learn list` groups them, and the ids say which language.
 
 ## 2. Working through one
 
