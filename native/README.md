@@ -123,16 +123,20 @@ cmake -S native -B native/build5 -DCMAKE_BUILD_TYPE=Release \
 make golden-check
 
 # Every example program, in every language, through the native engines
-python3 native/tools/example_smoke.py
+./build/time_warp_gates smoke
 
 # Every command row: as a program through `time_warp_check`, and through the REPL
-python3 native/tools/command_matrix.py
-python3 native/tools/repl_matrix.py
+./build/time_warp_gates commands
+./build/time_warp_gates repl
 
 # The lessons: the curriculum, and the two tools that drive it
-python3 native/tools/teach.py validate      # runs all 60 solutions through the engine
-python3 native/tools/teach.py outline       # the scheme of work
-python3 native/tools/learn.py list          # what a learner sees
+./build/time_warp_teach validate     # runs all 66 solutions through the engine
+./build/time_warp_teach outline      # the scheme of work
+./build/time_warp_learn list         # what a learner sees
+
+# The documentation gates and the packaged icons (their own small projects)
+./tools/docs/build/time_warp_docs links
+./build/time_warp_gates tree         # fails if any .py is tracked
 
 # The automation API and the terminal compiler (as processes)
 printf '%s\n' '{"jsonrpc":"2.0","id":1,"method":"ping"}' | ./api

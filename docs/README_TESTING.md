@@ -44,7 +44,7 @@ the gate for the failure the unit tests cannot see — a language that runs
 don't show up".
 
 ```bash
-python3 native/tools/example_smoke.py
+make smoke            # or: ./native/build/time_warp_gates smoke
 ```
 
 The programs that must produce ink are listed in `drawingExamples()` inside
@@ -57,7 +57,7 @@ produce output, drawing or a reported error. It also reports what the C++ execut
 dispatch on that no row or waiver mentions.
 
 ```bash
-python3 native/tools/command_matrix.py
+make command-matrix   # or: ./native/build/time_warp_gates commands
 ```
 
 The REPL is a separate path: each row is submitted through a fresh native
@@ -65,10 +65,8 @@ The REPL is a separate path: each row is submitted through a fresh native
 entry semantics are exercised there too.
 
 ```bash
-python3 native/tools/repl_matrix.py
+make repl-matrix      # or: ./native/build/time_warp_gates repl
 ```
-
-Both are also `make command-matrix` and `make repl-matrix`.
 
 ## Parity gates
 
@@ -77,8 +75,8 @@ answers, frozen before the engine was deleted. `0 differences` is the verdict, a
 documented divergences are listed in the harness output and are expected.
 
 ```bash
-make golden-check                      # both corpora; 662 programs
-python3 native/tools/golden_check.py --scheme   # the Scheme machine alone
+make golden-check                                  # both corpora; 662 programs
+./native/build/time_warp_gates golden --scheme     # the Scheme machine alone
 ```
 
 The language corpus (`native/tests/golden/lang_corpus.json.gz`) holds 470 programs:

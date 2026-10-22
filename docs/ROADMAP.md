@@ -275,8 +275,8 @@ same rows and examples the reference is: 138 programs, 0 differences.
 Lesson checking, the curriculum and the classroom are native, the worker classes are
 gone from the application and from the installed payload, and the reference engine
 itself is deleted. What a contributor needs to run every gate is a C++ compiler,
-CMake, Qt and a `python3` for the harness scripts — no virtual environment, and no
-second interpreter to keep in step.
+CMake and Qt — no interpreter, no virtual environment, and no second language to
+keep in step.
 
 BASIC's extended statement set is ported too: shapes, particles, fractals, music,
 speech and the gamepad words are in `basic_features.cpp` and `basic_library.cpp`,
