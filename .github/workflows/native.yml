@@ -310,7 +310,9 @@ jobs:
         run: |
           $env:PYTHONPATH = Join-Path $PWD "native/bridge"
           # Both requests the failed tests wait on: the curriculum, which is a
-          # file read, and a run, which starts an interpreter.
+          # file read, and a run, which starts an interpreter. This drives the
+          # *reference engine* directly -- the application no longer speaks this
+          # protocol -- so it stays as a harness check while the engine exists.
           # Built with ConvertTo-Json rather than written out: the program text
           # has quotes and newlines in it, and hand-escaped JSON here once sent a
           # malformed request that the worker -- correctly -- rejected.

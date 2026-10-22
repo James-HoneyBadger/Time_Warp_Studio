@@ -87,8 +87,10 @@ you had:
   machine phosphors and CRT glass you can tune from off to heavy. Choosing amber
   recolours the header, the editor, the canvas and the glass together, because the
   palette is one table.
-- **Native, offline, inspectable.** Every interpreter is C++ running in process.
-  There is no Python at run time, no network call and no telemetry. The project is
+- **Native, offline, inspectable.** Every interpreter is C++ running in process,
+  and so are the lesson check, the classroom and the two commands that drive them
+  (`time_warp_teach`, `time_warp_learn`). An installed package contains no Python
+  file at all; there is no network call and no telemetry. The project is
   MIT-licensed, and both the tests and the manuals are in the repository.
 
 ---

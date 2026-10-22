@@ -553,7 +553,7 @@ jobs:
           # build tree: what CPack packages is exactly what `cmake --install`
           # produces.
           #
-          # The bridge, the examples, the snippets and the help pages are
+          # The curriculum, the examples, the snippets and the help pages are
           # install() rules too, which is why they are checked in the staged tree
           # and not in `native/build`: the build-tree bundle has the icon and the
           # binary, and nothing else until it is installed.
@@ -562,7 +562,7 @@ jobs:
           cmake --install native/build --prefix "$staging"
           installed="$staging/Time Warp Studio.app"
           test -d "$installed"
-          test -f "$installed/Contents/Resources/share/time_warp/worker.py"
+          test -f "$installed/Contents/Resources/share/time-warp-studio/lessons.json"
           test -d "$installed/Contents/Resources/share/time-warp-studio/examples"
           test -f "$installed/Contents/Resources/share/doc/time-warp-studio/INDEX.md"
           test -f "$installed/Contents/Resources/share/doc/time-warp-studio/LICENSE"
@@ -598,7 +598,7 @@ jobs:
           hdiutil attach -nobrowse -readonly -noautoopen -noverify -mountpoint "$mount" dist/*.dmg
           app=$(find "$mount" -maxdepth 1 -name '*.app' -type d | head -1)
           test -n "$app"
-          test -f "$app/Contents/Resources/share/time_warp/worker.py"
+          test -f "$app/Contents/Resources/share/time-warp-studio/lessons.json"
           test -f "$app/Contents/Resources/share/doc/time-warp-studio/INDEX.md"
           test -f "$app/Contents/Resources/share/doc/time-warp-studio/LICENSE"
           test -d "$app/Contents/Frameworks"
