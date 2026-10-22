@@ -17,10 +17,6 @@ std::string_view to_string(CanvasCommandKind kind) noexcept {
             return "Left";
         case CanvasCommandKind::Right:
             return "Right";
-        case CanvasCommandKind::Pitch:
-            return "Pitch";
-        case CanvasCommandKind::Roll:
-            return "Roll";
         case CanvasCommandKind::Goto:
             return "Goto";
         case CanvasCommandKind::SetX:

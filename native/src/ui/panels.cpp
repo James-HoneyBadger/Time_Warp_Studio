@@ -1939,8 +1939,6 @@ QString TurtleCommandLog::describe(const timewarp::canvas::CanvasCommandView& vi
         case CanvasCommandKind::Back:
         case CanvasCommandKind::Left:
         case CanvasCommandKind::Right:
-        case CanvasCommandKind::Pitch:
-        case CanvasCommandKind::Roll:
         case CanvasCommandKind::SetX:
         case CanvasCommandKind::SetY:
         case CanvasCommandKind::SetHeading:

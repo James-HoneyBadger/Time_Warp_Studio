@@ -569,6 +569,11 @@ LOGO: list[Row] = [
     Row("Logo", "REDUCE", 'SHOW REDUCE "SUM [1 2 3]', "prints:"),
     Row("Logo", "ROLL", "SHOW ROLL [1 2 3]", "prints:"),
     Row("Logo", "FILLED", 'FILLED "RED [FD 20 RT 90 FD 20 RT 90 FD 20]', "draws"),
+    # A native extension, not a reference command: the canvas learned to draw a
+    # dashed pen in 19.0, and a pen style nothing can ask for is a feature nobody
+    # has. The row draws a line *after* the change, so a port that accepted the
+    # word and ignored it would still be caught by the ink.
+    Row("Logo", "PENSTYLE", "PENSTYLE 1\nFD 30\nPENSTYLE 0\nFD 10", "draws"),
     # -- Control.
     Row("Logo", "IFELSE", 'IFELSE 1 = 1 [PRINT "YES"] [PRINT "NO"]', "prints:YES"),
     Row("Logo", "TO ... END", "TO PAIR\nREPEAT 2 [FD 20 RT 180]\nEND\nPAIR", "draws"),

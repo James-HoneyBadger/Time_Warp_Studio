@@ -267,7 +267,8 @@ const std::set<std::string_view>& logo_commands() {
         "SETPW",        "PENWIDTH",    "PENSIZE",    "SETPENSIZE",  "REPEAT",
         "IF",           "IFELSE",      "STOP",       "OUTPUT",      "TO",
         "END",          "MAKE",        "PRINT",      "SHOW",        "TYPE",
-        "ARC",          "FILLED",      "LABEL",      "WAIT",        "BYE",
+        "ARC",          "FILLED",      "PENSTYLE",   "LABEL",       "WAIT",
+        "BYE",
         "OP",           "FOREVER",     "REM",        "WHILE",       "UNTIL",
         "FOREACH",      "MAP",         "FILTER",     "REDUCE",      "LOCAL",
         "THING",        "STAMP",       "STAMPCLEAN", "TEXTSIZE",    "SETLABELHEIGHT",
@@ -1528,6 +1529,35 @@ std::string LogoMachine::run_command(std::string_view command_text) {
         }
         if (name == "FILLED") {
             return do_filled(trimmed);
+        }
+        if (name == "PENSTYLE") {
+            // PENSTYLE n [, length] -- 0 solid, 1 dashed, 2 dotted, 3 dash-dot,
+            // 4 invisible. A native extension rather than a reference command: the
+            // canvas learned to draw a dashed pen in 19.0 and a pen style nothing
+            // can ask for is a feature nobody has.
+            // `args` is already split by the dispatcher.
+            const std::vector<std::string>& fields = args;
+            if (fields.empty()) {
+                return "❌ PENSTYLE needs a style number (0 solid, 1 dashed, "
+                       "2 dotted, 3 dash-dot, 4 invisible)\n";
+            }
+            const std::optional<double> style = eval_number(fields[0]);
+            if (!style.has_value()) {
+                return "❌ PENSTYLE needs a number, got '" + fields[0] + "'\n";
+            }
+            const int which = static_cast<int>(*style);
+            if (which < 0 || which > 4) {
+                return "❌ Value " + std::to_string(which) +
+                       " for PENSTYLE is outside 0-4\n";
+            }
+            double length = 1.0;
+            if (fields.size() >= 2) {
+                if (const std::optional<double> given = eval_number(fields[1])) {
+                    length = *given;
+                }
+            }
+            turtle_.set_pen_style(which, length);
+            return {};
         }
         if (name == "LABEL") {
             return do_label(trimmed);

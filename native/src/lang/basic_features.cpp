@@ -243,6 +243,11 @@ std::string Machine::palette(const std::string& args) {
         };
         if (rest.empty()) {
             cycle(1, 15, 1);
+            // The engine's own raster palette and the canvas's display list are
+            // two views of one palette; a cycle that moved only the first left the
+            // picture unchanged, which looks exactly like a statement that does
+            // nothing.
+            turtle_.cycle_palette(1, 15, 1);
             return "🎨 Palette cycled (1..15)\n";
         }
         std::vector<std::string> fields;
@@ -256,6 +261,7 @@ std::string Machine::palette(const std::string& args) {
             const int to = fields.size() >= 2 ? static_cast<int>(eval(fields[1])) : 15;
             const int step = fields.size() >= 3 ? static_cast<int>(eval(fields[2])) : 1;
             cycle(from, to, step);
+            turtle_.cycle_palette(from, to, step);
             return "🎨 Palette cycled (" + std::to_string(from) + ".." + std::to_string(to) +
                    " step " + std::to_string(step) + ")\n";
         } catch (const std::exception& error) {

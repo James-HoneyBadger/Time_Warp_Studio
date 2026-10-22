@@ -167,6 +167,11 @@ public:
         ++drawing_calls_;
     }
     void fill_last_shape(timewarp::lang::Rgb) override { ++actions_; }
+    /// A style change draws nothing and still *is* something the program did: a
+    /// gate that asked only about ink would call `PENSTYLE 1` silent and then be
+    /// surprised when the next line came out dashed.
+    void set_pen_style(int, double) override { ++actions_; }
+    void cycle_palette(int, int, int) override { ++actions_; }
     void draw_polygon(const std::vector<timewarp::lang::Point>& points,
                       timewarp::lang::Rgb stroke, timewarp::lang::Rgb fill,
                       double width, bool filled) override {

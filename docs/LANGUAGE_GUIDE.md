@@ -586,7 +586,21 @@ SETPENCOLOR "red
 
 ; Pen width
 SETPENWIDTH 2
+
+; Pen style: 0 solid, 1 dashed, 2 dotted, 3 dash-dot, 4 invisible.
+; The second number scales the dash length; leaving it out means 1.
+PENSTYLE 1
+FD 50
+PENSTYLE 2, 2
+FD 50
+PENSTYLE 0
 ```
+
+`PENSTYLE` is a **native extension**, not a reference command: the canvas learned to
+draw a dashed pen in 19.0, and a pen style no program can ask for is a feature nobody
+has. Style 4 is an invisible pen — the turtle moves, nothing is inked, and the stroke
+does not even appear in the scrubber, because a frame that draws nothing is not a
+frame.
 
 ### Shapes
 

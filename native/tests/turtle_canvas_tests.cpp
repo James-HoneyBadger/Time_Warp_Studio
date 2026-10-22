@@ -21,6 +21,7 @@
 //
 // Runs offscreen, so it needs no display and belongs in the normal CTest set.
 
+#include <array>
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
@@ -45,6 +46,7 @@
 #include "check.hpp"
 #include "timewarp/canvas/command.hpp"
 #include "timewarp/ui/scrubber.hpp"
+#include "timewarp/ui/native_runner.hpp"
 #include "timewarp/ui/turtle_canvas.hpp"
 
 namespace {
@@ -484,15 +486,17 @@ struct Undrawn {
     const char* reason;
 };
 
-constexpr Undrawn kNotDrawn[] = {
-    {CanvasCommandKind::Pitch, "3-D camera, workstream W19.2"},
-    {CanvasCommandKind::Roll, "3-D camera, workstream W19.2"},
-};
+// Empty, and that is the claim: every declared kind is drawn. `Pitch`/`Roll` were
+// here until 19.1 with "3-D camera" as the reason; they were deleted from the
+// vocabulary instead, because the camera belongs to `TurtlePose`, which projects
+// before it speaks. A waiver table with nothing in it is a stronger statement than
+// a table with two honest excuses. It is a `std::array` of zero because C++ has no
+// zero-length array.
+constexpr std::array<Undrawn, 0> kNotDrawn{};
 
 constexpr CanvasCommandKind kEveryKind[] = {
     CanvasCommandKind::Forward,     CanvasCommandKind::Back,
     CanvasCommandKind::Left,        CanvasCommandKind::Right,
-    CanvasCommandKind::Pitch,       CanvasCommandKind::Roll,
     CanvasCommandKind::Goto,        CanvasCommandKind::SetX,
     CanvasCommandKind::SetY,        CanvasCommandKind::Home,
     CanvasCommandKind::SetHeading,  CanvasCommandKind::PenUp,
@@ -578,9 +582,10 @@ void pushSample(TurtleCanvas& canvas, const Sample& sample) {
 // the product cannot keep, and until 18.x nothing noticed.
 void test_the_drawing_vocabulary_is_complete() {
     announce("drawing vocabulary");
-    // 46 declared kinds. A mismatch here is the reminder to add the new one to
-    // `kEveryKind`, which is one line and impossible to forget silently.
-    TW_CHECK_EQ(std::size(kEveryKind), std::size_t{46});
+    // 44 declared kinds, every one of them drawn. A mismatch here is the reminder
+    // to add the new one to `kEveryKind`, which is one line and impossible to
+    // forget silently.
+    TW_CHECK_EQ(std::size(kEveryKind), std::size_t{44});
 
     for (const CanvasCommandKind kind : kEveryKind) {
         const std::unique_ptr<TurtleCanvas> canvas{sizedCanvas()};
@@ -643,6 +648,43 @@ void test_a_filled_polygon_is_painted_in_its_own_colour() {
     const QColor middle = drawing.pixelColor(drawing.width() / 2, drawing.height() / 2);
     TW_CHECK_EQ(middle.blue() > 200, true);
     TW_CHECK_EQ(middle.red() < 60, true);
+}
+
+// The end of the chain: `PENSTYLE 1` in Logo must reach the canvas as a dashed
+// pen, not stop at the engine's own state. Driven through `NativeCanvasHost`
+// because that is the host a user has, and a host method nobody wires up is the
+// same defect as a command nobody draws.
+void test_a_pen_style_reaches_the_canvas_from_the_host() {
+    announce("pen style through the host");
+    const std::unique_ptr<TurtleCanvas> plain{sizedCanvas()};
+    const std::unique_ptr<TurtleCanvas> dashed{sizedCanvas()};
+    timewarp::canvas::CanvasCommandQueue queue_plain;
+    timewarp::canvas::CanvasCommandQueue queue_dashed;
+    timewarp::ui::NativeCanvasHost host_plain{queue_plain};
+    timewarp::ui::NativeCanvasHost host_dashed{queue_dashed};
+
+    host_plain.forward(80.0);
+    host_dashed.set_pen_style(1, 1.0);
+    host_dashed.forward(80.0);
+
+    // `drain` takes a callable, so the canvas is the sink: the same path the
+    // window's `CanvasBridge` uses.
+    const auto drain = [](timewarp::canvas::CanvasCommandQueue& queue,
+                          TurtleCanvas& canvas) {
+        queue.drain([&canvas](timewarp::canvas::CanvasCommandView view) {
+            canvas.apply(view);
+        });
+    };
+    drain(queue_plain, *plain);
+    drain(queue_dashed, *dashed);
+
+    TW_CHECK_EQ(plain->strokeCount(), 1);
+    TW_CHECK_EQ(dashed->strokeCount(), 1);
+    // A dashed line is not a solid one: the pixels differ. This is the assertion
+    // that would have failed while `set_pen_style` had no implementation on the
+    // host at all -- the command would have been accepted and the ink unchanged.
+    TW_CHECK(plain->renderedDrawing(1.0) != dashed->renderedDrawing(1.0));
+    TW_CHECK_EQ(dashed->commandsIgnored(), std::uint64_t{0});
 }
 
 void test_the_new_kinds_draw_something() {
@@ -1106,6 +1148,7 @@ int main(int argc, char** argv) {    // Set before QApplication exists, or Qt tr
     test_a_screen_is_painted_at_fixed_coordinates();
     test_the_drawing_vocabulary_is_complete();
     test_a_filled_polygon_is_painted_in_its_own_colour();
+    test_a_pen_style_reaches_the_canvas_from_the_host();
     test_the_new_kinds_draw_something();
     test_zoom_is_clamped_and_fit_recentres();
     test_content_bounds_include_every_drawn_axis();

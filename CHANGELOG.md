@@ -2,6 +2,53 @@
 
 <!-- history: all -->
 
+## [19.1.0] - 2026-10-22
+
+The vocabulary closes: **44 declared commands, 44 drawn, no waivers**. The last two —
+`Pitch` and `Roll` — were deleted rather than implemented, because the third dimension
+turned out to belong to the host and not to the canvas; and the two things the canvas
+learned in 19.0 that a program could not reach are now reachable.
+
+### Removed
+
+- **`CanvasCommandKind::Pitch` and `Roll`.** The 3-D turtle already works: `TurtlePose`
+  holds the orientation basis, rotates it on pitch/roll, and **projects before it
+  speaks**, so what the canvas receives is two-dimensional geometry and always was.
+  Two kinds that no host could emit had been in the vocabulary since the port, and
+  every consumer dropped them. Deleting them is the fix; drawing them would have been
+  a second camera. The waiver table in `turtle_canvas_tests` is now empty, which is a
+  stronger claim than a table with two honest excuses.
+
+### Added
+
+- **`PENSTYLE n [, length]` in Logo** — 0 solid, 1 dashed, 2 dotted, 3 dash-dot,
+  4 invisible — with a command-table row, a guide section and a test that drives it
+  through `NativeCanvasHost` and compares the *pixels* against a solid line. A native
+  extension rather than a reference command, said so in the guide: the canvas could
+  draw a dashed pen from 19.0 and nothing could ask for one.
+- `TurtleHost::set_pen_style` and `cycle_palette`, default no-ops so a host with no
+  palette is not wrong to ignore them; `NativeCanvasHost` and `RecordingHost` override
+  both.
+
+### Fixed
+
+- **`PALETTE CYCLE` in BASIC moved a palette nobody was looking at.** The statement
+  rotated the engine's own raster palette and never told the canvas, so the printed
+  acknowledgement said "Palette cycled" and the picture did not change — the exact
+  shape of a statement that does nothing. `turtle_.cycle_palette()` now emits
+  `CyclePalette`, and `PALETTE i, r, g, b` already reached the canvas. The
+  command-table row passed throughout, because it asks whether the statement *said*
+  something.
+
+### Still open, and stated
+
+The other five kinds the canvas learned in 19.0 — gradients, bezier curves, sprite
+objects, fills from a program, and the virtual screen — still have no language syntax.
+`FILLED` in Logo reaches the fill path, and that is the one that exists in the
+reference. Inventing five more statements (in which languages, with what argument
+shapes) is a design decision worth making deliberately rather than as the tail of a
+release, so it is written here rather than guessed at.
+
 ## [19.0.0] - 2026-10-22
 
 The canvas now draws everything the vocabulary declares. Of the 46 commands the

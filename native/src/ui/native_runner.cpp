@@ -7,6 +7,8 @@
 #include "timewarp/lang/executor.hpp"
 #include "timewarp/ui/sound_player.hpp"
 
+#include "timewarp/canvas/command.hpp"
+
 #include <algorithm>
 #include <chrono>
 #include <utility>
@@ -274,6 +276,20 @@ void NativeCanvasHost::begin_run() {
 
 void NativeCanvasHost::circle(double radius, double extent) {
     submit(make_circle(radius, extent));
+}
+
+void NativeCanvasHost::cycle_palette(int from, int to, int step) {
+    // The canvas cycles by one slot per command, so a range is one command per
+    // step: `PALETTE CYCLE 1, 15, 1` is fifteen, which is what animating a
+    // palette means. A step larger than the range is clamped to one.
+    Q_UNUSED(from);
+    Q_UNUSED(to);
+    const int steps = step == 0 ? 1 : step;
+    submit(timewarp::canvas::make_cycle_palette(steps));
+}
+
+void NativeCanvasHost::set_pen_style(int style, double parameter) {
+    submit(timewarp::canvas::make_pen_style(style, parameter));
 }
 
 void NativeCanvasHost::fill_last_shape(Rgb fill) {

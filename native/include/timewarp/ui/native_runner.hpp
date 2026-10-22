@@ -100,6 +100,8 @@ public:
     void draw_text(double x, double y, const char* text, int font_size = 12) override;
     void draw_point(double x, double y, timewarp::lang::Rgb colour) override;
     void fill_last_shape(timewarp::lang::Rgb fill) override;
+    void cycle_palette(int from, int to, int step) override;
+    void set_pen_style(int style, double parameter) override;
     void draw_polygon(const std::vector<timewarp::lang::Point>& points,
                       timewarp::lang::Rgb stroke, timewarp::lang::Rgb fill,
                       double width, bool filled) override;

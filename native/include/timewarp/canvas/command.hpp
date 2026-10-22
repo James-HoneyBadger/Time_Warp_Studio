@@ -45,8 +45,12 @@ enum class CanvasCommandKind : std::uint8_t {
     Back,      ///< x = distance
     Left,      ///< x = degrees
     Right,     ///< x = degrees
-    Pitch,     ///< x = degrees  (3-D mode)
-    Roll,      ///< x = degrees  (3-D mode)
+    // There is deliberately no Pitch/Roll here. The third dimension is the
+    // *host's* business: `TurtlePose` holds the orientation and projects to the
+    // drawing plane before it speaks, so what the canvas receives is already
+    // two-dimensional geometry. Two kinds that no host could ever emit were
+    // declared for several releases and dropped by every consumer -- removing
+    // them is the fix, not drawing them twice.
     Goto,      ///< x, y = position
     SetX,      ///< x = position
     SetY,      ///< y = position

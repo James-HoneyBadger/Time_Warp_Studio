@@ -414,6 +414,8 @@ measuring the wrong machine.
 | 17.0 ✓ | No Python in the product: lessons and classroom in C++, the worker deleted, nothing Python installed; `make golden-check` is the parity gate |
 | 17.1 ✓ | A screen you can look at — zoom about the pointer, click for a pixel, the mode named in the strip — sound on Windows through PowerShell, and a file fence made of components rather than a string prefix |
 | 18.0 ✓ | the reference engine deleted and every gate driving the native engines; the teacher's and learner's commands are the C++ ones; `time_warp_player` and a format-2 artefact replacing the copy-of-the-IDE; the two machines exportable as files |
+| 19.0 ✓ | Every command the canvas declares, it draws: fills, pen styles, gradients, bezier curves, sprite objects, palette cycling and the fixed-coordinate screen — and `turtle_canvas_tests` walks the enum so a vocabulary that outruns the surface fails the build |
+| 19.1 ✓ | The vocabulary closes at 44 of 44 with no waivers — `Pitch`/`Roll` deleted because the camera lives in `TurtlePose` — and two of those commands reach a program: Logo's `PENSTYLE`, and BASIC's `PALETTE CYCLE`, which had been moving a palette nobody was looking at |
 
 Smaller items belong in one of those releases rather than a release of their own: a
 Smalltalk call stack shown as frames rather than a Program Counter; Flatpak and an

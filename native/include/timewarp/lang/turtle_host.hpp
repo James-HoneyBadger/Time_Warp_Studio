@@ -284,6 +284,16 @@ public:
     /// mode. A host that never had a framebuffer does nothing.
     virtual void clear_framebuffer() {}
     virtual void set_palette_color(int index, Rgb colour) = 0;
+    /// Rotates the palette `[from, to]` by `step` slots.
+    ///
+    /// A default no-op rather than pure, because a host that has no palette (a
+    /// recording host, a test double) is not wrong to ignore it -- and forcing
+    /// every host to implement animation would have made this cost more than it
+    /// returns. `NativeCanvasHost` overrides it, which is the host a user sees.
+    virtual void cycle_palette(int /*from*/, int /*to*/, int /*step*/) {}
+    /// Sets the pen's dash style: 0 solid, 1 dashed, 2 dotted, 3 dash-dot,
+    /// 4 invisible. Same reasoning as `cycle_palette` for the default.
+    virtual void set_pen_style(int /*style*/, double /*parameter*/) {}
     /// The colour a palette index currently means. Used where a program draws a
     /// whole frame and must name the colour, not the index.
     [[nodiscard]] virtual Rgb resolve_color(int index) const = 0;
