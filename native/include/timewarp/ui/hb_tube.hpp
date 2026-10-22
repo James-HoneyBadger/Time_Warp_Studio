@@ -64,6 +64,12 @@ public:
     void setPalette(const TubePalette& palette);
     [[nodiscard]] const TubePalette& palette() const noexcept { return palette_; }
 
+    /// Off is a dark tube that shows nothing: the machine's power switch, not a
+    /// blank screen. Text keeps arriving in memory while the tube is dark -- a
+    /// powered-off machine's RAM does not know -- but nothing is painted.
+    void setPowered(bool on);
+    [[nodiscard]] bool powered() const noexcept { return powered_; }
+
     /// The character cell, in points. The tube's size follows from it.
     void setTextSize(int points);
     [[nodiscard]] int textSize() const noexcept { return text_size_; }
@@ -128,6 +134,7 @@ private:
     QStringList transcript_;
     int scroll_offset_ = 0;
     bool cursor_visible_ = true;
+    bool powered_ = true;
 };
 
 }  // namespace timewarp::ui

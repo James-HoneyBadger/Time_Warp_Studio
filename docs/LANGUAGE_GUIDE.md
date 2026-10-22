@@ -358,6 +358,31 @@ the parity corpus.
 program built on this: a sprite ship, a star field, a shot whose hits are found
 with `POINT`, and a score bar.
 
+### Waiting, and the timer
+
+`SLEEP n` waits n seconds (clamped to sixty), and a **stop request breaks the wait**
+rather than being ignored until it ends: the sleep is taken in two-millisecond
+slices. `ON TIMER(n) GOSUB line` arranges for `line` to be called every n seconds
+while the program runs, and `TIMER ON` / `TIMER OFF` arm and disarm it:
+
+```basic
+10 ON TIMER(0.5) GOSUB 100
+20 TIMER ON
+30 FOR J = 1 TO 10
+40 SLEEP 0.5
+50 NEXT J
+60 TIMER OFF
+70 END
+100 TICKS = TICKS + 1 : RETURN
+```
+
+The handler runs at a **statement boundary**, so it never interrupts a statement
+half-way, and it cannot interrupt itself: a handler that takes longer than the
+interval simply runs late. `TIMER` returns the seconds this run has been going.
+
+Both statements used to be acknowledgements — `SLEEP` printed "SLEEP 0.1s" and
+returned, and `TIMER ON` set a flag nothing read.
+
 ### Sound
 
 The synth is the machine's own kind: square waves and note lists, not sampled

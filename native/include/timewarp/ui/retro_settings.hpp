@@ -107,6 +107,12 @@ struct RetroComputerSettings {
     int editor_text_size = 12;
     /// The glass over the screen, from the same type the editor's CRT uses.
     CrtOverlay::Settings crt{13, 7, 3, 0, 8, QColor{51, 255, 102}};
+    /// The machine's own voice: boot chirp, key click, disk rattle, error buzz and
+    /// tape warble. A program's `SOUND` is the program's; this is the machine's.
+    bool voice_muted = false;
+    /// 0..100. Zero is a quiet machine rather than a muted one -- the events are still
+    /// counted, and `MachineVoice::sounded()` still says nothing was emitted.
+    int voice_volume = 60;
 
     /// Reads the `retroComputer/config` group. Missing keys keep their defaults,
     /// which is what makes a fresh installation a stock machine.
@@ -183,6 +189,8 @@ private:
     QComboBox* history_depth_ = nullptr;
     QSlider* screen_text_size_ = nullptr;
     QSlider* editor_text_size_ = nullptr;
+    QSlider* voice_volume_ = nullptr;
+    QCheckBox* voice_muted_ = nullptr;
     QCheckBox* remember_programs_ = nullptr;
     QCheckBox* switch_to_split_ = nullptr;
     QSlider* crt_scanlines_ = nullptr;

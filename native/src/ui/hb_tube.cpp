@@ -85,6 +85,11 @@ void HbTube::setMemory(HbMemory* memory) {
     update();
 }
 
+void HbTube::setPowered(bool on) {
+    powered_ = on;
+    update();
+}
+
 void HbTube::setPalette(const TubePalette& palette) {
     palette_ = palette;
     update();
@@ -294,6 +299,12 @@ void HbTube::paintRow(QPainter& painter, int row, const QString& text, bool from
 void HbTube::paintEvent(QPaintEvent*) {
     QPainter painter{this};
     painter.fillRect(rect(), palette_.background);
+    if (!powered_) {
+        // A dark tube: no glass, no glyphs, no cursor. The machine is off, and a
+        // machine that showed its last screen after the switch was thrown would be a
+        // screenshot rather than a computer.
+        return;
+    }
     // The bezel: a screen of the period had a border, and `POKE` can change its
     // colour -- it is register two of the I/O page.
     QColor border = palette_.border;

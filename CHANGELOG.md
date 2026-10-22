@@ -2,6 +2,56 @@
 
 <!-- history: all -->
 
+## [20.2.0] - 2026-10-22
+
+The machine has a clock, a voice and a switch. Three things a window cannot do: keep
+time, make a noise nobody asked for, and be *off*.
+
+### Added
+
+- **`MachineVoice`** — the five sounds an HB-1 makes by itself: a two-note chirp at
+  power-on (and at a ROM change), a click per prompt line, the disk head stepping for
+  every DOS word, a buzz once per failed run, and the tape warble waiting for 20.4.
+  Built from the same `Mixer` a program's `SOUND` uses, with a **volume and a mute in
+  CONFIG**. A muted machine still counts what it did: `count(Event::Boot)` is a fact
+  about the machine, `sounded()` is a fact about the speaker, and the tests assert both.
+- **The sound latch** at `$A005`: `POKE 40965, 30` and the machine plays 340 Hz for
+  80 ms on the next frame, then clears the register itself. That is all a
+  one-register beeper could ever do, and it is enough to play a scale.
+- **`HbClock`** — sixty frames a second, the frame counter in the I/O page
+  (`$A006`/`$A007`), and the latch serviced once a frame.
+- **A power-on self-test** that walks the free RAM it claims to have and sums every
+  ROM's version and banner note, printing what it found: `32768 BYTES FREE`,
+  `RAM CHECK OK (128 CELLS)`, `ROM CHECK OK (10 ROMS, 3078602950)`. It runs when the
+  start-up message is **Full**, because Short and Off are promises about how much the
+  machine says.
+- **The POWER lamp is a switch.** Off is off: the tube goes dark, the prompt stops
+  answering, the clock stops and a run is stopped with it. On is a cold boot.
+
+### Fixed
+
+- **`SLEEP` did not sleep.** It printed "ℹ️ SLEEP 0.1s" and returned — the same
+  acknowledged-nothing defect `LOCATE` and `SPRITE` had, and the reason a program that
+  wanted to wait could not. It now really waits, clamped to sixty seconds, in
+  two-millisecond slices so **a stop request breaks the wait**.
+- **`ON TIMER` never fired.** `ON TIMER(n) GOSUB line` stored nothing, and `TIMER ON`
+  set a flag no code read. The interval and the handler are now kept, the handler runs
+  at a statement boundary — never inside a statement, never inside itself — and a
+  handler that is not in the program switches the timer off instead of failing every
+  statement.
+- **The self-test wiped the two lines it had just printed** by clearing memory after
+  the RAM walk. It now tests first and prints afterwards, and puts the RAM back the way
+  it found it.
+
+### Deferred, with the reason
+
+**`CONT` is not in this release.** A real `CONT` needs the run to *pause* at a
+statement and resume with its control stacks intact, which is `DebugSession`'s
+machinery — and the machine has no debug session attached at all. Attaching one is the
+same work as 20.3's `MONITOR`, where it also buys a machine-code debugger. A `CONT`
+built out of "run it again from the next line" would lose a `FOR` frame and be a lie in
+the one case that matters.
+
 ## [20.1.0] - 2026-10-22
 
 The 64K is real, and the screen is memory. Until this release `POKE` wrote into a map

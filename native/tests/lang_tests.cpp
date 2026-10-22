@@ -1984,6 +1984,59 @@ void test_basic_gradients_reach_the_host() {
     }));
 }
 
+// `SLEEP` printed "SLEEP 0.1s" and returned: it acknowledged a wait it never took.
+// `ON TIMER`/`TIMER ON` set two flags that nothing ever read. Both were statements
+// that said they had done something, which is the failure this suite exists to catch.
+void test_sleep_waits_and_can_be_stopped() {
+    const auto started = std::chrono::steady_clock::now();
+    const BasicRun run = run_basic("SLEEP 0.05\nPRINT \"AFTER\"");
+    const double elapsed =
+        std::chrono::duration<double>(std::chrono::steady_clock::now() - started).count();
+    TW_CHECK(elapsed >= 0.04);
+    TW_CHECK(contains(run.output, "AFTER"));
+
+    // A stop request breaks the wait rather than being ignored until it ends.
+    RecordingHost host;
+    Interpreter interpreter{Language::Basic, host};
+    interpreter.load_program("SLEEP 5\nPRINT \"NEVER\"");
+    const auto stopping = std::chrono::steady_clock::now();
+    std::thread stopper{[&interpreter] {
+        std::this_thread::sleep_for(std::chrono::milliseconds(60));
+        interpreter.request_stop();
+    }};
+    interpreter.run();
+    stopper.join();
+    const double stop_elapsed =
+        std::chrono::duration<double>(std::chrono::steady_clock::now() - stopping).count();
+    TW_CHECK(stop_elapsed < 2.0);
+    TW_CHECK(!contains(interpreter.output(), "NEVER"));
+}
+
+void test_on_timer_fires_the_handler_while_the_program_runs() {
+    const BasicRun run = run_basic(
+        "10 ON TIMER(0.02) GOSUB 100\n"
+        "20 TIMER ON\n"
+        "30 FOR J = 1 TO 6\n"
+        "40 SLEEP 0.02\n"
+        "50 NEXT J\n"
+        "60 TIMER OFF\n"
+        "70 PRINT \"TICKS:\"; C\n"
+        "80 END\n"
+        "100 C = C + 1\n"
+        "110 RETURN");
+    const std::string& last = run.output.back();
+    TW_CHECK(last.rfind("TICKS:", 0) == 0);
+    // The handler ran, and it ran from an interrupt rather than from a `GOSUB` in the
+    // listing: C was never assigned anywhere but line 100.
+    const int ticks = std::stoi(last.substr(6));
+    TW_CHECK(ticks >= 1);
+
+    // A handler that is not in the program switches the timer off instead of failing
+    // every statement.
+    const BasicRun broken = run_basic("ON TIMER(0.01) GOSUB 900\nTIMER ON\nSLEEP 0.03");
+    TW_CHECK(!any_error(broken.output));
+}
+
 // `MID$(` contains `$(`, which an array read used to claim first: every string
 // function spelled with a `$` returned an empty field.
 void test_basic_dollar_string_functions_are_calls_not_array_reads() {
@@ -2819,6 +2872,8 @@ int main() {
     test_a_chained_bezier_starts_where_the_last_one_finished();
     test_logo_bezier_rejects_a_short_argument_list();
     test_logo_setpc_with_a_palette_index_sets_the_pen();
+    test_sleep_waits_and_can_be_stopped();
+    test_on_timer_fires_the_handler_while_the_program_runs();
     test_basic_sprite_statements_capture_place_move_and_hide();
     test_basic_gradients_reach_the_host();
     test_logo_unknown_command_is_reported_with_the_statement_number();

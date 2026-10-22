@@ -193,6 +193,12 @@ struct State {
     long error_index = -1;
     bool timer_defined = false;
     bool timer_enabled = false;
+    /// What `ON TIMER(n) GOSUB line` said, and when the next event is due. The two
+    /// flags above used to be all there was: the statement acknowledged the setting
+    /// and nothing ever read it, so the timer never fired.
+    double timer_interval = 0.0;
+    long timer_target = 0;
+    double timer_next_due = 0.0;
     /// SCREEN's configuration, with the reference's defaults.
     int screen_mode = 0;
     int cols = 80;
@@ -360,6 +366,16 @@ private:
     /// The characters typed at the canvas since the last `INKEY$`, or empty.
     [[nodiscard]] std::string key_text();
     std::string on_timer(const std::string& args);
+    /// True while a timer handler is on the stack, and the `GOSUB` depth it started
+    /// at: a handler must not be interrupted by the timer that called it.
+    bool timer_running = false;
+    std::size_t timer_depth = 0;
+    /// Fires `ON TIMER` when it is due. Called before each statement; a no-op unless
+    /// `TIMER ON` has been said, and never while the handler is already running.
+    void service_timer();
+    /// The machine's clock, in seconds. Monotonic, so a timer cannot be made to fire
+    /// early by a system clock going backwards.
+    [[nodiscard]] static double now_seconds();
     std::string play(const std::string& args);
     std::string say(const std::string& args);
     std::string shape(const std::string& args);

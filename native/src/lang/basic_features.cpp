@@ -1451,9 +1451,55 @@ std::string Machine::on_timer(const std::string& args) {
     }
     const double interval = std::stod(match[1].str());
     const long target = std::stol(match[2].str());
+    if (interval <= 0.0) {
+        return "❌ ON TIMER needs a positive interval, got " + python_number_text(interval) +
+               "\n";
+    }
     state_.timer_defined = true;
+    state_.timer_interval = interval;
+    state_.timer_target = target;
     return "⏱️ Timer set: every " + python_number_text(interval) + "s GOSUB " +
            std::to_string(target) + "\n";
+}
+
+double Machine::now_seconds() {
+    using clock = std::chrono::steady_clock;
+    static const clock::time_point origin = clock::now();
+    return std::chrono::duration<double>(clock::now() - origin).count();
+}
+
+void Machine::service_timer() {
+    if (!state_.timer_enabled || !state_.timer_defined) {
+        return;
+    }
+    // A handler that took longer than the interval must not be entered again from
+    // inside itself: the machine would be recursively interrupting itself, which no
+    // BASIC ever did. The handler is over when its `GOSUB` frame has been returned.
+    if (timer_running) {
+        if (state_.gosubs.size() >= timer_depth) {
+            return;
+        }
+        timer_running = false;
+    }
+    const double now = now_seconds();
+    if (now < state_.timer_next_due) {
+        return;
+    }
+    const auto found =
+        interpreter_.line_number_map.find(static_cast<int>(state_.timer_target));
+    if (found == interpreter_.line_number_map.end()) {
+        // A target that is not in the program cannot be a handler; switching the timer
+        // off says so once instead of failing every statement.
+        state_.timer_enabled = false;
+        return;
+    }
+    // The next event is counted from now, not from the missed one: a program that
+    // paused in `INPUT` should not be hit by a burst of catch-up interrupts.
+    state_.timer_next_due = now + state_.timer_interval;
+    state_.gosubs.push_back(interpreter_.current_line);
+    timer_depth = state_.gosubs.size();
+    timer_running = true;
+    interpreter_.jump_to(found->second);
 }
 
 std::string Machine::play(const std::string& args) { return play_music(*this, args); }

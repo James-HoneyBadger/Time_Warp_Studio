@@ -30,11 +30,13 @@
 
 #include "timewarp/lang/interpreter.hpp"
 
+#include "timewarp/ui/hb_clock.hpp"
 #include "timewarp/ui/hb_dos.hpp"
 #include "timewarp/ui/hb_memory.hpp"
 #include "timewarp/ui/hb_tube.hpp"
 #include "timewarp/ui/language.hpp"
 #include "timewarp/ui/machine_image.hpp"
+#include "timewarp/ui/machine_voice.hpp"
 #include "timewarp/ui/retro_settings.hpp"
 
 class QComboBox;
@@ -141,8 +143,28 @@ public:
     /// Stops a program that is running. The prompt session is left alone.
     void stopProgram();
     /// Cold-boots the current ROM: clears the screen and the canvas, resets the
-    /// prompt session, and prints the boot message again.
+    /// prompt session, and prints the self-test and the boot message again.
     void reboot();
+
+    // -- power -------------------------------------------------------------
+    //
+    // The lamp in the header is a switch. A machine of 1982 had one, and the
+    // difference between it and a window is that a switch is *off* sometimes.
+
+    [[nodiscard]] bool powered() const noexcept { return powered_; }
+    /// Switches the machine off (dark tube, dead prompt) or on (self-test, banner,
+    /// boot chirp). Powering on always cold-boots.
+    void setPowered(bool on);
+    void togglePower();
+
+    /// The machine's own voice: boot, key, disk, error, tape.
+    [[nodiscard]] MachineVoice* voice() const noexcept { return voice_; }
+    /// The frame clock. A test advances it by hand; sixty frames a second otherwise.
+    [[nodiscard]] HbClock* clock() const noexcept { return clock_; }
+    /// Runs the power-on self-test into the tube: the RAM it actually has, the ROM
+    /// check, and the disk. False when the machine is off, in which case nothing is
+    /// printed -- a dark screen is what "off" means.
+    bool runSelfTest();
 
     // -- the machine as a file --------------------------------------------
     //
@@ -237,6 +259,12 @@ private:
     /// session and a whole-program run cannot disagree about what a POKE means.
     [[nodiscard]] timewarp::lang::Interpreter::MachineBus machineBus();
 
+    /// One frame of the machine: the frame register, the sound latch, and a repaint.
+    void tickFrame();
+    /// The chirp, the self-test and the banner: what a cold boot is, whether it came
+    /// from the power switch or from a ROM change.
+    void coldBootSequence();
+
     void ensureRepl();
     void stopRepl();
     void stopRunner();
@@ -247,6 +275,8 @@ private:
     // Each of these is one machine word. They report through the console, in the
     // same voice as the rest of the prompt (`?` for a refusal), and write the
     // volume through `HbDos`, which is what makes them testable without a disk.
+    /// The disk rattle, in one place: every DOS word that moves the head calls it.
+    void diskAccessed();
     void listDisk();
     void showDiskStatus();
     void saveToDisk(const QString& name);
@@ -306,6 +336,12 @@ private:
     /// 1982 had one bank of RAM, and the per-ROM program buffer is a convenience of
     /// the PROGRAM page rather than a second memory.
     HbMemory memory_;
+    MachineVoice* voice_ = nullptr;
+    HbClock* clock_ = nullptr;
+    bool powered_ = true;
+    /// One buzz per run, not one per error line: a program in a `FOR` loop that fails
+    /// every pass would otherwise sound like a fire alarm.
+    bool run_error_sounded_ = false;
     /// `AUTO`'s next line number and step. `auto_active_` is what the prompt asks
     /// before it decides whether to end.
     bool auto_active_ = false;

@@ -135,6 +135,8 @@ the dialog is accepted:
 | `retroComputer/config/rememberPrograms` | `true` / `false` |
 | `retroComputer/config/switchToSplit` | `true` / `false` |
 | `retroComputer/config/historyDepth` | `0`–`500`; `0` is off |
+| `retroComputer/config/voiceVolume` | The machine's own voice, 0–100 |
+| `retroComputer/config/voiceMuted` | `true` / `false`. Muting is about sound, not history: a muted machine still counts what it did |
 | `retroComputer/config/phosphor` | `0` Green, `1` Amber, `2` White, `3` Ice |
 | `retroComputer/config/screenTextSize` | Point size, 8–24 |
 | `retroComputer/config/editorTextSize` | Point size, 8–24 |

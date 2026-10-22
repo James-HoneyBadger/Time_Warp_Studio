@@ -103,6 +103,10 @@ RetroComputerSettings RetroComputerSettings::load() {
         settings.value(configGroup("editorTextSize"), result.editor_text_size).toInt(),
         kTextSizeMinimum, kTextSizeMaximum);
 
+    result.voice_muted =
+        settings.value(configGroup("voiceMuted"), result.voice_muted).toBool();
+    result.voice_volume = clampTo(
+        settings.value(configGroup("voiceVolume"), result.voice_volume).toInt(), 0, 100);
     result.crt.scanlines = clampTo(
         settings.value(configGroup("crtScanlines"), result.crt.scanlines).toInt(), 0,
         kCrtMaximum);
@@ -135,6 +139,8 @@ void RetroComputerSettings::save() const {
     settings.setValue(configGroup("phosphor"), static_cast<int>(tint));
     settings.setValue(configGroup("screenTextSize"), screen_text_size);
     settings.setValue(configGroup("editorTextSize"), editor_text_size);
+    settings.setValue(configGroup("voiceMuted"), voice_muted);
+    settings.setValue(configGroup("voiceVolume"), voice_volume);
     settings.setValue(configGroup("crtScanlines"), crt.scanlines);
     settings.setValue(configGroup("crtVignette"), crt.vignette);
     settings.setValue(configGroup("crtCurvature"), crt.curvature);
@@ -153,6 +159,8 @@ QJsonObject RetroComputerSettings::toJson() const {
     root.insert(QStringLiteral("phosphor"), static_cast<int>(tint));
     root.insert(QStringLiteral("screenTextSize"), screen_text_size);
     root.insert(QStringLiteral("editorTextSize"), editor_text_size);
+    root.insert(QStringLiteral("voiceMuted"), voice_muted);
+    root.insert(QStringLiteral("voiceVolume"), voice_volume);
     root.insert(QStringLiteral("crtScanlines"), crt.scanlines);
     root.insert(QStringLiteral("crtVignette"), crt.vignette);
     root.insert(QStringLiteral("crtCurvature"), crt.curvature);
@@ -186,6 +194,9 @@ RetroComputerSettings RetroComputerSettings::fromJson(const QJsonObject& root) {
     result.editor_text_size = clampTo(
         root.value(QStringLiteral("editorTextSize")).toInt(result.editor_text_size),
         kTextSizeMinimum, kTextSizeMaximum);
+    result.voice_muted = root.value(QStringLiteral("voiceMuted")).toBool(result.voice_muted);
+    result.voice_volume = clampTo(
+        root.value(QStringLiteral("voiceVolume")).toInt(result.voice_volume), 0, 100);
     result.crt.scanlines = clampTo(
         root.value(QStringLiteral("crtScanlines")).toInt(result.crt.scanlines), 0,
         kCrtMaximum);
@@ -390,6 +401,15 @@ void RetroComputerSettingsDialog::buildUi() {
     switch_to_split_->setObjectName(QStringLiteral("retroSwitchToSplit"));
     machine_form->addRow(QString(), switch_to_split_);
 
+    voice_volume_ = addSliderRow(machine_form, machine, tr("Machine volume"),
+                                 QStringLiteral("retroVoiceVolume"), 0, 100,
+                                 settings_.voice_volume, QStringLiteral("%"));
+    voice_muted_ = new QCheckBox{tr("Silence the machine's own voice"), machine};
+    voice_muted_->setObjectName(QStringLiteral("retroVoiceMuted"));
+    voice_muted_->setToolTip(tr("The boot chirp, the key click, the disk rattle and "
+                                "the error buzz. A program's SOUND is not affected."));
+    machine_form->addRow(QString(), voice_muted_);
+
     auto* boot_note = new QLabel{
         tr("The boot ROM and boot screen apply the next time the machine is "
            "switched on. Everything else takes effect at once."),
@@ -487,6 +507,7 @@ void RetroComputerSettingsDialog::buildUi() {
     connect(history_depth_, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [this] { publish(); });
     connect(remember_programs_, &QCheckBox::toggled, this, [this] { publish(); });
     connect(switch_to_split_, &QCheckBox::toggled, this, [this] { publish(); });
+    connect(voice_muted_, &QCheckBox::toggled, this, [this] { publish(); });
 }
 
 void RetroComputerSettingsDialog::applyToControls() {
@@ -514,6 +535,8 @@ void RetroComputerSettingsDialog::applyToControls() {
     editor_text_size_->setValue(settings_.editor_text_size);
     remember_programs_->setChecked(settings_.remember_programs);
     switch_to_split_->setChecked(settings_.switch_to_split);
+    voice_volume_->setValue(settings_.voice_volume);
+    voice_muted_->setChecked(settings_.voice_muted);
     crt_scanlines_->setValue(settings_.crt.scanlines);
     crt_vignette_->setValue(settings_.crt.vignette);
     crt_curvature_->setValue(settings_.crt.curvature);
@@ -539,6 +562,8 @@ void RetroComputerSettingsDialog::collect() {
     settings_.editor_text_size = editor_text_size_->value();
     settings_.remember_programs = remember_programs_->isChecked();
     settings_.switch_to_split = switch_to_split_->isChecked();
+    settings_.voice_volume = voice_volume_->value();
+    settings_.voice_muted = voice_muted_->isChecked();
     settings_.tint = static_cast<PhosphorTint>(phosphor_->currentData().toInt());
     settings_.crt.scanlines = crt_scanlines_->value();
     settings_.crt.vignette = crt_vignette_->value();

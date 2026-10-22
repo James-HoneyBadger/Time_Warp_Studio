@@ -308,6 +308,18 @@ RetroComputerWindow::RetroComputerWindow(QWidget* parent) : QMainWindow(parent) 
     // twice: once by buildUi so there is never an unstyled frame, and again here
     // with the colours and sizes this machine was left in.
     applyMachineLook();
+    voice_ = new MachineVoice{this};
+    if (sound_ == nullptr) {
+        sound_ = new SoundPlayer{this};
+    }
+    voice_->setPlayer(sound_);
+    // The machine's own clock: sixty frames a second, and everything that moves moves
+    // on it. A program that pokes the sound latch is serviced here, once a frame, which
+    // is what a register with no interrupt line would have done.
+    clock_ = new HbClock{this};
+    connect(clock_, &HbClock::tick, this, [this] { tickFrame(); });
+    clock_->start();
+
     // The disk is mounted before the banner, because the banner prints its volume
     // and the catalogue has to be readable the moment the machine is.
     QString disk_error;
@@ -415,6 +427,10 @@ void RetroComputerWindow::buildHeader(QVBoxLayout* column) {
 
     lamp_label_ = new QLabel{QStringLiteral("\u25cf POWER"), header};
     lamp_label_->setObjectName(QStringLiteral("retroPowerLamp"));
+    lamp_label_->setCursor(Qt::PointingHandCursor);
+    lamp_label_->setToolTip(tr("Power. Click to switch the machine off and on."));
+    lamp_label_->setAccessibleName(tr("Power switch"));
+    lamp_label_->installEventFilter(this);
 
     config_button_ = new QPushButton{QStringLiteral("CONFIG"), header};
     config_button_->setObjectName(QStringLiteral("retroConfigButton"));
@@ -744,6 +760,11 @@ void RetroComputerWindow::handlePromptLine() {
 }
 
 void RetroComputerWindow::submitCommand(const QString& command) {
+    if (!powered_) {
+        // A machine with its switch off does not compute. Saying so on a dark screen
+        // would be the very thing this release is against.
+        return;
+    }
     const QString trimmed = command.trimmed();
     if (trimmed.isEmpty()) {
         // An empty line is the way out of AUTO, which is the one thing a user types
@@ -767,6 +788,9 @@ void RetroComputerWindow::submitCommand(const QString& command) {
         init_pending_ = false;
     }
 
+    if (voice_ != nullptr) {
+        voice_->play(MachineVoice::Event::Key);
+    }
     const RomInfo rom = romFor(language_);
     appendConsole(QStringLiteral("%1 %2")
                       .arg(QString::fromUtf8(rom.prompt), trimmed));
@@ -1578,6 +1602,12 @@ void RetroComputerWindow::ensureRepl() {
                     canvas_->fitToContent();
                 }
                 if (!error.isEmpty()) {
+                    // A machine buzzes when a program does something wrong. It is the
+                    // one sound a reader of the period remembers as *bad*, which is
+                    // exactly what makes it useful.
+                    if (voice_ != nullptr) {
+                        voice_->play(MachineVoice::Event::Error);
+                    }
                     appendConsole(QStringLiteral("?%1").arg(error));
                 }
                 updateStatus();
@@ -1637,6 +1667,7 @@ void RetroComputerWindow::runProgram() {
 
     auto* runner = new NativeRunner{*native, *queue_, this};
     runner_ = runner;
+    run_error_sounded_ = false;
     runner->set_wakeup([this] {
         if (bridge_ != nullptr) {
             bridge_->wake();
@@ -1663,6 +1694,14 @@ void RetroComputerWindow::runProgram() {
                 // memory in the program's own order. This is the scrollback.
                 if (tube_ != nullptr) {
                     tube_->remember(text);
+                }
+                // An error the engine reported through its output -- which is how the
+                // line-loop languages report one -- buzzes once per run.
+                if (!run_error_sounded_ && text.contains(QStringLiteral("\u274C"))) {
+                    run_error_sounded_ = true;
+                    if (voice_ != nullptr) {
+                        voice_->play(MachineVoice::Event::Error);
+                    }
                 }
             });
     connect(runner, &NativeRunner::inputRequested, this,
@@ -1742,7 +1781,14 @@ void RetroComputerWindow::clearScreenAndCanvas() {
 // a question mark and the reason -- because that is what a learner reads.
 // ---------------------------------------------------------------------------
 
+void RetroComputerWindow::diskAccessed() {
+    if (voice_ != nullptr) {
+        voice_->play(MachineVoice::Event::Disk);
+    }
+}
+
 void RetroComputerWindow::listDisk() {
+    diskAccessed();
     text_tabs_->setCurrentWidget(tube_);
     appendConsole(QStringLiteral("DISK VOLUME %1   %2   %3 SECTORS")
                       .arg(HbDos::kVolumeNumber)
@@ -1780,6 +1826,7 @@ void RetroComputerWindow::showDiskStatus() {
 }
 
 void RetroComputerWindow::saveToDisk(const QString& name) {
+    diskAccessed();
     if (name.isEmpty()) {
         appendConsole(QStringLiteral("?FILENAME NEEDED"));
         return;
@@ -1802,6 +1849,7 @@ void RetroComputerWindow::saveToDisk(const QString& name) {
 }
 
 void RetroComputerWindow::loadFromDisk(const QString& name) {
+    diskAccessed();
     DosFile file;
     QString error;
     if (!dos_.read(name, &file, &error)) {
@@ -1820,6 +1868,7 @@ void RetroComputerWindow::loadFromDisk(const QString& name) {
 }
 
 void RetroComputerWindow::runFromDisk(const QString& name) {
+    diskAccessed();
     DosFile file;
     QString error;
     if (!dos_.read(name, &file, &error)) {
@@ -1835,6 +1884,7 @@ void RetroComputerWindow::runFromDisk(const QString& name) {
 }
 
 void RetroComputerWindow::eraseFromDisk(const QString& name) {
+    diskAccessed();
     if (name.isEmpty()) {
         appendConsole(QStringLiteral("?FILENAME NEEDED"));
         return;
@@ -1850,6 +1900,7 @@ void RetroComputerWindow::eraseFromDisk(const QString& name) {
 }
 
 void RetroComputerWindow::renameOnDisk(const QString& from, const QString& to) {
+    diskAccessed();
     if (from.isEmpty() || to.isEmpty()) {
         appendConsole(QStringLiteral("?RENAME \"OLD\",\"NEW\""));
         return;
@@ -1879,6 +1930,7 @@ void RetroComputerWindow::lockOnDisk(const QString& name, bool locked) {
 }
 
 void RetroComputerWindow::verifyOnDisk(const QString& name) {
+    diskAccessed();
     DosFile file;
     QString error;
     if (!dos_.read(name, &file, &error)) {
@@ -1895,6 +1947,7 @@ void RetroComputerWindow::verifyOnDisk(const QString& name) {
 }
 
 void RetroComputerWindow::typeFromDisk(const QString& name) {
+    diskAccessed();
     DosFile file;
     QString error;
     if (!dos_.read(name, &file, &error)) {
@@ -1912,6 +1965,7 @@ void RetroComputerWindow::typeFromDisk(const QString& name) {
 }
 
 void RetroComputerWindow::formatDisk() {
+    diskAccessed();
     QString error;
     if (!dos_.format(&error)) {
         appendConsole(QStringLiteral("?%1").arg(error));
@@ -1955,7 +2009,7 @@ void RetroComputerWindow::setLanguage(Language language) {
         canvas_->reset();
     }
     auto_shown_graphics_ = false;
-    appendBootBanner();
+    coldBootSequence();
     text_tabs_->setCurrentWidget(tube_);
     booted_ = true;
     prepared_ = true;
@@ -2090,6 +2144,20 @@ void RetroComputerWindow::loadProgram(const QString& source) {
     updateStatus();
 }
 
+void RetroComputerWindow::coldBootSequence() {
+    if (!powered_ || voice_ == nullptr) {
+        return;
+    }
+    // A cold boot is a cold boot whether it came from the switch or from a ROM
+    // change: the chirp, the self-test (when the start-up message is Full), the
+    // banner. One function so the two paths cannot drift.
+    voice_->play(MachineVoice::Event::Boot);
+    if (settings_.banner == BootBanner::Full) {
+        runSelfTest();
+    }
+    appendBootBanner();
+}
+
 void RetroComputerWindow::reboot() {
     stopRunner();
     stopRepl();
@@ -2103,10 +2171,115 @@ void RetroComputerWindow::reboot() {
         canvas_->reset();
     }
     auto_shown_graphics_ = false;
-    appendBootBanner();
+    coldBootSequence();
     text_tabs_->setCurrentWidget(tube_);
     updateStatus();
 }
+
+void RetroComputerWindow::tickFrame() {
+    if (!powered_) {
+        return;
+    }
+    memory_.tickFrame();
+    // The sound latch is a register, not a queue: a program pokes a code and the
+    // machine plays it on the next frame, then clears the register itself so the
+    // program does not have to.
+    if (const int code = memory_.takeSoundLatch(); code != 0) {
+        voice_->tone(code);
+    }
+}
+
+bool RetroComputerWindow::runSelfTest() {
+    if (!powered_) {
+        return false;
+    }
+    // A self-test that prints "OK" without testing anything is the same lie as a
+    // hardcoded `MEM 64K`. This one walks the memory it claims to have and sums the
+    // bytes of the table the banner is built from -- and it does the walking *before*
+    // it prints, because the first draft cleared the memory afterwards and wiped the
+    // two lines it had just written.
+    int passed = 0;
+    for (int address = 0; address < HbMemory::kUserRamSize; address += 257) {
+        const auto pattern = static_cast<std::uint8_t>((address * 7 + 1) & 0xFF);
+        if (!memory_.poke(address, pattern) || memory_.peek(address) != pattern) {
+            appendConsole(QStringLiteral("?RAM FAILED AT %1").arg(address));
+            return false;
+        }
+        ++passed;
+    }
+    // The RAM goes back the way the machine found it: a self-test that leaves its
+    // pattern behind is a test with a side effect.
+    for (int address = 0; address < HbMemory::kUserRamSize; ++address) {
+        memory_.poke(address, 0);
+    }
+    appendConsole(QStringLiteral("HB-1 SELF TEST"));
+    appendConsole(QStringLiteral("%1 BYTES FREE").arg(HbMemory::kUserRamSize));
+    appendConsole(QStringLiteral("RAM CHECK OK (%1 CELLS)").arg(passed));
+
+    // The ROM check: a sum of every ROM's version string and banner note, which is
+    // the only ROM there is.
+    std::uint32_t rom_sum = 0;
+    int roms = 0;
+    for (const Language language : allLanguages()) {
+        const RomInfo rom = romFor(language);
+        const std::string text = std::string{rom.version} + std::string{rom.prompt} +
+                                 std::string{rom.note};
+        for (const char byte : text) {
+            rom_sum = rom_sum * 31 + static_cast<unsigned char>(byte);
+        }
+        ++roms;
+    }
+    if (roms != 10) {
+        appendConsole(QStringLiteral("?ROM CHECK: %1 OF 10 SOCKETS").arg(roms));
+        return false;
+    }
+    appendConsole(QStringLiteral("ROM CHECK OK (%1 ROMS, %2)").arg(roms).arg(rom_sum));
+    appendConsole(QStringLiteral("HB DOS 1.0  %1").arg(dos_.imagePath().isEmpty()
+                                                            ? QStringLiteral("NO DISK")
+                                                            : dos_.volumeName()));
+    return true;
+}
+
+void RetroComputerWindow::setPowered(bool on) {
+    if (powered_ == on) {
+        return;
+    }
+    powered_ = on;
+    if (tube_ != nullptr) {
+        tube_->setPowered(on);
+    }
+    if (input_ != nullptr) {
+        input_->setEnabled(on);
+        if (on) {
+            input_->setFocus();
+        }
+    }
+    run_button_->setEnabled(on);
+    stop_button_->setEnabled(on);
+    if (config_button_ != nullptr) {
+        config_button_->setEnabled(on);
+    }
+    if (lamp_label_ != nullptr) {
+        lamp_label_->setProperty("powered", on);
+        lamp_label_->style()->unpolish(lamp_label_);
+        lamp_label_->style()->polish(lamp_label_);
+    }
+    if (!on) {
+        // Off means off: the run stops, the clock stops, the tube goes dark and says
+        // nothing. A machine that keeps computing with the switch off is a screenshot.
+        stopRunner();
+        stopRepl();
+        clock_->stop();
+        updateStatus();
+        return;
+    }
+    clock_->start();
+    // `reboot` is the cold boot, chirp included: playing one here as well made a
+    // power-on sound twice.
+    reboot();
+}
+
+void RetroComputerWindow::togglePower() { setPowered(!powered_); }
 
 void RetroComputerWindow::saveCurrentProgram() {
     if (program_ != nullptr) {
@@ -2212,6 +2385,10 @@ void RetroComputerWindow::applySettings(const RetroComputerSettings& settings, b
 
     applyMachineLook();
     applyHistoryDepth();
+    if (voice_ != nullptr) {
+        voice_->setVolume(next.voice_volume);
+        voice_->setMuted(next.voice_muted);
+    }
     if (remember) {
         // Session state and configuration are written together: the remember
         // flag decides whether the programs are kept, so the two cannot be saved
@@ -2255,6 +2432,10 @@ RetroComputerSettingsDialog* RetroComputerWindow::openSettings() {
 }
 
 bool RetroComputerWindow::eventFilter(QObject* watched, QEvent* event) {
+    if (watched == lamp_label_ && event->type() == QEvent::MouseButtonRelease) {
+        togglePower();
+        return true;
+    }
     if (watched == input_ && event->type() == QEvent::KeyPress) {
         auto* key = static_cast<QKeyEvent*>(event);
         if (key->key() == Qt::Key_Up && !history_.isEmpty()) {

@@ -14,6 +14,8 @@
 #include "timewarp/lang/logo.hpp"
 
 #include <algorithm>
+#include <thread>
+#include <chrono>
 #include <cctype>
 #include <cmath>
 #include <cstdio>
@@ -263,6 +265,9 @@ std::string tail(std::string_view text, std::size_t from) {
 std::string Machine::execute(std::string_view command) {
     scan_program();
     install_functions();
+    // `ON TIMER` is a real interrupt: checked at every statement boundary, which is
+    // where a machine of the period would have taken it.
+    service_timer();
 
     std::string text = trim(command);
     // Classic BASIC lets `?` stand in for PRINT at the start of a statement.
@@ -605,6 +610,9 @@ std::string Machine::execute(std::string_view command) {
     }
     if (cmd == "TIMER ON") {
         state_.timer_enabled = true;
+        // Due one interval from now, which is what "ON TIMER(n)" means: n seconds
+        // between events, not n seconds after the program started.
+        state_.timer_next_due = now_seconds() + state_.timer_interval;
         return "⏱️ Timer enabled\n";
     }
     if (cmd == "TIMER OFF") {
@@ -684,6 +692,21 @@ std::string Machine::execute(std::string_view command) {
         if (!rest.empty()) {
             try {
                 const double seconds = eval(rest);
+                // It used to print "SLEEP 0.1s" and return, which is the same
+                // acknowledged-nothing defect `LOCATE` had. A program that asks to wait
+                // waits -- and it can still be stopped while it waits, because the sleep
+                // is taken in slices rather than as one uninterruptible block.
+                const double clamped = std::clamp(seconds, 0.0, 60.0);
+                const auto deadline =
+                    std::chrono::steady_clock::now() +
+                    std::chrono::duration_cast<std::chrono::steady_clock::duration>(
+                        std::chrono::duration<double>(clamped));
+                while (std::chrono::steady_clock::now() < deadline) {
+                    if (interpreter_.stop_requested()) {
+                        break;
+                    }
+                    std::this_thread::sleep_for(std::chrono::milliseconds(2));
+                }
                 char buffer[32];
                 std::snprintf(buffer, sizeof buffer, "%0.1f", seconds);
                 return "ℹ️ SLEEP " + std::string{buffer} + "s\n";

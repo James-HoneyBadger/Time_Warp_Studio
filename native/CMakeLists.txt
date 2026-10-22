@@ -1006,9 +1006,11 @@ if(TIME_WARP_QT_FOUND)
             src/ui/formatter.cpp
             src/ui/gif_encoder.cpp
             src/ui/hb_dos.cpp
+            src/ui/hb_clock.cpp
             src/ui/hb_memory.cpp
             src/ui/hb_tube.cpp
-    src/ui/machine_image.cpp
+            src/ui/machine_image.cpp
+            src/ui/machine_voice.cpp
             src/ui/help_browser.cpp
             src/ui/lint.cpp
             src/ui/main_window.cpp
@@ -1044,8 +1046,11 @@ if(TIME_WARP_QT_FOUND)
             include/timewarp/ui/find_bar.hpp
             include/timewarp/ui/find_in_files.hpp
             include/timewarp/ui/hb_dos.hpp
+            include/timewarp/ui/hb_clock.hpp
             include/timewarp/ui/hb_memory.hpp
             include/timewarp/ui/hb_tube.hpp
+            include/timewarp/ui/machine_image.hpp
+            include/timewarp/ui/machine_voice.hpp
             include/timewarp/ui/help_browser.hpp
             include/timewarp/ui/lint.hpp
             include/timewarp/ui/snippet_dialog.hpp

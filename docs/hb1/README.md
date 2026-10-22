@@ -45,7 +45,26 @@ engines with a very good costume on: see [Inside the HB-1](inside.md).
 ## First boot
 
 When the machine opens it cold-boots into a ROM — BASIC, unless CONFIG says
-otherwise — and prints the banner above. Then:
+otherwise — and prints its **self-test** and then the banner above:
+
+```text
+HB-1 SELF TEST
+32768 BYTES FREE
+RAM CHECK OK (128 CELLS)
+ROM CHECK OK (10 ROMS, 3078602950)
+HB DOS 1.0  HBWARP
+*** HB-1 ***
+…
+```
+
+The self-test is a test, not a decoration: it writes a pattern into the free RAM it
+claims to have and reads it back, and it sums the bytes of every ROM's version and
+banner note. A failure says which address failed and stops the boot. It appears when
+CONFIG's start-up message is **Full**, because Short and Off are promises about how
+much the machine says at power-on and a self-test that always printed would break
+them.
+
+Then:
 
 1. **Type a program.** In the BASIC ROM, `10 PRINT "HELLO, TIME TRAVELLER"` at the
    prompt stores line 10 on the PROGRAM page. `20 GOTO 10` stores another.
@@ -75,7 +94,7 @@ From left to right across the top:
 | **ROM** | The language socket. Selecting a ROM cold-boots into it |
 | **SCREEN** | `TEXT`, `SPLIT` or `GRAPHICS` |
 | **CONFIG** | The machine's settings screen — [all of them](config.md) |
-| **POWER** | The lamp. It is lit while the machine is on |
+| **POWER** | The lamp **is the switch**: click it and the machine goes dark, the prompt stops answering and the clock stops. Click again and it cold-boots, self-test and all |
 
 Under the screen:
 
@@ -85,6 +104,29 @@ Under the screen:
 | **RUN** | Runs the program on the PROGRAM page (F9) |
 | **STOP** | Stops a running program (Shift+F9) |
 | **CLS** | Clears the screen and the drawing (Ctrl+L) |
+
+### The machine's voice
+
+The HB-1 makes five sounds that no program asked for, and a reader who owned one of
+these remembers all five:
+
+| When | What it sounds like |
+| --- | --- |
+| Power on, cold boot, ROM change | a rising two-note chirp as the tube warms up |
+| A line typed at the prompt | one short click |
+| `SAVE`, `LOAD`, `CATALOG`, `INIT`, any disk word | the head stepping: a short rattle |
+| A program reports an error | a low buzz, once per run and not once per line |
+| The tape motor (20.4) | a warble over a hiss |
+
+They are tones built from the same mixer a program's `SOUND` uses — one sound chip,
+one voice — and CONFIG has a volume and a mute. A muted machine still *counts* what
+it did: muting is a promise about sound, not about history.
+
+A program has a sixth sound: **the latch at `$A005`**. `POKE 40965, 30` writes a code
+there and the machine plays it on the next frame, then clears the register itself so
+the program does not have to. `100 + code * 8` hertz, 80 milliseconds — enough for a
+program to play a scale by poking fifteen values, which is all a one-register beeper
+could ever do.
 
 The status line along the bottom is a machine readout, not decoration:
 
@@ -125,7 +167,7 @@ computer and one:
 | `$0000`–`$7FFF` | **Free RAM**, 32768 bytes, for `POKE` and for machine code |
 | `$8000`–`$8FFF` | **Screen cells**: 80 × 25 character codes, row-major, 2000 bytes |
 | `$9000`–`$9FFF` | **Colours**: one ink/paper nibble pair per cell, in the same order |
-| `$A000`–`$A0FF` | **I/O registers**: cursor column, cursor row, border, ink, paper, sound latch, frame counter, scrolled flag |
+| `$A000`–`$A0FF` | **I/O registers**: cursor column, cursor row, border, ink, paper, sound latch (`$A005`), frame counter low and high (`$A006`, `$A007`, sixty a second), scrolled flag |
 | `$F000`–`$FFFF` | **ROM**: readable, and a `POKE` into it is refused out loud |
 
 So a character is a byte at an address, and the machine shows it:
