@@ -2,6 +2,57 @@
 
 <!-- history: all -->
 
+## [22.2.0] - 2026-10-22
+
+The Markdown lint is the project's own, and it found a bug in the shared scanner.
+
+`make lint-md` was the last check in the tree that needed a toolchain from outside it:
+`npx --yes markdownlint-cli2` downloads Node and a package on every run. On this
+machine there is no `npx` at all, so the target had never run — which makes the
+`docs/DEPLOYMENT.md` claim that "`make lint-md` reports nothing" a claim about a
+report nobody had seen. It has now run, and it had things to say.
+
+### Added
+
+- **`time_warp_docs md`** — the Markdown lint as C++, in the documentation-tools
+  project that needs a compiler and nothing else. Twenty-eight rules from
+  markdownlint's set: heading increment, style, spacing, single-title and trailing
+  punctuation; list marker style, indentation, marker spacing and numbering; blank
+  lines around headings, lists and fences; fence language and fence character;
+  trailing whitespace, hard tabs, multiple blank lines and the file's own ending;
+  bare URLs, inline HTML, table pipe style and column counts. The rules it does not
+  implement are listed in `md.hpp` with a reason each.
+- **`md --explain`** prints how every line was read — heading, list item with its
+  indent and marker spacing, fence, table row — which is what to reach for when a
+  rule disagrees with a reader.
+
+### Fixed
+
+- **A line was split in the middle of an emoji.** The shared `split_lines` treated a
+  bare `0x85` byte as Unicode NEL, and `✅` is `e2 9c 85`: every bulleted line in
+  the guides was being cut in two, before the first character of its text. The links
+  and claims gates share that scanner, so this was not only the new rule's problem —
+  it is why a heading whose text began with a tick-mark could be read as a list item
+  and a list could look like a paragraph. Only a decoded multi-byte character can be
+  a line boundary now.
+- **Markdown that was actually wrong**: two unlabelled code fences in
+  `native/tools/docs/README.md`, and in `native/README.md` a sentence that had been
+  chopped in half in `84c65b0` — `...runInBridge has no runtime case` in one
+  paragraph and the orphaned `left; adding an executor is still the whole change a
+  new language needs.` fifty lines later, with the audio and ports bullets in
+  between. Rejoined, and the chip8 paragraph that still described the deleted
+  reference engine now describes the corpus.
+
+### Changed
+
+- **The markdown-lint CI job is now a gate.** It was one `super-linter` invocation
+  with `continue-on-error`, which could not fail a pull request and did not run at
+  all without Node. It builds `time_warp_docs` and runs `md`, so it can fail, and it
+  does so on the project's own rules rather than a third party's. The spell check
+  stays advisory and moved into its own job.
+- **`.markdownlint.json` is gone.** The rules live in `md.cpp`, one statement of
+  them rather than a config file and an implementation that could drift.
+
 ## [22.1.0] - 2026-10-22
 
 No Python. The last five scripts are C++, and the tree holds none at all — which is

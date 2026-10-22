@@ -21,7 +21,7 @@ cmake_minimum_required(VERSION 3.20)
 
 project(time_warp_docs
     VERSION 1.0.0
-    DESCRIPTION "Time Warp Studio documentation gates (links, claims, version)"
+    DESCRIPTION "Time Warp Studio documentation gates (links, claims, version, markdown)"
     LANGUAGES CXX
 )
 
@@ -50,6 +50,7 @@ add_executable(time_warp_docs
     src/docs/links.cpp
     src/docs/claims.cpp
     src/docs/version.cpp
+    src/docs/md.cpp
 )
 
 target_include_directories(time_warp_docs PRIVATE src)

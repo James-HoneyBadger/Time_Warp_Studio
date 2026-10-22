@@ -36,7 +36,7 @@ help:
 	@echo "  doc-links     Every relative link and #anchor in the guides resolves"
 	@echo "  test-all      All of the above"
 	@echo "  lint          clang-tidy-shaped checks: the build is warning-free"
-	@echo "  lint-md       Markdownlint over every tracked Markdown file"
+	@echo "  lint-md       Every tracked Markdown file against the house rules"
 	@echo "  doc-claims    Every path, name and make target the guides name exists"
 	@echo "  tree-check    The tree holds no Python"
 	@echo ""
@@ -114,8 +114,9 @@ doc-claims: docs-tool
 tree-check: gates-built
 	@$(GATES) tree
 
-# Markdown lint over the repository's own Markdown. `git ls-files` is what keeps the
-# virtual environment, the build trees and node_modules out of the run without a
-# second ignore file, so this reports on the files a reviewer sees and nothing else.
-lint-md:
-	@npx --yes markdownlint-cli2 --config .markdownlint.json $$(git ls-files '*.md')
+# Markdown lint over the repository's own Markdown: `time_warp_docs md`, which asks
+# `git ls-files` for the file list so the build trees and vendored directories stay
+# out of the run without a second ignore file. It replaced `markdownlint-cli2`,
+# which needed Node and fetched a package on every run.
+lint-md: docs-tool
+	@$(DOCS_TOOL) md

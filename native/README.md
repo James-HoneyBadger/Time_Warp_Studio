@@ -391,15 +391,17 @@ Every language is ported: **BASIC**, **FOCAL**, **PILOT**, **COMAL**, **APL** an
 (with the CHIP-8 assembler in `chip8.cpp`). Scheme lives in `src/scheme/` on its
 own explicit-stack machine. `Chip8Machine` implements the original machine plus the
 SuperChip 1.1 extensions -- 64x32 and 128x64 modes, the scrolls, DXY0's 16x16
-sprite, FX30's 8x10 font and the FX75/FX85 RPL flags -- and the reference in
-`chip8.py` implements the same set, because the parity gate compares the two.
+sprite, FX30's 8x10 font and the FX75/FX85 RPL flags -- and the frozen corpus
+records the reference answering the same set, because the parity gate compares the
+two.
 MegaChip's planes and audio are deliberately out of scope. The emulator window
 browses a user-supplied ROM folder (`chip8_library.{hpp,cpp}`); the studio ships no
 ROMs, because most circulating CHIP-8 programs are somebody else's copyright. The ports are also where the native expression
 evaluator became part of a Run: `Interpreter::evaluate_expression` uses
 `timewarp_expr`, so `C:`, `B:` and BASIC arithmetic are the arithmetic the
-expression library is gated against. `executor_for()` answers for all ten, so
+expression library is gated against. `executor_for()` answers for all eleven, so
 `MainWindow` runs every language in process and `runInBridge` has no runtime case
+left; adding an executor is still the whole change a new language needs.
 
 Two Qt-free libraries beside it are what a program reaches outward with:
 
@@ -414,7 +416,6 @@ Two Qt-free libraries beside it are what a program reaches outward with:
   refuses everything else, and `TIME_WARP_PORTS` is the teacher's escape hatch.
   `media_tests` drives it through a pseudo-terminal: a real device with the other
   end in the test.
-left; adding an executor is still the whole change a new language needs.
 
 The port is checked against the reference's own answers, not against a description
 of them:

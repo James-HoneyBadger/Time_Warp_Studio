@@ -424,6 +424,7 @@ measuring the wrong machine.
 | 21.0 ✓ | The eleventh language and a palette that means one thing: Forth — dictionary, colon definitions, three control structures, `VARIABLE`, `RECURSE`, turtle words, `POKE`/`PEEK` into the machine's memory — with 86 command rows, two lessons and three programs; and `SETPC 1` now names the colour the reference gave slot 1 in every language instead of near-black |
 | 22.0 ✓ | The harnesses are C++: `time_warp_gates` asks the four questions the Python scripts asked -- smoke, commands, repl, golden -- the command table is `native/share/command_rows.json`, and seven scripts left the tree with every make target keeping its name |
 | 22.1 ✓ | No Python: the documentation gates and the version tool are `time_warp_docs` (its own CMake project, no Qt), the icon generator is `time_warp_icon` and reproduces the packaged icons byte for byte, `./twc` is a wrapper around the IDE's compiler, and `make tree-check` fails if a `.py` comes back |
+| 22.2 ✓ | The Markdown lint is C++: `time_warp_docs md` -- twenty-eight rules, `--explain` to see how a line was read -- replacing `markdownlint-cli2` and its `.markdownlint.json`, with the CI job promoted from advisory to a gate; running it found a line-splitting bug in the shared scanner that had been cutting every `✅` bullet in two |
 
 Smaller items belong in one of those releases rather than a release of their own: a
 Smalltalk call stack shown as frames rather than a Program Counter; Flatpak and an

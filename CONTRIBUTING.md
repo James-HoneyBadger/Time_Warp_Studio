@@ -107,7 +107,7 @@ interpreter in the tree, so a checkout needs a compiler and nothing else.
 | The IDE and the C++ suites | A C++20 compiler (GCC 11+ or Clang 14+), CMake 3.20+, Qt6 (Widgets, Core, Gui; Svg optional for SVG export, PrintSupport optional for printing) and the SQLite 3 development package |
 | The gates (`make smoke`, `command-matrix`, `repl-matrix`, `golden-check`, `tree-check`) | The same build: they are `time_warp_gates`, built with the product |
 | The documentation gates (`make doc-links`, `doc-claims`) | A C++20 compiler. `time_warp_docs` is its own small project with no Qt |
-| `make lint-md` | `node`, for `markdownlint-cli2` |
+| `make lint-md` | A C++20 compiler: it is `time_warp_docs md`, built with the documentation tools |
 | Any of it | Git and a command line |
 
 ### Clone Repository
@@ -216,7 +216,7 @@ which is why `make engine-test` is not optional here.
 
 ```bash
 make lint        # the build, which is warning-free by construction
-make lint-md     # markdownlint over every tracked Markdown file
+make lint-md     # every tracked Markdown file against the house rules
 make doc-claims  # every path, name and make target the guides name exists
 ```
 
@@ -373,7 +373,7 @@ make smoke
 # All of the above, plus lint
 make test-all && make lint
 
-# The Markdown: every tracked .md file, against .markdownlint.json
+# The Markdown: every tracked .md file, against the rules in time_warp_docs md
 make lint-md
 ```
 

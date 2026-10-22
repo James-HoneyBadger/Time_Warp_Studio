@@ -1,5 +1,15 @@
 name: Lint Docs
 
+# Markdown is where this project says what it does, so a document that does not
+# satisfy the house rules is a defect like any other. The check is
+# `time_warp_docs md`, built from `native/tools/docs` -- one compiler, no Qt, no
+# package to fetch -- which is what makes it a gate rather than an advisory step:
+# until 22.2.0 this job was a super-linter invocation with `continue-on-error`, so
+# it could not fail a pull request and in practice did not.
+#
+# The spell check beside it is still advisory: it is a third-party dictionary, and
+# a project that gated on one would be arguing with its contributors about words.
+
 on:
   push:
     paths:
@@ -13,15 +23,23 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
+
+      - name: Build the documentation tools
+        run: |
+          cmake -S native/tools/docs -B native/tools/docs/build \
+            -DCMAKE_BUILD_TYPE=Release
+          cmake --build native/tools/docs/build --target time_warp_docs -j
+
       - name: Lint Markdown
-        uses: github/super-linter/slim@v7
-        env:
-          VALIDATE_MARKDOWN: true
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          MARKDOWN_CONFIG_FILE: '.markdownlint.json'
-        continue-on-error: true
+        run: ./native/tools/docs/build/time_warp_docs md
+
+  spellcheck:
+    runs-on: ubuntu-latest
+    # Advisory on its own terms: a dictionary is not this project's to enforce.
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v5
       - name: Spellcheck Markdown
         uses: rojopolis/spellcheck-github-actions@0.36.0
         with:
           config_path: .spellcheck.yml
-        continue-on-error: true

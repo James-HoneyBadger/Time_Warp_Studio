@@ -4,9 +4,6 @@
     "**/__pycache__/**": true,
     "**/htmlcov/**": true,
     "**/.git/**": true,
-    "**/.pytest_cache/**": true,
-    "**/.ruff_cache/**": true,
-    "**/.mypy_cache/**": true,
     "**/node_modules/**": true,
     "**/dist/**": true,
     "**/build/**": true,
@@ -34,14 +31,6 @@
     "**/dist/**": true,
     "**/build/**": true
   },
-  "markdownlint.appliesTo": "workspaceFiles",
-  "markdownlint.lintWorkspaceGlobs": [
-    "**/*.md",
-    "!**/.venv/**",
-    "!**/node_modules/**",
-    "!**/native/build*/**",
-    "!**/packaging/**"
-  ],
   "python.analysis.indexing": true,
   "python.analysis.memory.keepLibraryLocalVariables": false,
   "pylint.args": [

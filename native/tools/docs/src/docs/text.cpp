@@ -153,7 +153,12 @@ std::size_t terminator_length(std::string_view text, std::size_t position) {
     }
     if (static_cast<unsigned char>(character) >= 0x80) {
         const CodePoint point = decode_at(text, position);
-        if (point.value == 0x85 || point.value == 0x2028 || point.value == 0x2029) {
+        // Only a *decoded character* can be a line boundary. A continuation byte
+        // is not one: U+0085 is `c2 85`, so a bare `85` is the tail of some other
+        // character -- and `✅` is `e2 9c 85`, which put a line break inside an
+        // emoji and cut every bullet that began with one in half.
+        if (point.length > 1 &&
+            (point.value == 0x85 || point.value == 0x2028 || point.value == 0x2029)) {
             return point.length;
         }
     }

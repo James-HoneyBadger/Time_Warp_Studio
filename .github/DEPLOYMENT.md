@@ -10,7 +10,7 @@ that exist and what they gate.
 | -------- | ------- | ------------ |
 | `native.yml` | Push and pull request to `main`, when anything under `native/` or `Examples/` changes | Configures and builds the Qt application, refuses to pass if the widget UI was skipped, then runs the CTest suites in Release, Debug, AddressSanitizer and UndefinedBehaviorSanitizer configurations, the Scheme differential (asserting **0 unexpected mismatches**) and the parity gate against the frozen corpus, every example program through the native engines, and every command row both as a program and through the native REPL. Also smoke-tests the entry point (`--version`, `--help`, a bad-file screenshot) and renders an image artifact. A second job, `cross-platform`, builds the same tree with MSVC on `windows-latest` and with Apple's Clang on `macos-latest` and runs the same suites there, because each of those compilers rejects things GCC accepts and a release is the wrong place to find that out. A third, `windows-7`, configures with `-DTIME_WARP_QT5=ON -DTIME_WARP_WIN7=ON` against Qt 5.15.2 and runs the same suites, so the second Qt a release ships is not the first one anybody builds with it. |
 | `docs.yml` | Push and pull request to `main`, when anything under `docs/`, `README.md`, the lesson curriculum (`native/share/lessons.json`) or `time_warp_teach` changes | That every guide `docs/INDEX.md` promises exists — including the HB-1 and CHIP-8 manuals — that every relative link and `#anchor` in the guides resolves, that all eleven languages have a tutorial, and that every claim in the guides about a path, a name or a `make` target is still true. Runs `native/tools/docs`, one small C++ target with no Qt, so it answers in seconds and does not depend on the product's build. Regenerating the lesson plans needs `time_warp_teach`, so that check lives in `native.yml`. |
-| `markdown-lint.yml` | Push and pull request to `main`, when any `*.md` changes | Markdown lint against `.markdownlint.json`, and a spell check. **Both steps are `continue-on-error`**, so neither can fail a build today — see the note below. |
+| `markdown-lint.yml` | Push and pull request to `main`, when any `*.md` changes | Markdown lint by `time_warp_docs md`, built from `native/tools/docs`: the house rules in `md.cpp`, which replaced `markdownlint-cli2` and its `.markdownlint.json` at 22.2.0. **This step fails a pull request**, because it is the project's own tool with a verdict it stands behind. The spell check beside it stays `continue-on-error`: a dictionary is not this project's to enforce. |
 | `version.yml` | Push and pull request to `main`, when `VERSION`, the README, the changelog, `docs/`, `Scripts/` or the engine's `__init__.py` changes | That every hand-written copy of the version agrees with `VERSION`. Separate from the native build because it has to run on documentation changes, which the C++ job does not watch; it compiles `native/tools/docs` (no Qt, one compiler) rather than relying on anything installed. |
 | `release.yml` | A `v*` tag, or `workflow_dispatch` with a version | Refuses a tag that disagrees with `VERSION` (running `time_warp_docs version` as the same check `version.yml` makes), then builds the release on five runners -- `ubuntu-24.04` and `ubuntu-24.04-arm` for the Linux packages, `windows-latest` for the installer and ZIP, `windows-2022` for the Windows 7 installer that Qt 5.15 makes possible, `macos-latest` for the universal disk image -- running the CTest suites and an offscreen screenshot against each tree before packaging it, and attaching every artifact with a `.sha256` to the GitHub Release. It also pushes the container image to `ghcr.io`. The release job runs in the `production` environment, which is what makes GitHub record a Deployment. |
 
@@ -32,16 +32,19 @@ the one being read. `docs.yml` regenerates them and fails on a diff. It also run
 starters; a solution that does not pass is a lesson nobody can finish, and a starter
 that already passes has nothing to do.
 
-**Why the markdown lint does not fail a build.** The step is one `super-linter`
-invocation, and that image runs its other validators in the same step, so making the
-step fatal would gate a pull request on tools this project has not reviewed. The
-Markdown itself is clean: `make lint-md` reports nothing across the repository's own
-Markdown files, and the 45 findings that used to sit in `native/README.md`,
-`.github/copilot-instructions.md`, `.github/RELEASE_CHECKLIST.md` and `SECURITY.md`
-are fixed. The editor is pointed at the same file set — `.vscode/settings.json` sets
-`markdownlint.appliesTo` to `markdownOnly` and skips `.venv` and the build trees — so
-the Problems panel and the command agree. The spellcheck step beside it is advisory on
-its own terms.
+**Why the markdown lint is a gate now.** Until 22.2.0 the step was one
+`super-linter` invocation and it was `continue-on-error`, for a good reason at the
+time: that image runs its other validators in the same step, so making the step
+fatal would have gated a pull request on tools this project had not reviewed. It
+also meant the check could not fail, and on a machine without Node it did not run at
+all — so the claim that the Markdown was clean rested on a report nobody had seen.
+
+`time_warp_docs md` is the project's own tool: thirty rules from markdownlint's set,
+implemented in `native/tools/docs/src/docs/md.cpp`, run over `git ls-files '*.md'`.
+It builds from one C++ compiler, has no dependency to fetch, and its verdict is the
+project's, so the job fails a pull request that breaks it. The rules it does not
+implement are listed in `md.hpp` with a reason each — mostly that they encode a house
+style, or need a CommonMark parser to answer honestly.
 
 The Python application's workflows — `ci.yml`, `build_release.yml`,
 `publish-python.yml` and `publish-container.yml` — were removed with it. They
