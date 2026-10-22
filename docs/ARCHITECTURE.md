@@ -1,6 +1,6 @@
 # Architecture Guide
 
-## Time Warp Studio v19.1.0 — System Design and Implementation
+## Time Warp Studio v19.2.0 — System Design and Implementation
 
 > **This page describes the shipping product.** It was rewritten alongside the move
 > to C++20 / Qt6. Earlier revisions documented the PySide6 implementation, which has
@@ -289,15 +289,21 @@ touches it.
 - **A display list, not a pixmap.** Repainting on resize, on zoom and on pan needs the
   drawing again, so the ink is kept as geometry in world coordinates. A pixmap would go
   blurry when zoomed and could not be re-projected at all.
-- **Everything the vocabulary declares, it draws.** 44 commands, 44 painted, and the
+- **Everything the vocabulary declares, it draws.** 43 commands, 43 painted, and the
   waiver table is empty rather than populated with excuses. `turtle_canvas_tests` walks
   the enum and refuses a command that is neither drawn nor waived, because a vocabulary
   that outruns the surface is a promise the product cannot keep: fills, pen styles,
   gradients, bezier curves, sprite objects and palette cycling were declared for several
-  releases and silently dropped. The two that could not be drawn — the 3-D `Pitch` and
-  `Roll` — were **deleted**, because the orientation lives in `TurtlePose` in the host,
-  which projects before it speaks; a canvas-side rotation would have been a second
-  camera disagreeing with the first.
+  releases and silently dropped. The three nothing could emit — the 3-D `Pitch` and
+  `Roll`, and `ClearSvgaMode` — were **deleted**, because the orientation lives in
+  `TurtlePose` in the host, which projects before it speaks, and `Reset` already
+  returns the surface to fitting its ink; keeping them would have been a second
+  camera and a second way to say one thing.
+- **Everything it draws, a program can ask for.** The other half of the same promise:
+  a kind the surface paints and no language can emit is a field in a struct rather
+  than a feature. Logo's `BEZIER`/`PENSTYLE` and BASIC's `SPRITE`, `SPRITEMOVE`,
+  `SPRITESHOW`, `SPRITEHIDE`, `GRADIENT` and `ELLIPSEGRADIENT` are why the walk has no
+  waivers rather than two honest excuses.
 - **The turtle state is mirrored here.** The host adapter translates turtle calls
   one-to-one and statelessly — a `Forward` command carries a distance, not the heading
   to move along or the pen colour to draw with — so something has to replay the sequence

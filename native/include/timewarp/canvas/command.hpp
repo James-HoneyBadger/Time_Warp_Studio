@@ -73,8 +73,11 @@ enum class CanvasCommandKind : std::uint8_t {
     // -- canvas lifecycle -------------------------------------------------
     Clear,            ///< no payload
     Reset,            ///< no payload
-    SetSvgaMode,      ///< x = width, y = height
-    ClearSvgaMode,    ///< no payload
+    /// A fixed world extent: x = width, y = height. There is deliberately no
+    /// counterpart to unset it, because `Reset` already returns the surface to a
+    /// fit to its ink and clears the extent with it -- a second way to say the
+    /// same thing was declared for several releases and emitted by nothing.
+    SetSvgaMode,
     /// A fixed-pixel screen: x = width, y = height. Drawing that follows is
     /// placed at these coordinates, y down from the top-left, and the surface
     /// stops fitting itself to the ink.
@@ -332,10 +335,6 @@ struct CanvasCommandView {
     return command;
 }
 
-[[nodiscard]] constexpr CanvasCommand make_clear_svga_mode() noexcept {
-    return make_command(CanvasCommandKind::ClearSvgaMode);
-}
-
 /// A palette slot's colour. `CyclePalette` then rotates every ink colour that
 /// matches a slot through the slots, which is what palette cycling *is*.
 [[nodiscard]] constexpr CanvasCommand make_cycle_palette(int steps) noexcept {
@@ -395,6 +394,22 @@ struct CanvasCommandView {
 /// fixed 72 bytes and `b` is the only slot a gradient does not otherwise use.
 [[nodiscard]] constexpr std::uint32_t gradient_second(const CanvasCommand& command) noexcept {
     return static_cast<std::uint32_t>(command.b);
+}
+
+/// A named sprite: `hotspot_x`, `hotspot_y` is the point within the bitmap that a
+/// placement positions, `width` and `height` its size. The bitmap follows as one
+/// packed colour per pixel, exactly like `make_put_pixels`, and the name travels
+/// in the trailing text.
+[[nodiscard]] constexpr CanvasCommand make_sprite_define(double hotspot_x,
+                                                         double hotspot_y,
+                                                         double width,
+                                                         double height) noexcept {
+    CanvasCommand command = make_command(CanvasCommandKind::DefineSprite);
+    command.x = hotspot_x;
+    command.y = hotspot_y;
+    command.w = width;
+    command.h = height;
+    return command;
 }
 
 /// Placement of a defined sprite, with the hotspot at (x, y). The sprite's *name*

@@ -294,6 +294,43 @@ public:
     /// Sets the pen's dash style: 0 solid, 1 dashed, 2 dotted, 3 dash-dot,
     /// 4 invisible. Same reasoning as `cycle_palette` for the default.
     virtual void set_pen_style(int /*style*/, double /*parameter*/) {}
+
+    // -- shapes a program can ask for ------------------------------------
+    //
+    // Everything below was drawable by the canvas for a release before a
+    // language could reach it, which is the failure this interface exists to
+    // stop repeating. Same default-no-op reasoning as `cycle_palette`: a host
+    // with no bitmap surface is not wrong to ignore a sprite.
+
+    /// A cubic bezier: `points[0]` is where it starts, then each group of three
+    /// is two control points and an end point. Four points is one segment.
+    virtual void bezier(const std::vector<Point>& /*points*/, Rgb /*stroke*/,
+                        double /*width*/) {}
+    /// A rectangle filled with a gradient from `from` to `to`, shaded along
+    /// `angle` degrees (0 runs left to right). The corners may arrive in either
+    /// order.
+    virtual void draw_rect_gradient(double /*x0*/, double /*y0*/, double /*x1*/,
+                                    double /*y1*/, double /*angle*/, Rgb /*from*/,
+                                    Rgb /*to*/) {}
+    /// The same for an ellipse inscribed in the two corners.
+    virtual void draw_ellipse_gradient(double /*x0*/, double /*y0*/, double /*x1*/,
+                                       double /*y1*/, Rgb /*from*/, Rgb /*to*/) {}
+
+    /// A named bitmap: `pixels` is row-major from the top row, one per pixel,
+    /// and `hotspot` is the point within it that `place_sprite` positions. The
+    /// canvas keeps the name, so a placed sprite can move without the engine
+    /// resending its pixels.
+    virtual void define_sprite(const char* /*name*/, int /*hotspot_x*/, int /*hotspot_y*/,
+                               int /*width*/, int /*height*/,
+                               const std::vector<Rgb>& /*pixels*/) {}
+    /// Draws a defined sprite's bitmap with its hotspot at (x, y). A name that
+    /// was never defined draws nothing; the engine reports that, because it is
+    /// the part that knows the program.
+    virtual void place_sprite(const char* /*name*/, double /*x*/, double /*y*/) {}
+    /// Moves the newest placement of a sprite by a delta.
+    virtual void move_sprite(const char* /*name*/, double /*dx*/, double /*dy*/) {}
+    /// Shows or hides every placement of a sprite.
+    virtual void set_sprite_visible(const char* /*name*/, bool /*visible*/) {}
     /// The colour a palette index currently means. Used where a program draws a
     /// whole frame and must name the colour, not the index.
     [[nodiscard]] virtual Rgb resolve_color(int index) const = 0;

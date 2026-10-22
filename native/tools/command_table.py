@@ -350,13 +350,73 @@ BASIC: list[Row] = [
     Row("BASIC", "PLAY", 'PLAY "CDEFG"', "prints:Playing"),
     Row("BASIC", "SAY", 'SAY "HELLO"', "optional"),
     Row("BASIC", "SPEAK", 'SPEAK "HELLO"', "optional"),
-    Row("BASIC", "SPRITE define", "SPRITE SHIP, 10, 20, 30, 40", "prints:Sprite SHIP"),
+    # `SPRITE` used to print an acknowledgement and draw nothing. It now captures
+    # a block of the screen, and the rows below drive every form it has.
+    Row(
+        "BASIC",
+        "SPRITE define",
+        "SCREEN 1\nLINE (10,10)-(40,50), 4, BF\nSPRITE SHIP, 10, 10, 30, 40",
+        "prints:Sprite SHIP captured",
+        ("SPRITE",),
+    ),
+    Row(
+        "BASIC",
+        "SPRITE place",
+        "SCREEN 1\nLINE (10,10)-(40,50), 4, BF\nSPRITE SHIP, 10, 10, 30, 40"
+        "\nSPRITE SHIP, 100, 100",
+        "prints:Moved sprite SHIP",
+        ("SPRITE",),
+    ),
+    Row(
+        "BASIC",
+        "SPRITEMOVE",
+        "SCREEN 1\nLINE (10,10)-(40,50), 4, BF\nSPRITE SHIP, 10, 10, 30, 40"
+        "\nSPRITE SHIP, 100, 100\nSPRITEMOVE SHIP, 5, -5",
+        "prints:Moved sprite SHIP by",
+    ),
+    Row(
+        "BASIC",
+        "SPRITESHOW",
+        "SCREEN 1\nLINE (10,10)-(40,50), 4, BF\nSPRITE SHIP, 10, 10, 30, 40"
+        "\nSPRITE SHIP, 100, 100\nSPRITEHIDE SHIP\nSPRITESHOW SHIP",
+        "prints:Showing sprite SHIP",
+    ),
+    Row(
+        "BASIC",
+        "SPRITEHIDE",
+        "SCREEN 1\nLINE (10,10)-(40,50), 4, BF\nSPRITE SHIP, 10, 10, 30, 40"
+        "\nSPRITE SHIP, 100, 100\nSPRITEHIDE SHIP",
+        "prints:Hiding sprite SHIP",
+    ),
     Row(
         "BASIC",
         "SPRITE remove",
-        "SPRITE SHIP, 10, 20, 30, 40\nSPRITE SHIP, OFF",
+        "SCREEN 1\nSPRITE SHIP, 10, 20, 30, 40\nSPRITE SHIP, OFF",
         "prints:Removed sprite",
+        ("SPRITE",),
     ),
+    Row(
+        "BASIC",
+        "SPRITE without a screen",
+        "SPRITE SHIP, 10, 20, 30, 40",
+        "error",
+        ("SPRITE",),
+    ),
+    Row(
+        "BASIC",
+        "SPRITE place without a definition",
+        "SCREEN 1\nSPRITE GHOST, 10, 10",
+        "error",
+        ("SPRITE",),
+    ),
+    Row(
+        "BASIC",
+        "GRADIENT",
+        "SCREEN 1\nGRADIENT 0, 0, 100, 50, 4, 1, 45",
+        "draws",
+    ),
+    Row("BASIC", "ELLIPSEGRADIENT", "SCREEN 1\nELLIPSEGRADIENT 0, 0, 60, 40, 2, 3", "draws"),
+    Row("BASIC", "GRADIENT without a screen", "GRADIENT 0, 0, 100, 50, 4, 1", "error"),
     Row("BASIC", "ON TIMER", "ON TIMER(2) GOSUB 100", "prints:Timer set"),
     Row("BASIC", "TIMER ON", "ON TIMER(2) GOSUB 100\nTIMER ON", "prints:Timer enabled"),
     Row(
@@ -534,6 +594,10 @@ LOGO: list[Row] = [
     Row("Logo", "PENWIDTH", "PENWIDTH 3\nFORWARD 20", "draws"),
     Row("Logo", "SETPW", "SETPW 3\nFORWARD 20", "draws"),
     Row("Logo", "SETPC", 'SETPC "RED\nFORWARD 20', "draws"),
+    # A palette slot is the other half of SETPC, and it used to be accepted and
+    # change nothing.
+    Row("Logo", "SETPC palette slot", "SETPC 1\nFORWARD 20", "draws"),
+    Row("Logo", "BEZIER", "BEZIER 0 60 60 60 60 0", "draws"),
     Row("Logo", "SETCOLOR", 'SETCOLOR "RED\nFORWARD 20', "draws"),
     Row("Logo", "SETBG", 'SETBG "BLUE', "any"),
     Row("Logo", "SETBGCOLOR", 'SETBGCOLOR "BLUE', "any"),

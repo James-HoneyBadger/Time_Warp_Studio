@@ -46,6 +46,14 @@ public:
         double width = 2.0;
     };
 
+    struct Sprite {
+        int hotspot_x = 0;
+        int hotspot_y = 0;
+        int width = 0;
+        int height = 0;
+        std::vector<timewarp::lang::Rgb> pixels;
+    };
+
     struct Shape {
         enum class Kind { Circle, Rect, Polygon, Point, Text } kind = Kind::Circle;
         double x = 0.0;
@@ -172,6 +180,82 @@ public:
     /// surprised when the next line came out dashed.
     void set_pen_style(int, double) override { ++actions_; }
     void cycle_palette(int, int, int) override { ++actions_; }
+
+    /// A bezier is recorded as the polyline through its control points: the SVG
+    /// this host writes has no curves, and a gate that cannot see the command at
+    /// all would call a `BEZIER` program silent.
+    void bezier(const std::vector<timewarp::lang::Point>& points,
+                timewarp::lang::Rgb stroke, double width) override {
+        ++actions_;
+        Shape shape;
+        shape.kind = Shape::Kind::Polygon;
+        shape.points = points;
+        shape.stroke = stroke;
+        shape.width = width;
+        shapes_.push_back(std::move(shape));
+        ++drawing_calls_;
+    }
+    /// A gradient is a filled shape with two colours; the recording keeps the
+    /// first, because a recorder that is asked "did this program draw" is not
+    /// asked "how did it shade".
+    void draw_rect_gradient(double x0, double y0, double x1, double y1, double,
+                            timewarp::lang::Rgb from, timewarp::lang::Rgb) override {
+        draw_rect(x0, y0, x1, y1, from);
+    }
+    void draw_ellipse_gradient(double x0, double y0, double x1, double y1,
+                               timewarp::lang::Rgb from, timewarp::lang::Rgb) override {
+        ++actions_;
+        Shape shape;
+        shape.kind = Shape::Kind::Circle;
+        shape.x = std::min(x0, x1);
+        shape.y = std::min(y0, y1);
+        shape.w = std::fabs(x1 - x0);
+        shape.h = std::fabs(y1 - y0);
+        shape.fill = from;
+        shape.filled = true;
+        shapes_.push_back(std::move(shape));
+        ++drawing_calls_;
+    }
+    void define_sprite(const char* name, int hotspot_x, int hotspot_y, int width,
+                       int height,
+                       const std::vector<timewarp::lang::Rgb>& pixels) override {
+        ++actions_;
+        Sprite sprite;
+        sprite.hotspot_x = hotspot_x;
+        sprite.hotspot_y = hotspot_y;
+        sprite.width = width;
+        sprite.height = height;
+        sprite.pixels.assign(pixels.begin(), pixels.end());
+        sprites_[name != nullptr ? name : ""] = std::move(sprite);
+    }
+    void place_sprite(const char* name, double x, double y) override {
+        ++actions_;
+        placed_sprite_ = name != nullptr ? name : "";
+        placed_at_ = {x, y};
+        sprite_visible_ = true;
+        ++drawing_calls_;
+    }
+    void move_sprite(const char* name, double dx, double dy) override {
+        ++actions_;
+        placed_sprite_ = name != nullptr ? name : "";
+        placed_at_ = {placed_at_.first + dx, placed_at_.second + dy};
+        ++drawing_calls_;
+    }
+    void set_sprite_visible(const char*, bool visible) override {
+        ++actions_;
+        sprite_visible_ = visible;
+    }
+    /// What the last sprite call recorded: a gate can assert that a definition
+    /// carried pixels and a placement carried a position, which is the difference
+    /// between a sprite and an acknowledgement.
+    [[nodiscard]] const std::string& placed_sprite() const noexcept { return placed_sprite_; }
+    [[nodiscard]] std::pair<double, double> placed_at() const noexcept { return placed_at_; }
+    [[nodiscard]] bool sprite_visible() const noexcept { return sprite_visible_; }
+    /// The pixels of a defined sprite, empty for a name nobody defined.
+    [[nodiscard]] std::size_t defined_sprite_pixels(std::string_view name) const {
+        const auto found = sprites_.find(std::string{name});
+        return found == sprites_.end() ? 0 : found->second.pixels.size();
+    }
     void draw_polygon(const std::vector<timewarp::lang::Point>& points,
                       timewarp::lang::Rgb stroke, timewarp::lang::Rgb fill,
                       double width, bool filled) override {
@@ -436,6 +520,10 @@ private:
 
     std::vector<Segment> segments_;
     std::vector<Shape> shapes_;
+    std::map<std::string, Sprite> sprites_;
+    std::string placed_sprite_;
+    std::pair<double, double> placed_at_{0.0, 0.0};
+    bool sprite_visible_ = false;
     std::map<int, timewarp::lang::Rgb> palette_{{0, {255, 255, 255}},
                                                 {1, {16, 16, 20}},
                                                 {2, {140, 255, 140}}};

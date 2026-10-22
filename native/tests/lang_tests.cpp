@@ -133,6 +133,43 @@ public:
         op += " " + number_text(width);
         ops.push_back(op);
     }
+    void bezier(const std::vector<timewarp::lang::Point>& points, Rgb stroke,
+                double width) override {
+        std::string op = "bezier";
+        for (const timewarp::lang::Point& point : points) {
+            op += " " + number_text(point.x) + " " + number_text(point.y);
+        }
+        op += " " + colour_text(stroke) + " " + number_text(width);
+        ops.push_back(op);
+    }
+    void draw_rect_gradient(double x0, double y0, double x1, double y1, double angle, Rgb from,
+                            Rgb to) override {
+        ops.push_back("gradient " + number_text(x0) + " " + number_text(y0) + " " +
+                      number_text(x1) + " " + number_text(y1) + " " + colour_text(from) + " " +
+                      colour_text(to) + " " + number_text(angle));
+    }
+    void draw_ellipse_gradient(double x0, double y0, double x1, double y1, Rgb from,
+                               Rgb /*to*/) override {
+        ops.push_back("egradient " + number_text(x0) + " " + number_text(y0) + " " +
+                      number_text(x1) + " " + number_text(y1) + " " + colour_text(from));
+    }
+    void define_sprite(const char* name, int hotspot_x, int hotspot_y, int width,
+                       int height, const std::vector<Rgb>& pixels) override {
+        ops.push_back("sprite " + std::string{name} + " " + std::to_string(hotspot_x) + " " +
+                      std::to_string(hotspot_y) + " " + std::to_string(width) + " " +
+                      std::to_string(height) + " " + std::to_string(pixels.size()));
+    }
+    void place_sprite(const char* name, double x, double y) override {
+        ops.push_back("place " + std::string{name} + " " + number_text(x) + " " +
+                      number_text(y));
+    }
+    void move_sprite(const char* name, double dx, double dy) override {
+        ops.push_back("move " + std::string{name} + " " + number_text(dx) + " " +
+                      number_text(dy));
+    }
+    void set_sprite_visible(const char* name, bool visible) override {
+        ops.push_back(std::string{visible ? "spriteshow " : "spritehide "} + name);
+    }
     void put_pixels(int x, int y, int width, int height,
                     const std::vector<Rgb>& /*pixels*/) override {
         ops.push_back("blit " + std::to_string(x) + " " + std::to_string(y) + " " +
@@ -1474,6 +1511,47 @@ void test_logo_filled_draws_a_polygon_around_the_path_walked() {
     TW_CHECK(polygon.find("#FF0000") != std::string::npos);
 }
 
+// BEZIER is a native extension: the canvas has drawn a curve since 19.0 and no
+// language could ask for one until this word existed.
+void test_logo_bezier_draws_a_curve_and_leaves_the_turtle_on_its_end() {
+    const LogoRun run =
+        run_logo("SETPC \"RED\nFD 5\nBEZIER 0 40 40 40 40 0\nSHOW XCOR\nSHOW YCOR");
+    TW_CHECK(!any_error(run.output));
+    TW_CHECK_EQ(run.host.ops.at(0), std::string{"colour #FF0000"});
+    TW_CHECK_EQ(run.host.ops.at(2),
+                std::string{"bezier 0 5 0 40 40 40 40 0 #FF0000 2"});
+    // The turtle ends at the curve's end point, so a chained BEZIER starts where
+    // the last one finished rather than back at the origin.
+    TW_CHECK_EQ(run.output.at(run.output.size() - 2), std::string{"40.0"});
+    TW_CHECK_EQ(run.output.back(), std::string{"0.0"});
+    // Moving the turtle to the end point must not draw a straight line across the
+    // curve that was just drawn, so the pen is lifted for the reposition.
+    TW_CHECK_EQ(run.host.ops.at(3), std::string{"penup"});
+    TW_CHECK_EQ(run.host.ops.at(4), std::string{"goto 40 0"});
+    TW_CHECK_EQ(run.host.ops.at(6), std::string{"pendown"});
+    TW_CHECK_EQ(run.host.ops.size(), std::size_t{7});
+}
+
+void test_a_chained_bezier_starts_where_the_last_one_finished() {
+    const LogoRun run = run_logo("BEZIER 0 40 40 40 40 0\nBEZIER 80 0 80 -40 40 -40");
+    TW_CHECK(!any_error(run.output));
+    const std::string& second = run.host.ops.at(run.host.ops.size() - 5);
+    TW_CHECK_EQ(second, std::string{"bezier 40 0 80 0 80 -40 40 -40 #FFFFFF 2"});
+}
+
+// `SETPC 1` is a palette slot, and it used to be accepted and change nothing:
+// the pen stayed whatever it was and the picture came out the wrong colour.
+void test_logo_setpc_with_a_palette_index_sets_the_pen() {
+    const LogoRun run = run_logo("SETPC 1\nFD 10");
+    TW_CHECK_EQ(run.host.ops.at(0), std::string{"colour #101014"});
+}
+
+void test_logo_bezier_rejects_a_short_argument_list() {
+    const LogoRun run = run_logo("BEZIER 1 2 3");
+    TW_CHECK_EQ(run.output.back(),
+                std::string{"❌ [line 1] BEZIER requires cx1 cy1 cx2 cy2 x y"});
+}
+
 void test_logo_unknown_command_is_reported_with_the_statement_number() {
     const LogoRun run = run_logo("FD 10\nNOTACOMMAND");
     TW_CHECK_EQ(run.output.back(), std::string{"❌ [line 2] Unknown Logo command: NOTACOMMAND"});
@@ -1851,6 +1929,59 @@ BasicRun run_basic(std::string_view source, std::vector<std::string> inputs = {}
     interpreter.run();
     run.output = interpreter.output();
     return run;
+}
+
+// `SPRITE` used to print "Sprite SHIP at (10, 20) size 30x40" and draw nothing.
+// A statement that acknowledges work it did not do is the failure the example
+// smoke test exists for, so each form is now asserted on what reached the host.
+void test_basic_sprite_statements_capture_place_move_and_hide() {
+    const BasicRun run = run_basic(
+        "SCREEN 1\n"
+        "LINE (10,10)-(40,50), 4, BF\n"
+        "SPRITE SHIP, 10, 10, 30, 40\n"
+        "SPRITE SHIP, 100, 100\n"
+        "SPRITEMOVE SHIP, 5, -5\n"
+        "SPRITESHOW SHIP\n"
+        "SPRITEHIDE SHIP\n"
+        "SPRITE SHIP, OFF");
+    TW_CHECK(!any_error(run.output));
+    TW_CHECK(contains(run.output, "Sprite SHIP captured 30x40 at (10.0, 10.0)"));
+    TW_CHECK(contains(run.output, "Moved sprite SHIP to (100.0, 100.0)"));
+    TW_CHECK(contains(run.output, "Moved sprite SHIP by (5.0, -5.0)"));
+    TW_CHECK(contains(run.output, "Showing sprite SHIP"));
+    TW_CHECK(contains(run.output, "Hiding sprite SHIP"));
+    TW_CHECK(contains(run.output, "Removed sprite: SHIP"));
+    // The capture carries the pixels: a definition with a size and no bitmap is
+    // exactly what the old acknowledgement was.
+    TW_CHECK(std::any_of(run.host.ops.begin(), run.host.ops.end(), [](const std::string& op) {
+        return op == "sprite SHIP 0 0 30 40 1200";
+    }));
+    TW_CHECK(std::any_of(run.host.ops.begin(), run.host.ops.end(), [](const std::string& op) {
+        return op == "place SHIP 100 100";
+    }));
+    TW_CHECK(std::any_of(run.host.ops.begin(), run.host.ops.end(), [](const std::string& op) {
+        return op == "move SHIP 5 -5";
+    }));
+    TW_CHECK(std::any_of(run.host.ops.begin(), run.host.ops.end(), [](const std::string& op) {
+        return op == "spritehide SHIP";
+    }));
+}
+
+void test_basic_sprite_statements_refuse_a_name_they_never_captured() {
+    const BasicRun run = run_basic("SCREEN 1\nSPRITE GHOST, 10, 10");
+    TW_CHECK(contains(run.output, "No sprite named GHOST"));
+}
+
+void test_basic_gradients_reach_the_host() {
+    const BasicRun run = run_basic(
+        "SCREEN 1\nGRADIENT 0, 0, 100, 50, 4, 1, 45\nELLIPSEGRADIENT 0, 0, 60, 40, 2, 3");
+    TW_CHECK(!any_error(run.output));
+    TW_CHECK(std::any_of(run.host.ops.begin(), run.host.ops.end(), [](const std::string& op) {
+        return op.rfind("gradient 0 0 100 50 ", 0) == 0;
+    }));
+    TW_CHECK(std::any_of(run.host.ops.begin(), run.host.ops.end(), [](const std::string& op) {
+        return op.rfind("egradient 0 0 60 40 ", 0) == 0;
+    }));
 }
 
 // `MID$(` contains `$(`, which an array read used to claim first: every string
@@ -2684,6 +2815,12 @@ int main() {
     test_logo_clear_screen_resets_the_turtle();
     test_logo_text_size_reaches_the_text_call();
     test_logo_filled_draws_a_polygon_around_the_path_walked();
+    test_logo_bezier_draws_a_curve_and_leaves_the_turtle_on_its_end();
+    test_a_chained_bezier_starts_where_the_last_one_finished();
+    test_logo_bezier_rejects_a_short_argument_list();
+    test_logo_setpc_with_a_palette_index_sets_the_pen();
+    test_basic_sprite_statements_capture_place_move_and_hide();
+    test_basic_gradients_reach_the_host();
     test_logo_unknown_command_is_reported_with_the_statement_number();
     test_logo_heading_starts_north_and_turns_clockwise();
     test_turtle_pose_matches_the_reference_in_three_dimensions();

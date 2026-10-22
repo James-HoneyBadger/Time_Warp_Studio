@@ -138,6 +138,22 @@ struct FileHandle {
     std::FILE* handle = nullptr;
 };
 
+/// A sprite a program captured with `SPRITE name, x, y, w, h`: the pixels, and
+/// the hotspot the canvas positions when it is placed. Named sprites live here
+/// rather than in the canvas because `SPRITE name, OFF` has to forget one, and
+/// the part that forgets is the part that knows the program.
+struct CapturedSprite {
+    int width = 0;
+    int height = 0;
+    /// Where it was last placed, so `SPRITEMOVE` can move it by a delta and still
+    /// keep the engine's raster in step with the picture.
+    double x = 0.0;
+    double y = 0.0;
+    bool placed = false;
+    /// Row-major from the top row, one colour per pixel.
+    std::vector<Rgb> pixels;
+};
+
 struct State {
     /// DEFINT/DEFLNG/DEFSNG/DEFDBL/DEFSTR: initial letter to type name.
     std::map<char, std::string> defaults;
@@ -187,6 +203,8 @@ struct State {
     /// screen. Empty in text mode, which is why `GET`, `PUT` and `POINT` have
     /// an error to report rather than a silent zero.
     Raster raster;
+    /// The sprites `SPRITE` has captured, by upper-cased name.
+    std::map<std::string, CapturedSprite> sprites;
     /// `JOYINIT` found a gamepad. `STICK`/`STRIG` answer 0 until it does, which
     /// is what the documented behaviour says and what keeps a machine with a
     /// joystick plugged in from changing a program that never asked for one.
@@ -311,6 +329,10 @@ private:
     std::string paint(const std::string& args);
     std::string sprite_get(const std::string& args);
     std::string sprite_put(const std::string& args);
+    std::string sprite_visible(const std::string& args, bool visible);
+    std::string sprite_move(const std::string& args);
+    std::string gradient(const std::string& args);
+    std::string ellipse_gradient(const std::string& args);
     std::string swap(const std::string& args);
     std::string erase(const std::string& args);
     std::string constant(const std::string& args);

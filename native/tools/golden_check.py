@@ -321,6 +321,7 @@ def main(argv: list[str] | None = None) -> int:
         return 2
 
     agree = 0
+    diverged = 0
     failures: list[str] = []
     skipped: list[str] = []
     for entry in read_corpus(path):
@@ -349,7 +350,21 @@ def main(argv: list[str] | None = None) -> int:
             "drawing": list(entry["drawing"]),
             "variables": normalise_variables(entry["variables"]),
         }
-        ok, detail = compare(name, want, run_native(key, source))
+        actual = run_native(key, source)
+        # An entry can be *documented* as one the port answers differently, the way
+        # the Scheme corpus does. The recorded side stays the reference's; the note
+        # says what changed and why. A note that has gone stale -- the port agreeing
+        # again -- is a failure, so a divergence cannot quietly become a lie.
+        if entry.get("divergence"):
+            diverged += 1
+            ok, _ = compare(name, want, actual)
+            if ok:
+                failures.append(
+                    f"{key}: {name}\n  documented as a divergence "
+                    f"({entry['divergence']}) and it now agrees; remove the note"
+                )
+            continue
+        ok, detail = compare(name, want, actual)
         if ok:
             agree += 1
             if args.verbose:
@@ -362,8 +377,8 @@ def main(argv: list[str] | None = None) -> int:
     for failure in failures:
         print(f"DIFFER {failure}")
     print(
-        f"\n{agree} agreed, {len(failures)} differed, {len(skipped)} skipped "
-        f"({', '.join(chosen)})"
+        f"\n{agree} agreed, {len(failures)} differed, {len(skipped)} skipped, "
+        f"{diverged} documented divergence(s) ({', '.join(chosen)})"
     )
     return 0 if not failures else 1
 

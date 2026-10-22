@@ -107,6 +107,17 @@ void NativeCanvasHost::submit_points(CanvasCommand command,
     }
 }
 
+void NativeCanvasHost::submit_text_and_points(CanvasCommand command, std::string_view text,
+                                             const std::vector<double>& points) {
+    ++submitted_;
+    if (!timewarp::canvas::accepted(queue_.push(command, text, points))) {
+        return;
+    }
+    if (wakeup_) {
+        wakeup_();
+    }
+}
+
 void NativeCanvasHost::sync_canvas_pose() {
     if (!canvas_pose_dirty_) {
         return;
@@ -340,6 +351,83 @@ void NativeCanvasHost::draw_polygon(const std::vector<Point>& points, Rgb stroke
     submit_points(command, flat);
 }
 
+void NativeCanvasHost::bezier(const std::vector<Point>& points, Rgb stroke, double width) {
+    if (points.size() < 2) {
+        return;
+    }
+    std::vector<double> flat;
+    flat.reserve(points.size() * 2);
+    for (const Point& point : points) {
+        flat.push_back(point.x);
+        flat.push_back(point.y);
+    }
+    submit_points(timewarp::canvas::make_polyline(CanvasCommandKind::BezierCurve,
+                                                 colour_bits(stroke), width),
+                  flat);
+}
+
+void NativeCanvasHost::draw_rect_gradient(double x0, double y0, double x1, double y1,
+                                         double angle, Rgb from, Rgb to) {
+    const double left = std::min(x0, x1);
+    const double top = std::min(y0, y1);
+    submit(timewarp::canvas::make_rect_gradient(left, top, std::fabs(x1 - x0),
+                                                std::fabs(y1 - y0), angle,
+                                                colour_bits(from), colour_bits(to)));
+}
+
+void NativeCanvasHost::draw_ellipse_gradient(double x0, double y0, double x1, double y1,
+                                            Rgb from, Rgb to) {
+    const double left = std::min(x0, x1);
+    const double top = std::min(y0, y1);
+    submit(timewarp::canvas::make_ellipse_gradient(left, top, std::fabs(x1 - x0),
+                                                   std::fabs(y1 - y0),
+                                                   colour_bits(from), colour_bits(to)));
+}
+
+void NativeCanvasHost::define_sprite(const char* name, int hotspot_x, int hotspot_y,
+                                    int width, int height,
+                                    const std::vector<Rgb>& pixels) {
+    const std::string_view text{name != nullptr ? name : ""};
+    if (text.empty() || width <= 0 || height <= 0 ||
+        pixels.size() < static_cast<std::size_t>(width) * static_cast<std::size_t>(height)) {
+        return;
+    }
+    // A bitmap is a payload like a `PUT` block, so it chunks the same way: a
+    // 200x100 sprite is 20k pixels and 160 KB of doubles, four times what one
+    // command's share of the ring holds.
+    constexpr std::size_t kPixelsPerCommand = 16u * 1024u;
+    const auto columns = static_cast<std::size_t>(width);
+    const auto rows_per_chunk = std::max<std::size_t>(1, kPixelsPerCommand / columns);
+    // The canvas takes the whole bitmap from one command, so a sprite larger than
+    // the ring can hold is defined from as many rows as fit and the rest is
+    // dropped rather than the definition being half-sent: a half-sprite that
+    // draws would be worse than one that refuses.
+    const int rows = std::min(height, static_cast<int>(rows_per_chunk));
+    std::vector<double> chunk;
+    chunk.reserve(columns * static_cast<std::size_t>(rows));
+    for (int row = 0; row < rows; ++row) {
+        const auto base = static_cast<std::size_t>(row) * columns;
+        for (std::size_t column = 0; column < columns; ++column) {
+            chunk.push_back(static_cast<double>(colour_bits(pixels[base + column])));
+        }
+    }
+    submit_text_and_points(
+        timewarp::canvas::make_sprite_define(hotspot_x, hotspot_y, width, rows), text,
+        chunk);
+}
+
+void NativeCanvasHost::place_sprite(const char* name, double x, double y) {
+    submit_text(timewarp::canvas::make_sprite_place(x, y), name != nullptr ? name : "");
+}
+
+void NativeCanvasHost::move_sprite(const char* name, double dx, double dy) {
+    submit_text(timewarp::canvas::make_sprite_move(dx, dy), name != nullptr ? name : "");
+}
+
+void NativeCanvasHost::set_sprite_visible(const char* name, bool visible) {
+    submit_text(timewarp::canvas::make_sprite_visible(visible), name != nullptr ? name : "");
+}
+
 void NativeCanvasHost::put_pixels(int x, int y, int width, int height,
                                   const std::vector<Rgb>& pixels) {
     if (width <= 0 || height <= 0 ||
@@ -366,10 +454,13 @@ void NativeCanvasHost::put_pixels(int x, int y, int width, int height,
                 chunk.push_back(static_cast<double>(colour_bits(pixels[base + column])));
             }
         }
-        // The canvas counts y up, so the chunk's top raster row is its highest
-        // world row and the rows below it are lower.
+        // Each chunk starts at its own first row and the canvas draws rows
+        // *downward* from there, so the offset is added, not subtracted. Taking
+        // it away stacked every chunk after the first on top of the first, which
+        // silently mangled every block over 16k pixels -- a 200x100 sprite, for
+        // one -- while small blocks looked perfect.
         submit_points(
-            timewarp::canvas::make_put_pixels(x, y - first_row, width, rows), chunk);
+            timewarp::canvas::make_put_pixels(x, y + first_row, width, rows), chunk);
     }
 }
 

@@ -402,6 +402,27 @@ private:
     /// live, because a bitmap in every placement would be a copy per draw.
     QMap<QString, Sprite> sprites_;
 
+    /// The placements that have been stamped into `framebuffer_`, newest last.
+    ///
+    /// A bitmap screen is not a display list: moving or hiding a sprite means
+    /// putting back what was underneath it, so each placement keeps the pixels it
+    /// covered. Without this a move in screen mode redrew nothing -- the display
+    /// list moved and the picture did not, which is the same "declared but not
+    /// drawn" failure the command vocabulary walk exists to catch, one layer down.
+    struct BitmapPlacement {
+        QString name;
+        QPointF at;
+        bool visible = false;
+        QImage under;
+    };
+    std::vector<BitmapPlacement> placements_;
+
+    /// Stamps a placement into the framebuffer, first remembering what was under
+    /// it. Draws nothing for a name that was never defined.
+    void stampBitmap(BitmapPlacement& placement);
+    /// Puts back what a placement covered.
+    void eraseBitmap(BitmapPlacement& placement);
+
     /// Palette slots, as `SetPaletteColor` fills them, and the rotation
     /// `CyclePalette` applies to them.
     QMap<int, QColor> palette_;

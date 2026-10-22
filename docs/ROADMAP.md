@@ -416,6 +416,7 @@ measuring the wrong machine.
 | 18.0 ✓ | the reference engine deleted and every gate driving the native engines; the teacher's and learner's commands are the C++ ones; `time_warp_player` and a format-2 artefact replacing the copy-of-the-IDE; the two machines exportable as files |
 | 19.0 ✓ | Every command the canvas declares, it draws: fills, pen styles, gradients, bezier curves, sprite objects, palette cycling and the fixed-coordinate screen — and `turtle_canvas_tests` walks the enum so a vocabulary that outruns the surface fails the build |
 | 19.1 ✓ | The vocabulary closes at 44 of 44 with no waivers — `Pitch`/`Roll` deleted because the camera lives in `TurtlePose` — and two of those commands reach a program: Logo's `PENSTYLE`, and BASIC's `PALETTE CYCLE`, which had been moving a palette nobody was looking at |
+| 19.2 ✓ | Every command the canvas declares, a program can ask for: Logo's `BEZIER`, BASIC's `SPRITE`/`SPRITEMOVE`/`SPRITESHOW`/`SPRITEHIDE`/`GRADIENT`/`ELLIPSEGRADIENT` — and the three statements that had been acknowledging work they never did now do it |
 
 Smaller items belong in one of those releases rather than a release of their own: a
 Smalltalk call stack shown as frames rather than a Program Counter; Flatpak and an

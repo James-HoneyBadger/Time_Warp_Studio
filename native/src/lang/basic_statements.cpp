@@ -579,6 +579,24 @@ std::string Machine::execute(std::string_view command) {
     if (starts_with(cmd, "SPRITE ")) {
         return sprite(strip_comment(tail(text, 7)));
     }
+    // The sprite statements that take only a name, before `SPRITE ` above would
+    // ever see them -- the dispatch is prefix-based and `SPRITESHOW SHIP` is not
+    // a `SPRITE` with a space after it.
+    if (starts_with(cmd, "SPRITEMOVE ")) {
+        return sprite_move(strip_comment(tail(text, 11)));
+    }
+    if (starts_with(cmd, "SPRITESHOW ")) {
+        return sprite_visible(strip_comment(tail(text, 11)), true);
+    }
+    if (starts_with(cmd, "SPRITEHIDE ")) {
+        return sprite_visible(strip_comment(tail(text, 11)), false);
+    }
+    if (starts_with(cmd, "ELLIPSEGRADIENT ")) {
+        return ellipse_gradient(strip_comment(tail(text, 16)));
+    }
+    if (starts_with(cmd, "GRADIENT ")) {
+        return gradient(strip_comment(tail(text, 9)));
+    }
     if (starts_with(cmd, "ON TIMER")) {
         return on_timer(strip_comment(tail(text, 8)));
     }

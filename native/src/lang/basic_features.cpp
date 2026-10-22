@@ -1229,23 +1229,171 @@ std::string Machine::sprite(const std::string& args) {
     }
     const std::string name = upper(parts[0]);
     if (parts.size() == 2 && upper(parts[1]) == "OFF") {
+        // Forget the bitmap as well as hiding it: a name a program has released
+        // must not come back when it is used again, or a redefinition would be
+        // impossible to tell from the first one.
+        state_.sprites.erase(name);
+        turtle_.set_sprite_visible(name.c_str(), false);
         return "🎮 Removed sprite: " + name + "\n";
+    }
+    if (parts.size() >= 5) {
+        // `SPRITE name, x, y, w, h` captures the block already drawn at (x, y),
+        // which is how a sprite is made on every machine that had them: draw it,
+        // take a copy, then move the copy around without redrawing.
+        if (!state_.raster.active()) {
+            return "❌ SPRITE needs a graphics screen (SCREEN 1)\n";
+        }
+        try {
+            const int x = pixel(eval(parts[1]));
+            const int y = pixel(eval(parts[2]));
+            const int width = pixel(eval(parts[3]));
+            const int height = pixel(eval(parts[4]));
+            if (width <= 0 || height <= 0) {
+                return "❌ SPRITE " + name + " needs a positive size, got " +
+                       std::to_string(width) + "x" + std::to_string(height) + "\n";
+            }
+            CapturedSprite sprite;
+            sprite.width = width;
+            sprite.height = height;
+            sprite.pixels = state_.raster.block(x, y, width, height);
+            // The hotspot is the top-left corner, the same corner `PUT` places a
+            // captured block by, so a captured sprite goes back exactly where it
+            // came from.
+            turtle_.define_sprite(name.c_str(), 0, 0, width, height, sprite.pixels);
+            const std::string size = std::to_string(width) + "x" + std::to_string(height);
+            sprite.x = x;
+            sprite.y = y;
+            sprite.placed = true;
+            state_.sprites[name] = std::move(sprite);
+            return "🎮 Sprite " + name + " captured " + size + " at (" +
+                   python_number_text(x) + ", " + python_number_text(y) + ")\n";
+        } catch (const std::exception& error) {
+            return "❌ SPRITE error: " + std::string{error.what()} + "\n";
+        }
     }
     try {
         const double x = eval(parts[1]);
         const double y = parts.size() > 2 ? eval(parts[2]) : 0.0;
-        if (parts.size() >= 5) {
-            const double width = eval(parts[3]);
-            const double height = eval(parts[4]);
-            return "🎮 Sprite " + name + " at (" + python_number_text(x) + ", " +
-                   python_number_text(y) + ") size " + python_number_text(width) + "x" +
-                   python_number_text(height) + "\n";
+        const auto found = state_.sprites.find(name);
+        if (found == state_.sprites.end()) {
+            return "❌ No sprite named " + name + " (capture one with SPRITE " + name +
+                   ", x, y, w, h)\n";
         }
+        if (state_.raster.active()) {
+            // The engine's own raster follows, so POINT and GET read what the
+            // screen shows rather than what it showed before the sprite moved.
+            state_.raster.put_block(static_cast<int>(x), static_cast<int>(y),
+                                    found->second.width, found->second.height,
+                                    found->second.pixels);
+        }
+        found->second.x = x;
+        found->second.y = y;
+        found->second.placed = true;
+        turtle_.place_sprite(name.c_str(), x, y);
         return "🎮 Moved sprite " + name + " to (" + python_number_text(x) + ", " +
                python_number_text(y) + ")\n";
     } catch (const std::exception& error) {
         return "❌ SPRITE error: " + std::string{error.what()} + "\n";
     }
+}
+
+std::string Machine::sprite_visible(const std::string& args, bool visible) {
+    const std::string name = upper(trim(args));
+    if (name.empty()) {
+        return std::string{"❌ "} + (visible ? "SPRITESHOW" : "SPRITEHIDE") +
+               " requires a sprite name\n";
+    }
+    if (state_.sprites.find(name) == state_.sprites.end()) {
+        return "❌ No sprite named " + name + " (capture one with SPRITE " + name +
+               ", x, y, w, h)\n";
+    }
+    turtle_.set_sprite_visible(name.c_str(), visible);
+    return std::string{"🎮 "} + (visible ? "Showing" : "Hiding") + " sprite " + name + "\n";
+}
+
+std::string Machine::sprite_move(const std::string& args) {
+    const std::vector<std::string> parts = split_trimmed(args, ',');
+    if (parts.size() != 3) {
+        return "❌ SPRITEMOVE requires name, dx, dy\n";
+    }
+    const std::string name = upper(parts[0]);
+    const auto found = state_.sprites.find(name);
+    if (found == state_.sprites.end()) {
+        return "❌ No sprite named " + name + " (capture one with SPRITE " + name +
+               ", x, y, w, h)\n";
+    }
+    if (!found->second.placed) {
+        return "❌ Sprite " + name + " has not been placed yet (SPRITE " + name +
+               ", x, y)\n";
+    }
+    try {
+        const double dx = eval(parts[1]);
+        const double dy = eval(parts[2]);
+        // A relative move needs the last position, which the canvas already keeps;
+        // the engine keeps it too so a raster read stays truthful.
+        if (state_.raster.active()) {
+            state_.raster.put_block(static_cast<int>(found->second.x + dx),
+                                    static_cast<int>(found->second.y + dy),
+                                    found->second.width, found->second.height,
+                                    found->second.pixels);
+        }
+        found->second.x += dx;
+        found->second.y += dy;
+        turtle_.move_sprite(name.c_str(), dx, dy);
+        return "🎮 Moved sprite " + name + " by (" + python_number_text(dx) + ", " +
+               python_number_text(dy) + ")\n";
+    } catch (const std::exception& error) {
+        return "❌ SPRITEMOVE error: " + std::string{error.what()} + "\n";
+    }
+}
+
+std::string Machine::gradient(const std::string& args) {
+    const std::vector<std::string> parts = split_trimmed(args, ',');
+    if (parts.size() < 6) {
+        return "❌ GRADIENT requires x1, y1, x2, y2, first, second [, angle]\n";
+    }
+    if (!state_.raster.active()) {
+        return "❌ GRADIENT needs a graphics screen (SCREEN 1)\n";
+    }
+    try {
+        const double x1 = eval(parts[0]);
+        const double y1 = eval(parts[1]);
+        const double x2 = eval(parts[2]);
+        const double y2 = eval(parts[3]);
+        const Rgb from = resolve_colour(parts[4], turtle_.pen_colour());
+        const Rgb to = resolve_colour(parts[5], Rgb{0, 0, 0});
+        const double angle = parts.size() > 6 ? eval(parts[6]) : 0.0;
+        state_.raster.rect(static_cast<int>(std::min(x1, x2)),
+                           static_cast<int>(std::min(y1, y2)),
+                           static_cast<int>(std::max(x1, x2)),
+                           static_cast<int>(std::max(y1, y2)), from, true);
+        turtle_.draw_rect_gradient(x1, y1, x2, y2, angle, from, to);
+    } catch (const std::exception& error) {
+        return "❌ GRADIENT error: " + std::string{error.what()} + "\n";
+    }
+    return {};
+}
+
+std::string Machine::ellipse_gradient(const std::string& args) {
+    const std::vector<std::string> parts = split_trimmed(args, ',');
+    if (parts.size() < 6) {
+        return "❌ ELLIPSEGRADIENT requires x1, y1, x2, y2, first, second\n";
+    }
+    if (!state_.raster.active()) {
+        return "❌ ELLIPSEGRADIENT needs a graphics screen (SCREEN 1)\n";
+    }
+    try {
+        const double x1 = eval(parts[0]);
+        const double y1 = eval(parts[1]);
+        const double x2 = eval(parts[2]);
+        const double y2 = eval(parts[3]);
+        const Rgb from = resolve_colour(parts[4], turtle_.pen_colour());
+        const Rgb to = resolve_colour(parts[5], Rgb{0, 0, 0});
+        turtle_.draw_ellipse_gradient(x1, y1, x2, y2, from, to);
+    } catch (const std::exception& error) {
+        return "❌ ELLIPSEGRADIENT error: " + std::string{error.what()} + "\n";
+    }
+    return {};
 }
 
 std::string Machine::on_timer(const std::string& args) {

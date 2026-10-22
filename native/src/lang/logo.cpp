@@ -267,7 +267,8 @@ const std::set<std::string_view>& logo_commands() {
         "SETPW",        "PENWIDTH",    "PENSIZE",    "SETPENSIZE",  "REPEAT",
         "IF",           "IFELSE",      "STOP",       "OUTPUT",      "TO",
         "END",          "MAKE",        "PRINT",      "SHOW",        "TYPE",
-        "ARC",          "FILLED",      "PENSTYLE",   "LABEL",       "WAIT",
+        "ARC",          "FILLED",      "PENSTYLE",   "BEZIER",      "LABEL",
+        "WAIT",
         "BYE",
         "OP",           "FOREVER",     "REM",        "WHILE",       "UNTIL",
         "FOREACH",      "MAP",         "FILTER",     "REDUCE",      "LOCAL",
@@ -539,6 +540,7 @@ private:
     std::string do_arithmetic(const std::vector<std::string>& args, char operation);
     std::string do_random(const std::vector<std::string>& args);
     std::string do_arc(const std::vector<std::string>& args);
+    std::string do_bezier(const std::vector<std::string>& args);
     std::string do_filled(std::string_view command);
     std::string do_label(std::string_view command);
     std::string do_stamp();
@@ -1527,6 +1529,9 @@ std::string LogoMachine::run_command(std::string_view command_text) {
         if (name == "ARC") {
             return do_arc(args);
         }
+        if (name == "BEZIER") {
+            return do_bezier(args);
+        }
         if (name == "FILLED") {
             return do_filled(trimmed);
         }
@@ -1962,6 +1967,13 @@ std::string LogoMachine::do_setcolor(const std::vector<std::string>& args) {
                     std::strtol(colour.substr(start, 2).c_str(), nullptr, 16));
             };
             turtle_.set_color(Rgb{channel(1), channel(3), channel(5)});
+        } else if (const std::optional<double> slot = eval_number(colour);
+                   slot.has_value()) {
+            // A bare number is a palette slot, which is what `SETPC 1` means in
+            // the reference's own examples. Without this branch the statement was
+            // accepted, printed nothing, and changed no colour -- a statement that
+            // acknowledged work it had not done.
+            turtle_.set_color(turtle_.resolve_color(static_cast<int>(*slot)));
         }
         return {};
     }
@@ -3048,6 +3060,62 @@ std::string LogoMachine::do_arc(const std::vector<std::string>& args) {
         return "❌ Invalid parameters for ARC\n";
     }
     turtle_.circle(radius, angle);
+    return {};
+}
+
+std::string LogoMachine::do_bezier(const std::vector<std::string>& args) {
+    // BEZIER cx1 cy1 cx2 cy2 x y -- a cubic from where the turtle stands to
+    // (x, y), bending through the two control points.
+    //
+    // A native extension, like PENSTYLE: the canvas has drawn a bezier since
+    // 19.0 and no language could ask for one. The turtle ends at the curve's end
+    // point facing along its final tangent, which is what makes chaining two of
+    // them produce a smooth curve rather than a corner.
+    if (args.size() < 6) {
+        return "❌ BEZIER requires cx1 cy1 cx2 cy2 x y\n";
+    }
+    double values[6] = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
+    for (std::size_t index = 0; index < 6; ++index) {
+        try {
+            values[index] = interpreter_.evaluate_expression(args[index]);
+        } catch (const std::exception&) {
+            return "❌ Invalid parameters for BEZIER\n";
+        }
+    }
+    const Point start{pose_.x(), pose_.y()};
+    const Point first_control{values[0], values[1]};
+    const Point second_control{values[2], values[3]};
+    const Point finish{values[4], values[5]};
+    if (pen_down_) {
+        turtle_.bezier({start, first_control, second_control, finish},
+                       turtle_.pen_colour(), pen_width_);
+    }
+    // The end tangent of a cubic is the direction from the last control point to
+    // the end, so the heading follows the curve.
+    const double dx = finish.x - second_control.x;
+    const double dy = finish.y - second_control.y;
+    pose_.go_to(finish.x, finish.y);
+    if (dx != 0.0 || dy != 0.0) {
+        constexpr double kDegrees = 57.29577951308232;
+        pose_.set_heading(std::atan2(dx, dy) * kDegrees);
+    }
+    // The curve is already drawn; the host's `goto_xy` would draw a straight line
+    // from where the turtle stood to where it now is, and heading it would leave
+    // a second mark. The pen is lifted for the reposition only, which is also how
+    // the reference moved a turtle without drawing.
+    if (pen_down_) {
+        turtle_.pen_up();
+    }
+    turtle_.goto_xy(finish.x, finish.y);
+    // Heading 0 is north and grows clockwise, so a direction is atan2(dx, dy) in
+    // degrees -- the same conversion every other motion word uses.
+    turtle_.set_heading(pose_.heading());
+    if (pen_down_) {
+        turtle_.pen_down();
+    }
+    if (on_change_) {
+        on_change_();
+    }
     return {};
 }
 

@@ -320,6 +320,40 @@ captured tile is not only remembered. `PAINT` also floods the region that contai
 its point — so a filled area can be captured with `GET`. `CLS` clears both, and
 `SCREEN 0` discards the screen along with the mode.
 
+`SPRITE` is the same tile with a name and a memory: it captures a rectangle of the
+screen once and then moves without being re-sent.
+
+```basic
+SCREEN 1
+LINE (10, 10)-(40, 50), 4, BF
+SPRITE SHIP, 10, 10, 30, 40      ' capture: the top-left corner is the hotspot
+SPRITE SHIP, 100, 100            ' place it there
+SPRITEMOVE SHIP, 5, -5           ' and move it by a delta
+SPRITEHIDE SHIP                  ' put back what it covered
+SPRITESHOW SHIP                  ' and draw it again
+SPRITE SHIP, OFF                 ' forget it altogether
+```
+
+A placement is a bitmap on a bitmap screen and a shape on a drawing surface, so
+hiding one puts back the pixels it covered rather than leaving a hole. Placing a
+name that was never captured is an error naming the statement that would capture
+one, and moving one that was never placed says so — the point of the statement is
+the sprite, not the acknowledgement.
+
+Two statements paint a shape that changes colour across itself:
+
+```basic
+GRADIENT 0, 0, 199, 99, 1, 4, 0          ' rectangle; two corners; ink 1 to ink 4
+GRADIENT 0, 0, 199, 99, 1, 4, 90         ' the same, shaded upwards
+ELLIPSEGRADIENT 20, 120, 180, 250, 4, 1  ' the ellipse such a rectangle contains
+```
+
+`GRADIENT` takes the two opposite corners, the colour it starts with and the one it
+ends with, then an optional angle in degrees (0 runs left to right, 90 runs upwards).
+Both are drawn into the screen a program asked `SCREEN` for, and both are native
+additions: the reference had no gradient, so `lang_tests` holds them up rather than
+the parity corpus.
+
 [`Examples/basic/star_patrol.bas`](../Examples/basic/star_patrol.bas) is a whole
 program built on this: a sprite ship, a star field, a shot whose hits are found
 with `POINT`, and a score bar.
@@ -584,6 +618,9 @@ PU
 ; Pen color by name (quote the name)
 SETPENCOLOR "red
 
+; Or by palette slot: a bare number is a slot, not a brightness
+SETPC 1
+
 ; Pen width
 SETPENWIDTH 2
 
@@ -610,6 +647,20 @@ frame.
 REPEAT 4 [FD 100 RT 90]
 REPEAT 6 [FD 50 RT 60]
 ```
+
+`BEZIER` draws a curve the turtle cannot walk to, and then leaves the turtle on its
+end facing along it — so two of them joined make a smooth curve rather than a corner:
+
+```logo
+; BEZIER cx1 cy1 cx2 cy2 x y -- a cubic from where the turtle stands
+BEZIER 0 60 60 60 60 0
+BEZIER 120 0 120 -60 60 -60
+```
+
+Also a **native extension**: the canvas has drawn a bezier since 19.0 and no
+language could ask for one until this word existed. The two control points pull the
+curve towards themselves without the turtle ever visiting them, and the heading the
+turtle ends with is the curve's own end tangent.
 
 ### Procedures (Subprograms)
 

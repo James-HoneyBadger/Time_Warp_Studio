@@ -2,6 +2,75 @@
 
 <!-- history: all -->
 
+## [19.2.0] - 2026-10-22
+
+Every command the canvas declares, a program can now ask for — and three statements
+that said they had done something now do it.
+
+### The claim
+
+The canvas has drawn fills, gradients, bezier curves, sprite objects and palette
+cycling since 19.0, and until now exactly one of those had a word in any language.
+A feature no program can reach is not a feature, it is a field in a struct. This
+release closes the gap from the other side: `BEZIER` for Logo, `SPRITE`,
+`SPRITEMOVE`, `SPRITESHOW`, `SPRITEHIDE`, `GRADIENT` and `ELLIPSEGRADIENT` for BASIC.
+The vocabulary walk stands at **43 declared kinds, 43 drawn, no waivers**.
+
+### Added
+
+- **`BEZIER cx1 cy1 cx2 cy2 x y`** in Logo: a cubic curve from where the turtle
+  stands, ending with the turtle on the curve's end point facing along its final
+  tangent, so two of them joined make a smooth curve rather than a corner. The pen
+  is lifted for the reposition — a curve with a straight line across it is not the
+  curve that was asked for.
+- **`SPRITE name, x, y, w, h`** captures a rectangle of the screen as a named
+  bitmap; **`SPRITE name, x, y`** places or re-places it, **`SPRITEMOVE name, dx, dy`**
+  moves it by a delta, **`SPRITESHOW`/`SPRITEHIDE`** show and hide it, and
+  **`SPRITE name, OFF`** releases it. The hotspot is the captured block's top-left
+  corner, which is the corner `PUT` places a block by — so a captured sprite goes
+  back exactly where it came from.
+- **`GRADIENT x1, y1, x2, y2, first, second [, angle]`** and
+  **`ELLIPSEGRADIENT x1, y1, x2, y2, first, second`**: a rectangle and an ellipse
+  filled across themselves.
+- **`SETPC n`** with a bare number sets the pen to that palette slot, which is what
+  the reference's own examples mean by it.
+
+### Fixed
+
+- **`SPRITE` printed "🎮 Sprite SHIP at (10, 20) size 30x40" and drew nothing.** A
+  statement that acknowledges work it did not do is the exact failure the example
+  smoke test exists for, and this one had been in the command table passing its row
+  for several releases, because the row asked whether the statement *said*
+  something. It now captures, places, moves and hides.
+- **`SETPC 1` changed no colour at all.** A bare number fell down a branch that
+  accepted it and returned; the pen stayed white and the picture came out wrong.
+- **A `PUT` larger than one queue chunk was drawn in the wrong place.** The host
+  subtracted each chunk's row offset instead of adding it, so every chunk after the
+  first was stamped on top of the first. Blocks under 16k pixels — every small
+  sprite, every test — looked perfect. `test_a_large_pixel_block_is_placed_where_it_was_asked_for`
+  fails against the old arithmetic and passes against the new.
+- **Moving, showing or hiding a sprite did nothing in screen mode.** The display
+  list moved and the picture did not: the bitmap path had cases for defining and
+  placing a sprite and none for the other three. Each placement now remembers the
+  pixels it covered, so hiding one puts them back rather than leaving a hole.
+
+### Removed
+
+- **`CanvasCommandKind::ClearSvgaMode`**, for the same reason `Pitch`/`Roll` went in
+  19.1: nothing emitted it. `Reset` already returns the surface to fitting its ink
+  and clears the fixed extent with it, so a second way to say so was vocabulary
+  nothing could ask for.
+
+### Notes
+
+- The golden corpus keeps the **reference's** answers, and `SPRITE` is the one place
+  the port deliberately differs from them: the two affected rows carry a
+  `divergence` note saying why. The check fails on a stale note — if the port ever
+  agrees with the reference again, the note must be deleted rather than left to
+  misdescribe the code.
+- The command table's `SPRITE` rows had to grow a `SCREEN 1` line, because capturing
+  a bitmap needs a bitmap to capture from. 460 rows, all of them behaving.
+
 ## [19.1.0] - 2026-10-22
 
 The vocabulary closes: **44 declared commands, 44 drawn, no waivers**. The last two —

@@ -57,8 +57,6 @@ std::string_view to_string(CanvasCommandKind kind) noexcept {
             return "Reset";
         case CanvasCommandKind::SetSvgaMode:
             return "SetSvgaMode";
-        case CanvasCommandKind::ClearSvgaMode:
-            return "ClearSvgaMode";
         case CanvasCommandKind::SetFramebuffer:
             return "SetFramebuffer";
         case CanvasCommandKind::ClearFramebuffer:

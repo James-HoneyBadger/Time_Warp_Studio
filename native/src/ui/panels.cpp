@@ -2038,7 +2038,6 @@ QString TurtleCommandLog::describe(const timewarp::canvas::CanvasCommandView& vi
         case CanvasCommandKind::HideTurtle:
         case CanvasCommandKind::Clear:
         case CanvasCommandKind::Reset:
-        case CanvasCommandKind::ClearSvgaMode:
         case CanvasCommandKind::ClearFramebuffer:
             break;
     }

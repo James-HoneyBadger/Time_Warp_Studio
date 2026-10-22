@@ -506,7 +506,7 @@ constexpr CanvasCommandKind kEveryKind[] = {
     CanvasCommandKind::EndFill,     CanvasCommandKind::FillLastShape,
     CanvasCommandKind::ShowTurtle,  CanvasCommandKind::HideTurtle,
     CanvasCommandKind::Clear,       CanvasCommandKind::Reset,
-    CanvasCommandKind::SetSvgaMode, CanvasCommandKind::ClearSvgaMode,
+    CanvasCommandKind::SetSvgaMode,
     CanvasCommandKind::SetFramebuffer, CanvasCommandKind::ClearFramebuffer,
     CanvasCommandKind::SetPaletteColor, CanvasCommandKind::CyclePalette,
     CanvasCommandKind::Circle,      CanvasCommandKind::DrawPoint,
@@ -582,10 +582,10 @@ void pushSample(TurtleCanvas& canvas, const Sample& sample) {
 // the product cannot keep, and until 18.x nothing noticed.
 void test_the_drawing_vocabulary_is_complete() {
     announce("drawing vocabulary");
-    // 44 declared kinds, every one of them drawn. A mismatch here is the reminder
+    // 43 declared kinds, every one of them drawn. A mismatch here is the reminder
     // to add the new one to `kEveryKind`, which is one line and impossible to
     // forget silently.
-    TW_CHECK_EQ(std::size(kEveryKind), std::size_t{44});
+    TW_CHECK_EQ(std::size(kEveryKind), std::size_t{43});
 
     for (const CanvasCommandKind kind : kEveryKind) {
         const std::unique_ptr<TurtleCanvas> canvas{sizedCanvas()};
@@ -685,6 +685,109 @@ void test_a_pen_style_reaches_the_canvas_from_the_host() {
     // host at all -- the command would have been accepted and the ink unchanged.
     TW_CHECK(plain->renderedDrawing(1.0) != dashed->renderedDrawing(1.0));
     TW_CHECK_EQ(dashed->commandsIgnored(), std::uint64_t{0});
+}
+
+// The three shapes a program could not ask for until a language could emit them:
+// a bezier, two gradients and a named sprite. Each is driven through the real
+// host, so what is asserted is the path a program takes rather than a command a
+// test pushed by hand.
+void test_bezier_and_gradients_reach_the_canvas_from_the_host() {
+    announce("bezier and gradients through the host");
+    const std::unique_ptr<TurtleCanvas> canvas{sizedCanvas()};
+    timewarp::canvas::CanvasCommandQueue queue;
+    timewarp::ui::NativeCanvasHost host{queue};
+
+    host.bezier({timewarp::lang::Point{0.0, 0.0}, timewarp::lang::Point{40.0, 80.0},
+                 timewarp::lang::Point{80.0, 80.0}, timewarp::lang::Point{120.0, 0.0}},
+                timewarp::lang::Rgb{255, 255, 0}, 2.0);
+    host.draw_rect_gradient(0.0, 0.0, 50.0, 50.0, 0.0, timewarp::lang::Rgb{255, 0, 0},
+                            timewarp::lang::Rgb{0, 0, 255});
+    host.draw_ellipse_gradient(10.0, 10.0, 90.0, 60.0, timewarp::lang::Rgb{0, 255, 0},
+                               timewarp::lang::Rgb{0, 0, 0});
+    queue.drain([&canvas](timewarp::canvas::CanvasCommandView view) {
+        canvas->apply(view);
+    });
+
+    TW_CHECK_EQ(canvas->shapeCount(), 3);
+    TW_CHECK_EQ(canvas->commandsIgnored(), std::uint64_t{0});
+    // The bezier is a curve, not the line between its ends: a straight line would
+    // not pass through the control points it bows towards.
+    const QImage drawing = canvas->renderedDrawing(1.0);
+    TW_CHECK(!drawing.isNull());
+}
+
+void test_a_named_sprite_is_defined_placed_moved_and_hidden() {
+    announce("sprite objects through the host");
+    const std::unique_ptr<TurtleCanvas> canvas{sizedCanvas(200, 200)};
+    timewarp::canvas::CanvasCommandQueue queue;
+    timewarp::ui::NativeCanvasHost host{queue};
+    const auto drain = [&queue, &canvas] {
+        queue.drain([&canvas](timewarp::canvas::CanvasCommandView view) {
+            canvas->apply(view);
+        });
+    };
+
+    // A fixed screen, because a sprite is a bitmap and its definition is only
+    // visible where a bitmap is.
+    push(*canvas, timewarp::canvas::make_framebuffer(200.0, 200.0));
+    const std::vector<timewarp::lang::Rgb> pixels(4, timewarp::lang::Rgb{255, 0, 0});
+    host.define_sprite("box", 0, 0, 2, 2, pixels);
+    host.place_sprite("box", 20.0, 30.0);
+    drain();
+
+    TW_CHECK_EQ(canvas->framebufferPixel(20, 30), QColor(255, 0, 0));
+    TW_CHECK_EQ(canvas->framebufferPixel(21, 31), QColor(255, 0, 0));
+    // Outside the 2x2 bitmap the screen is still the colour the screen was
+    // made with, so nothing was written there.
+    const QColor paper = canvas->framebufferPixel(0, 0);
+    TW_CHECK(canvas->framebufferPixel(22, 30) == paper);
+
+    // A move in screen mode redraws the bitmap and puts back what it covered --
+    // the old square is gone, which a display-list-only move could not do.
+    host.move_sprite("box", 10.0, 10.0);
+    drain();
+    TW_CHECK_EQ(canvas->framebufferPixel(30, 40), QColor(255, 0, 0));
+    TW_CHECK_EQ(canvas->framebufferPixel(31, 41), QColor(255, 0, 0));
+    TW_CHECK(canvas->framebufferPixel(20, 30) == paper);
+
+    host.set_sprite_visible("box", false);
+    drain();
+    TW_CHECK(canvas->framebufferPixel(30, 40) == paper);
+    host.set_sprite_visible("box", true);
+    drain();
+    TW_CHECK_EQ(canvas->framebufferPixel(30, 40), QColor(255, 0, 0));
+
+    TW_CHECK_EQ(canvas->commandsIgnored(), std::uint64_t{0});
+}
+
+// A `PUT` larger than one queue chunk used to stack every chunk after the first
+// on top of the first, because the host subtracted the chunk's row offset instead
+// of adding it. A 200x100 block is 20k pixels, so it takes two chunks.
+void test_a_large_pixel_block_is_placed_where_it_was_asked_for() {
+    announce("multi-chunk PUT");
+    const std::unique_ptr<TurtleCanvas> canvas{sizedCanvas(220, 120)};
+    timewarp::canvas::CanvasCommandQueue queue;
+    timewarp::ui::NativeCanvasHost host{queue};
+
+    push(*canvas, timewarp::canvas::make_framebuffer(220.0, 120.0));
+    constexpr int kWidth = 200;
+    constexpr int kHeight = 100;
+    std::vector<timewarp::lang::Rgb> pixels(static_cast<std::size_t>(kWidth) * kHeight,
+                                            timewarp::lang::Rgb{0, 0, 255});
+    host.put_pixels(10, 10, kWidth, kHeight, pixels);
+    queue.drain([&canvas](timewarp::canvas::CanvasCommandView view) {
+        canvas->apply(view);
+    });
+
+    // The first row the block covers, the first row of the second chunk, and the
+    // last row of all three -- the last is the one the old arithmetic lost.
+    TW_CHECK_EQ(canvas->framebufferPixel(10, 10), QColor(0, 0, 255));
+    TW_CHECK_EQ(canvas->framebufferPixel(10, 10 + 81), QColor(0, 0, 255));
+    TW_CHECK_EQ(canvas->framebufferPixel(10, 10 + kHeight - 1), QColor(0, 0, 255));
+    // And the row below the block is still the screen's own colour, so nothing
+    // was written twice.
+    const QColor paper = canvas->framebufferPixel(0, 0);
+    TW_CHECK(canvas->framebufferPixel(10, 10 + kHeight) == paper);
 }
 
 void test_the_new_kinds_draw_something() {
@@ -790,7 +893,9 @@ void test_the_new_kinds_draw_something() {
         const std::unique_ptr<TurtleCanvas> canvas{sizedCanvas()};
         push(*canvas, timewarp::canvas::make_svga_mode(800.0, 600.0));
         TW_CHECK_EQ(canvas->commandsIgnored(), std::uint64_t{0});
-        push(*canvas, timewarp::canvas::make_clear_svga_mode());
+        // `Reset` is what returns the surface to fitting its ink; the vocabulary
+        // has no second way to say so.
+        push(*canvas, timewarp::canvas::make_command(CanvasCommandKind::Reset));
         TW_CHECK_EQ(canvas->commandsIgnored(), std::uint64_t{0});
     }
 }
@@ -1149,6 +1254,9 @@ int main(int argc, char** argv) {    // Set before QApplication exists, or Qt tr
     test_the_drawing_vocabulary_is_complete();
     test_a_filled_polygon_is_painted_in_its_own_colour();
     test_a_pen_style_reaches_the_canvas_from_the_host();
+    test_bezier_and_gradients_reach_the_canvas_from_the_host();
+    test_a_named_sprite_is_defined_placed_moved_and_hidden();
+    test_a_large_pixel_block_is_placed_where_it_was_asked_for();
     test_the_new_kinds_draw_something();
     test_zoom_is_clamped_and_fit_recentres();
     test_content_bounds_include_every_drawn_axis();

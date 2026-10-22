@@ -105,6 +105,17 @@ public:
     void draw_polygon(const std::vector<timewarp::lang::Point>& points,
                       timewarp::lang::Rgb stroke, timewarp::lang::Rgb fill,
                       double width, bool filled) override;
+    void bezier(const std::vector<timewarp::lang::Point>& points,
+                timewarp::lang::Rgb stroke, double width) override;
+    void draw_rect_gradient(double x0, double y0, double x1, double y1, double angle,
+                            timewarp::lang::Rgb from, timewarp::lang::Rgb to) override;
+    void draw_ellipse_gradient(double x0, double y0, double x1, double y1,
+                               timewarp::lang::Rgb from, timewarp::lang::Rgb to) override;
+    void define_sprite(const char* name, int hotspot_x, int hotspot_y, int width,
+                       int height, const std::vector<timewarp::lang::Rgb>& pixels) override;
+    void place_sprite(const char* name, double x, double y) override;
+    void move_sprite(const char* name, double dx, double dy) override;
+    void set_sprite_visible(const char* name, bool visible) override;
     void put_pixels(int x, int y, int width, int height,
                     const std::vector<timewarp::lang::Rgb>& pixels) override;
     [[nodiscard]] timewarp::lang::Rgb pen_colour() const override;
@@ -139,6 +150,12 @@ private:
     void submit_text(timewarp::canvas::CanvasCommand command, std::string_view text);
     void submit_points(timewarp::canvas::CanvasCommand command,
                        const std::vector<double>& points);
+    /// A command that carries *both* a name and a bitmap: a sprite definition is
+    /// the one kind that does, because a name is variable-length text and the
+    /// pixels are a point list.
+    void submit_text_and_points(timewarp::canvas::CanvasCommand command,
+                                std::string_view text,
+                                const std::vector<double>& points);
     /// Puts the canvas's own turtle back where the 3-D pose projects to, after
     /// a 3-D excursion has left it somewhere the 2-D commands cannot describe.
     void sync_canvas_pose();

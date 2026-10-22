@@ -534,7 +534,11 @@ void TurtleCanvas::apply(const timewarp::canvas::CanvasCommandView& view) {
                 if (shape.kind != CanvasCommandKind::PlaceSprite || shape.text != name) {
                     continue;
                 }
-                shape.at += QPointF{command.x, -command.y};
+                // A sprite is a bitmap, so its coordinates are the raster's: y
+                // grows downwards and the delta is added as given, which is also
+                // what the framebuffer path does. Negating it here moved the log
+                // the opposite way from the picture.
+                shape.at += QPointF{command.x, command.y};
                 shape.rect.moveTopLeft(shape.at);
                 growBounds(shape.rect);
                 break;
@@ -579,16 +583,12 @@ void TurtleCanvas::apply(const timewarp::canvas::CanvasCommandView& view) {
                 recomputeFit();
             }
             break;
-        case CanvasCommandKind::ClearSvgaMode:
-            svga_ = false;
-            recomputeFit();
-            break;
 
         default:
-            // Counted, not silently dropped. What is left is the 3-D camera
-            // (`Pitch`/`Roll`), which is workstream W19.2 and listed in
-            // `kNotDrawn` in `turtle_canvas_tests` with this reason. Everything
-            // else in the vocabulary draws.
+            // Counted, never silently dropped. Nothing reaches here: every kind in
+            // the vocabulary has a case above, which `turtle_canvas_tests` walks to
+            // prove. The counter stays because the next kind added without a case
+            // must be visible rather than invisible.
             ++ignored_;
             return;
     }
@@ -861,6 +861,7 @@ void TurtleCanvas::reset() {
     zoom_ = 1.0;
     pan_pixels_ = QPointF{0.0, 0.0};
     framebuffer_ = QImage{};
+    placements_.clear();
     raster_position_ = QPointF{0.0, 0.0};
     recomputeFit();
     emit turtleStateChanged();
@@ -1124,6 +1125,7 @@ void TurtleCanvas::clearFramebuffer() {
         return;
     }
     framebuffer_ = QImage{};
+    placements_.clear();
     emit framebufferChanged();
     update();
 }
@@ -1144,6 +1146,35 @@ void TurtleCanvas::rasterLine(const QPointF& from, const QPointF& to) {
     pen.setCapStyle(Qt::RoundCap);
     painter.setPen(pen);
     painter.drawLine(from, to);
+}
+
+void TurtleCanvas::stampBitmap(BitmapPlacement& placement) {
+    const auto found = sprites_.constFind(placement.name);
+    if (framebuffer_.isNull() || found == sprites_.constEnd() ||
+        found->image.isNull()) {
+        placement.visible = false;
+        return;
+    }
+    const QRect area{QPoint{qRound(placement.at.x()), qRound(placement.at.y())},
+                     found->image.size()};
+    // Clipped, so a sprite half off the screen puts back only the part that was
+    // ever covered.
+    const QRect clipped = area.intersected(framebuffer_.rect());
+    placement.under = clipped.isEmpty() ? QImage{} : framebuffer_.copy(clipped);
+    QPainter painter{&framebuffer_};
+    painter.drawImage(placement.at, found->image);
+    placement.visible = true;
+}
+
+void TurtleCanvas::eraseBitmap(BitmapPlacement& placement) {
+    if (!placement.visible || placement.under.isNull()) {
+        placement.visible = false;
+        return;
+    }
+    QPainter painter{&framebuffer_};
+    painter.drawImage(QPoint{qRound(placement.at.x()), qRound(placement.at.y())},
+                      placement.under);
+    placement.visible = false;
 }
 
 void TurtleCanvas::rasterize(const timewarp::canvas::CanvasCommandView& view) {
@@ -1315,10 +1346,49 @@ void TurtleCanvas::rasterize(const timewarp::canvas::CanvasCommandView& view) {
             if (found == sprites_.constEnd()) {
                 break;
             }
-            QPainter painter{&framebuffer_};
-            painter.drawImage(QPointF{command.x - found->hotspot.x(),
-                                      command.y - found->hotspot.y()},
-                              found->image);
+            BitmapPlacement placement;
+            placement.name = name;
+            placement.at = QPointF{command.x - found->hotspot.x(),
+                                   command.y - found->hotspot.y()};
+            placements_.push_back(placement);
+            stampBitmap(placements_.back());
+            break;
+        }
+        case CanvasCommandKind::MoveSprite: {
+            const QString name = QString::fromUtf8(view.text.data(),
+                                                   static_cast<qsizetype>(view.text.size()));
+            for (std::size_t index = placements_.size(); index-- > 0;) {
+                BitmapPlacement& placement = placements_[index];
+                if (placement.name != name) {
+                    continue;
+                }
+                // Raster coordinates, so y grows downwards and the delta is added
+                // as given -- the display list's world y grows upwards, which is
+                // why the two paths do not share this arithmetic.
+                eraseBitmap(placement);
+                placement.at += QPointF{command.x, command.y};
+                stampBitmap(placement);
+                break;
+            }
+            break;
+        }
+        case CanvasCommandKind::ShowSprite:
+        case CanvasCommandKind::HideSprite: {
+            const bool visible = command.kind == CanvasCommandKind::ShowSprite;
+            const QString name = QString::fromUtf8(view.text.data(),
+                                                   static_cast<qsizetype>(view.text.size()));
+            for (std::size_t index = placements_.size(); index-- > 0;) {
+                BitmapPlacement& placement = placements_[index];
+                if (placement.name != name) {
+                    continue;
+                }
+                if (visible) {
+                    stampBitmap(placement);
+                } else {
+                    eraseBitmap(placement);
+                }
+                break;
+            }
             break;
         }
         case CanvasCommandKind::PutPixels: {
