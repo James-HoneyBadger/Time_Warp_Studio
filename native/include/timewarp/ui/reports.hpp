@@ -14,6 +14,7 @@
 #pragma once
 
 #include <QList>
+#include <QMetaType>
 #include <QString>
 #include <QStringList>
 
@@ -110,3 +111,7 @@ struct TelemetryRow {
 };
 
 }  // namespace timewarp::ui
+
+// A mark sheet crosses a thread boundary, so the type has to be knowable to
+// `QMetaType` for the queued connection that carries it.
+Q_DECLARE_METATYPE(timewarp::ui::ClassroomMark)

@@ -513,7 +513,14 @@ QString Classroom::studentDirectory(const QString& id) const {
             continue;
         }
         if (!student.workDir.isEmpty()) {
-            return QDir::cleanPath(student.workDir);
+            // `~` expands as it does in the reference: a roster written by hand
+            // may say `~/shared/ada`, and a literal `~` directory would silently
+            // put a learner's work somewhere nobody looks.
+            QString path = student.workDir;
+            if (path == QStringLiteral("~") || path.startsWith(QStringLiteral("~/"))) {
+                path = QDir::homePath() + path.mid(1);
+            }
+            return QDir::cleanPath(path);
         }
         break;
     }
@@ -593,9 +600,9 @@ QStringList Classroom::distribute(const QStringList& lessonIds, QString* error) 
     return written;
 }
 
-QList<Submission> Classroom::collect(const QStringList& lessonIds) {
+QList<MarkJob> Classroom::markingJobs(const QStringList& lessonIds) const {
     const QStringList ids = lessonIds.isEmpty() ? assignment_.lessonIds : lessonIds;
-    QList<Submission> found;
+    QList<MarkJob> jobs;
     for (const Student& student : students_) {
         const QString directory = studentDirectory(student.id);
         for (const QString& id : ids) {
@@ -612,25 +619,72 @@ QList<Submission> Classroom::collect(const QStringList& lessonIds) {
                 if (!file.open(QIODevice::ReadOnly)) {
                     continue;
                 }
-                // Read once: a learner still editing must not be able to change a
-                // mark underneath the teacher reading it.
-                const std::string source = file.readAll().toStdString();
-                file.close();
-                const VerifyResult result = verify_checkpoint(
-                    lesson->checkpoints[static_cast<std::size_t>(index)], lesson->language,
-                    source);
-                Submission submission;
-                submission.studentId = student.id;
-                submission.lessonId = QString::fromStdString(lesson->id);
-                submission.checkpoint = index;
-                submission.path = path;
-                submission.passed = result.passed;
-                submission.message = QString::fromStdString(result.message);
-                found.append(submission);
+                MarkJob job;
+                job.studentId = student.id;
+                job.lessonId = QString::fromStdString(lesson->id);
+                job.lessonTitle = QString::fromStdString(lesson->title);
+                job.checkpoint = index;
+                job.checkpoints = static_cast<int>(lesson->checkpoints.size());
+                job.path = path;
+                // Read once, here: a learner still editing must not be able to
+                // change a mark underneath the teacher reading it.
+                job.source = QString::fromUtf8(file.readAll());
+                job.expectation = lesson->checkpoints[static_cast<std::size_t>(index)];
+                job.language = lesson->language;
+                jobs.append(job);
             }
         }
     }
+    return jobs;
+}
+
+QList<Submission> Classroom::markAll(const QList<MarkJob>& jobs) {
+    QList<Submission> found;
+    for (const MarkJob& job : jobs) {
+        const VerifyResult result = verify_checkpoint(
+            job.expectation, job.language, job.source.toStdString());
+        Submission submission;
+        submission.studentId = job.studentId;
+        submission.lessonId = job.lessonId;
+        submission.checkpoint = job.checkpoint;
+        submission.path = job.path;
+        submission.passed = result.passed;
+        submission.message = QString::fromStdString(result.message);
+        found.append(submission);
+    }
     return found;
+}
+
+QList<MarkRow> Classroom::marksFor(const QList<MarkJob>& jobs,
+                                   const QList<Submission>& submissions) {
+    // The job list is the authority on how many checkpoints a lesson has; the
+    // submissions are the ones that were handed in.
+    std::map<std::pair<QString, QString>, MarkRow> rows;
+    for (const MarkJob& job : jobs) {
+        MarkRow& row = rows[{job.studentId, job.lessonId}];
+        row.student = job.studentId;
+        row.lesson = job.lessonId;
+        row.title = job.lessonTitle;
+        row.checkpoints = job.checkpoints;
+        row.handedIn = 0;
+        row.passed = 0;
+        row.complete = false;
+    }
+    for (const Submission& submission : submissions) {
+        MarkRow& row = rows[{submission.studentId, submission.lessonId}];
+        ++row.handedIn;
+        row.passed += submission.passed ? 1 : 0;
+    }
+    QList<MarkRow> result;
+    for (auto& [key, row] : rows) {
+        row.complete = row.handedIn == row.checkpoints && row.passed == row.checkpoints;
+        result.append(row);
+    }
+    return result;
+}
+
+QList<Submission> Classroom::collect(const QStringList& lessonIds) {
+    return markAll(markingJobs(lessonIds));
 }
 
 QList<MarkRow> Classroom::lessonMarks(const QList<Submission>& submissions) const {

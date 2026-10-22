@@ -915,6 +915,7 @@ if(TIME_WARP_QT_FOUND)
             src/ui/benchmark.cpp
             src/ui/autosave.cpp
             src/ui/breakpoints.cpp
+            src/ui/classroom_marker.cpp
             src/ui/chip8_emulator.cpp
             src/ui/chip8_library.cpp
             src/ui/chip8_screen.cpp
@@ -961,6 +962,7 @@ if(TIME_WARP_QT_FOUND)
             include/timewarp/ui/code_editor.hpp
             include/timewarp/ui/chip8_emulator.hpp
             include/timewarp/ui/chip8_library.hpp
+            include/timewarp/ui/classroom_marker.hpp
             include/timewarp/ui/chip8_screen.hpp
             include/timewarp/ui/chip8_window.hpp
             include/timewarp/ui/command_palette.hpp

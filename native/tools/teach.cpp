@@ -3,7 +3,10 @@
 // The teacher's command.
 //
 //   time_warp_teach validate [curriculum.json]
-//   time_warp_teach list
+//   time_warp_teach list [curriculum.json]
+//   time_warp_teach roster
+//   time_warp_teach bundle <out.zip>
+//   time_warp_teach unbundle <in.zip> [--replace]
 //
 // `validate` is the pass that keeps the curriculum maintainable: every worked
 // answer must pass its own checkpoint and every starter must fail it. Without
@@ -11,10 +14,14 @@
 // because data is not exercised by anything unless something exercises it
 // deliberately.
 //
-// It is the C++ counterpart of `native/tools/teach.py validate`, and the two are
-// the same verdict because they are the same function's answer: this one calls
-// `timewarp::lessons`, which is what the IDE's panel calls too. The Python one is
-// kept until the reference engine is deleted.
+// It is the C++ counterpart of `native/tools/teach.py`, and the two are the same
+// verdict because they are the same function's answer: this one calls
+// `timewarp::lessons`, which is what the IDE's panels call too. `bundle` and
+// `unbundle` write and read the same zips the reference does, so a class moves
+// between them.
+//
+// `roster` prints the class and each learner's place in the curriculum; it marks
+// nothing, because listing a class must not run thirty programs.
 
 #include <cstdio>
 #include <string>

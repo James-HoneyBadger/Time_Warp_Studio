@@ -69,6 +69,7 @@
 #include "timewarp/ui/breakpoints.hpp"
 #include "timewarp/ui/chip8_window.hpp"
 #include "timewarp/ui/code_editor.hpp"
+#include "timewarp/ui/classroom_marker.hpp"
 #include "timewarp/ui/command_palette.hpp"
 #include "timewarp/ui/export.hpp"
 #include "timewarp/ui/find_bar.hpp"
@@ -4815,6 +4816,11 @@ MainWindow::~MainWindow() {
     // canvas queue and to its own host, so letting Qt tear those down first is a
     // write into freed memory from a thread that is still drawing.
     stopEngines();
+    // And the marking thread owns copies rather than the class, but a `QThread`
+    // destroyed while running is fatal either way.
+    if (classroom_marker_ != nullptr) {
+        classroom_marker_->wait();
+    }
 }
 
 timewarp::canvas::CanvasCommandQueue& MainWindow::canvasQueue() noexcept {
@@ -5766,23 +5772,27 @@ void MainWindow::requestClassroom() {
                                 classroom_->assignment().note);
 
     // Marking runs each handed-in file through the same verifier a learner's
-    // check uses, so the mark sheet and the panel cannot disagree.
-    QList<timewarp::ui::ClassroomMark> rows;
+    // check uses -- on a worker thread, because that runs the learner's program
+    // and a runaway one takes its whole budget. The rows that are already on
+    // screen stay there until the new ones arrive: blanking the class while a
+    // mark runs would show "nobody" as if that were the truth.
     if (!students.isEmpty()) {
-        for (const timewarp::lessons::MarkRow& mark :
-             classroom_->lessonMarks(classroom_->collect({}))) {
-            timewarp::ui::ClassroomMark row;
-            row.student = mark.student;
-            row.lesson = mark.lesson;
-            row.title = mark.title;
-            row.handedIn = mark.handedIn;
-            row.checkpoints = mark.checkpoints;
-            row.passed = mark.passed;
-            row.complete = mark.complete;
-            rows.append(row);
+        if (classroom_marker_ == nullptr) {
+            classroom_marker_ = new ClassroomMarker{this};
+            connect(classroom_marker_, &ClassroomMarker::marked, this,
+                    [this](const QList<timewarp::ui::ClassroomMark>& rows) {
+                        if (classroom_panel_ != nullptr) {
+                            classroom_panel_->setMarks(rows);
+                        }
+                    });
         }
+        if (!classroom_marker_->begin(classroom_->markingJobs({}))) {
+            // One is already running, and its answer is newer than this request;
+            // the rest of this pass still has work to do below.
+        }
+    } else {
+        classroom_panel_->setMarks({});
     }
-    classroom_panel_->setMarks(rows);
 
     // Presentation mode may be entered before this page is ever shown, and the
     // class's own size is what it has to use.

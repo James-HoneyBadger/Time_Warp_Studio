@@ -78,6 +78,25 @@ struct MarkRow {
     bool complete = false;
 };
 
+/// One file to mark, with everything the verifier needs.
+///
+/// The point of this type is that marking can run off the GUI thread without
+/// touching the class: a learner's file is executed, and a runaway one takes its
+/// whole budget, so marking a class on the GUI thread freezes the window.
+struct MarkJob {
+    QString studentId;
+    QString lessonId;
+    QString lessonTitle;
+    int checkpoint = 0;
+    int checkpoints = 0;
+    QString path;
+    /// Read on the caller's thread: the file may change while a mark is running,
+    /// and a mark must be taken from the bytes that were handed in.
+    QString source;
+    Checkpoint expectation;
+    lang::Language language = lang::Language::Basic;
+};
+
 /// One line per learner: how far through the curriculum they are.
 struct ClassProgressRow {
     QString id;
@@ -145,7 +164,14 @@ public:
     /// Finds every handed-out file and marks it against its checkpoint. A
     /// checkpoint with no file produces no submission, so "not handed in" and
     /// "handed in and wrong" stay different things.
+    ///
+    /// `collect` is `markAll(markingJobs(...))`; the two halves exist separately
+    /// so the expensive half can run on a worker thread with data it owns.
     [[nodiscard]] QList<Submission> collect(const QStringList& lessonIds = {});
+    [[nodiscard]] QList<MarkJob> markingJobs(const QStringList& lessonIds = {}) const;
+    [[nodiscard]] static QList<Submission> markAll(const QList<MarkJob>& jobs);
+    [[nodiscard]] static QList<MarkRow> marksFor(const QList<MarkJob>& jobs,
+                                                 const QList<Submission>& submissions);
 
     /// Rolls collected files up into one line per learner per lesson.
     [[nodiscard]] QList<MarkRow> lessonMarks(const QList<Submission>& submissions) const;

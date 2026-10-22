@@ -90,6 +90,10 @@ class CanvasBridge;
 }
 }  // namespace timewarp::canvas
 
+namespace timewarp::ui {
+class ClassroomMarker;
+}  // namespace timewarp::ui
+
 namespace timewarp::sql {
 class Database;
 }
@@ -1045,6 +1049,9 @@ private:
     /// for the same reason the curriculum is: a learner who never opens it should
     /// not pay for it.
     std::unique_ptr<timewarp::lessons::Classroom> classroom_;
+    /// Marks the class on its own thread, because a mark runs a learner's program
+    /// and a runaway handout takes its whole budget.
+    ClassroomMarker* classroom_marker_ = nullptr;
 
     /// Appends a line to the console, scrolling only if the user was already at
     /// the bottom.

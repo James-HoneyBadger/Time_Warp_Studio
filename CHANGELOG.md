@@ -82,6 +82,19 @@ read a pixel back, capture a sprite, and sound two voices at once.
 - **`time_warp_teach` and `time_warp_learn` are installed** beside the IDE, so the
   claim that the panel and the tools give one answer holds outside a checkout.
 
+### Fixed
+
+- **Marking a class no longer freezes the window.** The Classroom page marks
+  every handed-in file, and a mark runs the learner's program: a runaway handout
+  takes its whole ten-second budget, and doing that on the GUI thread stopped the
+  window for one file and for as long as the class had files like it. Marking runs
+  on `ClassroomMarker`, a thread of its own, over jobs that carry the source and
+  the checkpoint so it never reaches back into the class. `classroom_tests` asserts
+  the split agrees with the one-call form.
+- **A `work_dir` written with `~` expands to the home directory**, as it does in
+  the reference. A literal `~` directory would have put a learner's work somewhere
+  nobody looks.
+
 ### Notes and limits
 
 - `native/bridge/` remains in the checkout as development tooling: it is the

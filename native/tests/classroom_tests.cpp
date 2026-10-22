@@ -197,6 +197,67 @@ void test_a_bundle_carries_the_class_to_another_machine() {
     TW_CHECK_EQ(QString::fromUtf8(kept.readAll()), QStringLiteral("local"));
 }
 
+/// Marking is split into "find the files" and "run them", because the second half
+/// runs a learner's program and happens on a worker thread. The halves have to
+/// agree with the one-call version, or the thread and the command mark different
+/// classes.
+void test_marking_jobs_and_marks_agree_with_collect() {
+    announce("marking jobs");
+    tw::test::TempDir directory;
+    if (!directory.valid()) {
+        return;
+    }
+    Classroom room{directory.path()};
+    QString error;
+    TW_CHECK(room.load(&error));
+    TW_CHECK(room.addStudent("Ada", {}, {}, &error));
+    TW_CHECK(room.assign({QStringLiteral("basic_first_steps")}, {}, &error));
+    const QStringList written = room.distribute({}, &error);
+    TW_CHECK(!written.isEmpty());
+    if (written.isEmpty()) {
+        return;
+    }
+    // One answer, so the sheet has a pass and a fail in it.
+    QFile solved{written.front()};
+    TW_CHECK(solved.open(QIODevice::WriteOnly | QIODevice::Truncate));
+    solved.write(QByteArray::fromStdString(
+        lesson_of(room, "basic_first_steps")->checkpoints[0].solution));
+    solved.close();
+
+    const QList<timewarp::lessons::MarkJob> jobs = room.markingJobs({});
+    TW_CHECK_EQ(jobs.size(), written.size());
+    const QList<timewarp::lessons::Submission> split =
+        Classroom::markAll(jobs);
+    const QList<timewarp::lessons::Submission> direct = room.collect({});
+    TW_CHECK_EQ(split.size(), direct.size());
+    TW_CHECK_EQ(Classroom::marksFor(jobs, split).size(),
+                room.lessonMarks(direct).size());
+    if (!split.isEmpty() && !direct.isEmpty()) {
+        TW_CHECK_EQ(split.front().passed, direct.front().passed);
+        const auto rows = Classroom::marksFor(jobs, split);
+        if (!rows.isEmpty()) {
+            TW_CHECK_EQ(rows.front().handedIn, static_cast<int>(jobs.size()));
+            TW_CHECK_EQ(rows.front().passed, 1);
+        }
+    }
+}
+
+/// A `work_dir` may be written with a `~`, and it means the home directory.
+void test_a_work_directory_expands_a_tilde() {
+    announce("work directory");
+    tw::test::TempDir directory;
+    if (!directory.valid()) {
+        return;
+    }
+    Classroom room{directory.path()};
+    QString error;
+    TW_CHECK(room.load(&error));
+    TW_CHECK(room.addStudent("Ada", {}, QStringLiteral("~/tw-classroom-probe"), &error));
+    const QString found = room.studentDirectory(QStringLiteral("ada"));
+    TW_CHECK(!found.startsWith(QStringLiteral("~")));
+    TW_CHECK(found.startsWith(QDir::homePath()));
+}
+
 void test_presentation_size_is_clamped() {
     announce("presentation");
     tw::test::TempDir directory;
@@ -226,6 +287,8 @@ int main(int argc, char** argv) {
     test_handing_out_writes_starters_and_never_overwrites();
     test_collect_marks_handed_in_work_and_not_the_absence_of_it();
     test_a_bundle_carries_the_class_to_another_machine();
+    test_marking_jobs_and_marks_agree_with_collect();
+    test_a_work_directory_expands_a_tilde();
     test_presentation_size_is_clamped();
     return tw::test::summary("classroom");
 }
