@@ -7,6 +7,7 @@
 #include "timewarp/lang/executor.hpp"
 #include "timewarp/ui/sound_player.hpp"
 
+#include <algorithm>
 #include <chrono>
 #include <utility>
 
@@ -323,12 +324,53 @@ void NativeCanvasHost::draw_polygon(const std::vector<Point>& points, Rgb stroke
     submit_points(command, flat);
 }
 
+void NativeCanvasHost::put_pixels(int x, int y, int width, int height,
+                                  const std::vector<Rgb>& pixels) {
+    if (width <= 0 || height <= 0 ||
+        pixels.size() < static_cast<std::size_t>(width) * static_cast<std::size_t>(height)) {
+        return;
+    }
+    // One row of an 800-wide screen is 6.4 KB of doubles, but a full-screen
+    // block is 3.8 MB and would never fit the queue's 256 KiB ring. Chunks of
+    // 16k pixels keep every command well inside it, which is what makes a large
+    // `PUT` visible rather than silently dropped as too large.
+    constexpr std::size_t kPixelsPerCommand = 16u * 1024u;
+    const auto columns = static_cast<std::size_t>(width);
+    const auto rows_per_chunk =
+        std::max<std::size_t>(1, kPixelsPerCommand / columns);
+    std::vector<double> chunk;
+    for (int first_row = 0; first_row < height;
+         first_row += static_cast<int>(rows_per_chunk)) {
+        const int rows = std::min(static_cast<int>(rows_per_chunk), height - first_row);
+        chunk.clear();
+        chunk.reserve(columns * static_cast<std::size_t>(rows));
+        for (int row = first_row; row < first_row + rows; ++row) {
+            const auto base = static_cast<std::size_t>(row) * columns;
+            for (std::size_t column = 0; column < columns; ++column) {
+                chunk.push_back(static_cast<double>(colour_bits(pixels[base + column])));
+            }
+        }
+        // The canvas counts y up, so the chunk's top raster row is its highest
+        // world row and the rows below it are lower.
+        submit_points(
+            timewarp::canvas::make_put_pixels(x, y - first_row, width, rows), chunk);
+    }
+}
+
 void NativeCanvasHost::show_turtle() { submit(make_command(CanvasCommandKind::ShowTurtle)); }
 
 void NativeCanvasHost::hide_turtle() { submit(make_command(CanvasCommandKind::HideTurtle)); }
 
 void NativeCanvasHost::set_svga_mode(int width, int height) {
     submit(make_svga_mode(width, height));
+}
+
+void NativeCanvasHost::set_framebuffer(int width, int height) {
+    submit(timewarp::canvas::make_framebuffer(width, height));
+}
+
+void NativeCanvasHost::clear_framebuffer() {
+    submit(timewarp::canvas::make_clear_framebuffer());
 }
 
 void NativeCanvasHost::set_palette_color(int index, Rgb colour) {

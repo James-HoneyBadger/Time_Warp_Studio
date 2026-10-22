@@ -1467,21 +1467,28 @@ def _basic_for(interpreter: "Interpreter", args: str) -> str:
 
 
 def _basic_next(interpreter: "Interpreter", _args: str) -> str:
-    if not interpreter.for_stack:
-        return "❌ NEXT without FOR\n"
-    context = interpreter.for_stack[-1]
-    current_val = interpreter.get_numeric_value(context.var_name) or 0
-    new_val = current_val + context.step
-    interpreter.set_typed_variable(context.var_name, new_val)
-    if context.step > 0:
-        should_continue = new_val <= context.end_value
-    else:
-        should_continue = new_val >= context.end_value
-    if should_continue:
-        interpreter.current_line = context.for_line + 1
-    else:
-        interpreter.for_stack.pop()
-    return ""
+    # An empty loop body is legal, and its `NEXT` sits at `for_line + 1` -- the
+    # line already executing. The run loop detects a jump by comparing the
+    # program counter before and after a statement, so a jump back to the same
+    # line is invisible; count the loop here instead of leaving its frame for
+    # the enclosing loop's NEXT to consume.
+    while True:
+        if not interpreter.for_stack:
+            return "❌ NEXT without FOR\n"
+        context = interpreter.for_stack[-1]
+        current_val = interpreter.get_numeric_value(context.var_name) or 0
+        new_val = current_val + context.step
+        interpreter.set_typed_variable(context.var_name, new_val)
+        if context.step > 0:
+            should_continue = new_val <= context.end_value
+        else:
+            should_continue = new_val >= context.end_value
+        if not should_continue:
+            interpreter.for_stack.pop()
+            return ""
+        if context.for_line + 1 != interpreter.current_line:
+            interpreter.current_line = context.for_line + 1
+            return ""
 
 
 def _basic_gosub(interpreter: "Interpreter", args: str) -> str:

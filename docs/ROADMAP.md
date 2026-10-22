@@ -25,13 +25,13 @@ derived rather than remembered.
 | Projects | `.twproject` files, named groups, files and folders added to a project, drag-and-drop grouping, missing-file reporting, recent projects and session restore |
 | REPL | A persistent session per language under the editor; Scheme keeps definitions and echoes values, the line-loop languages and Logo keep bindings, while Smalltalk and CHIP-8 run each entry as a whole program |
 | Console | Streaming output, and interpreter errors in their own tab |
-| Canvas | Live drawing, zoom, pan, grid, auto-fit, turtle marker, scrubber playback, animated GIF recording, raster and SVG export, the pose strip and the command log |
+| Canvas | Live drawing, zoom, pan, grid, auto-fit, turtle marker, scrubber playback, animated GIF recording, raster and SVG export, the pose strip and the command log, and a fixed-coordinate screen mode (`SCREEN`) with sprites, pixel read-back and a game example |
 | Display | 35 themes, high contrast, A+ text sizes (100/125/150%), focus mode, CRT settings, four Monitor presets |
 | Execution | Run (F9) and Stop; one program at a time; unsaved-change prompts |
 | Input | A program can ask for a line and wait for it — `INPUT`, FOCAL's `ASK`, PILOT's `ACCEPT`, REXX's `PULL` — on whichever engine runs it; BASIC's round trip is asserted on the engine, on `NativeRunner`, and through the bridged worker |
 | HB-1 machine | Tools > HB-1 Computer (`Ctrl+Alt+W`): one CRT with a boot intro, a language ROM socket for all ten languages, TEXT/SPLIT/GRAPHICS modes, a program editor, a turtle canvas, and a prompt with BASIC direct mode; CONFIG (`Ctrl+,`) sets the boot ROM and screen, start-up message, phosphor palette, text sizes and CRT glass; each ROM's program, the ROM, the screen mode and the configuration persist; HB DOS 1.0 stores programs on a 512-sector volume with an Apple DOS-style catalogue, lock bits and a two-step INIT. Manuals: [the machines](MACHINES.md), [HB-1](hb1/README.md) |
 | CHIP-8 machine | Tools > CHIP-8 Emulator (`Ctrl+Shift+M`): a live 60 Hz CHIP-8 with a 64×32 screen (128×64 hi-res), keypad, Run/Pause/Step/Reset, 1–2000 opcodes per frame, register/memory/listing inspector, sound, and a ROM library the user points at a folder. It assembles listings and loads binary ROMs; the editor's CHIP-8 Run is the whole-program path. Manuals: [machine](chip8/README.md), [assembler](chip8/assembly.md), [instruction set](chip8/instruction-set.md) |
-| Languages | 10 languages, 60 verified example programs |
+| Languages | 10 languages, 61 verified example programs |
 | Native engines | Expression evaluator (`timewarp_expr`) and Scheme (`timewarp_scheme`) |
 | Bridged engines | None — every language runs in process. `native/bridge/` remains as the reference the parity gates and the lesson check use |
 | Native executors | All ten — BASIC, FOCAL, PILOT, COMAL, APL and REXX line-by-line; CHIP-8, Logo, Smalltalk and Scheme whole-program |
@@ -42,7 +42,7 @@ derived rather than remembered.
 | Database | A SQLite-backed Database tab, the shared `SQL` statement in nine languages, scripts, tables and schema; compiled programs link SQLite |
 | Automation | JSON-RPC over stdin/stdout (`language.run`, `repl.*`, `debug.*`, `sql.*`, `project.*`, `watch.evaluate`) and the `twc` terminal compiler |
 | Packaging | `make install`; tagged releases build a Windows installer and portable ZIP (Qt 6), a second Windows installer for Windows 7 (Qt 5.15), a universal macOS disk image, `.deb`, `.rpm`, AppImage, tarball and container artifacts |
-| Quality gates | 21 CTest suites in 4 build configurations and on four platforms (Linux, Windows, Windows with Qt 5.15, macOS), 3 parity gates, 575 engine tests, 447 command rows, 474 parity programs |
+| Quality gates | 21 CTest suites in 4 build configurations and on four platforms (Linux, Windows, Windows with Qt 5.15, macOS), 3 parity gates, 575 engine tests, 448 command rows, 470 parity programs |
 
 ---
 
@@ -147,6 +147,14 @@ unit test)
 **Nothing is open in Logo.** The last gap — a procedure's `OUTPUT` value never reaching
 its caller — is fixed in both the reference and `timewarp_lang`, with a row and unit
 tests; `PRINT DOUBLE 21` now prints 42.
+
+**Found since, by building the game example:** a `FOR` loop whose body is empty
+ended its *enclosing* loop after one iteration, silently. `NEXT` in an empty body
+returns to the line it is already on, and the run loop detects a jump by comparing
+the program counter before and after a statement, so the jump was invisible and the
+inner frame stayed on the stack for the outer `NEXT` to consume. Fixed in both
+engines, with a command row, a case in each engine's tests, and a note here — it is
+exactly the class of defect this section exists to keep fixed.
 
 ---
 
@@ -284,12 +292,75 @@ and the command table exercises them. What is now true, and what is still limite
   two. The reference engine never implemented any of them, so they are documented
   in `docs/LANGUAGE_GUIDE.md` and **not** in `command_table.py` — the parity gates
   cannot compare a command one side does not have.
-- **Graphics for games** is turtle-and-primitive based: `SCREEN`, `PSET`,
-  `LINE`, `CIRCLE`, `PAINT`, `DRAW`, `SPRITE` (position tracking), text at a
-  point, palette indices, plus `INKEY$` and `WAIT` for the loop. **Not built**: a
-  pixel framebuffer with `GET`/`PUT` sprite capture and a fixed screen
-  coordinate system (the canvas is a display list with fit-to-content), and a
-  sound-free `STICK`/`STRIG` gamepad backend on this platform.
+- **Graphics for games** is a screen, not a fitted drawing: `SCREEN` (text and
+  the numbered modes 1, 2, 7, 9, 12 and 13), `PSET`, `LINE`, `CIRCLE`, `PAINT`,
+  `POINT` read-back, `GET`/`PUT` sprite capture, `DRAW`, `SPRITE` (position
+  tracking), text at a point, palette indices, `INKEY$`, `JOYINIT`/`STICK`/`STRIG`
+  and `WAIT` for the loop. A program that names a screen gets a framebuffer painted
+  at fixed coordinates; anything else keeps the fit-to-content display list. The
+  numbered modes, sprite capture, `POINT` and the gamepad are native extensions the
+  reference never had, so `lang_tests` and the shipped example are their gate
+  rather than the parity corpus.
+
+---
+
+## Towards 17.0
+
+A major version here is a claim, not a number. 16.0 claimed that all ten languages
+run in C++. 17.0 claims two things, and this section is what stands between the
+tree and them.
+
+**The product has no Python in it.** The bridge has one runtime job left — checking
+a learner's program — and the parity gates had one dependency left: the engine
+itself. The first is a port: `lesson_system.py`, `classroom_mode.py` and
+`lessons.json` become `timewarp_lessons`, running a program through `executor_for`
+into the same `CanvasCommandQueue` the IDE drains, so the panel's verdict and
+`teach.py`'s stay one function's answer. The second is done: the reference's
+answers to 471 programs are frozen in
+`native/tests/golden/lang_corpus.json.gz`, program text included, and
+`make golden-check` compares the C++ engines with them without importing Python.
+`make golden-record` refreshes that file while the reference still exists; after
+the deletion the corpus *is* the record, and editing an example without
+re-recording is reported as a corpus problem rather than as a guess. See
+[README_TESTING.md](README_TESTING.md).
+
+**A program can draw a game.** All of it is in the tree now. `SCREEN 0` and the
+numbered modes 1, 2, 7, 9, 12 and 13 size a real pixel surface
+(`timewarp::lang::ScreenMode` carries them as data), `POINT` reads a pixel back as
+`&H00RRGGBB`, `GET`/`PUT` capture a sprite into an array and restore it, and
+`JOYINIT`/`STICK`/`STRIG` are answered by `/dev/input/js*` instead of by the
+constant 0 the reference had no backend to replace. A program that names a screen
+now gets a framebuffer to look at: the canvas paints it at whole-number scale at
+fixed coordinates, stops fitting itself to the ink, and exports it at its own size;
+the display list is still built, so the Turtle Log, the scrubber and the vector
+export keep working. `Examples/basic/star_patrol.bas` is a game built on all of it,
+and `lang_tests` runs it and asserts that it asked for a screen, placed a sprite and
+read a pixel.
+
+What the screen does not do yet is scroll under a zoom — the widget scales to fit
+and centres — and the mode is named by the program rather than chosen from a menu.
+
+The reference implemented none of it, so this is the first feature the parity gates
+cannot compare: its own suite (`lang_tests`) and its own example are what hold it
+up, and the gamepad rows are skipped by the gate rather than compared — a joystick
+is hardware, and a gate that reported one as a language difference would be
+measuring the wrong machine.
+
+### The ladder
+
+| Release | Claim |
+| --- | --- |
+| 16.5 ✓ | The framebuffer and fixed-coordinate modes, `GET`/`PUT`, gamepad input |
+| 16.6 | Audio that mixes — several voices in process, not one `paplay` per note |
+| 17.0-beta | Lesson and classroom checking native, behind a flag, with both paths compared |
+| 17.0 | `native/bridge/` and `python_worker` deleted; `make golden-check` is the parity gate |
+
+Smaller items belong in one of those releases rather than a release of their own:
+`time_warp_player` — a player executable instead of the copy of the IDE
+[`--compile`](#distributing-a-program) writes; a Smalltalk call stack shown as
+frames rather than a Program Counter; Flatpak and an arm64 AppImage; and the
+allow-list and threat model that `SERIAL`/`PARALLEL` have been owed since 16.0 put
+device nodes within a program's reach.
 
 ---
 

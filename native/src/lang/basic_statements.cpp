@@ -10,6 +10,7 @@
 
 #include "basic_internal.hpp"
 
+#include "timewarp/io/gamepad.hpp"
 #include "timewarp/lang/logo.hpp"
 
 #include <algorithm>
@@ -462,9 +463,20 @@ std::string Machine::execute(std::string_view command) {
         return close_files(strip_comment(tail(text, 6)));
     }
     if (starts_with(cmd, "GET ")) {
+        // `GET #1, A` is the file channel; `GET (x,y)-(x,y), A` captures a
+        // sprite off the raster. The `#` is what tells them apart, and it is
+        // the spelling the reference already reserves for a channel.
+        const std::string rest = trim(strip_comment(tail(text, 4)));
+        if (!rest.empty() && rest[0] != '#') {
+            return sprite_get(rest);
+        }
         return get_record(strip_comment(tail(text, 4)));
     }
     if (starts_with(cmd, "PUT ")) {
+        const std::string rest = trim(strip_comment(tail(text, 4)));
+        if (!rest.empty() && rest[0] != '#') {
+            return sprite_put(rest);
+        }
         return put_record(strip_comment(tail(text, 4)));
     }
 
@@ -474,6 +486,7 @@ std::string Machine::execute(std::string_view command) {
     }
     if (cmd == "CLS") {
         turtle_.clear();
+        state_.raster.clear(state_.raster.background());
         return "🎨 Screen cleared\n";
     }
     if (starts_with(cmd, "SCREEN ")) {
@@ -598,6 +611,11 @@ std::string Machine::execute(std::string_view command) {
         return fractal(trim(strip_comment(tail(text, 7))));
     }
     if (is_keyword(cmd, "JOYINIT")) {
+        auto& pad = timewarp::io::Gamepad::instance();
+        if (pad.available()) {
+            state_.joystick_initialised = true;
+            return std::string{"🎮 Gamepad ready ("} + pad.device() + ")\n";
+        }
         return "ℹ️ No gamepad backend available (optional: install pygame or inputs)\n";
     }
 
@@ -1319,21 +1337,32 @@ std::string Machine::for_loop(const std::string& args) {
 }
 
 std::string Machine::next(const std::string& /*args*/) {
-    if (state_.fors.empty()) {
-        return "❌ NEXT without FOR\n";
+    // A loop whose body is empty is legal -- `FOR I = 1 TO 10 : NEXT I` is one
+    // line in the BASIC this emulates -- and its `NEXT` sits at `body + 1`,
+    // which is the line already executing. Setting the program counter to the
+    // line it is already on is a jump the line loop cannot see (it compares the
+    // counter before and after), so the loop is counted here instead. Left
+    // unfixed, the frame stayed on the stack and the *enclosing* loop's NEXT
+    // consumed it -- the outer loop then ran once, silently.
+    while (true) {
+        if (state_.fors.empty()) {
+            return "❌ NEXT without FOR\n";
+        }
+        ForFrame& frame = state_.fors.back();
+        const double current = number_of(frame.variable).value_or(0.0);
+        const double value = current + frame.step;
+        assign(frame.variable, value);
+        const bool again =
+            frame.step > 0.0 ? value <= frame.limit : value >= frame.limit;
+        if (!again) {
+            state_.fors.pop_back();
+            return {};
+        }
+        if (frame.body + 1 != interpreter_.current_line) {
+            interpreter_.current_line = frame.body + 1;
+            return {};
+        }
     }
-    ForFrame& frame = state_.fors.back();
-    const double current = number_of(frame.variable).value_or(0.0);
-    const double value = current + frame.step;
-    assign(frame.variable, value);
-    const bool again =
-        frame.step > 0.0 ? value <= frame.limit : value >= frame.limit;
-    if (again) {
-        interpreter_.current_line = frame.body + 1;
-    } else {
-        state_.fors.pop_back();
-    }
-    return {};
 }
 
 std::string Machine::while_loop(const std::string& args) {

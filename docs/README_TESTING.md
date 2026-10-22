@@ -98,6 +98,35 @@ cd native/tools && python3 scheme_differential_check.py
 python3 native/tools/lang_differential_check.py   # 474 programs, 0 differences, 9 skipped
 ```
 
+### The recorded corpus
+
+The reference engine is going away, and a gate that needs it cannot check a tree
+that no longer has it. `--record` freezes the reference's answers into
+`native/tests/golden/lang_corpus.json.gz` — the program text travels with the
+answer, so the corpus outlives the command table it was recorded from — and
+`--golden` compares the C++ ports with that file instead of a live interpreter.
+Golden mode imports no Python at all, which the gate itself is run to prove.
+
+```bash
+make golden-check    # native/build/lang_cli against the corpus; needs no Python
+make golden-record   # re-freeze from the reference; needs the bridge
+```
+
+Three programs are excluded from the corpus and cannot be recorded: the `TIME$`
+and `DATE$` rows read the clock, and `INPUT # reads it back` reads a file another
+row wrote. The live gate still compares them, because both engines run moments
+apart in the same directory; a file recorded today cannot know either.
+
+The `JOYINIT`, `STICK` and `STRIG` rows are skipped in *both* modes. A gamepad is
+hardware: the reference shipped no backend and answers "none", while the port opens
+`/dev/input/js0`, so comparing the two would report a plugged-in joystick as a
+language difference on the machine that has one and pass on the machine that does
+not.
+
+A tampered or stale entry is a failure, not a skip: each entry carries a SHA-256
+of its program, so editing an example without re-recording is reported as a
+corpus problem rather than as a mismatch in the engine.
+
 ## Curriculum and documentation gates
 
 ```bash

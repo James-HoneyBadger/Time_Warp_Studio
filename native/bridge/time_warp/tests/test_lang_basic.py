@@ -95,6 +95,22 @@ def test_for_step():
     assert has(out, "2", "4", "6", "8", "10")
 
 
+def test_for_with_an_empty_body_does_not_end_its_outer_loop():
+    # `NEXT I` is the first line of the inner loop, so "go back to the body" is
+    # a jump to the statement that is already running. The enclosing loop used
+    # to lose its frame to it and run exactly once, silently.
+    out = bas(
+        "10 FOR F = 1 TO 3\n"
+        "20 C = C + 1\n"
+        "30 FOR I = 1 TO 4\n"
+        "40 NEXT I\n"
+        "50 NEXT F\n"
+        "60 PRINT C"
+    )
+    assert no_errors(out)
+    assert has(out, "3")
+
+
 def test_goto():
     out = bas(
         '10 PRINT "START"\n' "20 GOTO 40\n" '30 PRINT "SKIPPED"\n' '40 PRINT "END"'

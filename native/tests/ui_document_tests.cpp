@@ -45,6 +45,7 @@
 #include "check.hpp"
 #include "temp_dir.hpp"
 #include "timewarp/bridge/python_worker.hpp"
+#include "timewarp/canvas/command_queue.hpp"
 #include "timewarp/ui/app_paths.hpp"
 #include "timewarp/ui/autosave.hpp"
 #include "timewarp/ui/breakpoints.hpp"
@@ -52,6 +53,7 @@
 #include "timewarp/ui/find_bar.hpp"
 #include "timewarp/ui/language.hpp"
 #include "timewarp/ui/main_window.hpp"
+#include "timewarp/ui/native_runner.hpp"
 #include "timewarp/ui/panels.hpp"
 #include "timewarp/ui/resizable_tab_widget.hpp"
 #include "timewarp/ui/snippets.hpp"
@@ -590,6 +592,43 @@ void test_pen_up_moves_without_drawing() {
     TW_CHECK_EQ(canvas->strokeCount(), 1);
     TW_CHECK(std::abs(canvas->totalStrokeLength() - 50.0) < 1e-6);
     TW_CHECK(std::abs(canvas->turtlePosition().y() - 100.0) < 1e-6);
+}
+
+// The engine draws through `TurtleHost`, and the IDE's host is
+// `NativeCanvasHost`. A sprite restored by `PUT` reaches it as a pixel block:
+// the canvas draws shapes, not a framebuffer, so the host has to turn the block
+// into a canvas command that carries the pixels.
+void test_the_native_host_blits_a_sprite() {
+    announce("native sprite blit");
+    timewarp::canvas::CanvasCommandQueue queue;
+    timewarp::ui::NativeCanvasHost host{queue};
+
+    const std::vector<timewarp::lang::Rgb> pixels{
+        {255, 0, 0}, {0, 255, 0}, {0, 0, 255}, {255, 255, 255}};
+    host.put_pixels(7, 9, 2, 2, pixels);
+
+    int commands = 0;
+    timewarp::canvas::CanvasCommandKind kind =
+        timewarp::canvas::CanvasCommandKind::None;
+    std::vector<double> payload;
+    queue.drain([&](timewarp::canvas::CanvasCommandView view) {
+        ++commands;
+        kind = view.command.kind;
+        payload.assign(view.points.begin(), view.points.end());
+        return true;
+    });
+
+    TW_CHECK_EQ(commands, 1);
+    TW_CHECK(kind == timewarp::canvas::CanvasCommandKind::PutPixels);
+    TW_CHECK_EQ(payload.size(), std::size_t{4});
+    if (payload.size() == 4) {
+        // Row-major, top row first: the top-left pixel is the first value and
+        // the bottom-right the last.
+        TW_CHECK_EQ(static_cast<std::uint32_t>(payload[0]),
+                    timewarp::canvas::make_rgb(255, 0, 0));
+        TW_CHECK_EQ(static_cast<std::uint32_t>(payload[3]),
+                    timewarp::canvas::make_rgb(255, 255, 255));
+    }
 }
 
 void test_running_basic_prints_natively() {
@@ -1851,6 +1890,7 @@ int main(int argc, char** argv) {
     test_running_scheme_draws_on_the_canvas();
     test_pen_up_moves_without_drawing();
     test_running_basic_prints_natively();
+    test_the_native_host_blits_a_sprite();
     test_running_logo_draws_on_the_canvas();
     test_a_scheme_run_fills_the_variables_and_telemetry_panels();
     test_a_native_run_fills_the_variables_and_telemetry_panels();

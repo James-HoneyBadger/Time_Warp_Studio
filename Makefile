@@ -12,7 +12,8 @@ PYTHON ?= $(shell test -x .venv/bin/python3 && echo .venv/bin/python3 || echo py
 FORWARDED := build run test test-debug asan clean distclean info test-list \
              screenshot reset-layout
 
-.PHONY: help $(FORWARDED) engine-test smoke command-matrix repl-matrix test-all lint lint-md doc-links
+.PHONY: help $(FORWARDED) engine-test smoke command-matrix repl-matrix \
+        golden-record golden-check test-all lint lint-md doc-links
 
 help:
 	@echo "Time Warp Studio"
@@ -29,6 +30,8 @@ help:
 	@echo "The temporary language bridge in $(NATIVE)/bridge:"
 	@echo "  engine-test   The bridge engine's own pytest suite"
 	@echo "  smoke         Every example program, through the real bridge"
+	@echo "  golden-check  The ports against the frozen reference corpus (no Python)"
+	@echo "  golden-record Freeze the reference's answers again (needs the bridge)"
 	@echo "  test-all      All of the above"
 	@echo "  lint          Ruff over the bridge"
 	@echo "  lint-md       Markdownlint over every tracked Markdown file
@@ -59,7 +62,17 @@ command-matrix:
 repl-matrix:
 	@$(PYTHON) $(NATIVE)/tools/repl_matrix.py
 
-test-all: test engine-test smoke command-matrix repl-matrix doc-links
+# The parity gate's answer, frozen. `--record` asks the Python reference and is
+# run only while the reference still exists; `--golden` asks the recorded corpus
+# and needs neither Python nor `native/bridge/`, so the ports stay honest after
+# the engine they were ported from is deleted.
+golden-record:
+	@$(PYTHON) $(NATIVE)/tools/lang_differential_check.py --record
+
+golden-check:
+	@$(PYTHON) $(NATIVE)/tools/lang_differential_check.py --golden
+
+test-all: test engine-test smoke command-matrix repl-matrix golden-check doc-links
 
 lint:
 	@$(PYTHON) -m ruff check $(NATIVE)/bridge

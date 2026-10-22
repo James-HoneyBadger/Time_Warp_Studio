@@ -114,6 +114,14 @@ void TurtleCanvas::apply(const timewarp::canvas::CanvasCommandView& view) {
     const double before_pen_width = pen_width_;
     const bool before_visible = turtle_visible_;
 
+    // The screen, drawn a second time in its own coordinates. The display list
+    // below still runs, because it is the record the log, the scrubber and a
+    // later export read; this is what the surface *shows* when a program asked
+    // for a screen.
+    if (framebufferActive()) {
+        rasterize(view);
+    }
+
     switch (command.kind) {
         case CanvasCommandKind::Forward:
             moveAlong(command.x, true);
@@ -183,11 +191,20 @@ void TurtleCanvas::apply(const timewarp::canvas::CanvasCommandView& view) {
             visible_frames_ = 0;
             content_bounds_ = QRectF{};
             has_bounds_ = false;
+            if (framebufferActive()) {
+                framebuffer_.fill(background_);
+            }
             recomputeFit();
             break;
         case CanvasCommandKind::Reset:
             reset();
             return;
+        case CanvasCommandKind::SetFramebuffer:
+            setFramebufferSize(static_cast<int>(command.x), static_cast<int>(command.y));
+            break;
+        case CanvasCommandKind::ClearFramebuffer:
+            clearFramebuffer();
+            break;
 
         // -- generic drawing primitives -----------------------------------
         //
@@ -225,6 +242,59 @@ void TurtleCanvas::apply(const timewarp::canvas::CanvasCommandView& view) {
                     QPointF{view.points[(points - 1) * 2],
                             view.points[(points - 1) * 2 + 1]},
                     QPointF{view.points[0], view.points[1]}, color, width);
+            }
+            break;
+        }
+        case CanvasCommandKind::PutPixels: {
+            // A sprite placed by `PUT`. The raster counts its rows down from the
+            // block's top edge; this view counts y up, so each row is flipped.
+            // Equal colours in a row are one filled rect, which keeps a tile from
+            // becoming hundreds of shape entries in the scrubber.
+            const int width = static_cast<int>(command.w);
+            const int height = static_cast<int>(command.h);
+            if (width <= 0 || height <= 0) {
+                break;
+            }
+            const auto columns = static_cast<std::size_t>(width);
+            // One double per pixel, not one (x, y) pair per pixel, so this is the
+            // one command whose payload is counted in doubles and not in points.
+            const std::size_t pixels =
+                std::min(columns * static_cast<std::size_t>(height), view.points.size());
+            const auto packed_at = [&view](std::size_t index) {
+                return static_cast<std::uint32_t>(view.points[index]);
+            };
+            for (int row = 0; row < height; ++row) {
+                const std::size_t row_start = static_cast<std::size_t>(row) * columns;
+                if (row_start >= pixels) {
+                    break;
+                }
+                // A short payload loses whole pixels off the end of the last row,
+                // which is what a truncated block should mean.
+                const int row_columns = static_cast<int>(
+                    std::min(columns, pixels - row_start));
+                int column = 0;
+                while (column < row_columns) {
+                    const std::size_t start = row_start + static_cast<std::size_t>(column);
+                    const std::uint32_t colour = packed_at(start);
+                    int run = 1;
+                    while (column + run < row_columns &&
+                           packed_at(start + static_cast<std::size_t>(run)) == colour) {
+                        ++run;
+                    }
+                    Shape shape;
+                    shape.kind = CanvasCommandKind::DrawRect;
+                    shape.rect = QRectF{command.x + column, command.y - row,
+                                        static_cast<double>(run), 1.0};
+                    shape.centre = shape.rect.center();
+                    shape.color = QColor{static_cast<int>((colour >> 16) & 0xFFu),
+                                         static_cast<int>((colour >> 8) & 0xFFu),
+                                         static_cast<int>(colour & 0xFFu)};
+                    shape.width = 0.0;
+                    shape.filled = true;
+                    appendShape(shape);
+                    growBounds(shape.rect);
+                    column += run;
+                }
             }
             break;
         }
@@ -436,9 +506,12 @@ void TurtleCanvas::reset() {
     ignored_ = 0;
     zoom_ = 1.0;
     pan_pixels_ = QPointF{0.0, 0.0};
+    framebuffer_ = QImage{};
+    raster_position_ = QPointF{0.0, 0.0};
     recomputeFit();
     emit turtleStateChanged();
     emit contentChanged();
+    emit framebufferChanged();
     update();
 }
 
@@ -519,6 +592,13 @@ double TurtleCanvas::totalStrokeLength() const {
 }
 
 void TurtleCanvas::fitToContent() {
+    if (framebufferActive()) {
+        // A screen is already fitted: its coordinates are the program's. The
+        // call is not an error -- a run ends by fitting -- it just has nothing
+        // to do, and moving the view here would be the refit a screen must not
+        // have.
+        return;
+    }
     recomputeFit();
     zoom_ = 1.0;
     pan_pixels_ = QPointF{0.0, 0.0};
@@ -628,9 +708,181 @@ void TurtleCanvas::mouseReleaseEvent(QMouseEvent* event) {
 // Painting
 // ---------------------------------------------------------------------------
 
+// ---------------------------------------------------------------------------
+// Screen mode
+// ---------------------------------------------------------------------------
+
+void TurtleCanvas::setFramebufferSize(int width, int height) {
+    if (width <= 0 || height <= 0) {
+        return;
+    }
+    framebuffer_ = QImage{QSize{width, height}, QImage::Format_ARGB32_Premultiplied};
+    framebuffer_.fill(background_);
+    raster_position_ = QPointF{0.0, 0.0};
+    raster_colour_ = pen_color_;
+    raster_width_ = pen_width_;
+    raster_pen_down_ = true;
+    emit framebufferChanged();
+    update();
+}
+
+void TurtleCanvas::clearFramebuffer() {
+    if (framebuffer_.isNull()) {
+        return;
+    }
+    framebuffer_ = QImage{};
+    emit framebufferChanged();
+    update();
+}
+
+QColor TurtleCanvas::framebufferPixel(int x, int y) const {
+    if (framebuffer_.isNull() || x < 0 || y < 0 || x >= framebuffer_.width() ||
+        y >= framebuffer_.height()) {
+        return QColor{};
+    }
+    return framebuffer_.pixelColor(x, y);
+}
+
+void TurtleCanvas::rasterLine(const QPointF& from, const QPointF& to) {
+    QPainter painter{&framebuffer_};
+    painter.setRenderHint(QPainter::Antialiasing, false);
+    QPen pen{raster_colour_};
+    pen.setWidthF(std::max(1.0, raster_width_));
+    pen.setCapStyle(Qt::RoundCap);
+    painter.setPen(pen);
+    painter.drawLine(from, to);
+}
+
+void TurtleCanvas::rasterize(const timewarp::canvas::CanvasCommandView& view) {
+    const timewarp::canvas::CanvasCommand& command = view.command;
+    switch (command.kind) {
+        case CanvasCommandKind::Goto:
+        case CanvasCommandKind::SetX:
+        case CanvasCommandKind::SetY: {
+            // `CIRCLE` walks the pen around its arc with gotos, so these are the
+            // segments that make a circle visible on a screen.
+            const QPointF target{
+                command.kind == CanvasCommandKind::SetY ? raster_position_.x() : command.x,
+                command.kind == CanvasCommandKind::SetX ? raster_position_.y() : command.y};
+            if (raster_pen_down_) {
+                rasterLine(raster_position_, target);
+            }
+            raster_position_ = target;
+            break;
+        }
+        case CanvasCommandKind::PenUp:
+            raster_pen_down_ = false;
+            break;
+        case CanvasCommandKind::PenDown:
+            raster_pen_down_ = true;
+            break;
+        case CanvasCommandKind::SetPenColor:
+            raster_colour_ = QColor{command.red(), command.green(), command.blue()};
+            break;
+        case CanvasCommandKind::SetPenWidth:
+            if (command.x > 0.0) {
+                raster_width_ = command.x;
+            }
+            break;
+        case CanvasCommandKind::DrawPoint:
+            framebuffer_.setPixelColor(qRound(command.x), qRound(command.y),
+                                       QColor{command.red(), command.green(), command.blue()});
+            break;
+        case CanvasCommandKind::DrawPolyline: {
+            // A polyline carries its own pen: `x` is the width and `color` the
+            // ink, so the raster pen is borrowed for the duration of the shape.
+            const QColor saved_colour = raster_colour_;
+            const double saved_width = raster_width_;
+            raster_colour_ = QColor{command.red(), command.green(), command.blue()};
+            if (command.x > 0.0) {
+                raster_width_ = command.x;
+            }
+            const std::size_t points = view.point_count();
+            for (std::size_t index = 0; index + 1 < points; ++index) {
+                rasterLine(QPointF{view.points[index * 2], view.points[index * 2 + 1]},
+                           QPointF{view.points[index * 2 + 2], view.points[index * 2 + 3]});
+            }
+            if (command.is_closed() && points >= 3) {
+                rasterLine(QPointF{view.points[(points - 1) * 2],
+                                   view.points[(points - 1) * 2 + 1]},
+                           QPointF{view.points[0], view.points[1]});
+            }
+            raster_colour_ = saved_colour;
+            raster_width_ = saved_width;
+            break;
+        }
+        case CanvasCommandKind::DrawRect: {
+            const QColor colour{command.red(), command.green(), command.blue()};
+            QPainter painter{&framebuffer_};
+            painter.setRenderHint(QPainter::Antialiasing, false);
+            painter.setPen(QPen{colour});
+            painter.setBrush(command.is_filled() ? QBrush{colour} : QBrush{Qt::NoBrush});
+            painter.drawRect(
+                QRectF{QPointF{command.x, command.y}, QSizeF{command.w, command.h}}
+                    .normalized());
+            break;
+        }
+        case CanvasCommandKind::PutPixels: {
+            // One double per pixel, top row first, which is this command's own
+            // convention rather than the point-list every other payload uses.
+            const int width = static_cast<int>(command.w);
+            const int height = static_cast<int>(command.h);
+            if (width <= 0 || height <= 0) {
+                break;
+            }
+            const auto columns = static_cast<std::size_t>(width);
+            const std::size_t pixels =
+                std::min(columns * static_cast<std::size_t>(height), view.points.size());
+            for (std::size_t index = 0; index < pixels; ++index) {
+                const auto packed = static_cast<std::uint32_t>(view.points[index]);
+                framebuffer_.setPixelColor(
+                    static_cast<int>(command.x) + static_cast<int>(index % columns),
+                    static_cast<int>(command.y) + static_cast<int>(index / columns),
+                    QColor{static_cast<int>((packed >> 16) & 0xFFu),
+                           static_cast<int>((packed >> 8) & 0xFFu),
+                           static_cast<int>(packed & 0xFFu)});
+            }
+            break;
+        }
+        default:
+            break;
+    }
+}
+
+void TurtleCanvas::paintFramebuffer(QPainter& painter) const {
+    const int screen_width = framebuffer_.width();
+    const int screen_height = framebuffer_.height();
+    if (screen_width <= 0 || screen_height <= 0) {
+        return;
+    }
+    // Whole-number scaling while there is room: a 320x200 screen at 3x is three
+    // screen pixels per drawn pixel, and a smoothed one is a lie about what the
+    // program drew. Only a window smaller than the screen scales fractionally.
+    double factor = std::min(static_cast<double>(width()) / screen_width,
+                             static_cast<double>(height()) / screen_height);
+    if (factor >= 1.0) {
+        factor = std::floor(factor);
+    }
+    if (factor <= 0.0) {
+        return;
+    }
+    const int drawn_width = std::max(1, static_cast<int>(std::lround(screen_width * factor)));
+    const int drawn_height = std::max(1, static_cast<int>(std::lround(screen_height * factor)));
+    const QRect target{(width() - drawn_width) / 2, (height() - drawn_height) / 2,
+                       drawn_width, drawn_height};
+    painter.setRenderHint(QPainter::SmoothPixmapTransform, false);
+    painter.drawImage(target, framebuffer_);
+}
+
 void TurtleCanvas::paintEvent(QPaintEvent* /*event*/) {
     QPainter painter{this};
     painter.fillRect(rect(), background_);
+    if (framebufferActive()) {
+        // A screen has no grid and no turtle marker: both are statements about
+        // a coordinate system the program is not using.
+        paintFramebuffer(painter);
+        return;
+    }
     if (grid_visible_) {
         paintGrid(painter);
     }
@@ -644,6 +896,16 @@ void TurtleCanvas::paintEvent(QPaintEvent* /*event*/) {
 
 QImage TurtleCanvas::renderedDrawing(double factor) const {
     const double safe = factor > 0.0 ? factor : 1.0;
+    if (framebufferActive()) {
+        // The screen is already pixels: scaling it is a nearest-neighbour
+        // multiplication, not a re-render, so the exported picture is the one
+        // the program drew and not an antialiased impression of it.
+        const QSize target{std::max(1, qRound(framebuffer_.width() * safe)),
+                           std::max(1, qRound(framebuffer_.height() * safe))};
+        return framebuffer_
+            .scaled(target, Qt::IgnoreAspectRatio, Qt::FastTransformation)
+            .convertToFormat(QImage::Format_ARGB32_Premultiplied);
+    }
     const QSize target{std::max(1, qRound(static_cast<double>(width()) * safe)),
                        std::max(1, qRound(static_cast<double>(height()) * safe))};
     QImage image{target, QImage::Format_ARGB32_Premultiplied};
@@ -692,7 +954,14 @@ bool TurtleCanvas::exportDrawing(const QString& path, QString* error,
             QPainter painter{&generator};
             painter.setRenderHint(QPainter::Antialiasing, false);
             painter.fillRect(QRect{QPoint{0, 0}, canvas}, background_);
-            paintInk(painter, frameCount());
+            if (framebufferActive()) {
+                // A screen exports as an image: there are no vectors to write,
+                // and an empty SVG would be the silent failure the export
+                // exists to prevent.
+                painter.drawImage(QRect{QPoint{0, 0}, canvas}, framebuffer_);
+            } else {
+                paintInk(painter, frameCount());
+            }
         }
         // The generator flushes on destruction, which is why it has its own
         // scope above and why the commit comes after it.

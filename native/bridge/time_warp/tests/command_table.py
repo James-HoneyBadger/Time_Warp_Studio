@@ -89,6 +89,16 @@ BASIC: list[Row] = [
         "prints:SMALL",
     ),
     Row("BASIC", "FOR / NEXT", "FOR I = 1 TO 3\nPRINT I\nNEXT I", "prints:3"),
+    # An empty body is legal, and `NEXT` is then the line the loop returns to --
+    # a jump to the line already executing, which the run loop cannot see by
+    # comparing the counter. The outer loop is what this row is watching: it
+    # ran once, silently, before the fix on both engines.
+    Row(
+        "BASIC",
+        "FOR / NEXT with an empty body",
+        "FOR F = 1 TO 3\nC = C + 1\nFOR I = 1 TO 4\nNEXT I\nNEXT F\nPRINT C",
+        "prints:3",
+    ),
     Row(
         "BASIC", "FOR with STEP", "FOR I = 0 TO 10 STEP 5\nPRINT I\nNEXT I", "prints:10"
     ),
@@ -170,7 +180,11 @@ BASIC: list[Row] = [
     # -- Structural keywords. Each is already a piece of a program above; giving
     #    it a row of its own is what makes a break in the keyword attributable
     #    instead of showing up as a mystery failure in the row that used it.
-    Row("BASIC", "NEXT", "FOR I = 1 TO 2\nNEXT I\nPRINT I", "prints:2"),
+    # `NEXT` runs the loop to its end and leaves the counter one past the limit,
+    # which is what BASIC means by a finished `FOR`. The old expectation of 2 was
+    # the empty-body defect written down: the loop stopped after one pass because
+    # its `NEXT` was also the line it returned to.
+    Row("BASIC", "NEXT", "FOR I = 1 TO 2\nNEXT I\nPRINT I", "prints:3"),
     Row("BASIC", "WEND", "X = 0\nWHILE X < 2\nX = X + 1\nWEND\nPRINT X", "prints:2"),
     Row("BASIC", "LOOP", "X = 0\nDO\nX = X + 1\nLOOP UNTIL X = 2\nPRINT X", "prints:2"),
     Row(

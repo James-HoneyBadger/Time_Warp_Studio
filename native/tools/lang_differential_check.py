@@ -11,14 +11,28 @@ implementations and compares three things exactly:
 
 Corpus: every row of `command_table.py` for the language, plus every example
 program. Rows that use a random function are reported and skipped, because two
-generators seeded from the OS cannot agree by construction.
+generators seeded from the OS cannot agree by construction. A row that reads a
+gamepad is skipped for the same reason: the machine's answer is not the engine's,
+and a joystick plugged into one of them would be reported as a language
+difference.
 
     python3 native/tools/lang_differential_check.py [--verbose]
+
+Two modes outlive the reference. `--record` freezes the Python engine's answers
+into a corpus file, and `--golden` compares the ports with those answers instead
+of with a live interpreter, so the gate keeps its meaning once
+`native/bridge/` is deleted:
+
+    python3 native/tools/lang_differential_check.py --record   # needs Python
+    python3 native/tools/lang_differential_check.py --golden   # needs neither
 """
 
 from __future__ import annotations
 
 import argparse
+import gzip
+import hashlib
+import json
 import math
 import re
 import subprocess
@@ -29,14 +43,57 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 BRIDGE_ROOT = REPO_ROOT / "native" / "bridge"
 sys.path.insert(0, str(BRIDGE_ROOT))
 
-from time_warp.core.interpreter import Interpreter, Language  # noqa: E402
-from time_warp.graphics.turtle_state import TurtleShape  # noqa: E402
-from time_warp.tests import command_table  # noqa: E402
-
 CLI = REPO_ROOT / "native" / "build" / "lang_cli"
+
+#: Where `--record` writes and `--golden` reads. It sits with the tests rather
+#: than beside this tool because it is a fixture: the point of it is to outlive
+#: the engine it was recorded from. Gzipped, because thirty thousand drawing
+#: operations of prose-printed JSON is 1.2 MB that no reviewer reads by hand.
+GOLDEN_PATH = REPO_ROOT / "native" / "tests" / "golden" / "lang_corpus.json.gz"
+
+_ENGINE = None
+
+
+def _python_engine():
+    """The reference engine, imported on first use.
+
+    `--golden` never calls this. That is deliberate: a gate that still needed
+    Python to check a tree with no Python in it would not gate the thing this
+    corpus exists for.
+    """
+    global _ENGINE
+    if _ENGINE is None:
+        from time_warp.core.interpreter import Interpreter, Language
+        from time_warp.graphics.turtle_state import TurtleShape
+        from time_warp.tests import command_table
+
+        _ENGINE = (Interpreter, Language, TurtleShape, command_table)
+    return _ENGINE
+
 
 #: Programs that use these can never agree: the reference seeds from the OS.
 RANDOM_MARKERS = ("FRAN", "RND", "RANDOM")
+
+#: Programs whose answer cannot be *recorded*. The live gate compares these
+#: because both engines run moments apart in the same directory; a corpus
+#: recorded today cannot know what time it is tomorrow, or what file the row
+#: before it wrote.
+VOLATILE_MARKERS = {
+    "TIME$": "clock",
+    "DATE$": "clock",
+    "FOR INPUT": "reads a file another row wrote",
+}
+
+#: Programs whose answer depends on the machine rather than on the engine, in
+#: either mode. `STICK`/`STRIG`/`JOYINIT` read `/dev/input/js*`: the reference's
+#: optional backend is not installed, so it always says "no gamepad", while the
+#: port opens a real one. Comparing them would report a plugged-in joystick as a
+#: language difference.
+HARDWARE_MARKERS = {
+    "JOYINIT": "reads a gamepad",
+    "STICK(": "reads a gamepad",
+    "STRIG(": "reads a gamepad",
+}
 
 
 class _RecordedShapes(list):
@@ -109,6 +166,11 @@ class TraceTurtle:
     @staticmethod
     def _number(value: float) -> str:
         return str(int(value)) if float(value).is_integer() else repr(float(value))
+
+    @staticmethod
+    def _shape_class():
+        """The reference's shape record, imported where a shape is first made."""
+        return _python_engine()[2]
 
     @staticmethod
     def _colour(value) -> str:
@@ -248,6 +310,7 @@ class TraceTurtle:
         )
 
     def draw_text(self, x, y, text, color=None, font_size=12, align="left") -> None:
+        TurtleShape = self._shape_class()
         self.shapes.append(
             TurtleShape(
                 shape_type="text",
@@ -266,6 +329,7 @@ class TraceTurtle:
         )
 
     def draw_polygon(self, points, color=None, fill_color=None, width=None) -> None:
+        TurtleShape = self._shape_class()
         self.shapes.append(
             TurtleShape(
                 shape_type="polygon",
@@ -288,6 +352,7 @@ class TraceTurtle:
         return True
 
     def draw_line(self, x1, y1, x2, y2, color=None, width=None) -> None:
+        TurtleShape = self._shape_class()
         self.shapes.append(
             TurtleShape(
                 shape_type="line",
@@ -311,6 +376,7 @@ class TraceTurtle:
         points = [(fill_lines[0][0], fill_lines[0][1])]
         points.extend((line[2], line[3]) for line in fill_lines)
         if len(points) >= 3:
+            TurtleShape = self._shape_class()
             self.shapes.append(
                 TurtleShape(
                     shape_type="polygon",
@@ -440,7 +506,7 @@ def run_python(language: Language, source: str):
     it per input round repeats everything printed before the prompt -- a test
     helper's artefact, not the engine's behaviour.
     """
-    interpreter = Interpreter()
+    interpreter = _python_engine()[0]()
     turtle = TraceTurtle()
     interpreter.input_callback = lambda _prompt: ""
     output: list[str] = []
@@ -495,6 +561,7 @@ def run_native(key: str, source: str):
 
 def corpus(language: Language, key: str):
     """Rows from the command table plus the example files."""
+    command_table = _python_engine()[3]
     rows = getattr(command_table, key.upper(), [])
     programs = [(f"row:{row.command}", row.source) for row in rows]
     for path in sorted((REPO_ROOT / "Examples" / key).glob("*")):
@@ -505,19 +572,60 @@ def corpus(language: Language, key: str):
     return programs
 
 
-def compare(name: str, language: Language, key: str, source: str) -> tuple[bool, str]:
-    expected_output, expected_drawing, expected_variables = run_python(language, source)
-    actual_output, actual_drawing, actual_variables = run_native(key, source)
+def source_digest(source: str) -> str:
+    """A fingerprint of the program an expectation was recorded from."""
+    return hashlib.sha256(source.encode("utf-8")).hexdigest()
 
-    got_output = [normalise(line) for line in actual_output]
-    want_output = [normalise(line) for line in expected_output]
-    got_drawing = [normalise(op) for op in actual_drawing]
-    want_drawing = [normalise(op) for op in expected_drawing]
 
+def _read_corpus(path: Path) -> list[dict]:
+    if path.suffix == ".gz":
+        with gzip.open(path, "rt", encoding="utf-8") as handle:
+            return json.load(handle)
+    return json.loads(path.read_text(encoding="utf-8"))
+
+
+def _write_corpus(path: Path, entries: list[dict]) -> None:
+    """Write the corpus, byte-identically for identical content.
+
+    `mtime=0` is what makes a re-record that changed nothing produce no diff:
+    gzip stamps the current time into the header by default.
+    """
+    path.parent.mkdir(parents=True, exist_ok=True)
+    text = json.dumps(entries, indent=1, sort_keys=True) + "\n"
+    if path.suffix == ".gz":
+        path.write_bytes(gzip.compress(text.encode("utf-8"), compresslevel=9, mtime=0))
+    else:
+        path.write_text(text, encoding="utf-8")
+
+
+def expectation_from_python(language: Language, source: str) -> dict:
+    """The reference's answer, in the shape the corpus stores."""
+    output, drawing, variables = run_python(language, source)
+    return {
+        "output": [normalise(line) for line in output],
+        "drawing": [normalise(op) for op in drawing],
+        "variables": normalise_variables(variables),
+    }
+
+
+def expectation_from_native(key: str, source: str) -> dict:
+    """The port's answer, in the same shape."""
+    output, drawing, variables = run_native(key, source)
+    return {
+        "output": [normalise(line) for line in output],
+        "drawing": [normalise(op) for op in drawing],
+        "variables": normalise_variables(variables),
+    }
+
+
+def compare(name: str, want: dict, got: dict) -> tuple[bool, str]:
     problems: list[str] = []
-    if got_output != want_output:
-        problems.append(f"output:\n  python: {want_output}\n  native: {got_output}")
-    if got_drawing != want_drawing:
+    if got["output"] != want["output"]:
+        problems.append(
+            f"output:\n  python: {want['output']}\n  native: {got['output']}"
+        )
+    if got["drawing"] != want["drawing"]:
+        want_drawing, got_drawing = want["drawing"], got["drawing"]
         first = next(
             (
                 index
@@ -531,11 +639,219 @@ def compare(name: str, language: Language, key: str, source: str) -> tuple[bool,
             f"{first}: python {want_drawing[first : first + 3]} "
             f"native {got_drawing[first : first + 3]}"
         )
-    if normalise_variables(actual_variables) != normalise_variables(expected_variables):
+    if got["variables"] != want["variables"]:
         problems.append(
-            f"variables:\n  python: {expected_variables}\n  native: {actual_variables}"
+            f"variables:\n  python: {want['variables']}\n  native: {got['variables']}"
         )
     return not problems, f"{name}\n  " + "\n  ".join(problems)
+
+
+def _is_random(source: str) -> bool:
+    return any(marker in source.upper() for marker in RANDOM_MARKERS)
+
+
+def _volatile_reason(source: str) -> str | None:
+    upper = source.upper()
+    for marker, reason in VOLATILE_MARKERS.items():
+        if marker in upper:
+            return reason
+    return None
+
+
+def _hardware_reason(source: str) -> str | None:
+    upper = source.upper()
+    for marker, reason in HARDWARE_MARKERS.items():
+        if marker in upper:
+            return reason
+    return None
+
+
+def _ported_languages() -> list[str]:
+    # The native side is the only place that knows which languages have an
+    # executor: `executor_for` returns null for the ones still on the bridge.
+    # Keeping a second list here meant a new port had to be registered twice,
+    # and forgetting the second copy looked like a language with no corpus.
+    return subprocess.run(
+        [str(CLI), "--ported"], capture_output=True, text=True, check=True
+    ).stdout.split()
+
+
+def _chosen(args, ported: list[str]) -> list[str] | None:
+    chosen = args.language or ported
+    missing = [key for key in chosen if key not in ported]
+    if missing:
+        print(
+            f"no native executor for: {', '.join(missing)} "
+            f"(ported: {', '.join(ported)})",
+            file=sys.stderr,
+        )
+        return None
+    return chosen
+
+
+def _report(
+    agree: int, failures: list[str], skipped: list[str], chosen: list[str]
+) -> int:
+    for entry in skipped:
+        print(f"skip   {entry}")
+    for failure in failures:
+        print(f"DIFFER {failure}")
+    print(
+        f"\n{agree} agreed, {len(failures)} differed, {len(skipped)} skipped "
+        f"({', '.join(chosen)})"
+    )
+    return 0 if not failures else 1
+
+
+def check_live(args, ported: list[str]) -> int:
+    """Compare the ports with a running reference interpreter."""
+    Language = _python_engine()[1]
+    chosen = _chosen(args, ported)
+    if chosen is None:
+        return 2
+
+    agree = 0
+    skipped: list[str] = []
+    failures: list[str] = []
+    for key in chosen:
+        language = Language[key.upper()]
+        for name, source in corpus(language, key):
+            if _is_random(source):
+                skipped.append(f"{key}: {name} (random)")
+                continue
+            reason = _hardware_reason(source)
+            if reason is not None:
+                skipped.append(f"{key}: {name} ({reason})")
+                continue
+            ok, detail = compare(
+                name,
+                expectation_from_python(language, source),
+                expectation_from_native(key, source),
+            )
+            if ok:
+                agree += 1
+                if args.verbose:
+                    print(f"agree  {key}: {name}")
+            else:
+                failures.append(f"{key}: {detail}")
+
+    return _report(agree, failures, skipped, chosen)
+
+
+def record(args, ported: list[str]) -> int:
+    """Freeze the reference's answers, keeping the languages this run skipped.
+
+    The program text travels with the answer. That is what makes `--golden` able
+    to run without `native/bridge/`: the command table it came from will not be
+    there to ask.
+    """
+    Language = _python_engine()[1]
+    chosen = _chosen(args, ported)
+    if chosen is None:
+        return 2
+
+    path = Path(args.record)
+    kept: list[dict] = []
+    if path.exists():
+        kept = [
+            entry
+            for entry in _read_corpus(path)
+            if entry["language"] not in chosen
+        ]
+
+    entries: list[dict] = []
+    skipped: list[str] = []
+    for key in chosen:
+        language = Language[key.upper()]
+        for name, source in corpus(language, key):
+            if _is_random(source):
+                skipped.append(f"{key}: {name} (random)")
+                continue
+            reason = _hardware_reason(source)
+            if reason is not None:
+                skipped.append(f"{key}: {name} ({reason})")
+                continue
+            reason = _volatile_reason(source)
+            if reason is not None:
+                skipped.append(f"{key}: {name} ({reason})")
+                continue
+            entries.append(
+                {
+                    "language": key,
+                    "name": name,
+                    "source": source,
+                    "source_sha256": source_digest(source),
+                    **expectation_from_python(language, source),
+                }
+            )
+
+    path.parent.mkdir(parents=True, exist_ok=True)
+    _write_corpus(
+        path,
+        sorted(kept + entries, key=lambda entry: (entry["language"], entry["name"])),
+    )
+    for entry in skipped:
+        print(f"skip   {entry}")
+    print(
+        f"recorded {len(entries)} programs to {path} "
+        f"({len(kept) + len(entries)} in the file)"
+    )
+    return 0
+
+
+def check_golden(args, ported: list[str], path: Path) -> int:
+    """Compare the ports with a recorded corpus, and import no Python to do it."""
+    if not path.exists():
+        print(
+            f"no corpus at {path}; record one with "
+            f"`python3 native/tools/lang_differential_check.py --record`",
+            file=sys.stderr,
+        )
+        return 2
+
+    chosen = _chosen(args, ported)
+    if chosen is None:
+        return 2
+
+    agree = 0
+    skipped: list[str] = []
+    failures: list[str] = []
+    for entry in _read_corpus(path):
+        key = entry["language"]
+        if key not in chosen:
+            continue
+        name = entry["name"]
+        source = entry["source"]
+        # A corpus recorded before the gamepad rows were excluded still carries
+        # them; the machine running this check is the one that decides their
+        # answer, so it is skipped here too rather than compared.
+        reason = _hardware_reason(source)
+        if reason is not None:
+            skipped.append(f"{key}: {name} ({reason})")
+            continue
+        if entry.get("source_sha256") != source_digest(source):
+            failures.append(
+                f"{key}: {name}\n  the recorded source does not match its own "
+                f"digest; re-record the corpus"
+            )
+            continue
+        want = {
+            "output": entry["output"],
+            "drawing": entry["drawing"],
+            "variables": {
+                variable: tuple(value)
+                for variable, value in entry["variables"].items()
+            },
+        }
+        ok, detail = compare(name, want, expectation_from_native(key, source))
+        if ok:
+            agree += 1
+            if args.verbose:
+                print(f"agree  {key}: {name}")
+        else:
+            failures.append(f"{key}: {detail}")
+
+    return _report(agree, failures, skipped, chosen)
 
 
 def main() -> int:
@@ -546,7 +862,25 @@ def main() -> int:
         action="append",
         help="limit to one language (repeatable)",
     )
+    parser.add_argument(
+        "--record",
+        nargs="?",
+        const=str(GOLDEN_PATH),
+        metavar="PATH",
+        help="write the reference's answers to a corpus file",
+    )
+    parser.add_argument(
+        "--golden",
+        nargs="?",
+        const=str(GOLDEN_PATH),
+        metavar="PATH",
+        help="compare with a recorded corpus instead of a live reference",
+    )
     args = parser.parse_args()
+
+    if args.record and args.golden:
+        print("--record and --golden do opposite things; pick one", file=sys.stderr)
+        return 2
 
     if not CLI.exists():
         print(
@@ -555,50 +889,12 @@ def main() -> int:
         )
         return 2
 
-    # The native side is the only place that knows which languages have an
-    # executor: `executor_for` returns null for the ones still on the bridge.
-    # Keeping a second list here meant a new port had to be registered twice,
-    # and forgetting the second copy looked like a language with no corpus.
-    ported = subprocess.run(
-        [str(CLI), "--ported"], capture_output=True, text=True, check=True
-    ).stdout.split()
-    languages = {key: Language[key.upper()] for key in ported}
-    chosen = args.language or ported
-    missing = [key for key in chosen if key not in languages]
-    if missing:
-        print(
-            f"no native executor for: {', '.join(missing)} "
-            f"(ported: {', '.join(ported)})",
-            file=sys.stderr,
-        )
-        return 2
-
-    agree = 0
-    skipped: list[str] = []
-    failures: list[str] = []
-    for key in chosen:
-        language = languages[key]
-        for name, source in corpus(language, key):
-            if any(marker in source.upper() for marker in RANDOM_MARKERS):
-                skipped.append(f"{key}: {name} (random)")
-                continue
-            ok, detail = compare(name, language, key, source)
-            if ok:
-                agree += 1
-                if args.verbose:
-                    print(f"agree  {key}: {name}")
-            else:
-                failures.append(f"{key}: {detail}")
-
-    for entry in skipped:
-        print(f"skip   {entry}")
-    for failure in failures:
-        print(f"DIFFER {failure}")
-    print(
-        f"\n{agree} agreed, {len(failures)} differed, {len(skipped)} skipped "
-        f"({', '.join(chosen)})"
-    )
-    return 0 if not failures else 1
+    ported = _ported_languages()
+    if args.record:
+        return record(args, ported)
+    if args.golden:
+        return check_golden(args, ported, Path(args.golden))
+    return check_live(args, ported)
 
 
 if __name__ == "__main__":

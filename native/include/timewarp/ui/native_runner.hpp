@@ -103,10 +103,14 @@ public:
     void draw_polygon(const std::vector<timewarp::lang::Point>& points,
                       timewarp::lang::Rgb stroke, timewarp::lang::Rgb fill,
                       double width, bool filled) override;
+    void put_pixels(int x, int y, int width, int height,
+                    const std::vector<timewarp::lang::Rgb>& pixels) override;
     [[nodiscard]] timewarp::lang::Rgb pen_colour() const override;
     void show_turtle() override;
     void hide_turtle() override;
     void set_svga_mode(int width, int height) override;
+    void set_framebuffer(int width, int height) override;
+    void clear_framebuffer() override;
     void set_palette_color(int index, timewarp::lang::Rgb colour) override;
     [[nodiscard]] timewarp::lang::Rgb resolve_color(int index) const override;
 

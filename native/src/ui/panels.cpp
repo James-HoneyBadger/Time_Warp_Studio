@@ -1946,6 +1946,7 @@ QString TurtleCommandLog::describe(const timewarp::canvas::CanvasCommandView& vi
                 .arg(name, QString::number(command.index), plain_number(command.x));
 
         case CanvasCommandKind::SetSvgaMode:
+        case CanvasCommandKind::SetFramebuffer:
             return QStringLiteral("%1 %2\u00D7%3")
                 .arg(name, plain_number(command.x), plain_number(command.y));
 
@@ -1993,6 +1994,11 @@ QString TurtleCommandLog::describe(const timewarp::canvas::CanvasCommandView& vi
                 .arg(name, quoted_text(view.text), plain_number(command.x),
                      plain_number(command.y), plain_number(command.w));
 
+        case CanvasCommandKind::PutPixels:
+            return QStringLiteral("%1 %2 %3 %4 %5")
+                .arg(name, plain_number(command.x), plain_number(command.y),
+                     plain_number(command.w), plain_number(command.h));
+
         case CanvasCommandKind::DefineSprite:
             return QStringLiteral("%1 %2 %3 %4 %5 %6")
                 .arg(name, quoted_text(view.text), plain_number(command.x),
@@ -2020,6 +2026,7 @@ QString TurtleCommandLog::describe(const timewarp::canvas::CanvasCommandView& vi
         case CanvasCommandKind::Clear:
         case CanvasCommandKind::Reset:
         case CanvasCommandKind::ClearSvgaMode:
+        case CanvasCommandKind::ClearFramebuffer:
             break;
     }
     return name;

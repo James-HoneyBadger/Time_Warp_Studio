@@ -17,6 +17,8 @@
 #include <condition_variable>
 #include <cstdint>
 #include <cstdio>
+#include <fstream>
+#include <iterator>
 #include <map>
 #include <mutex>
 #include <sstream>
@@ -30,9 +32,11 @@
 #include "check.hpp"
 #include "timewarp/core/charconv.hpp"
 #include "timewarp/lang/chip8.hpp"
+#include "timewarp/io/gamepad.hpp"
 #include "timewarp/lang/debug.hpp"
 #include "timewarp/lang/interpreter.hpp"
 #include "timewarp/lang/python_random.hpp"
+#include "timewarp/lang/raster.hpp"
 #include "timewarp/lang/repl.hpp"
 #include "timewarp/lang/turtle_host.hpp"
 #include "timewarp/lang/watch.hpp"
@@ -44,6 +48,7 @@ using timewarp::lang::Chip8Program;
 using timewarp::lang::Interpreter;
 using timewarp::lang::Language;
 using timewarp::lang::PythonRandom;
+using timewarp::lang::Raster;
 using timewarp::lang::ReplSession;
 using timewarp::lang::Rgb;
 using timewarp::lang::TurtleHost;
@@ -127,11 +132,20 @@ public:
         op += " " + number_text(width);
         ops.push_back(op);
     }
+    void put_pixels(int x, int y, int width, int height,
+                    const std::vector<Rgb>& /*pixels*/) override {
+        ops.push_back("blit " + std::to_string(x) + " " + std::to_string(y) + " " +
+                      std::to_string(width) + " " + std::to_string(height));
+    }
     void show_turtle() override { ops.push_back("show"); }
     void hide_turtle() override { ops.push_back("hide"); }
     void set_svga_mode(int width, int height) override {
         ops.push_back("svga " + std::to_string(width) + " " + std::to_string(height));
     }
+    void set_framebuffer(int width, int height) override {
+        ops.push_back("screen " + std::to_string(width) + " " + std::to_string(height));
+    }
+    void clear_framebuffer() override { ops.push_back("noscreen"); }
     void set_palette_color(int index, Rgb colour) override {
         palette[index] = colour;
         ops.push_back("palette " + std::to_string(index) + " " + colour_text(colour));
@@ -1731,6 +1745,85 @@ void test_smalltalk_turtle_messages_draw() {
 }
 
 // ---------------------------------------------------------------------------
+// The raster
+// ---------------------------------------------------------------------------
+
+// A fixed-size pixel surface is what makes `POINT`, `GET` and `PUT` possible: a
+// display list cannot be read back. Clipping is asserted because GW-BASIC
+// clipped too -- a program that plots at (-5, 900) is not making a mistake a
+// learner needs a message about.
+void test_raster_clips_instead_of_failing() {
+    Raster raster;
+    TW_CHECK(!raster.active());
+
+    raster.resize(4, 3, Rgb{1, 2, 3});
+    TW_CHECK(raster.active());
+    TW_CHECK_EQ(raster.width(), 4);
+    TW_CHECK_EQ(raster.height(), 3);
+    TW_CHECK(raster.at(0, 0) == (Rgb{1, 2, 3}));
+
+    raster.set(0, 0, Rgb{255, 0, 0});
+    raster.set(-1, 0, Rgb{0, 255, 0});
+    raster.set(4, 0, Rgb{0, 255, 0});
+    raster.set(0, 3, Rgb{0, 255, 0});
+    TW_CHECK(raster.at(0, 0) == (Rgb{255, 0, 0}));
+    TW_CHECK(!raster.contains(4, 0));
+    // Outside the surface the answer is the background, not an error.
+    TW_CHECK(raster.at(-1, 0) == (Rgb{1, 2, 3}));
+    TW_CHECK(raster.at(0, 3) == (Rgb{1, 2, 3}));
+
+    raster.clear(Rgb{9, 9, 9});
+    TW_CHECK(raster.at(0, 0) == (Rgb{9, 9, 9}));
+    TW_CHECK(raster.background() == (Rgb{9, 9, 9}));
+}
+
+void test_raster_line_and_rect_plot_the_pixels_asked_for() {
+    Raster raster;
+    raster.resize(8, 8);
+    raster.line(0, 0, 7, 0, Rgb{255, 0, 0});
+    raster.rect(2, 2, 4, 4, Rgb{0, 0, 255}, true);
+
+    for (int x = 0; x < 8; ++x) {
+        TW_CHECK(raster.at(x, 0) == (Rgb{255, 0, 0}));
+    }
+    // A filled rectangle covers its interior, not only its outline.
+    TW_CHECK(raster.at(3, 3) == (Rgb{0, 0, 255}));
+    TW_CHECK(raster.at(2, 4) == (Rgb{0, 0, 255}));
+    TW_CHECK(raster.at(5, 5) == Rgb{});
+}
+
+void test_raster_flood_fill_stops_at_a_border() {
+    Raster raster;
+    raster.resize(5, 5);
+    raster.rect(1, 1, 3, 3, Rgb{255, 255, 255}, false);
+    raster.flood_fill(0, 0, Rgb{0, 255, 0});
+
+    TW_CHECK(raster.at(0, 0) == (Rgb{0, 255, 0}));
+    TW_CHECK(raster.at(4, 4) == (Rgb{0, 255, 0}));
+    // Inside the outline is a different region and keeps its colour.
+    TW_CHECK(raster.at(2, 2) == Rgb{});
+    TW_CHECK(raster.at(1, 1) == (Rgb{255, 255, 255}));
+}
+
+void test_raster_round_trips_a_block() {
+    Raster raster;
+    raster.resize(6, 6);
+    raster.set(1, 1, Rgb{10, 20, 30});
+    raster.set(2, 1, Rgb{40, 50, 60});
+
+    const std::vector<Rgb> block = raster.block(1, 1, 2, 2);
+    TW_CHECK_EQ(block.size(), std::size_t{4});
+    TW_CHECK(block.at(0) == (Rgb{10, 20, 30}));
+    TW_CHECK(block.at(1) == (Rgb{40, 50, 60}));
+
+    // Placed somewhere else, row-major from the top-left corner of the block.
+    raster.put_block(4, 4, 2, 2, block);
+    TW_CHECK(raster.at(4, 4) == (Rgb{10, 20, 30}));
+    TW_CHECK(raster.at(5, 4) == (Rgb{40, 50, 60}));
+    TW_CHECK(raster.at(4, 5) == Rgb{});
+}
+
+// ---------------------------------------------------------------------------
 // BASIC
 // ---------------------------------------------------------------------------
 
@@ -1810,6 +1903,82 @@ void test_basic_say_refuses_without_a_backend() {
     const BasicRun run = run_basic("SAY \"HELLO\"\nA$ = \"WORLD\"\nSAY A$");
     TW_CHECK_EQ(run.output.at(0), std::string{"❌ [line 1] Speech synthesis not available"});
     TW_CHECK_EQ(run.output.at(1), std::string{"❌ [line 3] Speech synthesis not available"});
+}
+
+/// An inner loop with an empty body is legal BASIC, and its `NEXT` is the line
+/// the loop returns to. The run loop sees a jump by comparing the program
+/// counter before and after a statement, so that jump is invisible; before this
+/// was handled, the inner frame was left on the stack and the *outer* loop's
+/// `NEXT` consumed it, so the outer loop ran once and said nothing.
+void test_basic_an_empty_loop_body_does_not_end_its_outer_loop() {
+    const BasicRun run = run_basic(
+        "10 FOR F = 1 TO 3\n"
+        "20 LET C = C + 1\n"
+        "30 FOR I = 1 TO 4\n"
+        "40 NEXT I\n"
+        "50 NEXT F\n"
+        "60 PRINT C\n");
+    TW_CHECK_EQ(run.output.size(), std::size_t{1});
+    if (run.output.empty()) {
+        return;
+    }
+    TW_CHECK_EQ(run.output.at(0), std::string{"3"});
+    TW_CHECK(!any_error(run.output));
+    // A bare `NEXT I` is enough: the inner loop must also be counted, and the
+    // variable it leaves behind is the first value past its limit.
+    const BasicRun counted = run_basic(
+        "10 FOR I = 1 TO 4\n"
+        "20 NEXT I\n"
+        "30 PRINT I\n");
+    TW_CHECK_EQ(counted.output.size(), std::size_t{1});
+    if (!counted.output.empty()) {
+        TW_CHECK_EQ(counted.output.at(0), std::string{"5"});
+    }
+}
+
+/// The shipped game is a gate as much as a sample. It is the one program that
+/// uses SCREEN, sprites, POINT and an empty-bodied loop together, and "it ran
+/// and drew nothing" is the failure this project treats as the bug.
+void test_the_screen_game_example_runs_and_draws() {
+#ifdef TIME_WARP_TEST_EXAMPLES
+    const std::string path =
+        std::string{TIME_WARP_TEST_EXAMPLES} + "/basic/star_patrol.bas";
+    std::ifstream file{path};
+    TW_CHECK(file.good());
+    if (!file) {
+        return;
+    }
+    const std::string source{std::istreambuf_iterator<char>{file},
+                             std::istreambuf_iterator<char>{}};
+    RecordingHost host;
+    Interpreter interpreter{Language::Basic, host};
+    interpreter.load_program(source);
+    interpreter.run();
+
+    for (const std::string& line : interpreter.output()) {
+        TW_CHECK(line.find("❌") == std::string::npos);
+    }
+
+    bool asked_for_a_screen = false;
+    bool placed_a_sprite = false;
+    bool read_a_pixel = false;
+    for (const std::string& op : host.ops) {
+        if (op.rfind("screen 320 200", 0) == 0) {
+            asked_for_a_screen = true;
+        }
+        if (op.rfind("blit", 0) == 0) {
+            placed_a_sprite = true;
+        }
+        if (op.rfind("point", 0) == 0) {
+            read_a_pixel = true;
+        }
+    }
+    TW_CHECK(asked_for_a_screen);
+    TW_CHECK(placed_a_sprite);
+    TW_CHECK(read_a_pixel);
+#else
+    std::printf("-- (example path not configured)\n");
+#endif
 }
 
 /// Profiling is measurement around the shared line loop: hits per line, time per
@@ -1908,6 +2077,168 @@ void test_basic_numeric_input_is_coerced() {
     if (!unanswered.output.empty()) {
         TW_CHECK_EQ(unanswered.output.at(0), std::string{"0"});
     }
+}
+
+// `POINT` answers what is on the screen the program drew on, packed as
+// `&H00RRGGBB`. The division is in the program because PRINT's own format is
+// six significant digits -- 16711680 would print as 1.67117e+07 -- and the
+// pixel is what the test is about, not the number's spelling.
+void test_basic_point_reads_back_the_pixel_it_drew() {
+    const BasicRun run = run_basic(
+        "10 SCREEN 1\n"
+        "20 PSET (10, 10), #FF0000\n"
+        "30 PRINT POINT(10, 10) / 65536\n"
+        "40 PRINT POINT(11, 11)\n");
+    TW_CHECK_EQ(run.output.size(), std::size_t{3});
+    if (run.output.size() != 3) {
+        return;
+    }
+    TW_CHECK_EQ(run.output.at(0), std::string{"🎨 Graphics mode (800x600)"});
+    TW_CHECK_EQ(run.output.at(1), std::string{"255"});
+    // A pixel nobody painted is the screen's background.
+    TW_CHECK_EQ(run.output.at(2), std::string{"0"});
+    TW_CHECK(!any_error(run.output));
+}
+
+// `SCREEN n` picks a size, and the size is the one that number meant. The
+// surface a program reads back changes with it, which is what makes a game's
+// coordinates portable between the modes.
+void test_basic_screen_modes_choose_the_screen_size() {
+    const BasicRun run = run_basic(
+        "10 SCREEN 13\n"
+        "20 PSET (319, 199), #FF0000\n"
+        "30 PRINT POINT(319, 199) / 65536\n"
+        "40 SCREEN 9\n"
+        "50 PRINT POINT(319, 199)\n"
+        "60 SCREEN 99\n");
+    TW_CHECK_EQ(run.output.size(), std::size_t{5});
+    if (run.output.size() != 5) {
+        return;
+    }
+    TW_CHECK_EQ(run.output.at(0), std::string{"🎨 Graphics mode (320x200)"});
+    TW_CHECK_EQ(run.output.at(1), std::string{"255"});
+    // A new mode is a new, blank screen: the pixel the last one had is not on
+    // this one, and asking about it answers the background rather than the old
+    // picture.
+    TW_CHECK_EQ(run.output.at(2), std::string{"🎨 Graphics mode (640x350)"});
+    TW_CHECK_EQ(run.output.at(3), std::string{"0"});
+    // A number that never was a mode names the ones that were, rather than only
+    // saying no.
+    TW_CHECK(run.output.at(4).find("not one of 0, 1, 2, 7, 9, 12, 13") !=
+            std::string::npos);
+}
+
+// -1 is how a program asks whether it has a screen at all, and it is the answer
+// in text mode as well as before any `SCREEN`.
+void test_basic_point_without_a_screen_answers_minus_one() {
+    const BasicRun run = run_basic(
+        "10 PRINT POINT(0, 0)\n"
+        "20 SCREEN 1\n"
+        "30 PSET (10, 10), #FF0000\n"
+        "40 SCREEN 0\n"
+        "50 PRINT POINT(10, 10)\n");
+    TW_CHECK_EQ(run.output.size(), std::size_t{4});
+    if (run.output.size() != 4) {
+        return;
+    }
+    TW_CHECK_EQ(run.output.at(0), std::string{"-1"});
+    TW_CHECK_EQ(run.output.at(2), std::string{"🎨 Text mode (80x25)"});
+    TW_CHECK_EQ(run.output.at(3), std::string{"-1"});
+}
+
+// `GET` captures a block into an array that carries its own size, `PUT` restores
+// it elsewhere, and both halves are observable through `POINT` -- a capture that
+// is remembered but never restored, and a restore nobody can read back, would
+// look identical from the console.
+void test_basic_get_and_put_round_trip_a_sprite() {
+    const BasicRun run = run_basic(
+        "10 SCREEN 1\n"
+        "20 PSET (5, 5), #00FF00\n"
+        "30 GET (5, 5)-(6, 6), A\n"
+        "40 PUT (20, 20), A\n"
+        "50 PRINT POINT(20, 20) / 256\n"
+        "60 PRINT POINT(21, 21)\n");
+    TW_CHECK_EQ(run.output.size(), std::size_t{3});
+    if (run.output.size() != 3) {
+        return;
+    }
+    TW_CHECK_EQ(run.output.at(1), std::string{"255"});
+    TW_CHECK_EQ(run.output.at(2), std::string{"0"});
+    // The surface is told as well, at the size the sprite really has.
+    TW_CHECK(contains(run.host.ops, "blit 20 20 2 2"));
+    TW_CHECK(!any_error(run.output));
+}
+
+// `PAINT` fills the screen a program can read back with the colour the surface
+// was just given. For `PAINT (x, y), 4` that is the reference's white, because
+// its own comma split reads the middle field of the point -- and a raster that
+// resolved the colour "correctly" would disagree with the fill a learner can
+// see, which is the worse of the two answers. This pins the choice.
+void test_basic_paint_fills_with_what_the_surface_was_given() {
+    const BasicRun run = run_basic(
+        "10 SCREEN 1\n"
+        "20 LINE (0, 0)-(4, 4), #0000FF, B\n"
+        "30 PAINT (2, 2), 4\n"
+        "40 PRINT INT(POINT(2, 2) / 65536)\n");
+    TW_CHECK_EQ(run.output.size(), std::size_t{3});
+    if (run.output.size() != 3) {
+        return;
+    }
+    // 255 is white; palette index 4 would have answered 0 red, which is the
+    // colour the surface was *not* told to fill with.
+    TW_CHECK_EQ(run.output.at(2), std::string{"255"});
+}
+
+void test_basic_get_needs_a_graphics_screen() {
+    const BasicRun run = run_basic("GET (0, 0)-(1, 1), A");
+    TW_CHECK(contains(run.output, "GET needs a graphics screen"));
+    TW_CHECK(any_error(run.output));
+}
+
+// `CLS` clears the screen a program can read back, not only the canvas: a
+// program that clears and then asks `POINT` must be told the pixel is gone.
+void test_basic_cls_clears_what_point_reads() {
+    const BasicRun run = run_basic(
+        "10 SCREEN 1\n"
+        "20 PSET (10, 10), #FF0000\n"
+        "30 CLS\n"
+        "40 PRINT POINT(10, 10)\n");
+    TW_CHECK_EQ(run.output.size(), std::size_t{3});
+    if (run.output.size() != 3) {
+        return;
+    }
+    TW_CHECK_EQ(run.output.at(2), std::string{"0"});
+}
+
+// `STICK`/`STRIG` answer 0 until `JOYINIT` has armed them, so a joystick plugged
+// into the machine cannot change a program that never asked to read it.
+void test_basic_stick_is_neutral_before_joyinit() {
+    const BasicRun run = run_basic("PRINT STICK(0)\nPRINT STRIG(0)");
+    TW_CHECK_EQ(run.output.size(), std::size_t{2});
+    if (run.output.size() == 2) {
+        TW_CHECK_EQ(run.output.at(0), std::string{"0"});
+        TW_CHECK_EQ(run.output.at(1), std::string{"0"});
+    }
+
+    // `JOYINIT` is hardware: it either arms the pad or says there is none. Both
+    // are answers, and the second is not an error the learner caused.
+    const BasicRun init = run_basic("JOYINIT");
+    TW_CHECK_EQ(init.output.size(), std::size_t{1});
+    TW_CHECK(!any_error(init.output));
+    TW_CHECK(contains(init.output, "amepad"));
+}
+
+// The device reports an axis in -32767..32767; `STICK` promises 0-255 with a
+// resting stick at 128. Truncating the midpoint would answer 127, so the
+// conversion rounds -- and a driver that reports the out-of-range -32768 must
+// clamp to 0 rather than wrap to the top.
+void test_gamepad_axis_scaling_is_centred() {
+    TW_CHECK_EQ(timewarp::io::scale_axis(-32767), 0);
+    TW_CHECK_EQ(timewarp::io::scale_axis(-32768), 0);
+    TW_CHECK_EQ(timewarp::io::scale_axis(0), 128);
+    TW_CHECK_EQ(timewarp::io::scale_axis(32767), 255);
+    TW_CHECK_EQ(timewarp::io::scale_axis(32768), 255);
+    TW_CHECK_EQ(timewarp::io::scale_axis(-100000), 0);
 }
 
 
@@ -2294,6 +2625,21 @@ int main() {
     test_basic_loops_and_subroutines_run();
     test_basic_input_prompt_and_answer_round_trip();
     test_basic_numeric_input_is_coerced();
+    test_raster_clips_instead_of_failing();
+    test_raster_line_and_rect_plot_the_pixels_asked_for();
+    test_raster_flood_fill_stops_at_a_border();
+    test_raster_round_trips_a_block();
+    test_basic_point_reads_back_the_pixel_it_drew();
+    test_basic_point_without_a_screen_answers_minus_one();
+    test_basic_screen_modes_choose_the_screen_size();
+    test_basic_get_and_put_round_trip_a_sprite();
+    test_basic_paint_fills_with_what_the_surface_was_given();
+    test_basic_get_needs_a_graphics_screen();
+    test_basic_cls_clears_what_point_reads();
+    test_basic_stick_is_neutral_before_joyinit();
+    test_gamepad_axis_scaling_is_centred();
+    test_basic_an_empty_loop_body_does_not_end_its_outer_loop();
+    test_the_screen_game_example_runs_and_draws();
     test_profiling_counts_each_line();
     test_profiling_is_off_unless_asked();
     test_logo_stops_at_a_breakpoint_and_steps();

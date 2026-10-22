@@ -56,6 +56,13 @@ public:
     void draw_point(double x, double y, Rgb colour) override {
         trace("point", x, y, colour);
     }
+    void put_pixels(int x, int y, int width, int height,
+                    const std::vector<Rgb>& /*pixels*/) override {
+        // The pixels themselves are not traced: a captured sprite can be
+        // thousands of them and the trace is compared line by line. The place
+        // and the size are what a mismatch is diagnosed from.
+        trace("blit", x, y, width, height);
+    }
     void draw_polygon(const std::vector<Point>& points, Rgb stroke, Rgb fill,
                       double width, bool filled) override {
         std::printf("DRAW\tpolygon");

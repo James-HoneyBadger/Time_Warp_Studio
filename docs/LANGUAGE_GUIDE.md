@@ -264,6 +264,67 @@ FOR I = 0 TO 360 STEP 10
 NEXT I
 ```
 
+`SCREEN 1` also gives the program a screen it can read back: `POINT` answers the
+colour at a pixel, and `GET`/`PUT` move a rectangle of pixels around.
+
+Which screen a program asks for is the mode's number, and the numbers mean what
+they meant:
+
+| `SCREEN` | Size | Colours | What it was |
+| --- | --- | --- | --- |
+| `0` | text (80x25 by default) | — | text mode; `SCREEN 0, cols, rows` resizes within 40-120 by 20-50 |
+| `1` | 800x600 | 16 | the studio's graphics mode; `SCREEN 1, w, h` picks another size |
+| `2` | 640x200 | 16 | CGA graphics |
+| `7` | 320x200 | 16 | EGA 320x200 |
+| `9` | 640x350 | 16 | EGA 640x350 |
+| `12` | 640x480 | 16 | VGA 640x480 |
+| `13` | 320x200 | 256 | VGA 320x200, 256 colours |
+
+A number that was never a mode is refused with the list of the ones that were, so
+a typo says what it could have said instead. The numbered modes above 1 are a
+native addition: the reference engine only ever had `SCREEN 1`, and the parity
+gate therefore cannot compare them — `lang_tests` and the shipped game are what
+hold them up.
+
+The size is not decoration. When a program names a screen, the drawing surface
+stops fitting itself to the ink and becomes that screen: (0, 0) is the top-left
+pixel, x grows right and y grows down, and the picture is shown at a whole-number
+scale so a pixel stays a square. `SCREEN 0` — or the end of a run — gives the
+fit-to-content drawing back. This is what a game needs and a drawing does not.
+
+```basic
+SCREEN 13
+PSET (10, 10), #FF0000
+PRINT POINT(10, 10) / 65536      ' 255: the red channel of &H00FF0000
+
+' A 16x16 tile captured once and stamped five times
+LINE (92, 92)-(108, 108), 12, BF
+GET (92, 92)-(108, 108), TILE
+FOR I = 1 TO 5
+    PUT (I * 40, 150), TILE
+NEXT I
+
+SCREEN 0                          ' text mode: POINT now answers -1
+```
+
+`POINT` answers `-1` when there is no graphics screen, which is how a program
+asks whether it has one. `GET` stores the width in element 0 of the array and the
+height in element 1, then the pixels row by row from the top-left corner; it sizes
+the array itself, so a sprite needs no `DIM` first. `GET #n` and `PUT #n` are
+still the file channel — the `#` is what tells the two apart.
+
+The screen is the program's own record of what it drew: the canvas keeps the
+primitives `LINE`, `CIRCLE`, `PSET` and `PAINT` always emitted — the log, the
+scrubber and the vector export read them — and the pixels are what `POINT`, `GET`
+and `PUT` answer from, and what is shown. A restored sprite is drawn too, so a
+captured tile is not only remembered. `PAINT` also floods the region that contains
+its point — so a filled area can be captured with `GET`. `CLS` clears both, and
+`SCREEN 0` discards the screen along with the mode.
+
+[`Examples/basic/star_patrol.bas`](../Examples/basic/star_patrol.bas) is a whole
+program built on this: a sprite ship, a star field, a shot whose hits are found
+with `POINT`, and a score bar.
+
 ### Sound
 
 The synth is the machine's own kind: square waves and note lists, not sampled
@@ -304,6 +365,34 @@ when nothing has been typed. Click the canvas first: that is where a game is
 played, so that is where the keys are read. A headless run has no keyboard and
 answers empty, which is what the parity gate records. It is therefore not a
 useful REPL command: the REPL has no running program for the buffer to feed.
+
+### Gamepad
+
+`JOYINIT` opens the first joystick the machine has; `STICK` reads an axis and
+`STRIG` a button.
+
+```basic
+JOYINIT
+X = 160
+FOR FRAME = 1 TO 3600                     ' about a minute at 16ms a frame
+    IF STICK(0) < 100 THEN X = X - 4      ' axis 0, left
+    IF STICK(0) > 156 THEN X = X + 4      ' axis 0, right
+    IF STRIG(0) = 1 THEN FIRE = 1         ' button 0 is held
+    PSET (X, 100), #FFFFFF
+    WAIT 16
+    IF INKEY$ = "q" THEN END
+NEXT FRAME
+```
+
+`STICK(n)` answers 0-255 with a resting stick at 128, and `STRIG(n)` answers 1
+while a button is held. Both answer 0 until `JOYINIT` has found a pad, so a machine
+with a joystick plugged in does not change a program that never asked to read one.
+`JOYINIT` reports the device it opened or that there is none: a gamepad is
+optional hardware, not an error in the program.
+
+On Linux the pad is `/dev/input/js0`, or the first of `js0` to `js3` that opens;
+`TIME_WARP_GAMEPAD=/dev/input/js1 ./time_warp_ide` names one instead. Windows and
+macOS builds report no pad rather than a backend that cannot read one.
 
 ### Drawing without the turtle: `DRAW`
 
@@ -379,10 +468,12 @@ Serial ports are opened raw (no echo, no line translation) and read with
 timeouts; writes wait rather than dropping bytes when the board is slower than
 the program.
 
-> **Note** — `DRAW`, `WAIT`, `SERIAL` and `PARALLEL` are native extensions: the
-> retired reference engine never implemented them, so the parity gates do not
-> compare them and `BEEP`/`SOUND`/`PLAY` keep the reference's acknowledgement
-> text exactly.
+> **Note** — `DRAW`, `WAIT`, `SERIAL`, `PARALLEL`, `POINT`, sprite `GET`/`PUT` and
+> the gamepad are native extensions: the retired reference engine implemented
+> none of the first four nor the screen readback, and answered `STICK`/`STRIG`
+> with 0 because it shipped no backend. The parity gates do not compare them —
+> a gamepad's answer depends on the machine, not on the program — and
+> `BEEP`/`SOUND`/`PLAY` keep the reference's acknowledgement text exactly.
 
 ### Math Functions
 

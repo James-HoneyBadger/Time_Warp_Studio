@@ -247,6 +247,16 @@ public:
     virtual void draw_polygon(const std::vector<Point>& points, Rgb stroke, Rgb fill,
                               double width, bool filled) = 0;
 
+    /// A block of pixels placed at a point, row-major, top row first.
+    ///
+    /// The one raster operation that has to reach the surface: `PUT` restores a
+    /// sprite the program captured, and a host that cannot show it would make
+    /// `GET`/`PUT` an invisible feature. Not pure, because the hosts that draw
+    /// no raster -- a test recorder, a headless gate -- lose nothing by
+    /// ignoring it, and a default keeps every existing host compiling.
+    virtual void put_pixels(int /*x*/, int /*y*/, int /*width*/, int /*height*/,
+                            const std::vector<Rgb>& /*pixels*/) {}
+
     // -- introspection ------------------------------------------------------
     // The reference's executors can read `turtle.pen_color` and use it as the
     // fill colour. One value is cheap to mirror and is exactly what a command
@@ -260,6 +270,19 @@ public:
     virtual void show_turtle() = 0;
     virtual void hide_turtle() = 0;
     virtual void set_svga_mode(int width, int height) = 0;
+    /// A program asked for a fixed-pixel screen: `width x height` pixels at
+    /// fixed coordinates, y down, origin top-left. `SCREEN` is the statement
+    /// that says it.
+    ///
+    /// Distinct from `set_svga_mode`, which reports the *world-space* size a
+    /// whole-program engine happens to draw in (CHIP-8 fills a 512x256 world
+    /// rectangle) and does not by itself change how anything is shown. Not
+    /// pure: a recorder or headless gate has no surface, and the program still
+    /// runs when the request is ignored.
+    virtual void set_framebuffer(int /*width*/, int /*height*/) {}
+    /// Back to the display list: `SCREEN 0`, or a program that left graphics
+    /// mode. A host that never had a framebuffer does nothing.
+    virtual void clear_framebuffer() {}
     virtual void set_palette_color(int index, Rgb colour) = 0;
     /// The colour a palette index currently means. Used where a program draws a
     /// whole frame and must name the colour, not the index.

@@ -71,6 +71,12 @@ enum class CanvasCommandKind : std::uint8_t {
     Reset,            ///< no payload
     SetSvgaMode,      ///< x = width, y = height
     ClearSvgaMode,    ///< no payload
+    /// A fixed-pixel screen: x = width, y = height. Drawing that follows is
+    /// placed at these coordinates, y down from the top-left, and the surface
+    /// stops fitting itself to the ink.
+    SetFramebuffer,
+    /// Back to the fit-to-content display list.
+    ClearFramebuffer,
     SetPaletteColor,  ///< index = slot, color
     CyclePalette,     ///< index = steps
 
@@ -87,6 +93,11 @@ enum class CanvasCommandKind : std::uint8_t {
     BezierCurve,        ///< trailing point list, x = width, color
 
     // -- sprites ----------------------------------------------------------
+    /// A block of pixels: x, y = its top-left in raster coordinates, w, h its
+    /// size, and the trailing doubles one packed `0x00RRGGBB` per pixel,
+    /// row-major with the top row first. `PUT` emits it, so a captured sprite
+    /// is visible and not merely remembered.
+    PutPixels,
     DefineSprite,  ///< trailing name; x, y, w, h
     PlaceSprite,   ///< trailing name; x, y
     MoveSprite,    ///< trailing name; x, y = delta
@@ -306,6 +317,19 @@ struct CanvasCommandView {
     return command;
 }
 
+/// A fixed-pixel screen of `width x height`.
+[[nodiscard]] constexpr CanvasCommand make_framebuffer(double width,
+                                                       double height) noexcept {
+    CanvasCommand command = make_command(CanvasCommandKind::SetFramebuffer);
+    command.x = width;
+    command.y = height;
+    return command;
+}
+
+[[nodiscard]] constexpr CanvasCommand make_clear_framebuffer() noexcept {
+    return make_command(CanvasCommandKind::ClearFramebuffer);
+}
+
 [[nodiscard]] constexpr CanvasCommand make_circle(double radius,
                                                   double extent = 360.0) noexcept {
     CanvasCommand command = make_command(CanvasCommandKind::Circle);
@@ -319,6 +343,22 @@ struct CanvasCommandView {
     CanvasCommand command = make_color(CanvasCommandKind::DrawPoint, rgb);
     command.x = px;
     command.y = py;
+    return command;
+}
+
+/// A pixel block: the packed colours follow as one double per pixel.
+///
+/// Unlike every other trailing payload, this one is **not** a point list: the
+/// points span holds `width * height` doubles, each a packed colour, and a
+/// reader must count `points.size()` rather than `point_count()`.
+[[nodiscard]] constexpr CanvasCommand make_put_pixels(double px, double py,
+                                                      double width,
+                                                      double height) noexcept {
+    CanvasCommand command = make_command(CanvasCommandKind::PutPixels);
+    command.x = px;
+    command.y = py;
+    command.w = width;
+    command.h = height;
     return command;
 }
 

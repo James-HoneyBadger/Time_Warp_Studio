@@ -6,7 +6,7 @@ complete computers inside it.*
 [![C++20](https://img.shields.io/badge/C%2B%2B-20-blue)](https://en.cppreference.com/)
 [![Qt](https://img.shields.io/badge/Qt-6%20%7C%205.15-green)](https://www.qt.io/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/Version-16.4.4-orange)](https://github.com/James-HoneyBadger/Time_Warp_Studio)
+[![Version](https://img.shields.io/badge/Version-16.5.0-orange)](https://github.com/James-HoneyBadger/Time_Warp_Studio)
 
 Time Warp Studio is a native C++20 and Qt workbench for people who like old
 computers. It is the programming environment the 1980s promised and never quite
@@ -255,10 +255,11 @@ See [docs/lessons/](docs/lessons/README.md) for the student and teacher guides.
 
 ### What ships with it
 
-- **60 example programs** across the ten languages, including a **showcase** per
-  language that walks its whole surface and ends in a drawing. They are worth
-  reading as reference material as much as running as examples, and every one of
-  them runs in the test gates.
+- **61 example programs** across the ten languages, including a **showcase** per
+  language that walks its whole surface and ends in a drawing, and
+  [`star_patrol.bas`](Examples/basic/star_patrol.bas) — a small game on a
+  fixed-coordinate screen. They are worth reading as reference material as much as
+  running as examples, and every one of them runs in the test gates.
 - **Error hints**, which offer a syntax suggestion beside an interpreter's error
   message.
 - **Ten language tutorials**, one per language, under `docs/tutorials/`.

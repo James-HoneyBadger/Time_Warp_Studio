@@ -2759,6 +2759,38 @@ void test_input_round_trip_reaches_the_runner() {
     TW_CHECK(saw_n);
 }
 
+// `SCREEN` is a request that has to survive the whole chain: the language asks
+// its host, the host pushes a command, and the canvas changes what it draws.
+// Each half has a test of its own; this is the seam between them, which is the
+// one that could silently do nothing.
+void test_a_program_screen_reaches_the_canvas() {
+    announce("a screen reaches the canvas");
+
+    timewarp::canvas::CanvasCommandQueue queue;
+    timewarp::ui::NativeRunner runner{timewarp::lang::Language::Basic, queue};
+
+    std::atomic<bool> finished{false};
+    QObject::connect(&runner, &timewarp::ui::NativeRunner::run_finished, &runner,
+                     [&](bool, const QString&) { finished = true; });
+
+    runner.load_program(QStringLiteral("10 SCREEN 13\n20 PSET (5, 7), #FF0000\n"));
+    runner.start();
+    TW_CHECK(spin_until([&finished] { return finished.load(); }));
+    runner.wait(5000);
+
+    timewarp::ui::TurtleCanvas canvas;
+    canvas.resize(800, 600);
+    while (queue.drain([&canvas](const timewarp::canvas::CanvasCommandView& view) {
+        canvas.apply(view);
+    }) > 0) {
+    }
+
+    TW_CHECK(canvas.framebufferActive());
+    TW_CHECK_EQ(canvas.framebufferSize().width(), 320);
+    TW_CHECK_EQ(canvas.framebufferSize().height(), 200);
+    TW_CHECK_EQ(canvas.framebufferPixel(5, 7), QColor(255, 0, 0));
+}
+
 /// The report shows what the engine measured, in the order the engine sorted it:
 /// the dialog must not re-sort or drop rows.
 void test_profile_report_lists_the_measurements() {
@@ -3730,6 +3762,7 @@ int main(int argc, char** argv) {
     test_view_menu_zoom_scales_the_canvas();
     test_profile_run_is_opt_in();
     test_input_round_trip_reaches_the_runner();
+    test_a_program_screen_reaches_the_canvas();
     test_profile_report_lists_the_measurements();
     test_run_menu_clear_output_empties_the_console();
     test_edit_menu_acts_on_whatever_has_focus();

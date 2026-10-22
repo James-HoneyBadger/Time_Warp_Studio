@@ -24,6 +24,7 @@
 #include <vector>
 
 #include "timewarp/audio/music.hpp"
+#include "timewarp/lang/screen_mode.hpp"
 
 namespace timewarp::lang::basic {
 namespace {
@@ -74,7 +75,24 @@ std::vector<std::string> split_trimmed(std::string_view text, char separator) {
     return parts;
 }
 
+/// A coordinate on the raster. The statements carry doubles; a pixel is a place.
+int pixel(double value) {
+    return static_cast<int>(std::lround(value));
+}
+
 }  // namespace
+
+int pack_colour(Rgb colour) {
+    return (std::clamp(colour.red, 0, 255) << 16) | (std::clamp(colour.green, 0, 255) << 8) |
+           std::clamp(colour.blue, 0, 255);
+}
+
+Rgb unpack_colour(long value) {
+    const long clamped = value < 0 ? 0 : (value > 0xFFFFFF ? 0xFFFFFF : value);
+    return Rgb{static_cast<int>((clamped >> 16) & 0xFF),
+               static_cast<int>((clamped >> 8) & 0xFF),
+               static_cast<int>(clamped & 0xFF)};
+}
 
 // -- screen ----------------------------------------------------------------
 
@@ -89,11 +107,18 @@ std::string Machine::screen(const std::string& args) {
                trim(parts[0]) + "'\n";
     }
     const auto mode = static_cast<long>(mode_value);
-    if (mode < 0 || mode > 1) {
-        return "❌ Value " + std::to_string(mode) + " for screen mode exceeds maximum 1\n";
+    const ScreenMode* chosen = find_screen_mode(static_cast<int>(mode));
+    if (chosen == nullptr) {
+        return "❌ Value " + std::to_string(mode) + " for screen mode is not one of " +
+               supported_screen_modes() + "\n";
     }
-    if (mode == 0) {
+    if (chosen->colours == 0) {
         state_.screen_mode = 0;
+        // Text mode takes the screen away, so a later POINT has an honest
+        // answer -- the error that says there is no screen -- rather than the
+        // pixels of a mode the program has left.
+        state_.raster = Raster{};
+        turtle_.clear_framebuffer();
         if (parts.size() >= 3) {
             const std::optional<long> columns = evaluate_integer(*this, parts[1]);
             const std::optional<long> rows = evaluate_integer(*this, parts[2]);
@@ -113,8 +138,14 @@ std::string Machine::screen(const std::string& args) {
         return "🎨 Text mode (" + std::to_string(state_.cols) + "x" +
                std::to_string(state_.rows) + ")\n";
     }
-    state_.screen_mode = 1;
-    if (parts.size() >= 3) {
+    state_.screen_mode = chosen->number;
+    state_.screen_width = chosen->width;
+    state_.screen_height = chosen->height;
+    // Only mode 1 takes a size: it is the reference's graphics mode, whose
+    // 800x600 is a default rather than a standard. The numbered modes are the
+    // sizes their numbers meant, so an extra argument is ignored there rather
+    // than quietly making `SCREEN 13` something no machine called 13.
+    if (chosen->number == 1 && parts.size() >= 3) {
         const std::optional<long> width = evaluate_integer(*this, parts[1]);
         const std::optional<long> height = evaluate_integer(*this, parts[2]);
         if (width.has_value() && (*width < 320 || *width > 1920)) {
@@ -130,6 +161,12 @@ std::string Machine::screen(const std::string& args) {
             state_.screen_height = static_cast<int>(*height);
         }
     }
+    // The screen the program can read back. The canvas is told as well, because
+    // a program that asked for a screen wants it *shown* at the size it asked
+    // for: this is what switches the drawing surface from fit-to-content to a
+    // fixed-coordinate framebuffer.
+    state_.raster.resize(state_.screen_width, state_.screen_height, palette_colour(0));
+    turtle_.set_framebuffer(state_.screen_width, state_.screen_height);
     return "🎨 Graphics mode (" + std::to_string(state_.screen_width) + "x" +
            std::to_string(state_.screen_height) + ")\n";
 }
@@ -309,6 +346,7 @@ std::string Machine::draw_line(const std::string& args) {
         const auto line = [this, colour](double ax, double ay, double bx, double by) {
             turtle_.draw_polygon({Point{ax, ay}, Point{bx, by}}, colour, Rgb{}, pen_width_,
                                  false);
+            state_.raster.line(pixel(ax), pixel(ay), pixel(bx), pixel(by), colour);
         };
         if (mode == "B") {
             line(x1, y1, x2, y1);
@@ -317,6 +355,7 @@ std::string Machine::draw_line(const std::string& args) {
             line(x1, y2, x1, y1);
         } else if (mode == "BF") {
             turtle_.draw_rect(x1, y1, x2, y2, colour);
+            state_.raster.rect(pixel(x1), pixel(y1), pixel(x2), pixel(y2), colour, true);
         } else {
             line(x1, y1, x2, y2);
         }
@@ -395,6 +434,7 @@ std::string Machine::draw_circle(const std::string& args) {
         if (extent >= 360.0) {
             move_to(centre_x + radius, centre_y);
         }
+        state_.raster.arc(centre_x, centre_y, radius, start_angle, extent, colour);
         turtle_.set_color(previous);
         if (!was_down) {
             pen_up();
@@ -419,6 +459,7 @@ std::string Machine::draw_point(const std::string& args, bool foreground) {
         const Rgb colour = match[3].matched ? resolve_colour(trim(match[3].str()), fallback)
                                             : fallback;
         turtle_.draw_point(x, y, colour);
+        state_.raster.set(pixel(x), pixel(y), colour);
     } catch (const std::exception& error) {
         return (foreground ? "❌ PSET error: " : "❌ PRESET error: ") +
                std::string{error.what()} + "\n";
@@ -436,9 +477,129 @@ std::string Machine::paint(const std::string& args) {
         colour = resolve_colour(parts[1], colour);
     }
     turtle_.fill_last_shape(colour);
+
+    // The raster is filled as well, in its own coordinates -- with the colour the
+    // surface was just given, not with the one the statement names. The two can
+    // differ: the reference resolves `PAINT (50, 30), 4` from a plain comma
+    // split, which makes the fill white, and a screen a program can read back
+    // that disagreed with the fill a learner can see would be the worse answer.
+    // `split_top` is used for the point because a point carries a comma of its
+    // own, not to re-read the colour. The flood happens whether or not the
+    // surface had a "last shape" to fill: the reference's own answer is a stub,
+    // and flooding the region that contains the point is what PAINT means.
+    const std::vector<std::string> fields = split_top(args, ",");
+    if (!fields.empty()) {
+        const std::string point_text = trim(fields[0]);
+        if (point_text.size() >= 2 && point_text.front() == '(' &&
+            point_text.back() == ')') {
+            const std::vector<std::string> point = split_trimmed(
+                point_text.substr(1, point_text.size() - 2), ',');
+            if (point.size() >= 2) {
+                try {
+                    state_.raster.flood_fill(pixel(eval(point[0])), pixel(eval(point[1])),
+                                             colour);
+                } catch (const std::exception&) {
+                    // The host's own answer is the one a learner reads; a point
+                    // the evaluator cannot read has already been reported by the
+                    // caller, and a second message would not help.
+                }
+            }
+        }
+    }
     // The reference fills the most recent *closed* shape; a line drawn with LINE
     // is not one, and a program that paints before drawing anything gets told.
     return fillable_shapes_ > 0 ? std::string{} : std::string{"ℹ️ No shape to fill\n"};
+}
+
+std::string Machine::sprite_get(const std::string& args) {
+    static const std::regex pattern{
+        R"(\(\s*([^,]+)\s*,\s*([^,]+)\s*\)\s*-\s*\(\s*([^,]+)\s*,\s*([^,]+)\s*\)\s*,\s*([A-Za-z_][A-Za-z0-9_]*\$?)\s*$)",
+        std::regex::ECMAScript};
+    std::smatch match;
+    if (!std::regex_match(args, match, pattern)) {
+        return "❌ GET requires (x1,y1)-(x2,y2), array\n";
+    }
+    if (!state_.raster.active()) {
+        return "❌ GET needs a graphics screen (SCREEN 1)\n";
+    }
+    const std::string name = upper(trim(match[5].str()));
+    if (!name.empty() && name.back() == '$') {
+        return "❌ GET requires a numeric array, not " + name + "\n";
+    }
+    try {
+        const double x1 = eval(trim(match[1].str()));
+        const double y1 = eval(trim(match[2].str()));
+        const double x2 = eval(trim(match[3].str()));
+        const double y2 = eval(trim(match[4].str()));
+        const int left = pixel(std::min(x1, x2));
+        const int right = pixel(std::max(x1, x2));
+        const int top = pixel(std::min(y1, y2));
+        const int bottom = pixel(std::max(y1, y2));
+        const int width = right - left + 1;
+        const int height = bottom - top + 1;
+        const std::vector<Rgb> captured = state_.raster.block(left, top, width, height);
+        // The array is sized here rather than demanded of DIM: a sprite has a
+        // size only once the second corner is known, and making a learner
+        // compute `2 + w*h` before capturing would be a trap, not a lesson.
+        std::vector<double>& array =
+            interpreter_.arrays[name];
+        array.assign(captured.size() + 2, 0.0);
+        array[0] = static_cast<double>(width);
+        array[1] = static_cast<double>(height);
+        for (std::size_t index = 0; index < captured.size(); ++index) {
+            array[index + 2] = static_cast<double>(pack_colour(captured[index]));
+        }
+    } catch (const std::exception& error) {
+        return "❌ GET error: " + std::string{error.what()} + "\n";
+    }
+    return {};
+}
+
+std::string Machine::sprite_put(const std::string& args) {
+    static const std::regex pattern{
+        R"(\(\s*([^,]+)\s*,\s*([^,]+)\s*\)\s*,\s*([A-Za-z_][A-Za-z0-9_]*\$?)\s*$)",
+        std::regex::ECMAScript};
+    std::smatch match;
+    if (!std::regex_match(args, match, pattern)) {
+        return "❌ PUT requires (x,y), array\n";
+    }
+    if (!state_.raster.active()) {
+        return "❌ PUT needs a graphics screen (SCREEN 1)\n";
+    }
+    const std::string name = upper(trim(match[3].str()));
+    const auto found = interpreter_.arrays.find(name);
+    if (found == interpreter_.arrays.end() || found->second.size() < 2) {
+        return "❌ No sprite captured in " + name +
+               " (capture one with GET first)\n";
+    }
+    const std::vector<double>& array = found->second;
+    const int width = static_cast<int>(array[0]);
+    const int height = static_cast<int>(array[1]);
+    if (width <= 0 || height <= 0) {
+        return "❌ Sprite array " + name + " is empty\n";
+    }
+    if (array.size() < static_cast<std::size_t>(width) * static_cast<std::size_t>(height) + 2) {
+        return "❌ Sprite array " + name + " is too small for " +
+               std::to_string(width) + "x" + std::to_string(height) + "\n";
+    }
+    try {
+        const int x = pixel(eval(trim(match[1].str())));
+        const int y = pixel(eval(trim(match[2].str())));
+        std::vector<Rgb> pixels;
+        pixels.reserve(static_cast<std::size_t>(width) * static_cast<std::size_t>(height));
+        for (std::size_t index = 2;
+             index < static_cast<std::size_t>(width) * static_cast<std::size_t>(height) + 2;
+             ++index) {
+            pixels.push_back(unpack_colour(static_cast<long>(array[index])));
+        }
+        state_.raster.put_block(x, y, width, height, pixels);
+        // The surface draws it too, so a sprite is visible and not merely
+        // remembered -- the feature exists to be seen.
+        turtle_.put_pixels(x, y, width, height, pixels);
+    } catch (const std::exception& error) {
+        return "❌ PUT error: " + std::string{error.what()} + "\n";
+    }
+    return {};
 }
 
 // -- files -----------------------------------------------------------------
@@ -1266,6 +1427,12 @@ std::string Machine::reset_program(std::string_view message) {
     state_.rows = 25;
     state_.screen_width = 800;
     state_.screen_height = 600;
+    // `RUN` is a new run, so the screen it could read back goes with the rest of
+    // the state: a program that starts with `POINT` must not see the picture its
+    // previous run left, and `STICK` must answer 0 until the new run's own
+    // `JOYINIT` -- the two facts `SCREEN 0` and the missing `JOYINIT` mean.
+    state_.raster = Raster{};
+    state_.joystick_initialised = false;
     functions_installed_ = false;
     // The reference clears the program itself, so the run ends here; moving the
     // counter past the last line is the same observable end.

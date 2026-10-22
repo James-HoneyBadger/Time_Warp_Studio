@@ -375,6 +375,90 @@ void test_shape_primitives_are_recorded() {
     TW_CHECK_EQ(canvas->strokeCount(), 5);
 }
 
+void test_a_sprite_block_is_drawn_as_shapes() {
+    announce("sprite block");
+    const std::unique_ptr<TurtleCanvas> canvas{sizedCanvas()};
+
+    // A 2x2 block: the top row is one colour, the bottom row two, so the top row
+    // becomes one run and the bottom two. The block arrives as packed colours in
+    // the trailing point list, one doubles value per pixel.
+    const double pixels[] = {
+        static_cast<double>(timewarp::canvas::make_rgb(200, 10, 10)),
+        static_cast<double>(timewarp::canvas::make_rgb(200, 10, 10)),
+        static_cast<double>(timewarp::canvas::make_rgb(10, 10, 200)),
+        static_cast<double>(timewarp::canvas::make_rgb(10, 200, 10)),
+    };
+    CanvasCommand blit = timewarp::canvas::make_put_pixels(10.0, 20.0, 2.0, 2.0);
+    canvas->apply(CanvasCommandView{blit, pixels, {}});
+
+    TW_CHECK_EQ(canvas->commandsApplied(), std::uint64_t{1});
+    TW_CHECK_EQ(canvas->commandsIgnored(), std::uint64_t{0});
+    TW_CHECK_EQ(canvas->shapeCount(), 3);
+    TW_CHECK_EQ(canvas->strokeCount(), 0);
+    // Raster rows count down; the view counts up, so the block's first row is
+    // its highest on screen, and it spans exactly its own width and height. In a
+    // normalized world-space rectangle that highest edge is `bottom()`, because
+    // world y grows upwards.
+    const QRectF bounds = canvas->contentBounds();
+    TW_CHECK(nearly(bounds.left(), 10.0));
+    TW_CHECK(nearly(bounds.right(), 12.0));
+    TW_CHECK(nearly(bounds.top(), 19.0));
+    TW_CHECK(nearly(bounds.bottom(), 21.0));
+}
+
+void test_a_screen_is_painted_at_fixed_coordinates() {
+    announce("screen mode");
+    const std::unique_ptr<TurtleCanvas> canvas{sizedCanvas()};
+
+    auto mode = timewarp::canvas::make_framebuffer(320.0, 200.0);
+    canvas->apply(CanvasCommandView{mode, {}, {}});
+    TW_CHECK(canvas->framebufferActive());
+    TW_CHECK_EQ(canvas->framebufferSize().width(), 320);
+    TW_CHECK_EQ(canvas->framebufferSize().height(), 200);
+
+    // `PSET` carries the program's own coordinates, and on a screen those are
+    // pixel coordinates: no flip, no fit, no origin at the centre.
+    auto point = timewarp::canvas::make_draw_point(10.0, 20.0,
+                                                   timewarp::canvas::make_rgb(255, 0, 0));
+    canvas->apply(CanvasCommandView{point, {}, {}});
+    TW_CHECK_EQ(canvas->framebufferPixel(10, 20), QColor(255, 0, 0));
+    // The neighbouring pixel is untouched, which is what makes the assertion
+    // above about a pixel rather than about "something red exists".
+    TW_CHECK(canvas->framebufferPixel(10, 21) != QColor(255, 0, 0));
+
+    // A `LINE` is a polyline of the same coordinates.
+    const double ends[] = {0.0, 0.0, 319.0, 0.0};
+    auto line = timewarp::canvas::make_command(CanvasCommandKind::DrawPolyline);
+    line.color = timewarp::canvas::make_rgb(0, 0, 255);
+    canvas->apply(CanvasCommandView{line, ends, {}});
+    TW_CHECK_EQ(canvas->framebufferPixel(160, 0), QColor(0, 0, 255));
+
+    // A `PUT` block lands top row first, at the coordinate it names.
+    const double pixels[] = {
+        static_cast<double>(timewarp::canvas::make_rgb(1, 2, 3)),
+        static_cast<double>(timewarp::canvas::make_rgb(4, 5, 6)),
+    };
+    auto blit = timewarp::canvas::make_put_pixels(100.0, 50.0, 2.0, 1.0);
+    canvas->apply(CanvasCommandView{blit, pixels, {}});
+    TW_CHECK_EQ(canvas->framebufferPixel(100, 50), QColor(1, 2, 3));
+    TW_CHECK_EQ(canvas->framebufferPixel(101, 50), QColor(4, 5, 6));
+
+    // The exported picture is the screen, not the window's fitted view of it.
+    const QImage shot = canvas->renderedDrawing(1.0);
+    TW_CHECK_EQ(shot.width(), 320);
+    TW_CHECK_EQ(shot.height(), 200);
+    TW_CHECK_EQ(shot.pixelColor(10, 20), QColor(255, 0, 0));
+
+    // Fitting is what a screen must not do.
+    canvas->fitToContent();
+    TW_CHECK_EQ(canvas->renderedDrawing(1.0).pixelColor(10, 20), QColor(255, 0, 0));
+
+    // `SCREEN 0` gives the display list back.
+    canvas->apply(CanvasCommandView{timewarp::canvas::make_clear_framebuffer(), {}, {}});
+    TW_CHECK(!canvas->framebufferActive());
+    TW_CHECK(!canvas->framebufferPixel(10, 20).isValid());
+}
+
 void test_unhandled_commands_are_counted_rather_than_lost() {
     announce("unhandled commands");
     const std::unique_ptr<TurtleCanvas> canvas{sizedCanvas()};
@@ -747,6 +831,8 @@ int main(int argc, char** argv) {    // Set before QApplication exists, or Qt tr
     test_clear_wipes_the_paper_and_reset_starts_over();
     test_show_and_hide_the_turtle();
     test_shape_primitives_are_recorded();
+    test_a_sprite_block_is_drawn_as_shapes();
+    test_a_screen_is_painted_at_fixed_coordinates();
     test_unhandled_commands_are_counted_rather_than_lost();
     test_zoom_is_clamped_and_fit_recentres();
     test_content_bounds_include_every_drawn_axis();

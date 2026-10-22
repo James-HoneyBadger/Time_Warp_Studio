@@ -140,6 +140,32 @@ public:
         shapes_.push_back(std::move(shape));
         ++drawing_calls_;
     }
+    /// A captured sprite, restored by `PUT`. One rect per pixel: the recorded
+    /// drawing has no bitmap shape, and a sprite is small enough that the SVG
+    /// stays readable.
+    void put_pixels(int x, int y, int width, int height,
+                    const std::vector<timewarp::lang::Rgb>& pixels) override {
+        if (width <= 0 || height <= 0) {
+            return;
+        }
+        ++actions_;
+        const auto columns = static_cast<std::size_t>(width);
+        const std::size_t expected = columns * static_cast<std::size_t>(height);
+        for (std::size_t index = 0; index < pixels.size() && index < expected; ++index) {
+            Shape shape;
+            shape.kind = Shape::Kind::Rect;
+            shape.x = x + static_cast<int>(index % columns);
+            // The raster counts rows down from its top edge; every other shape
+            // here counts up from the origin.
+            shape.y = y - static_cast<int>(index / columns);
+            shape.w = 1.0;
+            shape.h = 1.0;
+            shape.fill = pixels[index];
+            shape.filled = true;
+            shapes_.push_back(std::move(shape));
+        }
+        ++drawing_calls_;
+    }
     void fill_last_shape(timewarp::lang::Rgb) override { ++actions_; }
     void draw_polygon(const std::vector<timewarp::lang::Point>& points,
                       timewarp::lang::Rgb stroke, timewarp::lang::Rgb fill,

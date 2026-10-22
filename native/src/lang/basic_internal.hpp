@@ -14,6 +14,7 @@
 #include "timewarp/io/ports.hpp"
 #include "timewarp/lang/basic.hpp"
 #include "timewarp/lang/interpreter.hpp"
+#include "timewarp/lang/raster.hpp"
 #include "timewarp/lang/turtle_host.hpp"
 #include "timewarp/lang/value.hpp"
 
@@ -88,6 +89,15 @@ public:
 [[nodiscard]] std::string clock_date_text();
 /// `TIMER`: seconds since local midnight, fraction included.
 [[nodiscard]] double clock_timer_seconds();
+
+// -- colour packing --------------------------------------------------------
+
+/// A pixel as one number, `&H00RRGGBB` -- what `POINT` answers and what a
+/// captured sprite holds in its array.
+[[nodiscard]] int pack_colour(Rgb colour);
+/// The colour a packed number names. Channels outside 0-255 are clamped rather
+/// than wrapped, so a hand-written array value cannot turn red into blue.
+[[nodiscard]] Rgb unpack_colour(long value);
 
 // -- state ----------------------------------------------------------------
 
@@ -173,6 +183,14 @@ struct State {
     int rows = 25;
     int screen_width = 800;
     int screen_height = 600;
+    /// The pixels a program can read back, once `SCREEN 1` has given it a
+    /// screen. Empty in text mode, which is why `GET`, `PUT` and `POINT` have
+    /// an error to report rather than a silent zero.
+    Raster raster;
+    /// `JOYINIT` found a gamepad. `STICK`/`STRIG` answer 0 until it does, which
+    /// is what the documented behaviour says and what keeps a machine with a
+    /// joystick plugged in from changing a program that never asked for one.
+    bool joystick_initialised = false;
 };
 
 // -- the string expression evaluator ---------------------------------------
@@ -291,6 +309,8 @@ private:
     std::string draw_circle(const std::string& args);
     std::string draw_point(const std::string& args, bool foreground);
     std::string paint(const std::string& args);
+    std::string sprite_get(const std::string& args);
+    std::string sprite_put(const std::string& args);
     std::string swap(const std::string& args);
     std::string erase(const std::string& args);
     std::string constant(const std::string& args);

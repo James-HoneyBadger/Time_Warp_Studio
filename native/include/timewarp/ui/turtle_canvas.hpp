@@ -111,6 +111,26 @@ public:
     void setSurfaceColor(const QColor& colour);
     [[nodiscard]] QColor surfaceColor() const noexcept { return surface_color_; }
 
+    // -- screen presentation ----------------------------------------------
+    //
+    // A turtle drawing is fit to its content: there is no size a program can
+    // depend on. A *screen* is the opposite, and a game needs one. When a
+    // program asks for a screen (`SCREEN 13`), the surface switches to a
+    // `width x height` pixel buffer painted at fixed coordinates and integer
+    // scale, and the display list becomes the record of how it was made rather
+    // than what is shown. Nothing about the command stream changes.
+
+    /// Switches to a `width x height` screen, filled with the background. A
+    /// size that is not positive is ignored, which leaves the surface as it was.
+    void setFramebufferSize(int width, int height);
+    /// Back to the fit-to-content display list.
+    void clearFramebuffer();
+    [[nodiscard]] bool framebufferActive() const noexcept { return !framebuffer_.isNull(); }
+    [[nodiscard]] QSize framebufferSize() const noexcept { return framebuffer_.size(); }
+    /// The colour of one screen pixel, invalid outside the buffer. What a test
+    /// asks to prove a `PSET` reached the screen it claimed to.
+    [[nodiscard]] QColor framebufferPixel(int x, int y) const;
+
     // -- coordinate conversion --------------------------------------------
     //
     // Public because they are the only way to ask "where is this on screen" and
@@ -241,6 +261,9 @@ signals:
     /// A key was pressed while the canvas had focus. `INKEY$` is fed from this:
     /// a game polls the canvas, so the canvas is where the keys are typed.
     void keyTyped(QChar key);
+    /// The surface entered or left screen mode. The pose strip and the export
+    /// dialog both need to know which of the two pictures a run produced.
+    void framebufferChanged();
 
 private:
     /// One straight pen stroke, in world coordinates.
@@ -295,6 +318,16 @@ private:
 
     // -- painting ---------------------------------------------------------
     void paintGrid(QPainter& painter);
+    /// Paints the pixel buffer at an integer scale, centred, without smoothing:
+    /// a 320x200 screen shown at 3x is 320x200 pixels of information, and a
+    /// smoothed one is a lie about what the program drew.
+    void paintFramebuffer(QPainter& painter) const;
+    /// Applies one command to the pixel buffer as well as to the display list.
+    /// The two carry the same coordinates -- `SCREEN` makes the program's
+    /// coordinates screen coordinates -- so this is the same picture drawn a
+    /// second time, not a second interpretation.
+    void rasterize(const timewarp::canvas::CanvasCommandView& view);
+    void rasterLine(const QPointF& from, const QPointF& to);
     /// Paints the first *frames* history entries. `paintEvent` passes the
     /// visible count; export passes the whole list, which is what makes
     /// scrubbing a view rather than a state change.
@@ -333,6 +366,16 @@ private:
     bool grid_visible_ = true;
     bool dragging_ = false;
     QPointF drag_from_;
+
+    // -- screen mode ------------------------------------------------------
+    QImage framebuffer_;
+    /// Where the raster pen is, in screen coordinates: `CIRCLE` walks it around
+    /// the arc, so the segments it leaves have to start where the last one
+    /// finished.
+    QPointF raster_position_{0.0, 0.0};
+    QColor raster_colour_{0, 0, 0};
+    double raster_width_ = 1.0;
+    bool raster_pen_down_ = true;
 
     std::uint64_t applied_ = 0;
     std::uint64_t ignored_ = 0;

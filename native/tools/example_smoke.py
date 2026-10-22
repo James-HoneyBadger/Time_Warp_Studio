@@ -47,6 +47,13 @@ LANGUAGES = {
 # dialogue language whose examples ask questions and print answers.
 TEXT_ONLY = {"pilot"}
 
+# Examples the reference engine cannot run, because they use what the native
+# ports added and the reference never had: the numbered `SCREEN` modes, sprite
+# `GET`/`PUT`, `POINT`. They are not skipped silently -- `lang_tests` runs each
+# of them through the C++ engine and asserts it draws, which is the gate this
+# file uses too, just on the other side of the port.
+NATIVE_ONLY = {"basic/star_patrol.bas"}
+
 # The examples that must produce drawing, listed rather than inferred.
 #
 # Most examples are text programs -- a budget tracker, a statistics drill, a
@@ -221,6 +228,12 @@ def main(argv: list[str] | None = None) -> int:
 
     for language, extension in LANGUAGES.items():
         for path in sorted((root / "Examples").glob(f"**/*.{extension}")):
+            identifier = f"{language}/{path.name}"
+            if identifier in NATIVE_ONLY:
+                # Gated by `lang_tests` instead: these use commands the reference
+                # engine never implemented, so running them here would measure
+                # the reference's gaps rather than the example.
+                continue
             ran += 1
             result = run_one(
                 interpreter,
@@ -240,7 +253,6 @@ def main(argv: list[str] | None = None) -> int:
                 continue
 
             # Drawing is expected only where it is real: see DRAWING_EXAMPLES.
-            identifier = f"{language}/{path.name}"
             must_draw = identifier in DRAWING_EXAMPLES
             if must_draw and result["strokes"] == 0:
                 counts[language]["failed"] += 1

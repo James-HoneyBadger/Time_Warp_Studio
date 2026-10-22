@@ -63,6 +63,10 @@ std::string_view to_string(CanvasCommandKind kind) noexcept {
             return "SetSvgaMode";
         case CanvasCommandKind::ClearSvgaMode:
             return "ClearSvgaMode";
+        case CanvasCommandKind::SetFramebuffer:
+            return "SetFramebuffer";
+        case CanvasCommandKind::ClearFramebuffer:
+            return "ClearFramebuffer";
         case CanvasCommandKind::SetPaletteColor:
             return "SetPaletteColor";
         case CanvasCommandKind::CyclePalette:
@@ -89,6 +93,8 @@ std::string_view to_string(CanvasCommandKind kind) noexcept {
         case CanvasCommandKind::BezierCurve:
             return "BezierCurve";
 
+        case CanvasCommandKind::PutPixels:
+            return "PutPixels";
         case CanvasCommandKind::DefineSprite:
             return "DefineSprite";
         case CanvasCommandKind::PlaceSprite:

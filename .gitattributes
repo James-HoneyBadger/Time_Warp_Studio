@@ -11,3 +11,7 @@ docs/** linguist-generated=false
 *.png binary
 *.ico binary
 *.icns binary
+
+# The recorded parity corpus is gzip: a line-ending rewrite would corrupt it, and
+# the golden gate compares the ports against the bytes it writes.
+*.gz binary

@@ -282,7 +282,10 @@ endif()
 add_library(timewarp_lang
     src/audio/music.cpp
     src/io/ports.cpp
+    src/io/gamepad.cpp
     src/lang/value.cpp
+    src/lang/raster.cpp
+    src/lang/screen_mode.cpp
     src/lang/language.cpp
     src/lang/debug.cpp
     src/lang/watch.cpp
@@ -339,6 +342,11 @@ if(TIME_WARP_EXPR_BUILD_TESTS)
     add_executable(lang_tests tests/lang_tests.cpp)
     target_link_libraries(lang_tests PRIVATE timewarp::lang)
     target_include_directories(lang_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/tests)
+    # The shipped examples are a gate as well as a sample: a game that runs and
+    # draws nothing is the failure this project treats as the bug, so the test
+    # reads the file from the checkout wherever the build tree is.
+    target_compile_definitions(lang_tests PRIVATE
+        TIME_WARP_TEST_EXAMPLES="${CMAKE_CURRENT_SOURCE_DIR}/../Examples")
     if(NOT MSVC)
         target_compile_options(lang_tests PRIVATE -Wall -Wextra -Wpedantic -Wshadow)
         if(TIME_WARP_EXPR_WERROR)

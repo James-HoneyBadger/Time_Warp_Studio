@@ -1,5 +1,110 @@
 # Changelog
 
+## [16.5.0] - 2026-10-22
+
+The machine gets a screen it can read, and a screen it can show. `SCREEN 1` had
+been a mode name since the port — it recorded a width and a height and drew nothing
+with them — and the two things a BASIC program of the era actually did with it,
+capture a sprite and ask what colour a pixel is, had no answer. Neither had a
+gamepad: `STICK`/`STRIG` were documented, implemented and returned 0, because the
+reference's backend was an optional import it never shipped. And the drawing
+surface was still a picture that fitted itself to its ink, which is the opposite of
+what a game needs.
+
+### Added
+
+- **A pixel surface behind `SCREEN 1`** (`timewarp::lang::Raster`): a fixed
+  800x600-by-default buffer with clipping, Bresenham lines, filled and outlined
+  rectangles, arcs sampled the way `CIRCLE` samples them, and a flood fill. The
+  canvas keeps its display list and keeps drawing the primitives, so the picture
+  and the parity gate's command stream are unchanged; the buffer is what the
+  statements can read back.
+- **`POINT(x, y)`** answers the colour at a pixel as `&H00RRGGBB`, and `-1` when
+  the program has no graphics screen — which is how a program asks whether it has
+  one.
+- **`GET`/`PUT` sprites.** `GET (x1,y1)-(x2,y2), A` captures a rectangle into a
+  numeric array that carries its own width and height in elements 0 and 1, and
+  `PUT (x, y), A` places it again. The restored block is visible: the IDE's canvas
+  draws it as runs of filled pixels, the recording host a compiled program writes
+  its SVG with draws one rect per pixel, and the gate's trace reports where and
+  how large the block was. The `#` spelling is still the file channel;
+  `GET #1, A` and `PUT #9, , V$` behave exactly as before.
+- **A gamepad.** `JOYINIT` opens the first `/dev/input/js*` the machine has and
+  reports the device; `STICK(n)` answers 0-255 with a resting stick at 128 and
+  `STRIG(n)` answers 1 while a button is held. `TIME_WARP_GAMEPAD` names a device
+  instead of taking the first. Windows and macOS report no pad rather than a
+  backend that cannot read one.
+- **`SCREEN` picks a real display mode.** `SCREEN 0` text, `1` (800x600 by
+  default, or a size the program names), `2` (640x200), `7` (320x200), `9`
+  (640x350), `12` (640x480) and `13` (320x200, 256 colours), carried as a table
+  (`timewarp::lang::ScreenMode`) so the raster, the canvas and the error message
+  that lists the choices cannot disagree. A number that was never a mode is
+  refused with the list of the ones that were. The numbered modes above 1 are a
+  native addition; the reference never had them, so `lang_tests` and the shipped
+  game are what hold them up rather than the parity gate.
+- **A screen, not a fitted drawing.** A program that names a screen switches the
+  drawing surface to a framebuffer: (0, 0) is the top-left pixel, x grows right and
+  y grows down, the picture is painted at whole-number scale with no smoothing,
+  and `fitToContent` leaves it alone. The display list is still built — the Turtle
+  Log, the scrubber and the vector export read it — so the screen is a second
+  renderer over the same run, not a replacement for the record of it. Export
+  writes the screen at its own scale (`renderedDrawing`, and `.svg` embeds it),
+  which is what makes a saved game frame the frame the program drew.
+- **`Examples/basic/star_patrol.bas`**, a program built on all of it: a captured
+  sprite ship, a star field, a shot whose hits are found with `POINT`, and a score
+  bar. It runs 240 frames and stops, so it can be run without a person at the keys;
+  `lang_tests` runs it through the native engine and asserts that it asked for a
+  320x200 screen, placed a sprite and read a pixel.
+- **A parity gate that outlives its reference.** `lang_differential_check.py
+  --record` freezes the Python engine's answers to every command-table row and
+  every example program, program text included, into
+  `native/tests/golden/lang_corpus.json.gz`; `--golden` compares the
+  C++ engines with that file and imports no Python at all. `make golden-check` and
+  `make golden-record` are the two entry points, and each recorded entry carries a
+  SHA-256 of its program so a stale corpus is reported as a corpus problem rather
+  than as an engine mismatch. See
+  [README_TESTING.md](docs/README_TESTING.md).
+
+### Fixed
+
+- **A loop with an empty body ended its outer loop.** `FOR I = 1 TO 4 : NEXT I` is
+  legal BASIC, and its `NEXT` sits at the line the loop returns to — so "go back to
+  the body" is a jump to the statement already running. The run loop detects a jump
+  by comparing the program counter before and after a statement, which cannot see
+  that, so the inner frame stayed on the stack and the *enclosing* loop's `NEXT`
+  consumed it: the outer loop ran exactly once, silently. Fixed in the port and in
+  the reference, with a regression row, a case in each engine's tests, and a note
+  in the roadmap. Found while writing the game example, which needs a loop whose
+  body is nothing.
+- **`PUT` drew a block at half its size.** The canvas bounded the pixel payload by
+  `point_count()`, a point being two doubles, and a block carries one double per
+  pixel: a 2x2 sprite drew its first row and stopped. The payload convention is
+  written down beside `make_put_pixels`, which is the one command it applies to.
+- **`RUN` left the previous run's screen behind.** It reset the mode, the size and
+  the palette but not the pixels, so a program could read back the picture its
+  predecessor drew; it also left the gamepad armed, which meant `STICK` answered
+  without the new run's `JOYINIT`. Both are part of what a fresh run means and both
+  are reset now.
+- **The differential gate no longer reports a joystick as a language bug.** The
+  `JOYINIT`, `STICK` and `STRIG` rows are skipped in both modes, because their
+  answer depends on the machine: the reference says "no gamepad" on every machine
+  and the port finds the one that is plugged in.
+
+### Notes
+
+- The raster is the program's memory of what it drew; the framebuffer is what the
+  canvas shows when a program asks for one. Both exist because the two jobs are
+  different: `POINT` must answer in the program's coordinates on every machine, and
+  the picture must be able to fit itself to the ink when a program draws a turtle
+  fractal rather than a game.
+- What the screen does not do yet: scroll under a zoom (the widget scales to fit
+  and centres), and the IDE has no menu entry of its own for the mode — a program
+  names it. Both are 16.6-17.0 material rather than gaps in this claim.
+- `Examples/basic/star_patrol.bas` is listed in `example_smoke.py`'s
+  `NATIVE_ONLY` set: the reference engine cannot run the numbered modes or sprite
+  capture, so running it there would measure the reference's gaps. Its gate is
+  `lang_tests`, which runs it natively.
+
 ## [16.4.4] - 2026-10-21
 
 The canvas explains itself. The Turtle Log tab had been there since the window was

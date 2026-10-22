@@ -9,6 +9,8 @@
 
 #include "basic_internal.hpp"
 
+#include "timewarp/io/gamepad.hpp"
+
 #include <algorithm>
 #include <cctype>
 #include <chrono>
@@ -173,9 +175,34 @@ std::optional<expr::UserFunction> Machine::user_function(std::string_view raw_na
                                   }};
     }
     if (name == "STICK" || name == "STRIG") {
-        // No gamepad backend: 0 for an axis, and 0 for a released button, which
-        // is the answer the reference gives without pygame installed.
-        return expr::UserFunction{1, [](std::span<const double>) { return 0.0; }};
+        // A gamepad answers only after `JOYINIT` found one. Before that -- and
+        // on a machine with no joystick, or no backend at all -- these are 0,
+        // which is the answer the reference gives and the answer a program
+        // written for a machine without one already expects.
+        const bool stick = name == "STICK";
+        return expr::UserFunction{1, [this, stick](std::span<const double> arguments) {
+                                      if (!state_.joystick_initialised) {
+                                          return 0.0;
+                                      }
+                                      auto& pad = timewarp::io::Gamepad::instance();
+                                      const int index = static_cast<int>(arguments[0]);
+                                      return stick
+                                                 ? static_cast<double>(pad.axis(index))
+                                                 : (pad.button(index) ? 1.0 : 0.0);
+                                  }};
+    }
+    if (name == "POINT") {
+        // What is on the screen at a point, as `&H00RRGGBB`. -1 outside a
+        // graphics screen, so `IF POINT(X,Y) = -1` can ask whether there is one.
+        return expr::UserFunction{2, [this](std::span<const double> arguments) {
+                                      if (!state_.raster.active()) {
+                                          return -1.0;
+                                      }
+                                      const auto x = static_cast<int>(std::lround(arguments[0]));
+                                      const auto y = static_cast<int>(std::lround(arguments[1]));
+                                      return static_cast<double>(
+                                          pack_colour(state_.raster.at(x, y)));
+                                  }};
     }
     if (name == "EOF") {
         return expr::UserFunction{1, [this](std::span<const double> arguments) {
