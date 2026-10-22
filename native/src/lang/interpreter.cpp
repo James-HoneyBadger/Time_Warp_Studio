@@ -387,6 +387,11 @@ void Interpreter::run() {
         const auto statement_started = profiling_
                                            ? std::chrono::steady_clock::now()
                                            : std::chrono::steady_clock::time_point{};
+        // The flag a jump sets, cleared before the statement so a jump recorded
+        // by *this* one is what the test below sees -- including a jump to the
+        // line the counter is already on, which comparing the counter cannot
+        // detect.
+        jumped_ = false;
         (void)execute_statement(command);
         if (!check_data_breakpoints(source_line(physical_index))) {
             running = false;
@@ -407,7 +412,8 @@ void Interpreter::run() {
             break;
         }
         // A jump moved the program counter; the loop must not add one as well.
-        if (current_line != physical_index) {
+        if (jumped_ || current_line != physical_index) {
+            jumped_ = false;
             continue;
         }
         ++current_line;

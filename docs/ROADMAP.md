@@ -148,13 +148,20 @@ unit test)
 its caller — is fixed in both the reference and `timewarp_lang`, with a row and unit
 tests; `PRINT DOUBLE 21` now prints 42.
 
-**Found since, by building the game example:** a `FOR` loop whose body is empty
-ended its *enclosing* loop after one iteration, silently. `NEXT` in an empty body
-returns to the line it is already on, and the run loop detects a jump by comparing
-the program counter before and after a statement, so the jump was invisible and the
-inner frame stayed on the stack for the outer `NEXT` to consume. Fixed in both
-engines, with a command row, a case in each engine's tests, and a note here — it is
-exactly the class of defect this section exists to keep fixed.
+**Found since, by building the game example:** the run loop detected a jump by
+comparing the program counter before and after a statement, which cannot see a jump
+to the line already executing. Two defects came from that one cause, and both are
+fixed in both engines with a note here:
+
+- An empty-bodied `FOR` loop ended its *enclosing* loop after one iteration,
+  silently: `NEXT` returned to the line it was already on, the jump was invisible,
+  and the inner frame stayed on the stack for the outer `NEXT` to consume.
+- `10 GOTO 10` **ended the program** instead of looping, so a learner's first
+  infinite loop did not loop.
+
+The cause is fixed rather than each symptom: `Interpreter::jump_to` records the
+jump (and `jump_to` in the reference), every executor's jump goes through it, and
+the workaround inside `NEXT` is gone.
 
 ---
 

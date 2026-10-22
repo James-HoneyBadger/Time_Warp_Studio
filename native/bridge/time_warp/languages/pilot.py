@@ -356,7 +356,7 @@ def execute_pilot(
         return ""
     if cmd_type == "E":
         if interpreter.subroutine_stack:
-            interpreter.current_line = interpreter.subroutine_stack.pop()
+            interpreter.jump_to(interpreter.subroutine_stack.pop())
             return ""
         interpreter.running = False
         return ""

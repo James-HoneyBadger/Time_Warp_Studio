@@ -339,6 +339,9 @@ class Interpreter:
         self.output: List[str] = []
         self.program_lines: List[Tuple[Optional[int], str]] = []
         self.current_line: int = 0
+        #: Set by `jump_to`: a jump to the line already executing is
+        #: invisible to a before/after comparison of the counter.
+        self.jumped: bool = False
         self.labels: Dict[str, int] = {}
         self.line_number_map: Dict[int, int] = {}
         self.gosub_stack: List[int] = []
@@ -426,6 +429,9 @@ class Interpreter:
         # Program state
         self.program_lines: List[Tuple[Optional[int], str]] = []
         self.current_line: int = 0
+        #: Set by `jump_to`: a jump to the line already executing is
+        #: invisible to a before/after comparison of the counter.
+        self.jumped: bool = False
         self.labels: Dict[str, int] = {}
         self.line_number_map: Dict[int, int] = {}  # BASIC line number -> index
 
@@ -1024,6 +1030,17 @@ class Interpreter:
         )
         return 0, time.time()
 
+    def jump_to(self, line: int) -> None:
+        """Moves the program counter, and says so.
+
+        The run loop detects a jump by comparing the counter before and after a
+        statement, which cannot see a jump to the line already executing -- a
+        `GOTO` to its own line, or the `NEXT` of a loop whose body is empty. An
+        executor that jumps calls this rather than assigning `current_line`.
+        """
+        self.current_line = line
+        self.jumped = True
+
     def _run_and_collect(
         self, turtle: "TurtleState", iterations: int, start_time: float
     ) -> int:
@@ -1063,6 +1080,7 @@ class Interpreter:
                 if not statement.strip():
                     continue
 
+                self.jumped = False
                 success = self._execute_line_safely(statement, turtle)
                 self._record_debug_frame(physical_line, statement, idx, len(statements))
 
@@ -1072,7 +1090,7 @@ class Interpreter:
                 if not self.running or self.pending_input:
                     break
 
-                if self.current_line != physical_line - 1:
+                if self.jumped or self.current_line != physical_line - 1:
                     line_changed = True
                     break
 

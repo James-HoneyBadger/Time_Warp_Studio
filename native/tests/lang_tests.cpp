@@ -1981,6 +1981,34 @@ void test_the_screen_game_example_runs_and_draws() {
 #endif
 }
 
+/// A runaway program ends with a sentence rather than a hung window. The budget
+/// is the engine's, not the IDE's: a lesson check, a compiled program and the
+/// window all get the same answer, and a suite that never mentions it is how a
+/// removed cap goes unnoticed.
+///
+/// It also pins the other half of the jump fix: `10 GOTO 10` used to *end* the
+/// program, because a jump to the line already executing is invisible to a
+/// before/after comparison of the program counter. It loops until the cap now,
+/// which is what makes this test terminate at all.
+void test_a_runaway_program_stops_at_the_budget() {
+    RecordingHost host;
+    Interpreter interpreter{Language::Basic, host};
+    interpreter.load_program("10 GOTO 10\n");
+    const auto started = std::chrono::steady_clock::now();
+    interpreter.run();
+    const double seconds =
+        std::chrono::duration<double>(std::chrono::steady_clock::now() - started).count();
+    // The iteration cap, not the clock: 100,000 statements take milliseconds, and
+    // a test that waited ten seconds for the timeout would not be run often.
+    TW_CHECK(interpreter.iteration_capped());
+    TW_CHECK(!interpreter.running);
+    TW_CHECK(seconds < 5.0);
+    const std::vector<std::string> output = interpreter.output();
+    TW_CHECK(std::any_of(output.begin(), output.end(), [](const std::string& line) {
+        return line.find("Maximum iterations reached") != std::string::npos;
+    }));
+}
+
 /// Profiling is measurement around the shared line loop: hits per line, time per
 /// line, and a report ordered by that time.
 void test_profiling_counts_each_line() {
@@ -2640,6 +2668,7 @@ int main() {
     test_gamepad_axis_scaling_is_centred();
     test_basic_an_empty_loop_body_does_not_end_its_outer_loop();
     test_the_screen_game_example_runs_and_draws();
+    test_a_runaway_program_stops_at_the_budget();
     test_profiling_counts_each_line();
     test_profiling_is_off_unless_asked();
     test_logo_stops_at_a_breakpoint_and_steps();

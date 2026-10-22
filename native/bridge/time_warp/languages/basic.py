@@ -1347,7 +1347,7 @@ def _basic_goto(interpreter: "Interpreter", args: str) -> str:
         if line_num not in interpreter.line_number_map:
             return f"❌ GOTO {line_num} failed: line not found\n"
         target_idx = interpreter.line_number_map[line_num]
-        interpreter.current_line = target_idx
+        interpreter.jump_to(target_idx)
     except ValueError:
         return f"❌ Invalid line number: {target}\n"
     except (KeyError, IndexError) as e:
@@ -1381,7 +1381,7 @@ def _basic_resume(interpreter: "Interpreter", args: str) -> str:
         line_num = int(target)
         if line_num not in interpreter.line_number_map:
             return f"❌ RESUME {line_num}: line not found\n"
-        interpreter.current_line = interpreter.line_number_map[line_num]
+        interpreter.jump_to(interpreter.line_number_map[line_num])
         return ""
     # RESUME with no args: re-execute the error line. The *index* is what the
     # error handler records, because `basic_error_line` holds the BASIC line
@@ -1389,11 +1389,11 @@ def _basic_resume(interpreter: "Interpreter", args: str) -> str:
     # nowhere at all.
     err_index = getattr(interpreter, "basic_error_index", -1)
     if err_index >= 0:
-        interpreter.current_line = err_index
+        interpreter.jump_to(err_index)
         return ""
     err_line = getattr(interpreter, "basic_error_line", None)
     if err_line is not None and err_line in interpreter.line_number_map:
-        interpreter.current_line = interpreter.line_number_map[err_line]
+        interpreter.jump_to(interpreter.line_number_map[err_line])
     return ""
 
 
@@ -1403,13 +1403,13 @@ def _basic_resume_next(interpreter: "Interpreter") -> str:
     if err_index >= 0:
         target_idx = err_index + 1
         if target_idx < len(interpreter.program_lines):
-            interpreter.current_line = target_idx
+            interpreter.jump_to(target_idx)
         return ""
     err_line = getattr(interpreter, "basic_error_line", None)
     if err_line is not None and err_line in interpreter.line_number_map:
         target_idx = interpreter.line_number_map[err_line] + 1
         if target_idx < len(interpreter.program_lines):
-            interpreter.current_line = target_idx
+            interpreter.jump_to(target_idx)
     return ""
 
 
@@ -1467,28 +1467,23 @@ def _basic_for(interpreter: "Interpreter", args: str) -> str:
 
 
 def _basic_next(interpreter: "Interpreter", _args: str) -> str:
-    # An empty loop body is legal, and its `NEXT` sits at `for_line + 1` -- the
-    # line already executing. The run loop detects a jump by comparing the
-    # program counter before and after a statement, so a jump back to the same
-    # line is invisible; count the loop here instead of leaving its frame for
-    # the enclosing loop's NEXT to consume.
-    while True:
-        if not interpreter.for_stack:
-            return "❌ NEXT without FOR\n"
-        context = interpreter.for_stack[-1]
-        current_val = interpreter.get_numeric_value(context.var_name) or 0
-        new_val = current_val + context.step
-        interpreter.set_typed_variable(context.var_name, new_val)
-        if context.step > 0:
-            should_continue = new_val <= context.end_value
-        else:
-            should_continue = new_val >= context.end_value
-        if not should_continue:
-            interpreter.for_stack.pop()
-            return ""
-        if context.for_line + 1 != interpreter.current_line:
-            interpreter.current_line = context.for_line + 1
-            return ""
+    if not interpreter.for_stack:
+        return "❌ NEXT without FOR\n"
+    context = interpreter.for_stack[-1]
+    current_val = interpreter.get_numeric_value(context.var_name) or 0
+    new_val = current_val + context.step
+    interpreter.set_typed_variable(context.var_name, new_val)
+    if context.step > 0:
+        should_continue = new_val <= context.end_value
+    else:
+        should_continue = new_val >= context.end_value
+    if should_continue:
+        # An empty body makes the target the statement already executing, which
+        # `jump_to` is what makes visible to the run loop.
+        interpreter.jump_to(context.for_line + 1)
+    else:
+        interpreter.for_stack.pop()
+    return ""
 
 
 def _basic_gosub(interpreter: "Interpreter", args: str) -> str:
@@ -1540,7 +1535,7 @@ def _basic_return(interpreter: "Interpreter") -> str:
 
     try:
         return_line = interpreter.gosub_stack.pop()
-        interpreter.current_line = return_line + 1
+        interpreter.jump_to(return_line + 1)
         logger.debug("RETURN to line %s", return_line + 2)
     except IndexError as e:
         logger.error("RETURN failed: %s", e)
@@ -2044,7 +2039,7 @@ def _basic_while(interpreter: "Interpreter", args: str) -> str:
             return "❌ WHILE without WEND\n"
 
         # Jump past WEND (line_changed path does not increment)
-        interpreter.current_line = wend_idx + 1
+        interpreter.jump_to(wend_idx + 1)
         return ""
     except (ValueError, TypeError, ZeroDivisionError) as e:
         return f"❌ WHILE syntax error: {e}\n"
@@ -2058,7 +2053,7 @@ def _basic_wend(interpreter: "Interpreter") -> str:
     while_idx = interpreter.basic_while_stack.pop()
     # Jump back to WHILE to re-evaluate condition
     # (line_changed path does NOT increment current_line)
-    interpreter.current_line = while_idx
+    interpreter.jump_to(while_idx)
     return ""
 
 
@@ -2105,7 +2100,7 @@ def _basic_do(interpreter: "Interpreter", args: str) -> str:
     loop_idx = _find_matching_loop(interpreter, interpreter.current_line)
     if loop_idx == -1:
         return "❌ DO without LOOP\n"
-    interpreter.current_line = loop_idx + 1
+    interpreter.jump_to(loop_idx + 1)
     return ""
 
 
@@ -2138,7 +2133,7 @@ def _basic_loop(interpreter: "Interpreter", args: str) -> str:
     if should_loop:
         # Jump back to DO (re-execute DO check if any)
         # line_changed path does NOT increment, so set to exact index
-        interpreter.current_line = do_idx
+        interpreter.jump_to(do_idx)
 
     return ""
 
@@ -2191,14 +2186,14 @@ def _basic_sub(interpreter: "Interpreter", args: str) -> str:
 
     if definition and "end_line" in definition:
         # Skip past END SUB (main loop will increment current_line)
-        interpreter.current_line = definition["end_line"]
+        interpreter.jump_to(definition["end_line"])
     else:
         # Fallback: scan forward
         start_line = interpreter.current_line
         for i in range(start_line + 1, len(interpreter.program_lines)):
             _, line_text = interpreter.program_lines[i]
             if line_text.strip().upper() == "END SUB":
-                interpreter.current_line = i
+                interpreter.jump_to(i)
                 break
     return ""
 
@@ -2226,7 +2221,7 @@ def _basic_end_sub(interpreter: "Interpreter") -> str:
             interpreter.string_variables[var_name] = old_value
     # Return to the line after the CALL (main loop detects line_changed
     # and does continue without incrementing, so we add 1 here)
-    interpreter.current_line = frame["return_line"] + 1
+    interpreter.jump_to(frame["return_line"] + 1)
     interpreter.basic_in_sub = False
     return ""
 
@@ -2245,14 +2240,14 @@ def _basic_function(interpreter: "Interpreter", args: str) -> str:
     definition = interpreter.basic_functions.get(name)
 
     if definition and "end_line" in definition:
-        interpreter.current_line = definition["end_line"]
+        interpreter.jump_to(definition["end_line"])
     else:
         # Fallback: scan forward
         start_line = interpreter.current_line
         for i in range(start_line + 1, len(interpreter.program_lines)):
             _, line_text = interpreter.program_lines[i]
             if line_text.strip().upper() == "END FUNCTION":
-                interpreter.current_line = i
+                interpreter.jump_to(i)
                 break
     return ""
 
@@ -2286,7 +2281,7 @@ def _basic_end_function(interpreter: "Interpreter") -> str:
     # Place return value in the variable namespace so caller can use it
     interpreter.variables[func_name] = return_value
     # Return to the line after the CALL
-    interpreter.current_line = frame["return_line"] + 1
+    interpreter.jump_to(frame["return_line"] + 1)
     interpreter.basic_in_function = False
     return ""
 
@@ -2366,7 +2361,7 @@ def _basic_call(interpreter: "Interpreter", args: str) -> str:
 
     # Jump to sub body (main loop detects line_changed and does NOT
     # increment, so set directly to the first body line)
-    interpreter.current_line = definition["start_line"]
+    interpreter.jump_to(definition["start_line"])
     if is_function:
         interpreter.basic_in_function = True
     else:
@@ -2393,7 +2388,7 @@ def _basic_type_def(interpreter: "Interpreter", args: str) -> str:
         stripped = re.sub(r"^\d+\s+", "", line_text.strip())
         stripped_up = stripped.upper()
         if stripped_up in ("END TYPE", "ENDTYPE") or ln_up in ("END TYPE", "ENDTYPE"):
-            interpreter.current_line = scan_line
+            interpreter.jump_to(scan_line)
             break
         # Field declaration: fieldname AS type
         fm = re.match(

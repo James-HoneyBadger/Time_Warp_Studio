@@ -834,5 +834,5 @@ def execute_focal(
         return f"❌ FOCAL: {exc}\n"
 
     if target is not None:
-        interpreter.current_line = target
+        interpreter.jump_to(target)
     return output

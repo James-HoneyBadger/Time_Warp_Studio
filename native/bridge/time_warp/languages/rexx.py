@@ -792,13 +792,13 @@ def _after_block(
         rest = _statement_after_label(_strip_comment(lines[nxt][1]).strip())
         if re.match(r"^ELSE\b", rest, re.I):
             body = re.sub(r"^ELSE\b", "", rest, flags=re.I).strip()
-            interp.current_line = nxt + 1
+            interp.jump_to(nxt + 1)
             if body.upper().startswith("DO"):
                 _state(interp)["stack"].append({"kind": "else_body"})
             elif body:
                 _exec_statement(interp, body, turtle, output)
             return "__JUMP__"
-    interp.current_line = nxt
+    interp.jump_to(nxt)
     return "__JUMP__"
 
 
@@ -811,7 +811,7 @@ def _handle_do(interp: "Interpreter", text: str) -> str | None:
     if spec_upper.startswith("WHILE "):
         cond = spec[6:].strip()
         if not _truth(_eval_expr(interp, cond)):
-            interp.current_line = _scan_block_end(interp, do_idx) + 1
+            interp.jump_to(_scan_block_end(interp, do_idx) + 1)
             return "__JUMP__"
         state["stack"].append({"kind": "while", "do_idx": do_idx, "cond": cond})
         return None
@@ -849,7 +849,7 @@ def _handle_do(interp: "Interpreter", text: str) -> str | None:
     if over:
         items = _fmt(_eval_expr(interp, over.group(2).strip())).split()
         if not items:
-            interp.current_line = _scan_block_end(interp, do_idx) + 1
+            interp.jump_to(_scan_block_end(interp, do_idx) + 1)
             return "__JUMP__"
         _set_var(interp, over.group(1), items[0])
         state["stack"].append(
@@ -860,7 +860,7 @@ def _handle_do(interp: "Interpreter", text: str) -> str | None:
     if spec:
         count = int(_num(_eval_expr(interp, spec)))
         if count <= 0:
-            interp.current_line = _scan_block_end(interp, do_idx) + 1
+            interp.jump_to(_scan_block_end(interp, do_idx) + 1)
             return "__JUMP__"
         state["stack"].append({"kind": "count", "do_idx": do_idx, "count": count})
         return None
@@ -884,24 +884,24 @@ def _handle_end(interp: "Interpreter") -> str | None:
     if kind == "while":
         if _truth(_eval_expr(interp, frame["cond"])):
             state["stack"].append(frame)
-            interp.current_line = do_idx + 1
+            interp.jump_to(do_idx + 1)
             return "__JUMP__"
         return None
     if kind == "until":
         if _truth(_eval_expr(interp, frame["cond"])):
             return None
         state["stack"].append(frame)
-        interp.current_line = do_idx + 1
+        interp.jump_to(do_idx + 1)
         return "__JUMP__"
     if kind == "forever":
         state["stack"].append(frame)
-        interp.current_line = do_idx + 1
+        interp.jump_to(do_idx + 1)
         return "__JUMP__"
     if kind == "count":
         frame["count"] -= 1
         if frame["count"] > 0:
             state["stack"].append(frame)
-            interp.current_line = do_idx + 1
+            interp.jump_to(do_idx + 1)
             return "__JUMP__"
         return None
     if kind == "to":
@@ -911,7 +911,7 @@ def _handle_end(interp: "Interpreter") -> str | None:
         if (step >= 0 and current <= limit) or (step < 0 and current >= limit):
             _set_var(interp, frame["var"], _int_if_whole(current))
             state["stack"].append(frame)
-            interp.current_line = do_idx + 1
+            interp.jump_to(do_idx + 1)
             return "__JUMP__"
         return None
     if kind == "over":
@@ -919,7 +919,7 @@ def _handle_end(interp: "Interpreter") -> str | None:
         if frame["index"] < len(frame["items"]):
             _set_var(interp, frame["var"], frame["items"][frame["index"]])
             state["stack"].append(frame)
-            interp.current_line = do_idx + 1
+            interp.jump_to(do_idx + 1)
             return "__JUMP__"
         return None
     return None
@@ -936,9 +936,9 @@ def _skip_else(interp: "Interpreter") -> str | None:
         return None
     body = re.sub(r"^ELSE\b", "", rest, flags=re.I).strip()
     if body.upper().startswith("DO"):
-        interp.current_line = _scan_block_end(interp, nxt) + 1
+        interp.jump_to(_scan_block_end(interp, nxt) + 1)
     else:
-        interp.current_line = nxt + 1
+        interp.jump_to(nxt + 1)
     return "__JUMP__"
 
 
@@ -968,7 +968,7 @@ def _handle_when(
 
     if frame.get("matched") or not _truth(_eval_expr(interp, condition)):
         if body_upper.startswith("DO"):
-            interp.current_line = _scan_block_end(interp, do_idx) + 1
+            interp.jump_to(_scan_block_end(interp, do_idx) + 1)
             return "__JUMP__"
         return None
 
@@ -995,7 +995,7 @@ def _handle_otherwise(
 
     if frame.get("matched"):
         if body_upper.startswith("DO"):
-            interp.current_line = _scan_block_end(interp, do_idx) + 1
+            interp.jump_to(_scan_block_end(interp, do_idx) + 1)
             return "__JUMP__"
         return None
 
@@ -1026,7 +1026,7 @@ def _handle_call(interp: "Interpreter", name: str) -> str | None:
         raise RexxError(f"unknown subroutine '{label}'")
     state["call_stack"].append((interp.current_line, state.get("args")))
     state["args"] = args
-    interp.current_line = target + 1
+    interp.jump_to(target + 1)
     return "__JUMP__"
 
 
@@ -1039,7 +1039,7 @@ def _handle_return(interp: "Interpreter", text: str) -> str | None:
     if stack:
         return_line, previous_args = stack.pop()
         state["args"] = previous_args
-        interp.current_line = return_line + 1
+        interp.jump_to(return_line + 1)
         return "__JUMP__"
     interp.running = False
     return "__JUMP__"
@@ -1060,7 +1060,7 @@ def _handle_leave(interp: "Interpreter") -> str | None:
     index, frame = found
     stack = _state(interp)["stack"]
     del stack[index:]
-    interp.current_line = _scan_block_end(interp, frame["do_idx"]) + 1
+    interp.jump_to(_scan_block_end(interp, frame["do_idx"]) + 1)
     return "__JUMP__"
 
 
@@ -1069,7 +1069,7 @@ def _handle_iterate(interp: "Interpreter") -> str | None:
     if found is None:
         raise RexxError("ITERATE outside of a loop")
     _, frame = found
-    interp.current_line = _scan_block_end(interp, frame["do_idx"])
+    interp.jump_to(_scan_block_end(interp, frame["do_idx"]))
     return "__JUMP__"
 
 

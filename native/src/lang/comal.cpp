@@ -368,7 +368,7 @@ private:
 
     // -- control ----------------------------------------------------------
 
-    void jump(std::size_t index) { interpreter_.current_line = index; }
+    void jump(std::size_t index) { interpreter_.jump_to(index); }
 
     ComalFrame* top(std::string_view kind) {
         if (state_.stack.empty() || state_.stack.back().kind != kind) {

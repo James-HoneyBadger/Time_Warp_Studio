@@ -147,10 +147,19 @@ public:
 
     /// Execution position: an index into `program_lines()`.
     ///
-    /// Public because an executor jumps by assigning it, exactly as the Python
-    /// executors do. The loop re-tests it after each statement, and only
-    /// advances the line itself when the executor did not move it.
+    /// Public because an executor may still assign it, but a jump should go
+    /// through `jump_to`: the loop detects a jump by comparing the counter before
+    /// and after a statement, and a jump to the line already executing is
+    /// invisible to that comparison. `10 GOTO 10` used to fall through and end the
+    /// program; it now loops until the budget stops it.
     std::size_t current_line = 0;
+
+    /// Moves the program counter and records that a jump happened, which is the
+    /// one thing an assignment cannot say when the target is the current line.
+    void jump_to(std::size_t line) noexcept {
+        current_line = line;
+        jumped_ = true;
+    }
 
     /// Cleared by QUIT/STOP and by the budget. An executor must not keep
     /// running once this is false.
@@ -332,6 +341,8 @@ private:
     std::map<std::size_t, LineProfile> profile_;
     bool timed_out_ = false;
     bool iteration_capped_ = false;
+    /// Set by `jump_to`, cleared by the run loop before each statement.
+    bool jumped_ = false;
     std::string error_;
 };
 

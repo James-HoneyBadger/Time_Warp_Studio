@@ -1072,7 +1072,7 @@ std::string execute_unit(Interpreter& interpreter, TurtleHost& turtle, PilotStat
     }
     if (type == "E") {
         if (!interpreter.subroutine_stack.empty()) {
-            interpreter.current_line = interpreter.subroutine_stack.back();
+            interpreter.jump_to(interpreter.subroutine_stack.back());
             interpreter.subroutine_stack.pop_back();
             return {};
         }

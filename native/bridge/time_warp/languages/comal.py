@@ -419,7 +419,7 @@ def _pop(interp: "Interpreter") -> dict | None:
 
 
 def _jump(interp: "Interpreter", idx: int) -> str:
-    interp.current_line = idx
+    interp.jump_to(idx)
     return "__JUMP__"
 
 

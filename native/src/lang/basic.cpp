@@ -390,7 +390,7 @@ bool Machine::divert_on_error() {
     }
     interpreter_.set_number("ERR", 1.0);
     interpreter_.set_number("ERL", erl);
-    interpreter_.current_line = handler->second;
+    interpreter_.jump_to(handler->second);
     return true;
 }
 

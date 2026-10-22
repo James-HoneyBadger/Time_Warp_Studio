@@ -95,6 +95,13 @@ def test_for_step():
     assert has(out, "2", "4", "6", "8", "10")
 
 
+def test_goto_to_its_own_line_loops_until_the_budget():
+    # A jump to the line already executing used to look like "no jump", so the
+    # program fell through and ended. It loops now, and the budget ends it.
+    out = bas("10 GOTO 10")
+    assert any("Maximum iterations reached" in line for line in out)
+
+
 def test_for_with_an_empty_body_does_not_end_its_outer_loop():
     # `NEXT I` is the first line of the inner loop, so "go back to the body" is
     # a jump to the statement that is already running. The enclosing loop used

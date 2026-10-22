@@ -1275,7 +1275,7 @@ std::string Machine::goto_line(const std::string& args) {
     if (found == interpreter_.line_number_map.end()) {
         return "❌ GOTO " + std::to_string(*line) + " failed: line not found\n";
     }
-    interpreter_.current_line = found->second;
+    interpreter_.jump_to(found->second);
     return {};
 }
 
@@ -1294,7 +1294,7 @@ std::string Machine::gosub(const std::string& args) {
                              " not found");
     }
     state_.gosubs.push_back(interpreter_.current_line);
-    interpreter_.current_line = found->second;
+    interpreter_.jump_to(found->second);
     return {};
 }
 
@@ -1302,7 +1302,7 @@ std::string Machine::return_from_sub() {
     if (state_.gosubs.empty()) {
         return "❌ RETURN without GOSUB\n";
     }
-    interpreter_.current_line = state_.gosubs.back() + 1;
+    interpreter_.jump_to(state_.gosubs.back() + 1);
     state_.gosubs.pop_back();
     return {};
 }
@@ -1337,32 +1337,24 @@ std::string Machine::for_loop(const std::string& args) {
 }
 
 std::string Machine::next(const std::string& /*args*/) {
-    // A loop whose body is empty is legal -- `FOR I = 1 TO 10 : NEXT I` is one
-    // line in the BASIC this emulates -- and its `NEXT` sits at `body + 1`,
-    // which is the line already executing. Setting the program counter to the
-    // line it is already on is a jump the line loop cannot see (it compares the
-    // counter before and after), so the loop is counted here instead. Left
-    // unfixed, the frame stayed on the stack and the *enclosing* loop's NEXT
-    // consumed it -- the outer loop then ran once, silently.
-    while (true) {
-        if (state_.fors.empty()) {
-            return "❌ NEXT without FOR\n";
-        }
-        ForFrame& frame = state_.fors.back();
-        const double current = number_of(frame.variable).value_or(0.0);
-        const double value = current + frame.step;
-        assign(frame.variable, value);
-        const bool again =
-            frame.step > 0.0 ? value <= frame.limit : value >= frame.limit;
-        if (!again) {
-            state_.fors.pop_back();
-            return {};
-        }
-        if (frame.body + 1 != interpreter_.current_line) {
-            interpreter_.current_line = frame.body + 1;
-            return {};
-        }
+    if (state_.fors.empty()) {
+        return "❌ NEXT without FOR\n";
     }
+    ForFrame& frame = state_.fors.back();
+    const double current = number_of(frame.variable).value_or(0.0);
+    const double value = current + frame.step;
+    assign(frame.variable, value);
+    const bool again =
+        frame.step > 0.0 ? value <= frame.limit : value >= frame.limit;
+    if (again) {
+        // An empty body puts this statement at `body + 1`, so the jump's target
+        // is the line already executing -- which is exactly what `jump_to`
+        // exists to make visible to the run loop.
+        interpreter_.jump_to(frame.body + 1);
+    } else {
+        state_.fors.pop_back();
+    }
+    return {};
 }
 
 std::string Machine::while_loop(const std::string& args) {
@@ -1382,7 +1374,7 @@ std::string Machine::while_loop(const std::string& args) {
             ++depth;
         } else if (code == "WEND") {
             if (depth == 0) {
-                interpreter_.current_line = scan + 1;
+                interpreter_.jump_to(scan + 1);
                 return {};
             }
             --depth;
@@ -1395,7 +1387,7 @@ std::string Machine::wend() {
     if (state_.whiles.empty()) {
         return "❌ WEND without WHILE\n";
     }
-    interpreter_.current_line = state_.whiles.back();
+    interpreter_.jump_to(state_.whiles.back());
     state_.whiles.pop_back();
     return {};
 }
@@ -1428,7 +1420,7 @@ std::string Machine::do_loop(const std::string& args) {
             ++depth;
         } else if (starts_with(code, "LOOP")) {
             if (depth == 0) {
-                interpreter_.current_line = scan + 1;
+                interpreter_.jump_to(scan + 1);
                 return {};
             }
             --depth;
@@ -1459,7 +1451,7 @@ std::string Machine::loop(const std::string& args) {
         }
     }
     if (should_loop) {
-        interpreter_.current_line = start;
+        interpreter_.jump_to(start);
     }
     return {};
 }
@@ -1491,13 +1483,13 @@ std::string Machine::sub_definition(const std::string& args) {
     const std::string name = upper(trim(header.substr(0, header.find('('))));
     const auto definition = state_.subs.find(name);
     if (definition != state_.subs.end()) {
-        interpreter_.current_line = definition->second.end;
+        interpreter_.jump_to(definition->second.end);
         return {};
     }
     const auto& lines = interpreter_.program_lines();
     for (std::size_t scan = interpreter_.current_line + 1; scan < lines.size(); ++scan) {
         if (upper(trim(lines[scan].text)) == "END SUB") {
-            interpreter_.current_line = scan;
+            interpreter_.jump_to(scan);
             break;
         }
     }
@@ -1517,7 +1509,7 @@ std::string Machine::end_sub() {
             interpreter_.remove_variable(name);
         }
     }
-    interpreter_.current_line = frame.return_line + 1;
+    interpreter_.jump_to(frame.return_line + 1);
     return {};
 }
 
@@ -1529,13 +1521,13 @@ std::string Machine::function_definition(const std::string& args) {
     const std::string name = upper(trim(header.substr(0, header.find('('))));
     const auto definition = state_.functions.find(name);
     if (definition != state_.functions.end()) {
-        interpreter_.current_line = definition->second.end;
+        interpreter_.jump_to(definition->second.end);
         return {};
     }
     const auto& lines = interpreter_.program_lines();
     for (std::size_t scan = interpreter_.current_line + 1; scan < lines.size(); ++scan) {
         if (upper(trim(lines[scan].text)) == "END FUNCTION") {
-            interpreter_.current_line = scan;
+            interpreter_.jump_to(scan);
             break;
         }
     }
@@ -1557,7 +1549,7 @@ std::string Machine::end_function() {
         }
     }
     interpreter_.set_number(frame.function_name, result);
-    interpreter_.current_line = frame.return_line + 1;
+    interpreter_.jump_to(frame.return_line + 1);
     return {};
 }
 
@@ -1619,7 +1611,7 @@ std::string Machine::call(const std::string& args) {
         }
     }
     state_.calls.push_back(std::move(frame));
-    interpreter_.current_line = definition->second.start;
+    interpreter_.jump_to(definition->second.start);
     return {};
 }
 
@@ -1634,7 +1626,7 @@ std::string Machine::type_definition(const std::string& args) {
         const std::string text = trim(lines[scan].text);
         const std::string code = upper(text);
         if (code == "END TYPE" || code == "ENDTYPE") {
-            interpreter_.current_line = scan;
+            interpreter_.jump_to(scan);
             break;
         }
         static const std::regex field_pattern{
@@ -1875,11 +1867,11 @@ std::string Machine::resume(const std::string& args) {
         if (found == interpreter_.line_number_map.end()) {
             return "❌ RESUME " + target + ": line not found\n";
         }
-        interpreter_.current_line = found->second;
+        interpreter_.jump_to(found->second);
         return {};
     }
     if (state_.error_index >= 0) {
-        interpreter_.current_line = static_cast<std::size_t>(state_.error_index);
+        interpreter_.jump_to(static_cast<std::size_t>(state_.error_index));
     }
     return {};
 }
@@ -1888,7 +1880,7 @@ std::string Machine::resume_next() {
     if (state_.error_index >= 0) {
         const auto target = static_cast<std::size_t>(state_.error_index) + 1;
         if (target < interpreter_.program_lines().size()) {
-            interpreter_.current_line = target;
+            interpreter_.jump_to(target);
         }
         return {};
     }
@@ -1899,7 +1891,7 @@ std::string Machine::resume_next() {
             interpreter_.line_number_map.find(*lines[interpreter_.current_line].number);
         if (found != interpreter_.line_number_map.end() &&
             found->second + 1 < lines.size()) {
-            interpreter_.current_line = found->second + 1;
+            interpreter_.jump_to(found->second + 1);
         }
     }
     return {};

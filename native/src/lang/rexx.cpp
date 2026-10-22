@@ -1068,7 +1068,7 @@ Flow RexxMachine::after_block(std::size_t block_end) {
         if (std::regex_search(rest, else_pattern)) {
             const std::string body =
                 trim(std::regex_replace(rest, else_pattern, ""));
-            interpreter.current_line = next + 1;
+            interpreter.jump_to(next + 1);
             if (starts_with(upper(body), "DO")) {
                 Frame frame;
                 frame.kind = "else_body";
@@ -1079,7 +1079,7 @@ Flow RexxMachine::after_block(std::size_t block_end) {
             return Flow::Jump;
         }
     }
-    interpreter.current_line = next;
+    interpreter.jump_to(next);
     return Flow::Jump;
 }
 
@@ -1092,7 +1092,7 @@ Flow RexxMachine::handle_do(const std::string& text) {
     if (starts_with(spec_upper, "WHILE ")) {
         const std::string condition = trim(spec.substr(6));
         if (!truth(eval_expr(interpreter, condition))) {
-            interpreter.current_line = scan_block_end(interpreter, do_index) + 1;
+            interpreter.jump_to(scan_block_end(interpreter, do_index) + 1);
             return Flow::Jump;
         }
         Frame frame;
@@ -1145,7 +1145,7 @@ Flow RexxMachine::handle_do(const std::string& text) {
         const std::vector<std::string> items =
             split_ws(fmt(eval_expr(interpreter, trim(match[2].str()))));
         if (items.empty()) {
-            interpreter.current_line = scan_block_end(interpreter, do_index) + 1;
+            interpreter.jump_to(scan_block_end(interpreter, do_index) + 1);
             return Flow::Jump;
         }
         set_var(interpreter, match[1].str(), RValue::word(items.front()));
@@ -1162,7 +1162,7 @@ Flow RexxMachine::handle_do(const std::string& text) {
     if (!spec.empty()) {
         const long long count = static_cast<long long>(num(eval_expr(interpreter, spec)));
         if (count <= 0) {
-            interpreter.current_line = scan_block_end(interpreter, do_index) + 1;
+            interpreter.jump_to(scan_block_end(interpreter, do_index) + 1);
             return Flow::Jump;
         }
         Frame frame;
@@ -1201,7 +1201,7 @@ Flow RexxMachine::handle_end() {
     if (kind == "while") {
         if (truth(eval_expr(interpreter, frame.condition))) {
             state.stack.push_back(frame);
-            interpreter.current_line = do_index + 1;
+            interpreter.jump_to(do_index + 1);
             return Flow::Jump;
         }
         return Flow::None;
@@ -1211,19 +1211,19 @@ Flow RexxMachine::handle_end() {
             return Flow::None;
         }
         state.stack.push_back(frame);
-        interpreter.current_line = do_index + 1;
+        interpreter.jump_to(do_index + 1);
         return Flow::Jump;
     }
     if (kind == "forever") {
         state.stack.push_back(frame);
-        interpreter.current_line = do_index + 1;
+        interpreter.jump_to(do_index + 1);
         return Flow::Jump;
     }
     if (kind == "count") {
         frame.count -= 1;
         if (frame.count > 0) {
             state.stack.push_back(frame);
-            interpreter.current_line = do_index + 1;
+            interpreter.jump_to(do_index + 1);
             return Flow::Jump;
         }
         return Flow::None;
@@ -1236,7 +1236,7 @@ Flow RexxMachine::handle_end() {
         if ((step >= 0.0 && current <= limit) || (step < 0.0 && current >= limit)) {
             set_var(interpreter, frame.variable, RValue::numeric(current));
             state.stack.push_back(frame);
-            interpreter.current_line = do_index + 1;
+            interpreter.jump_to(do_index + 1);
             return Flow::Jump;
         }
         return Flow::None;
@@ -1246,7 +1246,7 @@ Flow RexxMachine::handle_end() {
         if (frame.index < frame.items.size()) {
             set_var(interpreter, frame.variable, RValue::word(frame.items[frame.index]));
             state.stack.push_back(frame);
-            interpreter.current_line = do_index + 1;
+            interpreter.jump_to(do_index + 1);
             return Flow::Jump;
         }
         return Flow::None;
@@ -1268,9 +1268,9 @@ Flow RexxMachine::skip_else() {
     }
     const std::string body = trim(std::regex_replace(rest, else_pattern, ""));
     if (starts_with(upper(body), "DO")) {
-        interpreter.current_line = scan_block_end(interpreter, next) + 1;
+        interpreter.jump_to(scan_block_end(interpreter, next) + 1);
     } else {
-        interpreter.current_line = next + 1;
+        interpreter.jump_to(next + 1);
     }
     return Flow::Jump;
 }
@@ -1301,7 +1301,7 @@ Flow RexxMachine::handle_when(const std::string& text) {
 
     if (frame->matched || !truth(eval_expr(interpreter, condition))) {
         if (starts_with(body_upper, "DO")) {
-            interpreter.current_line = scan_block_end(interpreter, interpreter.current_line) + 1;
+            interpreter.jump_to(scan_block_end(interpreter, interpreter.current_line) + 1);
             return Flow::Jump;
         }
         return Flow::None;
@@ -1329,7 +1329,7 @@ Flow RexxMachine::handle_otherwise(const std::string& text) {
 
     if (frame->matched) {
         if (starts_with(body_upper, "DO")) {
-            interpreter.current_line = scan_block_end(interpreter, interpreter.current_line) + 1;
+            interpreter.jump_to(scan_block_end(interpreter, interpreter.current_line) + 1);
             return Flow::Jump;
         }
         return Flow::None;
@@ -1369,7 +1369,7 @@ Flow RexxMachine::handle_call(const std::string& name) {
     }
     state.call_stack.emplace_back(interpreter.current_line, state.args);
     state.args = arguments;
-    interpreter.current_line = target->second + 1;
+    interpreter.jump_to(target->second + 1);
     return Flow::Jump;
 }
 
@@ -1384,7 +1384,7 @@ Flow RexxMachine::handle_return(const std::string& text) {
         const auto [return_line, previous_args] = state.call_stack.back();
         state.call_stack.pop_back();
         state.args = previous_args;
-        interpreter.current_line = return_line + 1;
+        interpreter.jump_to(return_line + 1);
         return Flow::Jump;
     }
     interpreter.running = false;
@@ -1408,7 +1408,7 @@ Flow RexxMachine::handle_leave() {
     const Frame frame = state.stack[*found];
     state.stack.erase(state.stack.begin() + static_cast<std::ptrdiff_t>(*found),
                       state.stack.end());
-    interpreter.current_line = scan_block_end(interpreter, frame.do_index) + 1;
+    interpreter.jump_to(scan_block_end(interpreter, frame.do_index) + 1);
     return Flow::Jump;
 }
 
@@ -1418,7 +1418,7 @@ Flow RexxMachine::handle_iterate() {
         throw RexxError("ITERATE outside of a loop");
     }
     const Frame frame = state.stack[*found];
-    interpreter.current_line = scan_block_end(interpreter, frame.do_index);
+    interpreter.jump_to(scan_block_end(interpreter, frame.do_index));
     return Flow::Jump;
 }
 

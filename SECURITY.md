@@ -4,8 +4,13 @@
 
 | Version | Supported           |
 | ------- | ------------------- |
-| 14.x    | :white_check_mark:  |
-| < 14.0  | :x:                 |
+| 16.x    | :white_check_mark:  |
+| < 16.0  | :x:                 |
+
+The application is the Qt build in `native/`. The Python engine in
+`native/bridge/` is a development reference used by the test gates and (until
+17.0) the classroom page; it is not part of the shipped program, and nothing a
+learner runs executes in it.
 
 ## Reporting a Vulnerability
 
@@ -41,22 +46,77 @@ If you discover a security vulnerability in Time Warp Studio, please report it r
 - A fix will be developed and released as a patch version.
 - You will be credited in the release notes (unless you prefer to remain anonymous).
 
-## Security Considerations
+## Threat model
 
-Time Warp Studio is an **offline desktop application**. It is designed for local use and does not expose network services by default. Key security notes:
+Time Warp Studio is an **offline desktop application**. It opens no sockets, ships
+no server component, and the only process it starts on the user's behalf is an
+audio player. The surface that matters is a program: a `.bas` file is code, and
+this document states exactly what code may do.
 
-- **Safe expression evaluation:** All math/expression evaluation uses a hand-written parser — native C++ (`timewarp_expr`) and, in the bridge engine, `ExpressionEvaluator`. `eval()` is never called on user input.
-- **No network exposure:** The application runs locally and does not open network ports or ship any server components.
-- **Student programs are not a security boundary.** A program you run executes with the privileges of the IDE: BASIC's file commands can read and write files the user can, and a program that never returns has to be stopped by the user. Run programs you trust.
-- **Optional subprocess sandbox:** setting `TWS_SANDBOX=1` runs whole-program executors in a separate process with CPU/memory limits and a timeout, for running untrusted student code. It is opt-in and off by default.
-- **Dependencies:** the application is C++20 with Qt6. The Python reference engine that the parity gates and the lesson check use is Python 3.10+ and standard-library only — no third-party packages are required (`pyttsx3`, `pygame` and `inputs` are optional and imported defensively). Keep Qt and Python updated to their latest stable versions.
-- **Secrets stay out of the repository.** A `detect-secrets` pre-commit hook checks staged files against a committed baseline (`.secrets.baseline`), so a credential pasted into a file fails the commit instead of being pushed. If a secret does reach a commit, treat it as compromised: rotate it, then rewrite the history that contains it — removing the file in a later commit does not remove it from the repository.
+### A program is not a sandbox
+
+A program runs in the application's process, with the user's privileges. It is not
+a security boundary and is not presented as one. What it *can* do:
+
+- **Files.** BASIC's file channel (`OPEN`, `GET #`, `PUT #`) reads and writes what
+  the user can read and write. A file name is resolved by the engine, not the
+  shell, and `SHELL` is refused outright — but a program that can write files can
+  still overwrite one you own. Run programs you trust.
+- **Device nodes, through an allow-list.** `SERIAL` and `PARALLEL`
+  (`native/src/io/ports.cpp`) open raw POSIX devices only from a family list —
+  `/dev/ttyUSB*`, `/dev/ttyACM*`, `/dev/ttyAMA*`, `/dev/serial/by-id/*`, `/dev/lp*`,
+  `/dev/parport*`, and the pseudo-terminals — plus any exact path a teacher adds
+  with `TIME_WARP_PORTS` (`:`-separated). Everything else is refused by the engine
+  with a sentence the program prints: `/dev/mem`, a disk, `/etc/passwd`, a
+  relative path and a `..` path are all refused, and `media_tests` asserts it.
+- **SQL.** `SQL` statements reach the SQLite connection the Database tab has open,
+  which is a file the user chose.
+- **The clock.** `TIME$`, `DATE$` and `TIMER` read the local clock.
+- **The filesystem's size.** A program that loops forever is stopped by the run
+  budget, not by the operating system: 10 seconds of wall clock, 2,000,000
+  statements and 100,000 program steps
+  (`native/include/timewarp/lang/interpreter.hpp`). It ends with a sentence
+  (`❌ Error: Execution timeout`) rather than a hung window, and the user can still
+  press Stop.
+
+What it cannot do: open a network connection, start a shell, read memory or a
+block device, or escape the classroom and progress directories it is given.
+
+### The application's own surface
+
+- **The automation API** (`./api`, `native/src/api/`) speaks JSON-RPC 2.0 over
+  stdin/stdout. It binds nothing and listens on nothing; a caller has to start the
+  process itself.
+- **A standalone artifact** is the IDE's binary with the program appended. It
+  contains the source in plain bytes — `strings hello` finds it — because the
+  program is interpreted and nothing is hidden. Send one only to somebody who may
+  see its source.
+- **The reference engine** in `native/bridge/` is development tooling. It is not
+  installed and no learner program is routed to it.
+
+### Dependencies
+
+The application is C++20 with Qt 6 (Widgets, Core, Gui), SQLite, and optionally Qt
+Svg and Qt PrintSupport for drawing export and printing. The Windows 7 artifact
+uses Qt 5.15, which is the last Qt that runs on 7 SP1. There is no Python at run
+time and no third-party runtime beyond Qt and SQLite. Keep them updated.
+
+### Secrets stay out of the repository
+
+A `detect-secrets` pre-commit hook checks staged files against a committed baseline
+(`.secrets.baseline`), so a credential pasted into a file fails the commit instead
+of being pushed. If a secret does reach a commit, treat it as compromised: rotate
+it, then rewrite the history that contains it — removing the file in a later commit
+does not remove it from the repository.
 
 ## Best Practices for Users
 
 - Run Time Warp Studio in a standard user account (no elevated privileges required).
-- Keep Qt, Python and all dependencies updated.
-- Only load programs from trusted sources.
+- Keep Qt, SQLite and the rest of the system updated.
+- Only load programs from sources you trust, and read a program before you run it —
+  the editor is right there.
+- Add a device path with `TIME_WARP_PORTS` only if you know what is plugged into
+  it.
 
 ## Acknowledgements
 

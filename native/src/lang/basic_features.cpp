@@ -1436,7 +1436,7 @@ std::string Machine::reset_program(std::string_view message) {
     functions_installed_ = false;
     // The reference clears the program itself, so the run ends here; moving the
     // counter past the last line is the same observable end.
-    interpreter_.current_line = interpreter_.program_lines().size();
+    interpreter_.jump_to(interpreter_.program_lines().size());
     return std::string{message};
 }
 

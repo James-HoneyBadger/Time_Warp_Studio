@@ -32,6 +32,17 @@ to be kept saying the same thing.
   plus the loader's refusals, the message a wrong answer gets, and the progress
   round trip.
 
+### Fixed
+
+- **A jump to the line already executing ended the program.** The run loop detects
+  a jump by comparing the program counter before and after a statement, so
+  `10 GOTO 10` looked like "no jump" and fell through to the end of the program;
+  a learner's first infinite loop did not loop. The empty-bodied `FOR` defect fixed
+  in 16.5.0 was the same bug, worked around inside `NEXT`; the cause is fixed now:
+  `Interpreter::jump_to` records the jump, every executor's jump goes through it,
+  and the `NEXT` workaround is gone. Fixed in both engines, with a unit test in each
+  and a budget test that pins it.
+
 ### Changed
 
 - **The Lessons panel is a view over the library.** Opening the tab loads the

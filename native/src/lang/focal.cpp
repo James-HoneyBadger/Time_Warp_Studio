@@ -1039,7 +1039,7 @@ std::string execute_focal(Interpreter& interpreter, std::string_view source, Tur
     try {
         const StatementResult result = executor.statement(source);
         if (result.target.has_value()) {
-            interpreter.current_line = *result.target;
+            interpreter.jump_to(*result.target);
         }
         return result.output;
     } catch (const FocalError& error) {
