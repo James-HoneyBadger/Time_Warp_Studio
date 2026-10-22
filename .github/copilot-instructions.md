@@ -25,8 +25,12 @@ the parity gate compares with a recorded corpus, and the harnesses drive
 - **Qt application (C++20)** — the product, and the only maintained UI.
   - Entry point: `native/tools/time_warp_ide.cpp`
   - Build: `cmake -S native -B native/build -DCMAKE_BUILD_TYPE=Release && cmake --build native/build -j`
-  - Shell: `native/src/ui/main_window.cpp`; canvas `native/src/ui/turtle_canvas.cpp`;
-    editor `native/src/ui/code_editor.cpp`; languages `native/src/ui/language.cpp`
+  - Shell: `native/src/ui/main_window_*.cpp`, one file per section (construction,
+    menus, appearance, actions, chrome, SQL and projects, session, execution) over
+    the shared keys and helpers in `main_window_internal.hpp`; canvas
+    `native/src/ui/turtle_canvas.cpp`; editor `native/src/ui/code_editor.cpp`;
+    languages `native/src/ui/language.cpp`, a Qt adapter over the one table in
+    `native/include/timewarp/lang/registry.hpp`
   - Every language is native: Scheme (`timewarp_scheme`, an explicit-stack CEK
     machine, dispatched in-process) and CHIP-8, Logo and Smalltalk
     (whole-program) plus BASIC, FOCAL, PILOT, COMAL, APL and REXX (line-by-line)
@@ -265,7 +269,8 @@ needs an interpreter: if a guide names a `python3` command it is out of date, an
 
 ### Key Components
 
-- **Qt shell**: `native/src/ui/main_window.cpp` — documents, tabs, menus, status bar
+- **Qt shell**: `native/src/ui/main_window_*.cpp` — documents, tabs, menus, status bar,
+  a file per section, over `main_window_internal.hpp`
 - **TurtleCanvas**: `native/src/ui/turtle_canvas.cpp` — the display list and the painter
 - **CodeEditor**: `native/src/ui/code_editor.cpp` — gutter, current line, tab stops,
   syntax colouring and the search that `FindBar` drives
@@ -290,13 +295,13 @@ needs an interpreter: if a guide names a `python3` command it is out of date, an
   `docs/MACHINES.md` — the two machines are a centrepiece, not a demo.
 - **Lessons**: `native/src/lessons/` (`timewarp_lessons`: the curriculum, the verifier,
   progress, and the classroom with rosters, handouts, marking and bundles),
-  `native/src/ui/panels.cpp` (`LessonPanel`), and the two commands
+  `native/src/ui/panels_lessons.cpp` (`LessonPanel`), and the two commands
   `native/tools/{learn,teach}.cpp`
 - **The run report**: `native/tools/check.cpp` (`time_warp_check`) — one program through
   the native engines, with what it printed and what it drew. This is what the example
   and command harnesses drive, and what a person at a terminal can ask.
-- **Inspection panels**: `native/src/ui/panels.cpp` — `VariablesPanel`,
-  `TelemetryPanel`, `DebugPanel`. The native runners report both tables to the window
+- **Inspection panels**: `native/src/ui/panels_inspectors.cpp` — `VariablesPanel`,
+  `TelemetryPanel`, `DebugPanel` and the turtle inspector. The native runners report both tables to the window
   before `finished`. Scheme has no executor in that path, so its tables come from
   `DebuggerRunner::snapshot()` — including the final snapshot taken when a run ends
   without pausing. `DebugPanel`'s buttons forward to whichever runner is paused:

@@ -47,16 +47,12 @@ struct SizeWaiver {
 };
 
 constexpr SizeWaiver kWaivers[] = {
-    {"native/src/ui/main_window.cpp",
-     "the window: every section commented in it is a controller waiting to be lifted out"},
     {"native/src/lang/logo.cpp",
      "the Logo executor: lexer, evaluator, primitives and turtle in one file"},
     {"native/src/ui/retro_computer.cpp",
      "the HB-1 machine, which owns its own canvas queue, bridge and runners"},
     {"native/src/lang/basic_statements.cpp",
      "BASIC's statements: one file per family is the split"},
-    {"native/src/ui/panels.cpp",
-     "the docks: one file per panel is the split"},
     {"native/tests/ui_layout_tests.cpp",
      "85 cases in one file: one file per case group is the split, and the next phase"},
     {"native/tests/lang_tests.cpp",

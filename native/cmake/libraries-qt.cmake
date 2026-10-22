@@ -484,9 +484,21 @@ if(TIME_WARP_QT_FOUND)
             src/ui/machine_voice.cpp
             src/ui/help_browser.cpp
             src/ui/lint.cpp
-            src/ui/main_window.cpp
+            src/ui/main_window_construction.cpp
+            src/ui/main_window_menus.cpp
+            src/ui/main_window_appearance.cpp
+            src/ui/main_window_actions.cpp
+            src/ui/main_window_chrome.cpp
+            src/ui/main_window_data.cpp
+            src/ui/main_window_session.cpp
+            src/ui/main_window_run.cpp
             src/ui/outline.cpp
-            src/ui/panels.cpp
+            src/ui/panels_status.cpp
+            src/ui/panels_classroom.cpp
+            src/ui/panels_function_keys.cpp
+            src/ui/panels_crt.cpp
+            src/ui/panels_lessons.cpp
+            src/ui/panels_inspectors.cpp
             src/ui/preferences.cpp
             src/ui/profile_report.cpp
             src/ui/project_panel.cpp

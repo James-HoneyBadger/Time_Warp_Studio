@@ -606,7 +606,7 @@ sets the `dark`/`mid`/`shadow` roles the base stylesheet reads — a palette tha
 left those at the platform's values paints light-theme borders on a dark window,
 which is the failure mode that makes a "ported" theme look half finished.
 
-**CRT effects** — the overlay (`CrtOverlay`, `native/src/ui/panels.cpp`) draws
+**CRT effects** — the overlay (`CrtOverlay`, `native/src/ui/panels_crt.cpp`) draws
 scanlines, vignette, curvature, flicker and a phosphor tint. View > CRT Scanlines
 (Shift+F7) switches it, View > CRT Settings sets the five intensities, and the four
 Screen Mode presets pair a theme with them.
