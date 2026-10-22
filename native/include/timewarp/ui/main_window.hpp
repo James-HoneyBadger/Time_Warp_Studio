@@ -53,6 +53,7 @@
 #include <array>
 
 #include "timewarp/bridge/python_worker.hpp"
+#include "timewarp/lessons/progress.hpp"
 #include "timewarp/debugger/debugger_runner.hpp"
 #include "timewarp/lang/language.hpp"
 #include "timewarp/ui/autosave.hpp"
@@ -981,6 +982,11 @@ private:
     /// which also clears the console and canvas: a lesson check must not wipe the
     /// drawing the learner is looking at while checking it.
     [[nodiscard]] bool ensureBridge();
+    /// Loads the curriculum and the learner's place in it, once. The lesson
+    /// panel is a view over this, not a client of the bridge: a check runs
+    /// in-process through `timewarp_lessons`, which is the same function the
+    /// teacher's command asks.
+    [[nodiscard]] bool ensureLessons();
     /// Opens a checkpoint's starting program in a new document.
     void openLessonCode(const QString& languageKey, const QString& source,
                         const QString& name);
@@ -1034,6 +1040,9 @@ private:
     bool classroom_requested_ = false;
 
     std::unique_ptr<timewarp::bridge::PythonWorker> python_worker_;
+    /// The curriculum and the learner's progress. Loaded on first use, because a
+    /// learner who never opens the Lessons tab should not pay for it at start-up.
+    std::unique_ptr<timewarp::lessons::ProgressStore> lessons_;
 
     /// Appends a line to the console, scrolling only if the user was already at
     /// the bottom.

@@ -5612,16 +5612,99 @@ void MainWindow::openLessonCode(const QString& languageKey, const QString& sourc
     updateTabLabel(editor);
 }
 
-void MainWindow::requestLessonCurriculum() {
-    if (ensureBridge()) {
-        python_worker_->requestLessons();
+bool MainWindow::ensureLessons() {
+    if (lessons_ != nullptr) {
+        return true;
     }
+    auto store = std::make_unique<timewarp::lessons::ProgressStore>();
+    QString error;
+    if (!store->load_default(&error)) {
+        if (lesson_panel_ != nullptr) {
+            lesson_panel_->setFailure(tr("the lessons"), error);
+        }
+        return false;
+    }
+    lessons_ = std::move(store);
+    return true;
+}
+
+void MainWindow::requestLessonCurriculum() {
+    if (!ensureLessons()) {
+        return;
+    }
+    QList<timewarp::bridge::LessonSummary> summaries;
+    for (const timewarp::lessons::Lesson& lesson : lessons_->lessons()) {
+        timewarp::bridge::LessonSummary summary;
+        summary.id = QString::fromStdString(lesson.id);
+        summary.title = QString::fromStdString(lesson.title);
+        summary.language = QString::fromStdString(std::string{
+            timewarp::lang::display_name(lesson.language)});
+        summary.languageKey =
+            QString::fromStdString(std::string{timewarp::lang::key(lesson.language)});
+        summary.difficulty = QString::fromStdString(lesson.difficulty);
+        summary.description = QString::fromStdString(lesson.description);
+        for (const std::string& objective : lesson.objectives) {
+            summary.objectives << QString::fromStdString(objective);
+        }
+        for (const std::string& prerequisite : lesson.prerequisites) {
+            summary.prerequisites << QString::fromStdString(prerequisite);
+        }
+        for (const timewarp::lessons::Checkpoint& checkpoint : lesson.checkpoints) {
+            timewarp::bridge::LessonCheckpoint row;
+            row.title = QString::fromStdString(checkpoint.title);
+            row.description = QString::fromStdString(checkpoint.description);
+            row.starter = QString::fromStdString(checkpoint.starter_code);
+            row.expectation = checkpoint.expect_error.has_value()
+                                  ? QStringLiteral("error")
+                                  : (checkpoint.expect_turtle.has_value()
+                                         ? QStringLiteral("turtle")
+                                         : QStringLiteral("lines"));
+            for (const std::string& hint : checkpoint.hints) {
+                row.hints << QString::fromStdString(hint);
+            }
+            summary.checkpoints.append(row);
+        }
+        summaries.append(summary);
+    }
+    if (lesson_panel_ != nullptr) {
+        lesson_panel_->setLessons(summaries);
+        if (presentation_font_ > 0) {
+            lesson_panel_->setPresentationFont(presentation_font_);
+        }
+    }
+    requestLessonProgress();
 }
 
 void MainWindow::requestLessonProgress() {
-    if (python_worker_ != nullptr && python_worker_->isRunning()) {
-        python_worker_->requestLessonProgress();
+    if (!ensureLessons() || lesson_panel_ == nullptr) {
+        return;
     }
+    QList<timewarp::bridge::LessonProgress> rows;
+    for (const timewarp::lessons::Lesson& lesson : lessons_->lessons()) {
+        timewarp::bridge::LessonProgress row;
+        row.id = QString::fromStdString(lesson.id);
+        row.title = QString::fromStdString(lesson.title);
+        row.language = QString::fromStdString(std::string{
+            timewarp::lang::display_name(lesson.language)});
+        row.difficulty = QString::fromStdString(lesson.difficulty);
+        switch (lessons_->status(lesson.id)) {
+            case timewarp::lessons::LessonStatus::NotStarted:
+                row.status = QStringLiteral("not_started");
+                break;
+            case timewarp::lessons::LessonStatus::InProgress:
+                row.status = QStringLiteral("in_progress");
+                break;
+            case timewarp::lessons::LessonStatus::Completed:
+                row.status = QStringLiteral("completed");
+                break;
+        }
+        row.checkpoint = lessons_->current_index(lesson.id);
+        row.checkpoints = timewarp::core::intLength(lesson.checkpoints.size());
+        row.hintsUsed = lessons_->hints_used(lesson.id);
+        rows.append(row);
+    }
+    const auto [finished, total] = lessons_->completed_count();
+    lesson_panel_->setProgress(rows, finished, total);
 }
 
 void MainWindow::requestLessonCheck(const QString& lesson, int checkpoint) {
@@ -5633,30 +5716,69 @@ void MainWindow::requestLessonCheck(const QString& lesson, int checkpoint) {
         }
         return;
     }
-    if (!ensureBridge()) {
+    if (!ensureLessons()) {
         return;
     }
-    // The panel has already been told why by `checkLesson` when a program is in
-    // flight; nothing here needs to repeat it.
-    python_worker_->checkLesson(lesson, checkpoint, editor->toPlainText());
+    // In process, through the same library `time_warp_teach` runs. The check is
+    // the learner's program against the checkpoint; a run that takes a while is
+    // the program's own budget, not a request round trip.
+    const timewarp::lessons::VerifyResult result = lessons_->check(
+        lesson.toStdString(), checkpoint, editor->toPlainText().toStdString());
+    const auto [finished, total] = lessons_->completed_count();
+    const bool completed =
+        lessons_->status(lesson.toStdString()) == timewarp::lessons::LessonStatus::Completed;
+    if (lesson_panel_ != nullptr) {
+        lesson_panel_->setChecked(lesson, checkpoint, result.passed,
+                                  QString::fromStdString(result.message), completed,
+                                  finished, total);
+    }
 }
 
 void MainWindow::requestLessonHint(const QString& lesson, int checkpoint) {
-    if (ensureBridge()) {
-        python_worker_->requestHint(lesson, checkpoint);
+    if (!ensureLessons() || lesson_panel_ == nullptr) {
+        return;
     }
+    const timewarp::lessons::Lesson* found =
+        timewarp::lessons::find_lesson(lessons_->lessons(), lesson.toStdString());
+    if (found == nullptr) {
+        return;
+    }
+    // The panel asks for the next hint it has not shown: the count in the
+    // progress file is what makes "hint 2 of 3" survive closing the window.
+    const int number = lessons_->hints_used(found->id);
+    const std::string text = lessons_->hint(found->id, checkpoint, number);
+    if (text.empty()) {
+        lesson_panel_->setHint(tr("That is every hint for this checkpoint."), number,
+                               number);
+        return;
+    }
+    const int total = timewarp::core::intLength(
+        found->checkpoints[static_cast<std::size_t>(checkpoint)].hints.size());
+    lesson_panel_->setHint(QString::fromStdString(text), number + 1, total);
 }
 
 void MainWindow::requestLessonSolution(const QString& lesson, int checkpoint) {
-    if (ensureBridge()) {
-        python_worker_->requestSolution(lesson, checkpoint);
+    if (!ensureLessons() || lesson_panel_ == nullptr) {
+        return;
     }
+    const timewarp::lessons::Lesson* found =
+        timewarp::lessons::find_lesson(lessons_->lessons(), lesson.toStdString());
+    if (found == nullptr || checkpoint < 0 ||
+        checkpoint >= timewarp::core::intLength(found->checkpoints.size())) {
+        return;
+    }
+    lesson_panel_->setSolution(QString::fromStdString(
+        found->checkpoints[static_cast<std::size_t>(checkpoint)].solution));
 }
 
 void MainWindow::requestLessonReset(const QString& lesson) {
-    if (ensureBridge()) {
-        python_worker_->resetLesson(lesson);
+    if (!ensureLessons()) {
+        return;
     }
+    lessons_->reset(lesson.toStdString());
+    // The panel shows where the learner is, so the only thing to do after a
+    // reset is tell it again.
+    requestLessonProgress();
 }
 
 void MainWindow::requestClassroom() {
@@ -5769,25 +5891,6 @@ void MainWindow::adoptBridgeWorker() {
                 setExecutionState(ok ? tr("ready") : tr("stopped"),
                                   (ok ? tr("Finished") : tr("Stopped")) + gaps);
             });
-    connect(python_worker_.get(), &timewarp::bridge::PythonWorker::lessonsReceived, this,
-            [this](const QList<timewarp::bridge::LessonSummary>& lessons,
-                   int presentation_font) {
-                if (lesson_panel_ != nullptr) {
-                    lesson_panel_->setLessons(lessons);
-                    if (presentation_font > 0) {
-                        lesson_panel_->setPresentationFont(presentation_font);
-                    }
-                }
-                requestLessonProgress();
-            });
-    connect(python_worker_.get(), &timewarp::bridge::PythonWorker::lessonProgressReceived,
-            this,
-            [this](const QList<timewarp::bridge::LessonProgress>& rows, int completed,
-                   int total) {
-                if (lesson_panel_ != nullptr) {
-                    lesson_panel_->setProgress(rows, completed, total);
-                }
-            });
     // The run's own state, which arrives just before `finished`.
     connect(python_worker_.get(), &timewarp::bridge::PythonWorker::variablesReported,
             this,
@@ -5802,39 +5905,6 @@ void MainWindow::adoptBridgeWorker() {
                 // Held, not shown: the wall clock is not known until `finished`,
                 // and both belong to the same table.
                 engine_telemetry_ = rows;
-            });
-    connect(python_worker_.get(), &timewarp::bridge::PythonWorker::lessonHintReceived, this,
-            [this](const QString& text, int number, int total) {
-                if (lesson_panel_ != nullptr) {
-                    lesson_panel_->setHint(text, number, total);
-                }
-            });
-    connect(python_worker_.get(), &timewarp::bridge::PythonWorker::lessonSolutionReceived,
-            this, [this](const QString& text) {
-                if (lesson_panel_ != nullptr) {
-                    lesson_panel_->setSolution(text);
-                }
-            });
-    connect(python_worker_.get(), &timewarp::bridge::PythonWorker::lessonChecked, this,
-            [this](const QString& lesson, int checkpoint, bool passed, const QString& message,
-                   bool completed, int finished, int total) {
-                if (lesson_panel_ != nullptr) {
-                    lesson_panel_->setChecked(lesson, checkpoint, passed, message, completed,
-                                              finished, total);
-                }
-            });
-    connect(python_worker_.get(), &timewarp::bridge::PythonWorker::lessonResetDone, this,
-            [this](const QString& lesson) {
-                Q_UNUSED(lesson);
-                // The panel shows where the learner is, so the only thing to do
-                // after a reset is ask again.
-                requestLessonProgress();
-            });
-    connect(python_worker_.get(), &timewarp::bridge::PythonWorker::lessonFailed, this,
-            [this](const QString& request, const QString& error) {
-                if (lesson_panel_ != nullptr) {
-                    lesson_panel_->setFailure(request, error);
-                }
             });
     connect(python_worker_.get(), &timewarp::bridge::PythonWorker::classroomRosterReceived,
             this,

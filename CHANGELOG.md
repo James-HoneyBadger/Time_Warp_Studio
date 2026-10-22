@@ -32,12 +32,17 @@ to be kept saying the same thing.
   plus the loader's refusals, the message a wrong answer gets, and the progress
   round trip.
 
+### Changed
+
+- **The Lessons panel is a view over the library.** Opening the tab loads the
+  curriculum in process, a check runs in process, and the six worker signals the
+  panel used to listen to are gone. `ui_layout_tests` proves it: the tab is
+  raised in a window with no bridge started, and the twenty lessons still arrive.
+
 ### Notes
 
-- The Lessons panel still asks the worker, and `classroom_mode.py` (rosters,
-  handouts, marking, bundles) is still Python. Both are the remaining work of this
-  port: the panel is a view swap onto `ProgressStore`, and the classroom is the
-  same kind of move. Nothing else in the application calls Python at run time.
+- `classroom_mode.py` (rosters, handouts, marking, bundles) is still Python and
+  still reached through the worker. It is the last runtime job the bridge has.
 
 ## [16.6.0] - 2026-10-22
 

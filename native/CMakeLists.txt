@@ -1039,6 +1039,11 @@ if(TIME_WARP_QT_FOUND)
         if(TARGET timewarp::canvas_qt)
             target_link_libraries(timewarp_ui PRIVATE timewarp::canvas_qt)
         endif()
+        # The Lessons panel is a view over the curriculum and the learner's
+        # progress, checked in process -- no worker round trip.
+        if(TARGET timewarp::lessons)
+            target_link_libraries(timewarp_ui PRIVATE timewarp::lessons)
+        endif()
         if(TARGET timewarp::debugger)
             target_link_libraries(timewarp_ui PRIVATE timewarp::debugger)
         endif()

@@ -64,6 +64,7 @@
 
 #include "timewarp/core/qt_gui_compat.hpp"
 #include "check.hpp"
+#include "temp_dir.hpp"
 #include "timewarp/canvas/command.hpp"
 #include "timewarp/canvas/command_queue.hpp"
 #include "timewarp/ui/autosave.hpp"
@@ -436,7 +437,35 @@ void test_lesson_panel_contract() {
     TW_CHECK_EQ(window->rightTabs()->tabText(4), QString::fromUtf8("\U0001F393 Lessons"));
 }
 
-// The panel keeps every verdict this session, not only the one on screen: a
+// Opening the Lessons tab loads the curriculum *in process*. This is the test
+// that proves the panel is no longer a client of the Python worker: no bridge is
+// started here, and the twenty lessons still arrive.
+void test_the_lesson_panel_loads_the_curriculum_without_a_bridge() {
+    announce("lessons load without the bridge");
+    tw::test::TempDir directory;
+    TW_CHECK(directory.valid());
+    if (!directory.valid()) {
+        return;
+    }
+    directory.useAsDataDir();
+    {
+        const std::unique_ptr<MainWindow> window = shownWindow();
+        LessonPanel* panel = window->lessonPanel();
+        TW_CHECK(panel != nullptr);
+        if (panel != nullptr) {
+            // Raising the tab is what makes the window ask: the panel itself does
+            // not load anything at start-up.
+            window->rightTabs()->setCurrentIndex(4);
+            TW_CHECK_EQ(panel->lessonCount(), 20);
+            TW_CHECK(!panel->currentLesson().isEmpty());
+            // The first lesson's starter is a document the learner can open.
+            TW_CHECK(!panel->currentStarter().isEmpty());
+        }
+    }
+    directory.restoreDataDir();
+}
+
+// The panel keeps every verdict this session, not only the one on screen:
 // session report lists what was tried, and the panel is the one place a verdict
 // arrives. It has no bridge here -- these are the setters the worker's answers
 // call.
@@ -3703,6 +3732,7 @@ int main(int argc, char** argv) {
     test_editor_pane_splitter_holds_two_tab_groups();
     test_right_column_tabs_and_order();
     test_lesson_panel_contract();
+    test_the_lesson_panel_loads_the_curriculum_without_a_bridge();
     test_lesson_panel_records_the_session();
     test_classroom_panel_contract();
     test_variables_panel_contract();

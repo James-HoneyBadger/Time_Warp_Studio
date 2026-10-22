@@ -328,10 +328,13 @@ starter fails, every language is taught. The `lessons_tests` suite asserts the s
 thing, so the curriculum is data that something executes deliberately rather than
 data that sits in the tree looking correct.
 
+The Lessons panel is a view over that library now: opening the tab loads the
+curriculum in process, a check runs in process, and the worker signals it used to
+listen to are gone. `ui_layout_tests` raises the tab in a window with no bridge and
+asserts the twenty lessons arrive.
+
 What is left of the port is the classroom (`classroom_mode.py`: rosters,
-handouts, marking, bundles) and the Lessons panel's wiring: the panel still asks
-the worker, and the `LessonManager`'s progress file is now C++-readable
-(`ProgressStore`), so the panel is a view swap rather than a rewrite.
+handouts, marking, bundles), which is still reached through the worker.
 
 The parity gates' remaining dependency is done too: the reference's answers to
 470 programs are frozen in
