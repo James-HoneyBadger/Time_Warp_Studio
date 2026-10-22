@@ -95,6 +95,15 @@ read a pixel back, capture a sprite, and sound two voices at once.
   the reference. A literal `~` directory would have put a learner's work somewhere
   nobody looks.
 
+### Packaging
+
+- **`zlib` is a declared dependency, and `python3` no longer is.** The Debian and
+  RPM packages named `python3` for a lesson check that no longer runs there, and
+  classroom bundles needed `zlib` declared instead. The container image installs
+  `zlib1g` and no longer carries Python; the Windows jobs install `zlib` from
+  vcpkg beside SQLite, because MSVC has no system copy and Qt does not expose the
+  one it links privately. The requirements table and the security policy name it.
+
 ### Notes and limits
 
 - `native/bridge/` remains in the checkout as development tooling: it is the

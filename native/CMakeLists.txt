@@ -1494,18 +1494,20 @@ integrated turtle-graphics canvas and a debugger. Inside it are two complete \
 machines: the HB-1, a bespoke 1982 home computer from a parallel universe with a \
 ten-language ROM socket, a CRT and its own disk operating system, and a live \
 CHIP-8 with an assembler, keypad and register inspector. Every language runs \
-natively in C++; the bundled Python engine is the reference the lesson check uses.")
+natively in C++, including the lesson check and the classroom.")
 set(CPACK_PACKAGE_HOMEPAGE_URL "https://github.com/James-HoneyBadger/Time_Warp_Studio")
 set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_CURRENT_SOURCE_DIR}/../LICENSE")
 
-# `python3` is not optional: the Lessons panel runs the bundled engine, which is
-# Python. The Qt packages are the libraries the binary links against plus the
-# platform plugins it loads at run time -- without the plugins the application
-# starts and immediately reports that it cannot load a platform plugin.
+# No Python: the lesson check and the classroom are in the binary. `zlib1g` is
+# what classroom bundles are written with -- a class zip a school can open is
+# worth one library every desktop already has. The Qt packages are the libraries
+# the binary links against plus the platform plugins it loads at run time --
+# without the plugins the application starts and immediately reports that it
+# cannot load a platform plugin.
 set(CPACK_DEBIAN_PACKAGE_MAINTAINER "James Temple <james@honey-badger.org>")
 set(CPACK_DEBIAN_PACKAGE_SECTION "education")
 set(CPACK_DEBIAN_PACKAGE_DEPENDS
-    "libqt6widgets6, libqt6gui6, libqt6core6, qt6-qpa-plugins, python3, libsqlite3-0")
+    "libqt6widgets6, libqt6gui6, libqt6core6, qt6-qpa-plugins, libsqlite3-0, zlib1g")
 # Only when this build was made with it: a package that names a library the
 # binary does not link is a needless install, and one that omits a library the
 # binary does link fails to start.
@@ -1529,7 +1531,7 @@ endif()
 
 set(CPACK_RPM_PACKAGE_LICENSE "MIT")
 set(CPACK_RPM_PACKAGE_GROUP "Education")
-set(CPACK_RPM_PACKAGE_REQUIRES "qt6-qtbase-gui, python3, sqlite-libs")
+set(CPACK_RPM_PACKAGE_REQUIRES "qt6-qtbase-gui, sqlite-libs, zlib")
 if(${TIME_WARP_QT}Svg_FOUND)
     string(APPEND CPACK_RPM_PACKAGE_REQUIRES ", qt6-qtsvg")
 endif()

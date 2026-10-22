@@ -234,7 +234,7 @@ jobs:
       - name: Install SQLite (Windows)
         if: runner.os == 'Windows'
         run: |
-          & "$env:VCPKG_INSTALLATION_ROOT/vcpkg.exe" install sqlite3:x64-windows-static-md --clean-after-build
+          & "$env:VCPKG_INSTALLATION_ROOT/vcpkg.exe" install sqlite3:x64-windows-static-md zlib:x64-windows-static-md --clean-after-build
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       # The compiler environment, rather than a generator name. `windows-latest`
@@ -385,7 +385,7 @@ jobs:
 
       - name: Install SQLite (Windows)
         run: |
-          & "$env:VCPKG_INSTALLATION_ROOT/vcpkg.exe" install sqlite3:x64-windows-static-md --clean-after-build
+          & "$env:VCPKG_INSTALLATION_ROOT/vcpkg.exe" install sqlite3:x64-windows-static-md zlib:x64-windows-static-md --clean-after-build
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       # The 2019 toolset when the image still carries it, which is the one this Qt

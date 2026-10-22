@@ -96,8 +96,9 @@ block device, or escape the classroom and progress directories it is given.
 
 ### Dependencies
 
-The application is C++20 with Qt 6 (Widgets, Core, Gui), SQLite, and optionally Qt
-Svg and Qt PrintSupport for drawing export and printing. The Windows 7 artifact
+The application is C++20 with Qt 6 (Widgets, Core, Gui), SQLite, zlib (classroom
+bundles), and optionally Qt Svg and Qt PrintSupport for drawing export and
+printing. The Windows 7 artifact
 uses Qt 5.15, which is the last Qt that runs on 7 SP1. There is no Python at run
 time and no third-party runtime beyond Qt and SQLite. Keep them updated.
 

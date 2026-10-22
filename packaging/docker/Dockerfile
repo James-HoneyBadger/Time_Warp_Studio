@@ -67,15 +67,15 @@ LABEL org.opencontainers.image.title="Time Warp Studio" \
 
 # Qt6 brings the platform plugins and the xcb libraries a window needs, and
 # `libqt6sql6-sqlite` is the driver the Database tab opens its connection with.
-# `python` is not optional: the lesson check runs the bundled engine, which is
-# Python, and without it the Lessons panel reports an engine that will not start.
+# `zlib1g` is what classroom bundles are written with. There is no Python: the
+# lesson check and the classroom run in the binary.
 # `alsa-utils` is what `SOUND` and `PLAY` hand their WAV to -- a container with no
 # sound device is silent, but it is silent for the right reason.
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
         libqt6widgets6 libqt6gui6 libqt6core6 libqt6sql6-sqlite \
-        libqt6printsupport6 libsqlite3-0 \
-        python3 fontconfig fonts-dejavu-core alsa-utils libgl1 \
+        libqt6printsupport6 libsqlite3-0 zlib1g \
+        fontconfig fonts-dejavu-core alsa-utils libgl1 \
     && rm -rf /var/lib/apt/lists/*
 
 # `studio` takes uid 1000 rather than whatever `useradd` would pick: the base

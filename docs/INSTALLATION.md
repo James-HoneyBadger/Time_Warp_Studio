@@ -15,6 +15,7 @@ time.
 | Qt6 | 6.2 | Widgets, Core and Gui modules must be installed; the Svg and PrintSupport modules are optional and enable SVG drawing export and printing |
 | or Qt5 | 5.15 | Only for the Windows 7 build (`-DTIME_WARP_QT5=ON`); same modules, same role |
 | SQLite3 | 3.35 | The database manager and the languages' `SQL` statement; the development package (`libsqlite3-dev`) is required to build |
+| zlib | 1.2 | Classroom bundles are zips, read and written with it; `zlib1g-dev` on Linux, the system library on macOS, `vcpkg install zlib` on Windows |
 | Python | 3.10 | *Optional* — only for the reference engine (parity gates, command matrix and lesson checks); running a language needs no Python |
 
 All ten languages run in C++ inside the application, so running a program needs
@@ -327,15 +328,16 @@ nothing installed. It is built for glibc 2.39 or newer (Ubuntu 24.04 and later, 
 a distribution of similar age); on anything older use the package for that
 distribution, which resolves the libraries properly.
 
-The **packages** put the binary, the bridge, the desktop entry and the icon where
-the system expects them, so the application appears in the menu and can be removed
-with the package manager. They declare `python3`, the Qt 6 runtime and SQLite as
-dependencies, and they carry the example programs — **File > Open Example** lists
-them, so a new install has something to run.
+The **packages** put the binary, the two lesson commands, the curriculum, the
+desktop entry and the icon where the system expects them, so the application
+appears in the menu and can be removed with the package manager. They declare the
+Qt 6 runtime, SQLite and zlib as dependencies — and no Python, because none is
+needed — and they carry the example programs, so **File > Open Example** lists them
+and a new install has something to run.
 
 The **tarball** is the install tree above, plus the licence and the two READMEs.
-It needs Qt 6, SQLite, a C++ runtime and `python3` for the lesson check — the
-same requirements as a local build, minus the compiler.
+It needs Qt 6, SQLite, zlib and a C++ runtime — the same requirements as a local
+build, minus the compiler.
 
 The container image is `ghcr.io/james-honeybadger/time-warp-studio:<version>`
 (or `:latest`), and it carries everything, including Qt and Python. It is named
