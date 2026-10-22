@@ -1,6 +1,6 @@
 # Architecture Guide
 
-## Time Warp Studio v22.4.1 — System Design and Implementation
+## Time Warp Studio v23.0.0 — System Design and Implementation
 
 > **This page describes the shipping product.** It was rewritten alongside the move
 > to C++20 / Qt6. Earlier revisions documented the PySide6 implementation, which has
@@ -50,7 +50,10 @@ stream of JSON messages coming back.
 | `timewarp_canvas` | `native/src/canvas/` | producer: interpreter thread; consumer: GUI thread | Carries drawing across the thread boundary |
 | `timewarp_canvas_qt` | `native/src/canvas/qt_bridge.cpp` | GUI thread | Qt glue for that queue: wakeup and draining |
 | `timewarp_scheme` | `native/src/scheme/` | runner thread, in-process | Scheme, on an explicit-stack machine with no native recursion |
-| `timewarp_lang` | `native/src/lang/` | runner thread, in-process | The shared interpreter loop and every line-by-line executor: BASIC, FOCAL, PILOT, COMAL, APL and REXX, plus whole-program CHIP-8, Logo, Smalltalk and Forth |
+| `timewarp_lang` | `native/src/lang/` | runner thread, in-process | The shared interpreter loop, the value type, dispatch and the language registry — a static library composed of one object library per language: BASIC, FOCAL, PILOT, COMAL, APL and REXX line by line, CHIP-8, Logo, Smalltalk and Forth whole-program |
+| `timewarp_audio` | `native/src/audio/` | either | `SOUND` and `PLAY`'s tones and the mixer. Was a file list inside `timewarp_lang` |
+| `timewarp_io` | `native/src/io/` | either | `SERIAL`, `PARALLEL`, `STICK` and `STRIG`. Also out of `timewarp_lang`, so a language edit no longer rebuilds a device reader |
+| `timewarp/lang/registry.hpp` | `native/include/timewarp/lang/` | compiled in | The eleven languages, once: display name, protocol key, extensions, whole-program flag. Header-only and Qt-free, so the executors, the shell and the gates read the same table |
 | `timewarp_debugger` | `native/src/debugger/` | its own `QThread` | Runs a Scheme program and services pause / step / breakpoint requests |
 | `timewarp_expr` | `native/src/token.cpp`, `lexer.cpp`, `evaluator.cpp` | runner thread, in-process | The ported expression evaluator, linked into `timewarp_lang` — see the note below |
 | `timewarp_lessons` | `native/src/lessons/` | GUI thread, or a command | The curriculum, the verifier, the learner's progress and the classroom. See the libraries section |
@@ -871,8 +874,28 @@ It exists for one reason: Qt 6 requires Windows 10, so a Windows 7 build cannot 
 Qt 5.15 — the last Qt that runs on 7 SP1 — must. The two versions differ in a handful of
 names and in whether `QList` and `QVector` are one type, and those differences live in two
 small headers, `timewarp/core/qt_compat.hpp` and `timewarp/core/qt_gui_compat.hpp`, rather
-than in a conditional at each call site. Every `Qt6::` reference in `native/CMakeLists.txt`
-is `${TIME_WARP_QT}::`, so a target linked in one build is linked in the other.
+than in a conditional at each call site. Every `${TIME_WARP_QT}::` reference in the build
+is spelled that way, so a target linked in one build is linked in the other.
+
+### The build file
+
+`native/CMakeLists.txt` is a schedule of includes and options, and the build itself is
+five modules under `native/cmake/`:
+
+| Module | What it defines |
+| --- | --- |
+| `version.cmake` | the product version, read from `../VERSION` |
+| `warnings.cmake` | `timewarp_enable_warnings(target)` and `timewarp_add_suite(name, libs…)` — the policy that used to be written at each of 37 targets |
+| `libraries.cmake` | the Qt-free libraries: expression, Scheme, language (with its per-language object libraries), canvas, audio, I/O |
+| `qt.cmake` | which Qt: 6, or 5.15 for the Windows 7 artifact |
+| `tools.cmake` | the command-line tools that need no Qt: `time_warp_check`, the gates, the icon generator |
+| `libraries-qt.cmake` | the Qt libraries: canvas bridge, debugger, SQL, projects, lessons, API |
+| `packaging.cmake` | install rules, the desktop entry and CPack |
+
+`include()` rather than `add_subdirectory()` on purpose: one directory scope keeps the
+thousands of `src/…` paths in those files relative to `native/`, which is what they
+assume. `time_warp_gates structure` fails if `CMakeLists.txt` grows past 200 lines or a
+source file past 2,000 without being named on a waiver list that may only shrink.
 
 ---
 

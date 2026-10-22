@@ -2,6 +2,55 @@
 
 <!-- history: all -->
 
+## [23.0.0] - 2026-10-22
+
+The infrastructure, made modular: one home for the language table, a build that is
+read one part at a time, three libraries where there was one doing twelve jobs, and
+the two monoliths split along the sections that were already commented inside them.
+Two new gates keep each of those from growing back.
+
+### Changed
+
+- **One language table.** The eleven languages were described twice -- display name,
+  key and extensions in `src/ui/language.cpp`, switches over the same names in
+  `src/lang/language.cpp` -- and CHIP-8's `.ch8`/`.c8` were written in four files
+  besides. `native/include/timewarp/lang/registry.hpp` is the one home: a constexpr
+  table, header-only and Qt-free, that the executors, the Qt shell, the tools and the
+  gates all read. The UI keeps its own enum (it has `Unknown`) and maps by position
+  with a `static_assert`.
+- **The build in parts.** `native/CMakeLists.txt` was 1,841 lines in one scope with
+  the warning policy written at 37 call sites. It is 116 lines and six modules under
+  `native/cmake/`, with `timewarp_enable_warnings(target)` and
+  `timewarp_add_suite(name, libs…)` saying each thing once.
+  `cmake --build --target help` lists the same 527 entries before and after.
+- **Three libraries where there was one.** `timewarp_audio` and `timewarp_io` come out
+  of `timewarp_lang`, and each language becomes an object library, so a change to the
+  Logo executor compiles one translation unit: `touch logo.cpp` then a `-j1` build
+  reports exactly `tw_lang_logo.dir/src/lang/logo.cpp.o`. The link structure is
+  unchanged -- one `timewarp::lang` for everything that consumes the engines.
+- **`main_window.cpp` (6,245 lines) is eight files**, one per section that was already
+  commented in it, over `main_window_internal.hpp` for the keys and helpers they share.
+- **`panels.cpp` (2,047 lines) is six files**, one per panel group.
+
+### Added
+
+- **`time_warp_gates registry`** fails if any C++ line names a language's display name
+  and its key together -- a table row by another name. It found ten in its first run,
+  all comments, so it reads code and not prose; a duplicate injected into `value.cpp`
+  made it fail, as it should.
+- **`time_warp_gates structure`** fails on a source file past 2,000 lines that is not on
+  a waiver list, on a build file past 200, and on a waiver that is no longer needed --
+  the list may only shrink, which is how `main_window.cpp` and `panels.cpp` left it.
+- Both are in `make test-all`.
+
+### Fixed
+
+- `ui::languageFromKey` stays case-sensitive and `lang::language_from_key` stays
+  lenient: the first version of the registry broke all 560 command rows by making the
+  UI lookup accept `BASIC`, and the suite caught it before the split was believed.
+- Five documents named `main_window.cpp` and `panels.cpp` after they were split; the
+  claims gate refused to let a path that moved pass.
+
 ## [22.4.1] - 2026-10-22
 
 Eight defects in the interpreters, found by writing programs rather than by reading
