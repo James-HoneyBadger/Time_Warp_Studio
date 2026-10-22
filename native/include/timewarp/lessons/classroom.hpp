@@ -182,6 +182,10 @@ public:
     /// Zips the whole class: roster, assignment, presentation and every learner's
     /// work. Learners who have not started are included -- a bundle is also how a
     /// class is *set up* on another machine.
+    ///
+    /// A learner whose `work_dir` is outside the classroom is listed in the roster
+    /// but their files are not in the archive: there is no name inside the zip for
+    /// them. Their work is still on the shared drive the roster names.
     [[nodiscard]] bool createBundle(const QString& outputPath, QString* error = nullptr) const;
     /// Unpacks a bundle. `replace` decides whether existing files are overwritten;
     /// setting up a class is additive, refreshing one is authoritative.
