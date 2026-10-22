@@ -574,10 +574,9 @@ public slots:
 public:
     /// Runs the current document.
     ///
-    /// Scheme goes through the native interpreter on a background thread. The
-    /// other five go through the Python bridge, because reimplementing them is
-    /// the work the bridge exists to postpone -- and a Run button that refuses to
-    /// run five sixths of the advertised languages is not an IDE.
+    /// Scheme goes through its own machine on a background thread and the other
+    /// ten through `NativeRunner`, which is `Interpreter` plus the canvas queue. A
+    /// project with an entry point runs that file (see `runProject`).
     void runCurrentDocument();
     /// Opens `path` as the project file. The dialog and the session restore both
     /// come through here, and so does a test: the model is the thing under test,
@@ -1014,7 +1013,7 @@ private:
     /// Opens a checkpoint's starting program in a new document.
     void openLessonCode(const QString& languageKey, const QString& source,
                         const QString& name);
-    /// Sends the lesson requests the panel asks for, once the bridge is up.
+    /// Sends the lesson requests the panel asks for, once the curriculum is loaded.
     void requestLessonCurriculum();
     void requestLessonProgress();
     void requestLessonCheck(const QString& lesson, int checkpoint);

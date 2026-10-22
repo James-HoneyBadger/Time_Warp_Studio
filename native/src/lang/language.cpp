@@ -138,8 +138,10 @@ Executor executor_for(Language language) noexcept {
         case Language::Rexx:
             return &execute_rexx;
 
-        // Still driven by the Python bridge: the Scheme machine is native but
-        // Scheme's own executor has not been wired to this table yet.
+        // Scheme is not an executor in this table: it is the separate explicit-stack
+        // machine in `timewarp_scheme`, which the IDE drives through its debugger
+        // runner, `time_warp_check` runs directly, and the API's REPL holds an
+        // instance of. A null here is how a caller tells the two apart.
         case Language::Scheme:
             return nullptr;
     }

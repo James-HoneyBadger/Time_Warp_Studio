@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: MIT
 #
-# Standalone build for the native C++20 expression engine extracted from the
-# Time Warp Studio Python interpreter.
+# Standalone build for the Time Warp Studio native engines, gates and Qt
+# application. No Python is involved in building or running any of it.
 #
 #   cmake -S native -B native/build -DCMAKE_BUILD_TYPE=Release
 #   cmake --build native/build -j
@@ -184,10 +184,11 @@ if(TIME_WARP_EXPR_BUILD_TESTS)
 endif()
 
 # ---------------------------------------------------------------------------
-# Differential-test CLI
+# Expression probe
 #
-# Evaluates expressions read from stdin so tools/differential_check.py can diff
-# the C++ port against the original Python implementation over a corpus.
+# Evaluates expressions read from stdin, one per line. It was the C++ half of a
+# differential check against the Python reference; the reference is gone, so it is
+# now a hand tool. `evaluator_tests` is the gate.
 # ---------------------------------------------------------------------------
 
 add_executable(expr_cli tools/eval_cli.cpp)
@@ -272,11 +273,14 @@ endif()
 # ---------------------------------------------------------------------------
 # Native language executors
 #
-# The C++ counterparts of the Python executors in `bridge/time_warp/languages`.
-# A language lives here once it is ported; until then the bridge still runs it,
-# and `executor_for()` returns null so the caller can tell the difference. This
-# is why the library is separate from `timewarp_scheme`: Scheme has its own
-# machine, while these share one interpreter loop and one executor interface.
+# One executor per line-by-line or whole-program language, plus the shared
+# expression evaluator, canvas host and I/O ports they run against. This is why
+# the library is separate from `timewarp_scheme`: Scheme has its own machine,
+# while these share one interpreter loop and one executor interface. Forth is
+# whole-program like Logo and Smalltalk, and it lives here too.
+#
+# `executor_for()` answers for every language in this library and returns null
+# only for Scheme, which is the machine rather than an executor.
 # ---------------------------------------------------------------------------
 
 add_library(timewarp_lang

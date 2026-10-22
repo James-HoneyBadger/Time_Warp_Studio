@@ -1,15 +1,16 @@
 // SPDX-License-Identifier: MIT
 //
-// Differential-test CLI.
+// Expression probe.
 //
 // Reads one expression per line from stdin and writes:
 //
 //     <expression>\tOK <result>
 //     <expression>\tERR <message>
 //
-// It is wired to exactly the same context the Python reference is given by
-// tools/differential_check.py, so the two implementations can be diffed over a
-// corpus.  Blank lines and lines starting with '#' are ignored.
+// It was built to be diffed against the Python reference one expression at a time,
+// and that half is gone with the reference. What is left is the quickest way to ask
+// the evaluator a question by hand -- `echo '2+3*X' | native/build/expr_cli` -- with
+// `evaluator_tests` as the gate. Blank lines and lines starting with '#' are ignored.
 
 #include <iomanip>
 #include <iostream>

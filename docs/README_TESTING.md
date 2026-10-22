@@ -17,14 +17,16 @@ cmake --build native/build -j
 ctest --test-dir native/build --output-on-failure
 ```
 
-There are 23 suites: the lexer, the expression evaluator, the Scheme machine, the
-native language engine, the canvas command queue, the Qt canvas bridge, the debug and
-debugger runner, the UI layout, the UI documents, the turtle canvas, the syntax
-highlighter, the mixer, the lessons library, the classroom, sound and ports, the
-editor's text services
-(formatting, snippets, find-in-files, autosave), the help browser, the live CHIP-8
-machine with its window, the HB-1 computer, the project file, the SQL
-database, and the JSON-RPC API.
+There are 24 suites, one binary each, named for what they cover:
+
+`lexer_tests`, `evaluator_tests`, `scheme_tests`, `lang_tests` (the native
+executors and the shared interpreter loop), `canvas_queue_tests`,
+`canvas_bridge_tests`, `debug_tests`, `debugger_runner_tests`,
+`ui_layout_tests`, `ui_document_tests`, `turtle_canvas_tests`,
+`syntax_highlighter_tests`, `audio_tests`, `media_tests`, `player_tests`,
+`lessons_tests`, `classroom_tests`, `editor_services_tests`,
+`help_browser_tests`, `chip8_emulator_tests` (the live machine and its window),
+`retro_computer_tests` (the HB-1), `project_tests`, `sql_tests` and `api_tests`.
 
 Other build trees, all of which must stay green:
 

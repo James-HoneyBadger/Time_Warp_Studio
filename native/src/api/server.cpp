@@ -258,6 +258,11 @@ QJsonObject projectJson(const project::Project& project) {
     object.insert(QStringLiteral("name"), project.name());
     object.insert(QStringLiteral("root"), project.root());
     object.insert(QStringLiteral("filePath"), project.filePath());
+    // What the IDE's Run Project runs: an absolute path, or null when the project
+    // has no entry point. Reported so a client can run the same program rather
+    // than guess which file the project means.
+    object.insert(QStringLiteral("entry"),
+                  project.hasEntry() ? QJsonValue{project.entry()} : QJsonValue{});
     QJsonArray groups;
     for (const QString& group : project.groups()) {
         groups.append(group);
@@ -669,6 +674,21 @@ QJsonValue Server::State::dispatch(const QString& method, const QJsonObject& par
     if (method == QLatin1String("project.addFile")) {
         if (!project.addFile(qstring(params, "path"), qstring(params, "group", false))) {
             failed("the file is already a member or the path is empty");
+        }
+        return projectJson(project);
+    }
+    if (method == QLatin1String("project.setEntry")) {
+        if (!project.isValid()) {
+            failed("no project is open");
+        }
+        if (!project.setEntry(qstring(params, "path"))) {
+            failed("the entry point could not be set");
+        }
+        return projectJson(project);
+    }
+    if (method == QLatin1String("project.clearEntry")) {
+        if (!project.clearEntry()) {
+            failed("the project has no entry point");
         }
         return projectJson(project);
     }

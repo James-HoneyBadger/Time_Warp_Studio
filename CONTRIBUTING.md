@@ -59,9 +59,9 @@ Three recipes cover most contributions:
   [FORMAT.md § 9](docs/lessons/FORMAT.md#9-adding-lessons-for-a-new-language). A
   language is not finished until every item exists, and a PR that stops halfway
   leaves a language the IDE knows but the lesson panel cannot teach: the executor,
-  the enum and `core/language_registry.py`, the IDE's table in
-  `native/src/ui/language.cpp`, an example under `Examples/`, command-table rows, a
-  tutorial, a reference section, and two lessons.
+  its cases in `executor_for` and in the IDE's table in `native/src/ui/language.cpp`,
+  an example under `Examples/`, command rows, a tutorial, a reference section, and
+  two lessons.
 - **A command.** Add it to the executor, add a row to the `rows` list in
   `native/share/command_rows.json`, and run `make command-matrix`. The row is what
   proves the command

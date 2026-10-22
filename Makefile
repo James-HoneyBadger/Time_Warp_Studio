@@ -14,7 +14,8 @@ FORWARDED := build run test test-debug asan clean distclean info test-list \
              screenshot reset-layout
 
 .PHONY: help $(FORWARDED) smoke command-matrix repl-matrix gates-built \
-        golden-check teach-check test-all lint lint-md docs-tool doc-links doc-claims
+        golden-check teach-check test-all lint lint-md docs-tool doc-links doc-claims \
+        tree-check
 
 help:
 	@echo "Time Warp Studio"
@@ -31,10 +32,11 @@ help:
 	@echo "The checks (development tooling):"
 	@echo "  smoke         Every example program, through the native engines"
 	@echo "  command-matrix Every command row, one program each"
+	@echo "  repl-matrix   Every command row, through the native REPL"
 	@echo "  golden-check  The ports against the frozen reference corpus"
 	@echo "  teach-check   Every lesson solution passes and every starter fails"
 	@echo "  doc-links     Every relative link and #anchor in the guides resolves"
-	@echo "  test-all      All of the above"
+	@echo "  test-all      The suites, the program gates and the documentation gates"
 	@echo "  lint          clang-tidy-shaped checks: the build is warning-free"
 	@echo "  lint-md       Every tracked Markdown file against the house rules"
 	@echo "  doc-claims    Every path, name and make target the guides name exists"
@@ -82,8 +84,11 @@ golden-check: gates-built
 teach-check:
 	@$(MAKE) --no-print-directory -C $(NATIVE) teach-check
 
+# Every gate in one target: the suites, the four program gates, the curriculum,
+# and the documentation checks -- including the Markdown lint, which is a gate in
+# CI and was the one check a local `test-all` did not run.
 test-all: test smoke command-matrix repl-matrix teach-check golden-check doc-links \
-          doc-claims tree-check
+          doc-claims lint-md tree-check
 
 # Warnings are errors in every target, so a lint pass is the build passing. Kept as
 # a target because `make lint` is what a contributor types and because the guides

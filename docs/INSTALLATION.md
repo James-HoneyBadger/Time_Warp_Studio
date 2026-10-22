@@ -284,7 +284,7 @@ cpack --config native/build/CPackConfig.cmake -G NSIS
 fails to compile here rather than failing to launch on the target machine. Both are
 off by default; the release build is Qt 6.
 
-What the pipeline checks is that this configuration builds, that all 23 suites pass
+What the pipeline checks is that this configuration builds, that all 24 suites pass
 against Qt 5.15, and that the executable starts and renders a window -- on Windows
 11, because that is what the runner is. What has **not** been verified is Windows 7
 itself: no continuous-integration image is older than Windows Server 2019, and the

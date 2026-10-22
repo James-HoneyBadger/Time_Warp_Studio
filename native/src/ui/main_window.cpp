@@ -6217,10 +6217,10 @@ void MainWindow::finishRun(const QString& error, bool completed) {
     // back.
     turtle_canvas_->fitToContent();
 
-    // A Scheme run reports nothing over the bridge, so its two tables come from
-    // the runner and the IDE. Publishing them here rather than leaving the HUD
-    // showing the last bridged run is the difference between a stale number and
-    // an absent one.
+    // A Scheme run reports nothing through a runner's done-message, so its two
+    // tables come from the runner and the IDE. Publishing them here rather than
+    // leaving the HUD showing the last run's numbers is the difference between a
+    // stale number and an absent one.
     if (debug_panel_ != nullptr) {
         debug_panel_->setPaused(false, 0, QString{});
     }

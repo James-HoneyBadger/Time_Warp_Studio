@@ -23,7 +23,7 @@ Lessons
     ...
   ✓ smalltalk_classes   SMALLTALK intermediate Classes and Blocks in Smalltalk
 
-2 of 20 lessons complete. `time_warp_learn start <lesson>` to start one.
+2 of 22 lesson(s) finished
 ```
 
 `✓` means finished, `…` means started, and a blank means not started. You do not

@@ -9,6 +9,7 @@
 
 #include <cstdio>
 
+#include <QFileInfo>
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonObject>
@@ -341,6 +342,19 @@ void test_project() {
         }
     }
     TW_CHECK(found_deep);
+
+    // The entry point is the program Run Project runs, so it is reported -- and it
+    // can be set and cleared over the same surface that sets everything else.
+    TW_CHECK(added.value(QStringLiteral("entry")).isNull());
+    QJsonObject set_entry;
+    set_entry.insert(QStringLiteral("path"), file);
+    const QJsonObject with_entry =
+        resultOf(server, QStringLiteral("project.setEntry"), set_entry).toObject();
+    TW_CHECK_EQ(with_entry.value(QStringLiteral("entry")).toString(),
+                QFileInfo{file}.absoluteFilePath());
+    TW_CHECK_EQ(resultOf(server, QStringLiteral("project.clearEntry"), {}).toObject()
+                    .value(QStringLiteral("entry")),
+                QJsonValue{});
 
     // A broken request is an error, not a crash or a silent success.
     QJsonObject missing;

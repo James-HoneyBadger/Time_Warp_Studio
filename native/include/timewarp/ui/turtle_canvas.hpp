@@ -76,10 +76,10 @@ public:
 
     /// Moves the turtle marker without drawing anything.
     ///
-    /// The Python bridge needs this and the command stream cannot express it. The
-    /// bridge's commands carry *absolute geometry* -- a segment to draw -- because
-    /// diffing the reference's line list is the only way to capture everything it
-    /// draws without overriding every turtle method. Replaying `Forward` on top of
+    /// A whole-program run needs this and the command stream cannot express it:
+    /// those commands carry *absolute geometry* -- a segment to draw -- because
+    /// diffing the recording of what was drawn is the way to capture everything
+    /// without overriding every turtle method. Replaying `Forward` on top of
     /// that geometry would draw every line a second time; leaving the marker at the
     /// origin would leave it nowhere near the drawing. So the pose arrives
     /// separately, and the marker moves without leaving a trail.

@@ -56,7 +56,7 @@ nothing about that layer is missing a user-facing behaviour.
    real files.
 6. **Docs land in the same commit.** The ROADMAP state table, `ARCHITECTURE.md`
    where a subsystem is described, and a CHANGELOG entry for anything a user can
-   see. `make lint-md` clean, `python3 Scripts/version_sync.py` clean.
+   see. `make lint-md` clean and `time_warp_docs version` clean.
 
 ---
 
@@ -986,11 +986,14 @@ states are in `ui_layout_tests`.
 
 ## Gates, per phase
 
-Every phase must leave all of these green, in this order:
+Every phase must leave all of these green, in this order. What is listed below is
+the list as each phase ran it; five of these commands were Python scripts, and
+22.1.0 replaced them. A phase today is `make test-all`, which is the same set
+written down in [README_TESTING.md](README_TESTING.md).
 
 ```bash
 cmake --build native/build -j
-ctest --test-dir native/build --output-on-failure        # 23 suites
+ctest --test-dir native/build --output-on-failure        # 24 suites
 python3 native/tools/differential_check.py native/build/expr_cli
 python3 native/tools/lang_differential_check.py          # 474/0/9
 python3 native/tools/example_smoke.py                   # 60 programs

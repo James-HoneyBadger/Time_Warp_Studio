@@ -2,6 +2,68 @@
 
 <!-- history: all -->
 
+## [22.3.0] - 2026-10-22
+
+An audit of 19.1 to 22.2 against the tree as it now stands, and the fixes it asked
+for. The releases were each honest when they landed; what had drifted since was the
+*surrounding writing* -- guides still describing the reference engine as though it
+were here, counts that moved, and one feature that shipped with no documentation at
+all.
+
+### Added
+
+- **Run Project is documented.** `.twproject` format 2 added an `entry` at 22.0.0
+  and no guide mentioned it: not the Projects chapter, not the file-on-disk
+  section, not the API reference. `docs/USER_GUIDE.md` now covers the entry point,
+  the ▶ marker, `Ctrl+Alt+R`, the resolution of relative file names against the
+  project root, and what happens when the entry's file leaves the project.
+- **`project.info` reports `entry`**, as an absolute path or null, and there are
+  `project.setEntry` and `project.clearEntry` methods. The Projects dock grew that
+  field and the automation surface did not, so a build script could not ask which
+  program a project means. Asserted in `api_tests`.
+
+### Fixed
+
+- **`executor_for()`'s Scheme comment named the Python bridge**, which was deleted
+  at 18.0. Its present-tense claim ("still driven by the Python bridge") was the one
+  place in the tree that said a component existed. Scheme is the explicit-stack
+  machine, and the comment now says so. The same false claim was corrected in
+  `executor.hpp`, `main_window.hpp`, `turtle_canvas.hpp`, `interpreter.cpp` and
+  `native/README.md`, whose "answers for all eleven" was wrong in the other
+  direction: it answers for ten and returns null for Scheme.
+- **`native/CMakeLists.txt` still introduced itself as the build "for the native
+  C++20 expression engine extracted from the Time Warp Studio Python interpreter"**,
+  and described the language library as waiting for the bridge.
+- **`native/README.md`'s tools tree listed seven deleted Python scripts** and none of
+  the C++ tools that replaced them, and its example counts said 60 and 30 where the
+  gate finds 63 and 33. The `.github/RELEASE_CHECKLIST.md` said 60 too.
+- **Stale counts across the guides**: 21 suites in `SUPPORT.md`, 23 in
+  `INSTALLATION.md`, `README_TESTING.md` and `native/README.md`, "ten languages" in
+  three places, and the ROADMAP's gates row still advertising "575 engine tests, 448
+  command rows, 470 parity programs" for a toolchain that has been replaced. Every
+  figure is now the one the gates print: 24 suites, 546 rows, 63 examples, 662
+  corpus programs.
+- **`docs/PORTING_PLAN.md`'s "Gates, per phase"** listed ten commands, five of them
+  Python scripts deleted at 22.1.0, and told the reader every phase must leave them
+  green. The block is now marked as the record it is, pointing at `make test-all`.
+- **`.github/workflows/version.yml` watched `Scripts/`**, deleted at 22.1.0, so a
+  change to the version tool that lives in `native/tools/docs/` did not trigger the
+  job that checks the version. `DEPLOYMENT.md` documented the same ghost.
+- **`CONTRIBUTING.md`'s language recipe** still named `core/language_registry.py`,
+  and `.github/copilot-instructions.md` still listed ten languages and pointed the
+  turtle state at `graphics/turtle_state.py`.
+
+### Changed
+
+- **The canvas vocabulary gate derives its expected count.** The test that asserts
+  every declared command draws compared `kEveryKind` against a hand-written `43`, so
+  adding a kind to the enum and forgetting the list passed silently -- the exact
+  failure the gate exists to catch. It now walks the enum until `to_string` stops
+  naming one, and a removed kind fails the test (proved by removing one).
+- **`make test-all` runs `lint-md`**, which was a gate in CI and the one check a
+  local `test-all` skipped. `tree-check` is declared phony, and the help text names
+  every gate, `repl-matrix` included.
+
 ## [22.2.0] - 2026-10-22
 
 The Markdown lint is the project's own, and it found a bug in the shared scanner.

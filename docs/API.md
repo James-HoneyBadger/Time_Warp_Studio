@@ -151,12 +151,18 @@ its `CREATE` statement.
   "name": "Class",
   "root": "/home/learner/class",
   "filePath": "/home/learner/class/Class.twproject",
+  "entry": "/home/learner/class/flower.logo",
   "groups": ["Art"],
   "files": [{"path":"/home/learner/class/flower.logo",
              "group":"Art","exists":true}],
   "missing": []
 }
 ```
+
+`entry` is the program the IDE's Run Project runs, as an absolute path, or
+`null` when the project has none. A client that wants to run the project runs
+that file -- it is the one place the project states which of its programs is
+*the* program.
 
 #### `project.addFile`, `project.addFiles`, `project.addFolder`, `project.removeFile`
 
@@ -179,6 +185,13 @@ the project plus `added`, the number of files this call added:
 `addGroup`/`removeGroup` take `name`; `renameGroup` takes `from` and `to`;
 `moveFile` takes `path` and `group` (empty to ungroup). Removing a group returns
 its files to the ungrouped section.
+
+#### `project.setEntry`, `project.clearEntry`
+
+`setEntry` takes `path` and makes it the project's entry point, adding the file
+to the project when it is not already a member. `clearEntry` takes nothing and
+fails when there was no entry. These are the two context-menu commands on the
+Project dock, and the ones a build script would call:
 
 Every project method returns the whole project (or, for `addFolder`, the project
 plus `added`), so a caller never has to merge a delta into a copy it thinks it

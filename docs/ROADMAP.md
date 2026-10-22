@@ -42,7 +42,7 @@ derived rather than remembered.
 | Database | A SQLite-backed Database tab, the shared `SQL` statement in nine languages, scripts, tables and schema; compiled programs link SQLite |
 | Automation | JSON-RPC over stdin/stdout (`language.run`, `repl.*`, `debug.*`, `sql.*`, `project.*`, `watch.evaluate`) and the `twc` terminal compiler |
 | Packaging | `make install`; tagged releases build a Windows installer and portable ZIP (Qt 6), a second Windows installer for Windows 7 (Qt 5.15), a universal macOS disk image, `.deb`, `.rpm`, AppImage, tarball and container artifacts |
-| Quality gates | 23 CTest suites in 4 build configurations and on four platforms (Linux, Windows, Windows with Qt 5.15, macOS), 3 parity gates, 575 engine tests, 448 command rows, 470 parity programs |
+| Quality gates | 24 CTest suites in 4 build configurations and on four platforms (Linux, Windows, Windows with Qt 5.15, macOS); the frozen-corpus gate over 662 programs (470 language, 192 Scheme); 546 command rows run as programs and through the REPL; 63 example programs through the smoke gate; and the documentation gates (links, claims, version, Markdown lint) |
 
 ---
 
@@ -57,7 +57,7 @@ written down in `WAIVERS`.
 
 **Still open**
 
-None. Every defect below has a regression row in `command_table.py` and, where the
+None. Every defect below has a regression row in `native/share/command_rows.json` and, where the
 behaviour is expressible in a unit test, a case in the language's test module. The
 section stays because the next port has to keep them fixed: a port that quietly
 restores one of these is a regression even though it is new code.
@@ -197,12 +197,13 @@ everything the others have:
 
 - a native **executor** in `native/src/lang/`, and rows in the recorded parity
   corpus that `make golden-check` compares it with,
-- a **worked example** under `Examples/` that `example_smoke.py` runs and checks for
-  ink (all four draw),
+- a **worked example** under `Examples/` that `make smoke` runs and checks for ink
+  (all four draw),
 - a **command reference** in `docs/LANGUAGE_GUIDE.md` and a **tutorial** in
   `docs/tutorials/`,
-- **command-table rows** covering every literal `command_inventory.py` finds in their
-  executors, so `command_matrix.py` drives them the way it drives BASIC.
+- **command rows** covering every literal the inventory
+  (`native/tools/gates/inventory.cpp`) finds in their executors, so `make
+  command-matrix` drives them the way it drives BASIC.
 
 Writing those rows is what turned the inventory's counts into the list of defects
 above: nine of them were found by a row that had no answer, not by reading the code.
@@ -255,8 +256,9 @@ against has been deleted. The three jobs it kept have each been taken over:
 1. **The parity gate** compares each port with a *recording* —
    `native/tests/golden/lang_corpus.json.gz`, the reference's answers to 470
    programs, which carry the program text so the corpus outlives the engine.
-2. **`command_matrix.py` and `example_smoke.py`** drive `time_warp_check`, the
-   native engines, so a language that runs and draws nothing is still caught.
+2. **`make command-matrix` and `make smoke`** (`time_warp_gates commands` and
+   `smoke`) drive the native engines, so a language that runs and draws nothing is
+   still caught.
 3. **The lesson check** is `timewarp_lessons` — the same library the Lessons panel
    asks, so the panel's verdict and `time_warp_teach`'s are one function's answer.
 
@@ -317,7 +319,7 @@ and the command table exercises them. What is now true, and what is still limite
   (`native/src/io/ports.cpp`) open raw POSIX devices for the serial and parallel
   families, with timeouts and a write that waits; `DRAW` and `WAIT` are the other
   two. The reference engine never implemented any of them, so they are documented
-  in `docs/LANGUAGE_GUIDE.md` and **not** in `command_table.py` — the parity gates
+  in `docs/LANGUAGE_GUIDE.md` and **not** in `command_rows.json` — the parity gate
   cannot compare a command one side does not have.
 - **Graphics for games** is a screen, not a fitted drawing: `SCREEN` (text and
   the numbered modes 1, 2, 7, 9, 12 and 13), `PSET`, `LINE`, `CIRCLE`, `PAINT`,

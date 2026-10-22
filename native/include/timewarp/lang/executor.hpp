@@ -22,10 +22,12 @@ class TurtleHost;
 
 using Executor = std::string (*)(Interpreter&, std::string_view, TurtleHost&);
 
-/// The executor for *language*, or `nullptr` when it has not been ported yet.
+/// The executor for *language*, or `nullptr` for Scheme.
 ///
-/// Returning null rather than throwing keeps "the bridge still runs this one"
-/// a question the caller can ask, instead of an exception used for control flow.
+/// Scheme is not an executor: it is the explicit-stack machine in
+/// `timewarp_scheme`, driven by `DebuggerRunner` rather than by this table.
+/// Returning null rather than throwing keeps that a question the caller can ask,
+/// instead of an exception used for control flow.
 [[nodiscard]] Executor executor_for(Language language) noexcept;
 
 }  // namespace timewarp::lang

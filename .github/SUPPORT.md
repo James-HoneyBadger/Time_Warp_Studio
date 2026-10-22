@@ -39,7 +39,7 @@ one I would type:
 ## What is supported
 
 **Platforms.** Linux, Windows and macOS are all built and tested on every change:
-the 21 suites run under GCC on Ubuntu 24.04, under MSVC on Windows, under MSVC
+the 24 suites run under GCC on Ubuntu 24.04, under MSVC on Windows, under MSVC
 with Qt 5.15 for the Windows 7 artifact and under Apple's Clang on macOS, and a
 tagged release ships a Windows installer, a second installer for Windows 7 and a
 universal macOS disk image beside the Linux packages. Say which platform you are

@@ -8,9 +8,9 @@
 
 ## Project Overview
 
-Time Warp Studio is an old-school desktop programming environment built with **C++20 and Qt6** (Qt 5.15 for the Windows 7 build): a unified IDE for ten interpreters from 1964–1980, with turtle graphics, a debugger in every language, and two complete machines — the HB-1 home computer and a live CHIP-8. A checked lesson curriculum ships for teaching, but the product is framed for retro-computing hobbyists first.
+Time Warp Studio is an old-school desktop programming environment built with **C++20 and Qt6** (Qt 5.15 for the Windows 7 build): a unified IDE for eleven interpreters from 1964 to 1980, with turtle graphics, a debugger in every language, and two complete machines — the HB-1 home computer and a live CHIP-8. A checked lesson curriculum ships for teaching, but the product is framed for retro-computing hobbyists first.
 
-**Supported Languages:** BASIC, APL, Logo, PILOT, FOCAL, Scheme, CHIP-8, COMAL, REXX, and Smalltalk.
+**Supported Languages:** BASIC, APL, Logo, PILOT, FOCAL, Scheme, CHIP-8, COMAL, REXX, Smalltalk and Forth.
 
 **Current State:** The Qt desktop application in `native/` is the product, and all
 eleven languages run in C++ inside it. The PySide6 implementation that came before it
@@ -372,8 +372,10 @@ by adding its record to the table and, if it needs one, a high-contrast variant;
 
 ### Turtle Graphics Integration
 
-- Turtle state managed in `graphics/turtle_state.py`
-- Graphics rendered using Qt painter with zoom/pan support in `ui/canvas.py`
+- Turtle state is `TurtlePose`/`TurtleHost` in `native/include/timewarp/lang/turtle_host.hpp`;
+  the reference's 16-colour palette is `reference_palette_colour()` there, the one table
+  every host and BASIC use
+- Graphics rendered using Qt painter with zoom/pan support in `native/src/ui/turtle_canvas.cpp`
 - Canvas clearing and setup handled automatically per execution
 - Compatible with existing turtle graphics commands
 

@@ -7,7 +7,7 @@ each one replaced or absorbed its Python original:
 | --- | --- | --- |
 | `timewarp_expr` | `utils/expression_evaluator.py` | the expression lexer/evaluator shared by every language executor |
 | `timewarp_scheme` | `languages/scheme.py` | a tree-walking Scheme interpreter with **no native recursion** |
-| `timewarp_lang` | `languages/*.py` | the shared interpreter loop and all ten executors: BASIC, FOCAL, PILOT, COMAL, APL and REXX line by line, CHIP-8, Logo and Smalltalk whole-program |
+| `timewarp_lang` | `languages/*.py` | the shared interpreter loop and all eleven executors: BASIC, FOCAL, PILOT, COMAL, APL and REXX line by line, CHIP-8, Logo, Smalltalk and Forth whole-program |
 | `timewarp_canvas` | bridging `ui/output.py` and `ui/canvas.py` | a lock-free single-producer/single-consumer canvas command queue, with an optional Qt6 adapter |
 
 `timewarp_expr` came first: a self-contained, hot, allocation-sensitive unit with
@@ -73,35 +73,42 @@ native/
 │   ├── canvas_queue_tests.cpp    queue + concurrency (Qt-free)
 │   └── canvas_bridge_tests.cpp   Qt bridge (built only when Qt6 is found)
 └── tools/
-    ├── eval_cli.cpp                  stdin → result CLI (for the expression corpus)
-    ├── bench.cpp                     expression micro-benchmark
+    ├── time_warp_ide.cpp             the product's entry point
+    ├── time_warp_api.cpp             the JSON-RPC service
+    ├── check.cpp                     `time_warp_check`: one program, what it did
+    ├── lang_cli.cpp                  one program in, its output and drawing out
+    ├── teach.cpp, learn.cpp          `time_warp_teach`, `time_warp_learn`
+    ├── eval_cli.cpp                  `expr_cli`: one expression per line, evaluated
     ├── scheme_cli.cpp                runs one Scheme program from stdin
+    ├── bench.cpp                     expression micro-benchmark
     ├── scheme_bench.cpp              depth and throughput measurement
     ├── canvas_queue_bench.cpp        queue throughput and coalescing ratio
-    ├── check.cpp                     `time_warp_check`: one program, what it did
-    ├── golden_check.py               the ports against the frozen corpora
-    ├── command_table.py              the curated command rows and the waivers
-    ├── example_smoke.py              every example program, through the engines
-    ├── command_matrix.py             every command row, as a program
-    ├── repl_matrix.py                every command row, through the REPL
-    └── check_doc_{links,claims}.py   the documentation gates
+    ├── player.cpp                    the standalone audio player
+    ├── gates/                        `time_warp_gates`: smoke, commands, repl,
+    │                                 golden and tree -- every program gate
+    ├── docs/                         `time_warp_docs`: links, claims, version, md
+    ├── icon/                         `time_warp_icon`: the packaged icons
+    └── twc/                          the `./twc` launcher's C++ support
 ```
+
+The gates and the documentation tools are separate CMake projects inside `tools/`,
+each needing a compiler and nothing else -- no Qt, no Python -- so `make doc-links`
+answers in seconds without building the application.
 
 The rest of the tree is the application around those engines:
 `include/timewarp/{lang,ui,project,sql,api}/` and their matching `src/`
 directories hold the shared interpreter loop and executors, the Qt window and
 panels, the `.twproject` model, SQLite access and the JSON-RPC server.
-`tools/time_warp_ide.cpp` is the product's entry point and
-`tools/time_warp_api.cpp` the automation service; `tools/twc.py` generates the
-small standalone executables, with its C++ support files beside it in
-`tools/twc/`.
+`tools/twc/` is what `./twc` is built from: the launcher wraps
+`time_warp_ide --compile`, so a compiler script produces a real standalone
+executable without a second front end to keep in step.
 
 ## Build, test, benchmark
 
 ```bash
 # The short way: native/Makefile drives the CMake build below.
 make -C native                # release build
-make -C native test           # build, then all 23 suites
+make -C native test           # build, then all 24 suites
 make -C native test-debug     # unoptimised, with Q_ASSERT and hardening live
 make -C native asan           # under AddressSanitizer, in a third tree
 make -C native asan ASAN=undefined SAN_DIR=build-ubsan \
@@ -399,9 +406,11 @@ browses a user-supplied ROM folder (`chip8_library.{hpp,cpp}`); the studio ships
 ROMs, because most circulating CHIP-8 programs are somebody else's copyright. The ports are also where the native expression
 evaluator became part of a Run: `Interpreter::evaluate_expression` uses
 `timewarp_expr`, so `C:`, `B:` and BASIC arithmetic are the arithmetic the
-expression library is gated against. `executor_for()` answers for all eleven, so
-`MainWindow` runs every language in process and `runInBridge` has no runtime case
-left; adding an executor is still the whole change a new language needs.
+expression library is gated against. `executor_for()` answers for the ten executor
+languages and returns null for Scheme, which is the machine in `timewarp_scheme`
+rather than an executor; `MainWindow` runs every language in process and
+`runInBridge` has no runtime case left. For the ten, adding an executor is still the
+whole change a new language needs.
 
 Two Qt-free libraries beside it are what a program reaches outward with:
 
@@ -1201,12 +1210,14 @@ wrong name.
 
 ### The canvas, and what runs
 
-**All ten languages run.** Scheme goes through the C++ interpreter on a
-background thread; the other nine run in process through `timewarp_lang`. No
-program is sent to the Python engine any more, and the engine itself is deleted.
-Every one of the 60 examples in `Examples/` executes, and the 30 that draw produce
-drawing -- checked by `tools/example_smoke.py` through the native engines, and their
-output frozen against the reference's in `lang_corpus.json.gz`.
+**All eleven languages run.** Scheme goes through its own machine on a background
+thread; the other ten run in process through `timewarp_lang`. No program is sent to
+a Python engine any more, and the engine itself is deleted. Every one of the 63
+examples the reference could run executes, and the 33 that draw produce drawing --
+checked by `make smoke` (`time_warp_gates smoke`). Fifty of them are also frozen
+against the reference's own answers in `lang_corpus.json.gz`.
+`basic/star_patrol.bas` uses commands the reference never had, so `lang_tests` runs
+it and asserts the ink instead.
 
 ### The lesson panel
 
@@ -1229,22 +1240,22 @@ second interpreter is involved.
 The **Classroom** page is the teacher's side of the same machinery. `ClassroomPanel`
 shows the roster, the assignment and one row of marks per learner per lesson, filled
 from `lessons::Classroom`, the
-module `teach.py` writes, so the mark the panel shows and `teach.py collect`'s are one
-function's answer. The class list is a file read and answers at any time; the marks run
+library `time_warp_teach` is a command line over, so the mark the panel shows and
+`time_warp_teach collect`'s are one function's answer. The class list is a file read and answers at any time; the marks run
 the verifier and are refused while a program is running, for the reason above.
 
 **Save Bundle...** and **Load Bundle...** on that panel move the whole class: the
-archive is the engine's ZIP (`classroom_mode.create_bundle`), asked for through
-`classroom-bundle`/`classroom-unbundle` requests, so `teach.py bundle` and the
-button produce the same file and `teach.py unbundle` reads either. Loading asks
-whether to replace existing files before it writes anything.
+archive is `timewarp_lessons`' ZIP, written by `lessons::createBundle`, so
+`time_warp_teach bundle` and the button produce the same file and
+`time_warp_teach unbundle` reads either. Loading asks whether to replace existing
+files before it writes anything.
 
 **Presentation mode** (View > Presentation Mode, Shift+F11) is focus mode for a room:
 it hides the menu bar as well as the toolbars, status bar and docks, and takes the
 lesson panel and the log views to the size the class is projected at. The size and
-the full-screen choice come from `presentation.json` through a
-`classroom-presentation` request, so `teach.py present --windowed` is obeyed; the
-same block rides on the curriculum and class-list answers and is parsed once.
+the full-screen choice come from `presentation.json` in the classroom library, so
+`time_warp_teach present --windowed` is obeyed; the same values ride on the
+curriculum and class-list data and are read once.
 
 `TurtleCanvas` is a real graphics surface, not a stand-in. Whichever engine runs,
 the path is the same: turtle calls become `CanvasCommand`s, the producer pushes
@@ -1347,7 +1358,7 @@ strokes a circle costs.
   most circulating CHIP-8 programs are somebody else's copyright. Manuals:
   `docs/chip8/README.md`, `docs/chip8/assembly.md`, `docs/chip8/instruction-set.md`.
 * **The HB-1** is `RetroComputerWindow`: one CRT with a boot intro, a
-  prompt, a ROM selector for all ten languages, TEXT/SPLIT/GRAPHICS modes, a real
+  prompt, a ROM selector for all eleven languages, TEXT/SPLIT/GRAPHICS modes, a real
   `CodeEditor` on its PROGRAM page and a `TurtleCanvas` beside it. It owns its own
   queue, bridge, `ReplRunner` and `NativeRunner`; per-ROM programs, the ROM and the
   mode persist in QSettings. `retro_settings.{hpp,cpp}` holds its configuration —

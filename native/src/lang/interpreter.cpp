@@ -322,8 +322,10 @@ void Interpreter::run() {
 
     const Executor executor = executor_for(language_);
     if (executor == nullptr) {
-        // Not an executor bug: the language simply has not been ported, and the
-        // message says which one so the caller knows to keep using the bridge.
+        // Not an executor bug: `executor_for` answers for ten of the eleven, and
+        // Scheme is the one it does not -- that is the separate machine, run by
+        // its own runner, so this line is what a caller sees only if it asked the
+        // wrong table.
         log_output(std::string{"❌ Error: "} + std::string{display_name(language_)} +
                    " is not implemented natively yet\n");
         running = false;

@@ -54,6 +54,7 @@ namespace {
 using timewarp::canvas::CanvasCommand;
 using timewarp::canvas::CanvasCommandKind;
 using timewarp::canvas::CanvasCommandView;
+using timewarp::canvas::to_string;
 using timewarp::ui::Scrubber;
 using timewarp::ui::TurtleCanvas;
 
@@ -582,10 +583,20 @@ void pushSample(TurtleCanvas& canvas, const Sample& sample) {
 // the product cannot keep, and until 18.x nothing noticed.
 void test_the_drawing_vocabulary_is_complete() {
     announce("drawing vocabulary");
-    // 43 declared kinds, every one of them drawn. A mismatch here is the reminder
-    // to add the new one to `kEveryKind`, which is one line and impossible to
-    // forget silently.
-    TW_CHECK_EQ(std::size(kEveryKind), std::size_t{43});
+    // Every declared kind, and the count is *derived* rather than written down: a
+    // new enumerator is named by `to_string` (which must gain a case or the build
+    // fails under -Wswitch) and the walk stops at the first unnamed value, so the
+    // expected total grows on its own and a kind that is never added to
+    // `kEveryKind` fails here instead of passing quietly. The values have to stay
+    // contiguous for that walk to mean anything.
+    std::size_t declared = 0;
+    for (int value = 1; value < 256; ++value) {
+        if (to_string(static_cast<CanvasCommandKind>(value)) == "Unknown") {
+            break;
+        }
+        ++declared;
+    }
+    TW_CHECK_EQ(std::size(kEveryKind), declared);
 
     for (const CanvasCommandKind kind : kEveryKind) {
         const std::unique_ptr<TurtleCanvas> canvas{sizedCanvas()};

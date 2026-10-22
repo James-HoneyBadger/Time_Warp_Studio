@@ -114,15 +114,34 @@ between groups never moves it on disk.
 - A program that has been moved or deleted is marked **missing**, not forgotten.
   Put it back, or remove the entry.
 
+### Run the project
+
+A project can name one program as its **entry point** -- the program a reader of
+the project should run first, and the one that opens when the project is
+launched from a shortcut.
+
+- **Set as Entry Point** in a program's context menu. The entry is marked with ▶
+  in the dock, so which file is *the* program is visible without opening the menu.
+- **Run Project** (`Ctrl+Alt+R`, or ▶ in the panel's header) runs it.
+- **Clear Entry Point** forgets it. Removing the entry's file from the project
+  clears it too, so a project never points at a file it no longer holds.
+
+Relative file names in a program resolve against the **project root** when it
+runs as part of a project, and against the document's own folder otherwise. That
+is what lets a program `OPEN "data/words.txt"` and mean the file beside the
+project rather than whatever directory the IDE happened to be launched from.
+
 ### The file on disk
 
 `.twproject` is a small JSON document. Paths inside the project root are stored
 relative to it, so copying the whole folder keeps the project working; files
 outside the root stay absolute. Saves are atomic (`QSaveFile`), and a project file
-from a newer format is refused instead of being half-read.
+from a newer format is refused instead of being half-read. Format 2 added the
+`entry` key; a format 1 file still opens and simply has no entry point.
 
 Paths can also be managed through the API's `project.*` methods, including
-`project.addFolder`. See [API.md](API.md#projectcreate-projectopen-projectsave-projectinfo).
+`project.addFolder`, `project.setEntry` and `project.clearEntry`. See
+[API.md](API.md#projectcreate-projectopen-projectsave-projectinfo).
 
 ---
 
