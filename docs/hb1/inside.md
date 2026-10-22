@@ -5,11 +5,11 @@ way, and where to put a new word. The user-facing books are the
 [Owner's Manual](README.md), [ROMs](roms.md), [HB DOS](hb-dos.md) and
 [CONFIG](config.md).
 
-The whole machine is four translation units:
+The whole machine is four libraries, and the window itself is seven files:
 
 | File | What it is |
 | --- | --- |
-| [`retro_computer.hpp`](../../native/include/timewarp/ui/retro_computer.hpp) / [`retro_computer.cpp`](../../native/src/ui/retro_computer.cpp) | The window: front panel, screen, prompt, machine words, persistence |
+| [`retro_computer.hpp`](../../native/include/timewarp/ui/retro_computer.hpp) / `retro_computer_*.cpp` | The window, split by what it does: `ui` (front panel, screen, status), `basic` (the line editor, AUTO, renumbering), `machine` (the ROM, the runners, the canvas, the images), `dos` (the prompt's half of the disk words), `boot` (power, self test, the frame tick) and `settings` (persistence and the dialog), over `support` and `retro_computer_internal.hpp` |
 | [`retro_settings.hpp`](../../native/include/timewarp/ui/retro_settings.hpp) / [`retro_settings.cpp`](../../native/src/ui/retro_settings.cpp) | The configuration: palettes, the three-page dialog, the stored group |
 | [`hb_dos.hpp`](../../native/include/timewarp/ui/hb_dos.hpp) / [`hb_dos.cpp`](../../native/src/ui/hb_dos.cpp) | The disk: a widget-free class, one JSON image |
 | [`panels.hpp`](../../native/include/timewarp/ui/panels.hpp) | `CrtOverlay`, the glass, shared with the IDE |

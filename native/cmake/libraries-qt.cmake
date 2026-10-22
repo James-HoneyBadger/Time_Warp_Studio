@@ -504,7 +504,13 @@ if(TIME_WARP_QT_FOUND)
             src/ui/project_panel.cpp
             src/ui/repl_runner.cpp
             src/ui/resizable_tab_widget.cpp
-            src/ui/retro_computer.cpp
+            src/ui/retro_computer_basic.cpp
+            src/ui/retro_computer_boot.cpp
+            src/ui/retro_computer_dos.cpp
+            src/ui/retro_computer_machine.cpp
+            src/ui/retro_computer_settings.cpp
+            src/ui/retro_computer_support.cpp
+            src/ui/retro_computer_ui.cpp
             src/ui/retro_settings.cpp
             src/ui/scrubber.cpp
             src/ui/snippet_dialog.cpp

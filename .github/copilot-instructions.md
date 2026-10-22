@@ -275,7 +275,7 @@ needs an interpreter: if a guide names a `python3` command it is out of date, an
 - **CodeEditor**: `native/src/ui/code_editor.cpp` — gutter, current line, tab stops,
   syntax colouring and the search that `FindBar` drives
 - **Language table**: `native/src/ui/language.cpp` — names, settings keys, extensions
-- **HB-1**: `native/src/ui/retro_computer.cpp` — a self-contained home
+- **HB-1**: `native/src/ui/retro_computer_*.cpp` — a self-contained home
   computer whose ROM socket is the `Language` enum. It owns its own canvas queue,
   bridge, `ReplRunner` and `NativeRunner`, so nothing started there shares state with
   the editor's REPL bar; per-ROM programs, the ROM and the screen mode persist in

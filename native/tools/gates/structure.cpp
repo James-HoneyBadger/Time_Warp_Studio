@@ -47,8 +47,6 @@ struct SizeWaiver {
 };
 
 constexpr SizeWaiver kWaivers[] = {
-    {"native/src/ui/retro_computer.cpp",
-     "the HB-1 machine, which owns its own canvas queue, bridge and runners"},
     {"native/tests/ui_layout_tests.cpp",
      "85 cases in one file: one file per case group is the split, and the next phase"},
     {"native/tests/lang_tests.cpp",
