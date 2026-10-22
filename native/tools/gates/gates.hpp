@@ -17,6 +17,8 @@
 //     time_warp_gates commands  every row of the command table, one program each
 //     time_warp_gates repl      every row again, this time through the REPL API
 //     time_warp_gates golden    the ports against the frozen reference corpora
+//     time_warp_gates tree      the tree holds no Python
+//     time_warp_gates registry  the language table has one home
 //
 // Each returns 0 only when every question it asked was answered.
 
@@ -125,5 +127,8 @@ struct ReplAnswer {
 [[nodiscard]] int runGolden(const QStringList& arguments);
 /// Fails if the tree has grown a `.py` back.
 [[nodiscard]] int runTree(const QStringList& arguments);
+/// Fails if a language's display name, key or extensions are written down anywhere
+/// but `timewarp/lang/registry.hpp`.
+[[nodiscard]] int runRegistry(const QStringList& arguments);
 
 }  // namespace timewarp::gates

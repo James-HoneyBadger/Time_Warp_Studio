@@ -5,6 +5,7 @@
 #pragma once
 
 #include <optional>
+#include <span>
 #include <string_view>
 #include <vector>
 
@@ -31,6 +32,14 @@ enum class Language {
 
 /// The protocol/settings key: lowercase, no punctuation ("chip8").
 [[nodiscard]] std::string_view key(Language language) noexcept;
+
+/// The file extensions that select this language, most common first, without dots
+/// and in lower case. Empty for a value outside the table.
+///
+/// This is the registry's list, not a second one: `registry.hpp` holds the row and
+/// this reads it, so `ui::extensions` and the Qt shell cannot disagree with the
+/// executors about what a `.ch8` file is.
+[[nodiscard]] std::span<const std::string_view> extensions(Language language) noexcept;
 
 /// The inverse of `key`, case-insensitively. Empty when the key is unknown.
 [[nodiscard]] std::optional<Language> language_from_key(std::string_view key) noexcept;

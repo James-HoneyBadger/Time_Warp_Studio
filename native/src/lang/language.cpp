@@ -2,6 +2,10 @@
 
 #include "timewarp/lang/language.hpp"
 
+#include "timewarp/lang/registry.hpp"
+
+#include <span>
+
 #include "timewarp/lang/basic.hpp"
 #include "timewarp/lang/chip8.hpp"
 #include "timewarp/lang/comal.hpp"
@@ -20,97 +24,58 @@
 namespace timewarp::lang {
 
 std::string_view display_name(Language language) noexcept {
-    switch (language) {
-        case Language::Basic:
-            return "BASIC";
-        case Language::Pilot:
-            return "PILOT";
-        case Language::Logo:
-            return "Logo";
-        case Language::Comal:
-            return "COMAL";
-        case Language::Rexx:
-            return "REXX";
-        case Language::Scheme:
-            return "Scheme";
-        case Language::Focal:
-            return "FOCAL";
-        case Language::Chip8:
-            return "CHIP-8";
-        case Language::Apl:
-            return "APL";
-        case Language::Smalltalk:
-            return "Smalltalk";
-        case Language::Forth:
-            return "Forth";
-    }
-    return "?";
+    const LanguageRow* row = language_row(language);
+    return row != nullptr ? row->display : std::string_view{};
 }
 
 std::string_view key(Language language) noexcept {
-    switch (language) {
-        case Language::Basic:
-            return "basic";
-        case Language::Pilot:
-            return "pilot";
-        case Language::Logo:
-            return "logo";
-        case Language::Comal:
-            return "comal";
-        case Language::Rexx:
-            return "rexx";
-        case Language::Scheme:
-            return "scheme";
-        case Language::Focal:
-            return "focal";
-        case Language::Chip8:
-            return "chip8";
-        case Language::Apl:
-            return "apl";
-        case Language::Smalltalk:
-            return "smalltalk";
-        case Language::Forth:
-            return "forth";
-    }
-    return "?";
-}
-
-std::vector<Language> all_languages() {
-    return {Language::Basic, Language::Pilot,  Language::Logo,  Language::Comal,
-            Language::Rexx,  Language::Scheme, Language::Focal, Language::Chip8,
-            Language::Apl,   Language::Smalltalk, Language::Forth};
+    const LanguageRow* row = language_row(language);
+    return row != nullptr ? row->key : std::string_view{};
 }
 
 std::optional<Language> language_from_key(std::string_view name) noexcept {
-    std::string lower{name};
-    for (char& character : lower) {
-        character = static_cast<char>(std::tolower(static_cast<unsigned char>(character)));
+    // Keys are lowercase in the table; the caller's spelling is not always, because
+    // a protocol payload may say "BASIC". Comparing in one case is what makes
+    // `--language BASIC` and `--language basic` the same request.
+    std::string lower;
+    lower.reserve(name.size());
+    for (const char character : name) {
+        lower.push_back(static_cast<char>(
+            std::tolower(static_cast<unsigned char>(character))));
     }
-    for (const Language language : all_languages()) {
-        if (lower == key(language)) {
-            return language;
+    const LanguageRow* row = language_row_for_key(lower);
+    if (row == nullptr) {
+        return std::nullopt;
+    }
+    return row->language;
+}
+
+std::vector<Language> all_languages() {
+    std::vector<Language> languages;
+    languages.reserve(kLanguageTable.size());
+    for (const LanguageRow& row : kLanguageTable) {
+        languages.push_back(row.language);
+    }
+    return languages;
+}
+
+std::span<const std::string_view> extensions(Language language) noexcept {
+    const LanguageRow* row = language_row(language);
+    if (row == nullptr) {
+        return {};
+    }
+    std::size_t count = 0;
+    for (const std::string_view candidate : row->extensions) {
+        if (!candidate.empty()) {
+            ++count;
         }
     }
-    return std::nullopt;
+    return std::span<const std::string_view>{row->extensions.data(), count};
 }
 
 bool is_whole_program(Language language) noexcept {
-    switch (language) {
-        case Language::Scheme:
-        case Language::Chip8:
-        case Language::Logo:
-        case Language::Smalltalk:
-        case Language::Forth:
-            return true;
-        case Language::Basic:
-        case Language::Pilot:
-        case Language::Comal:
-        case Language::Rexx:
-        case Language::Focal:
-        case Language::Apl:
-            return false;
-    }
-    return false;
+    const LanguageRow* row = language_row(language);
+    return row != nullptr && row->whole_program;
 }
 
 Executor executor_for(Language language) noexcept {

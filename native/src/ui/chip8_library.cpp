@@ -2,6 +2,8 @@
 
 #include "timewarp/ui/chip8_library.hpp"
 
+#include "timewarp/lang/registry.hpp"
+
 #include <QDialogButtonBox>
 #include <QDir>
 #include <QDirIterator>
@@ -23,10 +25,18 @@ namespace {
 
 constexpr auto kFolderKey = "chip8/romFolder";
 
+/// A ROM is a file the registry calls CHIP-8, or a raw `.rom`/`.bin` image. The two
+/// extensions that name the language come from `timewarp/lang/registry.hpp`: they
+/// used to be written out here, in `chip8_window.cpp`, in the Qt language table and
+/// in the smoke gate, and four copies of an extension is four chances to disagree.
 [[nodiscard]] bool isRomSuffix(const QString& suffix) {
-    const QString lower = suffix.toLower();
-    return lower == QLatin1String("ch8") || lower == QLatin1String("c8") ||
-           lower == QLatin1String("rom") || lower == QLatin1String("bin");
+    const std::string lower = suffix.toLower().toStdString();
+    if (lower == "rom" || lower == "bin") {
+        return true;
+    }
+    const timewarp::lang::LanguageRow* row =
+        timewarp::lang::language_row_for_extension(lower);
+    return row != nullptr && row->language == timewarp::lang::Language::Chip8;
 }
 
 }  // namespace

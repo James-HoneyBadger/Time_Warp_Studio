@@ -10,6 +10,11 @@
 
 #include "gates.hpp"
 
+#include "timewarp/lang/registry.hpp"
+
+#include <string>
+#include <vector>
+
 #include <QDir>
 #include <QDirIterator>
 #include <QFile>
@@ -24,17 +29,23 @@ namespace timewarp::gates {
 namespace {
 
 struct LanguageExamples {
-    const char* key;
-    const char* extension;
+    std::string key;
+    std::string extension;
 };
 
-/// The extension each language's examples use, keyed the way the C++ side keys a
-/// language: the settings keys from `native/src/ui/language.cpp`.
-constexpr LanguageExamples kLanguages[] = {
-    {"basic", "bas"},  {"pilot", "pilot"},    {"logo", "logo"},  {"comal", "comal"},
-    {"rexx", "rexx"},  {"scheme", "scm"},     {"focal", "foc"},  {"chip8", "ch8"},
-    {"apl", "apl"},    {"smalltalk", "st"},   {"forth", "fs"},
-};
+/// The languages the corpus covers, with the extension their examples use.
+///
+/// Both halves come from `timewarp/lang/registry.hpp` -- the key and the first
+/// extension of each row -- because a second copy of "what extension is CHIP-8" is
+/// how the smoke gate and the IDE end up disagreeing about which files are examples.
+std::vector<LanguageExamples> language_examples() {
+    std::vector<LanguageExamples> languages;
+    for (const timewarp::lang::LanguageRow& row : timewarp::lang::kLanguageTable) {
+        languages.push_back(LanguageExamples{std::string{row.key},
+                                             std::string{row.extensions.front()}});
+    }
+    return languages;
+}
 
 /// Languages expected to draw nothing *as a language*: PILOT is a dialogue
 /// language whose examples ask questions and print answers.
@@ -148,11 +159,12 @@ int runSmoke(const QStringList& arguments) {
     QStringList failures;
     int ran = 0;
 
-    for (const LanguageExamples& language : kLanguages) {
-        const QString key = QLatin1String{language.key};
+    for (const LanguageExamples& language : language_examples()) {
+        const QString key = QString::fromStdString(language.key);
         counts.insert(key, Counts{});
         const QString folder = QDir{root}.filePath(QStringLiteral("Examples"));
-        QDirIterator iterator{folder, {QStringLiteral("*.") + QLatin1String{language.extension}},
+        QDirIterator iterator{folder,
+                              {QStringLiteral("*.") + QString::fromStdString(language.extension)},
                               QDir::Files, QDirIterator::Subdirectories};
         QStringList paths;
         while (iterator.hasNext()) {
@@ -219,11 +231,11 @@ int runSmoke(const QStringList& arguments) {
     }
 
     std::printf("%-10s %6s %6s %8s\n", "language", "passed", "failed", "strokes");
-    for (const LanguageExamples& language : kLanguages) {
-        const QString key = QLatin1String{language.key};
+    for (const LanguageExamples& language : language_examples()) {
+        const QString key = QString::fromStdString(language.key);
         const Counts& entry = counts[key];
-        std::printf("%-10s %6d %6d %8lld\n", language.key, entry.passed, entry.failed,
-                    entry.strokes);
+        std::printf("%-10s %6d %6d %8lld\n", language.key.c_str(), entry.passed,
+                    entry.failed, entry.strokes);
     }
 
     if (!failures.isEmpty()) {

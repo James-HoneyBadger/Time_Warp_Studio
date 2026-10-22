@@ -517,8 +517,11 @@ add_executable(time_warp_gates
     tools/gates/golden.cpp
     tools/gates/inventory.cpp
     tools/gates/tree.cpp
+    tools/gates/registry.cpp
 )
-target_include_directories(time_warp_gates PRIVATE tools/gates)
+# The gates read `timewarp/lang/registry.hpp` for the language table -- the header is
+# a constexpr table with no library behind it, so this is an include path, not a link.
+target_include_directories(time_warp_gates PRIVATE tools/gates include)
 target_compile_definitions(time_warp_gates PRIVATE
     TIME_WARP_SOURCE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/..")
 find_package(ZLIB REQUIRED)

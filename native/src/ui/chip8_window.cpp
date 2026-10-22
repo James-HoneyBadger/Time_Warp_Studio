@@ -255,8 +255,7 @@ void Chip8Window::buildInspector(QVBoxLayout* column) {
 }
 
 bool Chip8Window::isRomFile(const QString& path) {
-    const QString suffix = QFileInfo{path}.suffix().toLower();
-    return suffix == QStringLiteral("ch8") || suffix == QStringLiteral("c8");
+    return ui::languageForFile(path) == Language::Chip8;
 }
 
 bool Chip8Window::openFile(const QString& path) {

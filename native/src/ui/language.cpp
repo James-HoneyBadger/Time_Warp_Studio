@@ -3,6 +3,8 @@
 #include "timewarp/core/qt_compat.hpp"
 #include "timewarp/ui/language.hpp"
 
+#include "timewarp/lang/registry.hpp"
+
 #include <array>
 #include <string_view>
 
@@ -12,52 +14,32 @@ namespace timewarp::ui {
 
 namespace {
 
-/// One row of the language table.
+/// The registry's row for a UI language.
 ///
-/// The extensions are exactly those in the Python implementation's
-/// `core/language_registry.py`, alternates included: a file the Python IDE calls
-/// BASIC must be one this build calls BASIC, or the two disagree about what they
-/// are running.
-struct LanguageInfo {
-    Language language;
-    std::string_view display;   ///< "BASIC", "Logo", "REXX", "Scheme"
-    std::string_view key;       ///< "basic", "logo", "rexx" — settings and protocol
-    std::string_view extension1;
-    std::string_view extension2;  ///< empty when the language has only one
-};
+/// The one fact -- display name, key, extensions -- lives in
+/// `timewarp/lang/registry.hpp`. This enum adds `Unknown`, and it maps by position:
+/// the two enumerations list the same eleven languages in the same order, which is
+/// what the `static_assert`s below hold.
+constexpr timewarp::lang::Language toRegistry(Language language) {
+    return static_cast<timewarp::lang::Language>(static_cast<int>(language));
+}
 
-constexpr std::array<LanguageInfo, 11> kLanguages{{
-    {Language::Basic, "BASIC", "basic", "bas", "bsc"},
-    {Language::Pilot, "PILOT", "pilot", "pilot", "plt"},
-    {Language::Logo, "Logo", "logo", "logo", "lg"},
-    {Language::Comal, "COMAL", "comal", "comal", "cml"},
-    {Language::Rexx, "REXX", "rexx", "rexx", "rex"},
-    {Language::Scheme, "Scheme", "scheme", "scm", "ss"},
-    {Language::Focal, "FOCAL", "focal", "foc", "focal"},
-    {Language::Chip8, "CHIP-8", "chip8", "ch8", "c8"},
-    {Language::Apl, "APL", "apl", "apl", "dyalog"},
-    {Language::Smalltalk, "Smalltalk", "smalltalk", "st", "smalltalk"},
-    {Language::Forth, "Forth", "forth", "fs", "fth"},
-}};
+static_assert(static_cast<int>(Language::Forth) ==
+                  static_cast<int>(timewarp::lang::Language::Forth),
+              "the UI enum and the registry list the same languages in the same order");
 
-/// Scheme has three extensions, which the two-column table above cannot hold, so
-/// it is handled explicitly rather than by widening every row.
-constexpr std::array<std::string_view, 1> kSchemeExtraExtensions{"scheme"};
+[[nodiscard]] const timewarp::lang::LanguageRow* row(Language language) {
+    if (language == Language::Unknown) {
+        return nullptr;
+    }
+    return timewarp::lang::language_row(toRegistry(language));
+}
 
 /// The bytes a `QTextDocument` would rewrite: `'\r'` becomes `'\n'` and the
 /// no-break space becomes an ordinary space. The private-use range cannot come
 /// from a Latin-1 decode, so each mapping stays a bijection over 0x00-0xFF.
 constexpr char16_t kCarriageReturnCodePoint = 0xE00D;
 constexpr char16_t kNoBreakSpaceCodePoint = 0xE0A0;
-
-[[nodiscard]] const LanguageInfo* find(Language language) {
-    for (const LanguageInfo& info : kLanguages) {
-        if (info.language == language) {
-            return &info;
-        }
-    }
-    return nullptr;
-}
 
 }  // namespace
 
@@ -95,47 +77,40 @@ QByteArray romTextToBytes(const QString& text) {
 }
 
 QString displayName(Language language) {
-    const LanguageInfo* info = find(language);
+    const timewarp::lang::LanguageRow* info = row(language);
     return info != nullptr ? timewarp::core::fromUtf8(info->display) : QStringLiteral("—");
 }
 
 QString settingsKey(Language language) {
-    const LanguageInfo* info = find(language);
+    const timewarp::lang::LanguageRow* info = row(language);
     return info != nullptr ? timewarp::core::fromUtf8(info->key) : QStringLiteral("unknown");
 }
 
 QStringList extensions(Language language) {
-    const LanguageInfo* info = find(language);
-    if (info == nullptr) {
-        return {};
-    }
-    QStringList result{timewarp::core::fromUtf8(info->extension1)};
-    if (!info->extension2.empty()) {
-        result << timewarp::core::fromUtf8(info->extension2);
-    }
-    if (language == Language::Scheme) {
-        for (const std::string_view extra : kSchemeExtraExtensions) {
-            result << timewarp::core::fromUtf8(extra);
-        }
+    QStringList result;
+    for (const std::string_view extension : timewarp::lang::extensions(toRegistry(language))) {
+        result << timewarp::core::fromUtf8(extension);
     }
     return result;
 }
 
 QList<Language> allLanguages() {
     QList<Language> languages;
-    for (const LanguageInfo& info : kLanguages) {
-        languages << info.language;
+    for (const timewarp::lang::LanguageRow& info : timewarp::lang::kLanguageTable) {
+        languages << static_cast<Language>(static_cast<int>(info.language));
     }
     return languages;
 }
 
 Language languageFromKey(const QString& key) {
-    for (const LanguageInfo& info : kLanguages) {
-        if (key == timewarp::core::fromUtf8(info.key)) {
-            return info.language;
-        }
-    }
-    return Language::Unknown;
+    // Case-sensitive on purpose: a settings key is written lowercase by this build,
+    // and `ui_document_tests` pins `"Logo"` as unknown so a key from somewhere else
+    // fails loudly instead of being silently accepted. The *protocol* lookup in
+    // `lang::language_from_key` is the lenient one, because a payload may say "BASIC".
+    const timewarp::lang::LanguageRow* info =
+        timewarp::lang::language_row_for_key(key.toStdString());
+    return info != nullptr ? static_cast<Language>(static_cast<int>(info->language))
+                           : Language::Unknown;
 }
 
 Language languageForFile(const QString& fileNameOrPath) {
@@ -148,39 +123,31 @@ Language languageForFile(const QString& fileNameOrPath) {
     if (suffix.isEmpty()) {
         return Language::Unknown;
     }
-    for (const LanguageInfo& info : kLanguages) {
-        if (suffix == timewarp::core::fromUtf8(info.extension1)) {
-            return info.language;
-        }
-        if (!info.extension2.empty() && suffix == timewarp::core::fromUtf8(info.extension2)) {
-            return info.language;
-        }
-    }
-    for (const std::string_view extra : kSchemeExtraExtensions) {
-        if (suffix == timewarp::core::fromUtf8(extra)) {
-            return Language::Scheme;
-        }
-    }
-    return Language::Unknown;
+    const timewarp::lang::LanguageRow* info =
+        timewarp::lang::language_row_for_extension(suffix.toStdString());
+    return info != nullptr ? static_cast<Language>(static_cast<int>(info->language))
+                           : Language::Unknown;
 }
 
 QString openFileFilter() {
     QStringList allPatterns;
-    for (const LanguageInfo& info : kLanguages) {
-        for (const QString& extension : extensions(info.language)) {
+    for (const timewarp::lang::LanguageRow& info : timewarp::lang::kLanguageTable) {
+        for (const QString& extension :
+             extensions(static_cast<Language>(static_cast<int>(info.language)))) {
             allPatterns << QStringLiteral("*.") + extension;
         }
     }
 
     QStringList filters;
     filters << QStringLiteral("All programs (%1)").arg(allPatterns.join(QLatin1Char(' ')));
-    for (const LanguageInfo& info : kLanguages) {
+    for (const timewarp::lang::LanguageRow& info : timewarp::lang::kLanguageTable) {
+        const auto language = static_cast<Language>(static_cast<int>(info.language));
         QStringList patterns;
-        for (const QString& extension : extensions(info.language)) {
+        for (const QString& extension : extensions(language)) {
             patterns << QStringLiteral("*.") + extension;
         }
         filters << QStringLiteral("%1 (%2)")
-                       .arg(displayName(info.language), patterns.join(QLatin1Char(' ')));
+                       .arg(displayName(language), patterns.join(QLatin1Char(' ')));
     }
     filters << QStringLiteral("All files (*)");
     return filters.join(QStringLiteral(";;"));
