@@ -36,13 +36,15 @@ read:
 | `docs/lessons/FORMAT.md` | The technical reference: the curriculum file, how a checkpoint is checked, the protocol |
 | `docs/lessons/plans/*.md` | The lesson plans, one file per language, generated from the curriculum |
 
-The machine-readable curriculum is
-[`native/bridge/time_warp/features/lessons.json`](../../native/bridge/time_warp/features/lessons.json),
+The machine-readable curriculum is [`native/share/lessons.json`](../../native/share/lessons.json),
 and the code that loads, checks and records it is
-[`lesson_system.py`](../../native/bridge/time_warp/features/lesson_system.py)
-(learner) and
-[`classroom_mode.py`](../../native/bridge/time_warp/features/classroom_mode.py)
-(teacher).
+[`timewarp_lessons`](../../native/include/timewarp/lessons/curriculum.hpp) — the
+same library the Lessons panel asks and `time_warp_teach` runs. The reference
+engine keeps its own reader
+([`lesson_system.py`](../../native/bridge/time_warp/features/lesson_system.py)) and
+its classroom
+([`classroom_mode.py`](../../native/bridge/time_warp/features/classroom_mode.py))
+until the port is finished; both read that one curriculum file.
 
 ## The twenty lessons
 

@@ -483,7 +483,7 @@ a measurable question rather than a matter of opinion.
 
 ### Projects, SQL and the automation API
 
-Three libraries sit beside the engines, each with one job and a test suite:
+Four libraries sit beside the engines, each with one job and a test suite:
 
 - **`timewarp_project`** (`native/include/timewarp/project/project.hpp`) is a JSON
   view over programs that already exist. A project is the file (`<name>.twproject`),
@@ -501,6 +501,20 @@ Three libraries sit beside the engines, each with one job and a test suite:
   thread. Results carry columns, rows, the change count and an error; the row cap
   (1000) is part of the type, not a thing the panel decides. Table and schema
   lookups bind their names rather than pasting them into SQL.
+- **`timewarp_lessons`** (`native/include/timewarp/lessons/`) is the curriculum and
+  the verdict. `curriculum.cpp` reads `share/lessons.json` and refuses a checkpoint
+  with no expectation or two — one that would pass or fail everybody, silently —
+  while `verify.cpp` runs a learner's program through the engines with
+  `RecordingHost` as the surface, so a lesson is checkable with no window. The three
+  expectations are the reference's: what a program printed (engine commentary such
+  as 🎨 is not output), what the turtle drew (pen segments and shapes counted
+  separately, and whether it finished where it started), and a reported error, which
+  is checked before anything else because a checkpoint whose answer *is* a failure
+  would otherwise be swallowed by the branch that reports a broken program.
+  `progress.cpp` keeps a learner's place in `~/.time_warp/progress.json` in the
+  shape that file has always had. The IDE's panel, `time_warp_teach` and the
+  `lessons_tests` suite all ask this library, which is what makes a learner's
+  verdict and a teacher's mark one function's answer.
 - **`timewarp_api`** is JSON-RPC 2.0 over newline-delimited JSON, with no transport
   of its own. `api::Server` takes an `istream` and an `ostream`, which is how it can
   be driven by a process (`time_warp_api`), a test (string streams) or an embedding
@@ -666,8 +680,8 @@ depends on the distinction:
    `native/bridge/time_warp/tests/command_table.py` so every new command is covered by
    `native/tools/command_matrix.py`.
 5. **Add a lesson** so the curriculum can teach it: two lessons in
-   `native/bridge/time_warp/features/lessons.json`, then `native/tools/teach.py validate`
-   until it is silent. A checkpoint is checked by *running* the learner's program, so this
+   `native/share/lessons.json`, then `make teach-check` (`time_warp_teach validate`
+   once the tree is built) until it is silent. A checkpoint is checked by *running* the learner's program, so this
    is also the only thing that proves the lesson's transcript.
 6. **Document it**: a reference section in `docs/LANGUAGE_GUIDE.md`, a tutorial in
    `docs/tutorials/` (the docs workflow requires one per language), a row in the README's

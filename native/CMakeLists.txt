@@ -693,6 +693,77 @@ else()
 endif()
 
 # ---------------------------------------------------------------------------
+# Lessons (Qt Core)
+#
+# The curriculum and the verifier the Lessons panel, `time_warp_teach` and
+# `time_warp_learn` all ask. Qt Core for the JSON and nothing else: the languages
+# are the engine's, and `RecordingHost` is the surface, so a lesson can be judged
+# on a machine with no window at all.
+# ---------------------------------------------------------------------------
+
+if(TIME_WARP_QT_FOUND)
+    add_library(timewarp_lessons
+        src/lessons/curriculum.cpp
+        src/lessons/progress.cpp
+        src/lessons/verify.cpp
+        include/timewarp/lessons/curriculum.hpp
+        include/timewarp/lessons/progress.hpp
+        include/timewarp/lessons/verify.hpp
+    )
+    add_library(timewarp::lessons ALIAS timewarp_lessons)
+
+    target_include_directories(timewarp_lessons
+        PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+    )
+    target_compile_features(timewarp_lessons PUBLIC cxx_std_20)
+    target_link_libraries(timewarp_lessons
+        PUBLIC ${TIME_WARP_QT}::Core timewarp::lang timewarp::scheme
+    )
+
+    if(MSVC)
+        target_compile_options(timewarp_lessons PRIVATE /W4 /permissive-)
+    else()
+        target_compile_options(timewarp_lessons PRIVATE
+            -Wall -Wextra -Wpedantic -Wshadow -Wcast-qual ${TIME_WARP_GNU_WARNING_FLAGS}
+            ${TIME_WARP_NULL_DEREFERENCE}
+        )
+        if(TIME_WARP_EXPR_WERROR)
+            target_compile_options(timewarp_lessons PRIVATE -Werror)
+        endif()
+    endif()
+
+    if(TIME_WARP_EXPR_BUILD_TESTS)
+        add_executable(lessons_tests tests/lessons_tests.cpp)
+        target_link_libraries(lessons_tests PRIVATE timewarp::lessons)
+        target_include_directories(lessons_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/tests)
+        # The shipped curriculum, from the checkout: a lesson whose answer does
+        # not pass is a curriculum bug, and this test is what finds it.
+        target_compile_definitions(lessons_tests PRIVATE
+            TIME_WARP_TEST_LESSONS="${CMAKE_CURRENT_SOURCE_DIR}/share/lessons.json")
+        if(NOT MSVC)
+            target_compile_options(lessons_tests PRIVATE -Wall -Wextra -Wpedantic -Wshadow)
+            if(TIME_WARP_EXPR_WERROR)
+                target_compile_options(lessons_tests PRIVATE -Werror)
+            endif()
+        endif()
+        add_test(NAME lessons_tests COMMAND lessons_tests)
+    endif()
+
+    # The teacher's command: validate the curriculum, and (with --write) the
+    # lesson plans the documentation job compares against it.
+    add_executable(time_warp_teach tools/teach.cpp)
+    target_link_libraries(time_warp_teach PRIVATE timewarp::lessons)
+    if(NOT MSVC)
+        target_compile_options(time_warp_teach PRIVATE -Wall -Wextra -Wpedantic -Wshadow)
+        if(TIME_WARP_EXPR_WERROR)
+            target_compile_options(time_warp_teach PRIVATE -Werror)
+        endif()
+    endif()
+else()
+    message(STATUS "Qt not found: skipping the lessons library")
+endif()
+
+# ---------------------------------------------------------------------------
 # Automation API (Qt Core)
 #
 # JSON-RPC over newline-delimited JSON. The library has no transport of its own:
@@ -1151,6 +1222,13 @@ if(TIME_WARP_QT_FOUND)
         # and a build tree offer the same snippets.
         install(
             FILES ${CMAKE_CURRENT_SOURCE_DIR}/share/snippets.json
+            DESTINATION ${TIME_WARP_SHARE_DIR}/time-warp-studio
+        )
+        # The curriculum is shipped data too: the Lessons panel and the teacher's
+        # command read the same file, so a package and a checkout teach the same
+        # course.
+        install(
+            FILES ${CMAKE_CURRENT_SOURCE_DIR}/share/lessons.json
             DESTINATION ${TIME_WARP_SHARE_DIR}/time-warp-studio
         )
         # The documentation browser reads these. `docsRoot()` looks in

@@ -13,7 +13,7 @@ FORWARDED := build run test test-debug asan clean distclean info test-list \
              screenshot reset-layout
 
 .PHONY: help $(FORWARDED) engine-test smoke command-matrix repl-matrix \
-        golden-record golden-check test-all lint lint-md doc-links
+        golden-record golden-check teach-check test-all lint lint-md doc-links
 
 help:
 	@echo "Time Warp Studio"
@@ -32,6 +32,7 @@ help:
 	@echo "  smoke         Every example program, through the real bridge"
 	@echo "  golden-check  The ports against the frozen reference corpus (no Python)"
 	@echo "  golden-record Freeze the reference's answers again (needs the bridge)"
+	@echo "  teach-check   Every lesson solution passes and every starter fails"
 	@echo "  test-all      All of the above"
 	@echo "  lint          Ruff over the bridge"
 	@echo "  lint-md       Markdownlint over every tracked Markdown file
@@ -71,6 +72,12 @@ golden-record:
 
 golden-check:
 	@$(PYTHON) $(NATIVE)/tools/lang_differential_check.py --golden
+
+# The curriculum, checked by the same library the Lessons panel asks: every
+# worked answer passes its checkpoint and every starter fails it. `teach-check`
+# needs the build; `teach-check-py` is the reference's answer while it exists.
+teach-check:
+	@$(MAKE) --no-print-directory -C $(NATIVE) teach-check
 
 test-all: test engine-test smoke command-matrix repl-matrix golden-check doc-links
 

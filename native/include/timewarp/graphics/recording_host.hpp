@@ -219,6 +219,17 @@ public:
     /// Turtle operations seen, including turns and pen changes that leave no ink.
     [[nodiscard]] std::size_t actionCount() const noexcept { return actions_; }
 
+    // -- what a lesson check reads ----------------------------------------
+    //
+    // A curriculum checkpoint counts pen segments and painted shapes, and asks
+    // whether the turtle finished where it started. Those are the three facts
+    // here rather than a general view of the recording: a lesson is judged by
+    // what was drawn, not by how.
+    [[nodiscard]] std::size_t segmentCount() const noexcept { return segments_.size(); }
+    [[nodiscard]] std::size_t shapeCount() const noexcept { return shapes_.size(); }
+    [[nodiscard]] double turtleX() const noexcept { return x_; }
+    [[nodiscard]] double turtleY() const noexcept { return y_; }
+
     /// The drawing as an SVG document. Empty before the program drew anything.
     [[nodiscard]] std::string svg() const {
         std::ostringstream stream;

@@ -140,7 +140,7 @@ the IDE and opens in player mode. The full guide is [USER_GUIDE.md](USER_GUIDE.m
 ## 4. Verify the build
 
 ```bash
-ctest --test-dir native/build --output-on-failure     # 22 suites
+ctest --test-dir native/build --output-on-failure     # 23 suites
 python3 native/tools/example_smoke.py                 # all 60 examples
 python3 native/tools/command_matrix.py                # every command-table row
 python3 native/tools/repl_matrix.py                   # every row through the REPL
@@ -290,7 +290,7 @@ cpack --config native/build/CPackConfig.cmake -G NSIS
 fails to compile here rather than failing to launch on the target machine. Both are
 off by default; the release build is Qt 6.
 
-What the pipeline checks is that this configuration builds, that all 22 suites pass
+What the pipeline checks is that this configuration builds, that all 23 suites pass
 against Qt 5.15, and that the executable starts and renders a window -- on Windows
 11, because that is what the runner is. What has **not** been verified is Windows 7
 itself: no continuous-integration image is older than Windows Server 2019, and the

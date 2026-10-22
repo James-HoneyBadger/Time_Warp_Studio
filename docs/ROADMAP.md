@@ -42,7 +42,7 @@ derived rather than remembered.
 | Database | A SQLite-backed Database tab, the shared `SQL` statement in nine languages, scripts, tables and schema; compiled programs link SQLite |
 | Automation | JSON-RPC over stdin/stdout (`language.run`, `repl.*`, `debug.*`, `sql.*`, `project.*`, `watch.evaluate`) and the `twc` terminal compiler |
 | Packaging | `make install`; tagged releases build a Windows installer and portable ZIP (Qt 6), a second Windows installer for Windows 7 (Qt 5.15), a universal macOS disk image, `.deb`, `.rpm`, AppImage, tarball and container artifacts |
-| Quality gates | 22 CTest suites in 4 build configurations and on four platforms (Linux, Windows, Windows with Qt 5.15, macOS), 3 parity gates, 575 engine tests, 448 command rows, 470 parity programs |
+| Quality gates | 23 CTest suites in 4 build configurations and on four platforms (Linux, Windows, Windows with Qt 5.15, macOS), 3 parity gates, 575 engine tests, 448 command rows, 470 parity programs |
 
 ---
 
@@ -317,13 +317,24 @@ A major version here is a claim, not a number. 16.0 claimed that all ten languag
 run in C++. 17.0 claims two things, and this section is what stands between the
 tree and them.
 
-**The product has no Python in it.** The bridge has one runtime job left — checking
-a learner's program — and the parity gates had one dependency left: the engine
-itself. The first is a port: `lesson_system.py`, `classroom_mode.py` and
-`lessons.json` become `timewarp_lessons`, running a program through `executor_for`
-into the same `CanvasCommandQueue` the IDE drains, so the panel's verdict and
-`teach.py`'s stay one function's answer. The second is done: the reference's
-answers to 471 programs are frozen in
+**The product has no Python in it.** The bridge had two runtime jobs left, and the
+first is now native. `timewarp_lessons` (`native/src/lessons/`) reads the
+curriculum from `native/share/lessons.json` — the file moved out of the reference's
+package, so a package and a checkout teach the same course — and judges a program
+through the engines with `RecordingHost` as the surface, which is what makes a
+lesson checkable on a machine with no window. `time_warp_teach validate` runs all
+sixty worked answers and all sixty starters through it: every answer passes, every
+starter fails, every language is taught. The `lessons_tests` suite asserts the same
+thing, so the curriculum is data that something executes deliberately rather than
+data that sits in the tree looking correct.
+
+What is left of the port is the classroom (`classroom_mode.py`: rosters,
+handouts, marking, bundles) and the Lessons panel's wiring: the panel still asks
+the worker, and the `LessonManager`'s progress file is now C++-readable
+(`ProgressStore`), so the panel is a view swap rather than a rewrite.
+
+The parity gates' remaining dependency is done too: the reference's answers to
+470 programs are frozen in
 `native/tests/golden/lang_corpus.json.gz`, program text included, and
 `make golden-check` compares the C++ engines with them without importing Python.
 `make golden-record` refreshes that file while the reference still exists; after

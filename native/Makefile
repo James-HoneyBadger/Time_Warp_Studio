@@ -189,6 +189,15 @@ ctest-run: build
 	@QT_QPA_PLATFORM=$(QT_QPA_PLATFORM) $(CTEST) --test-dir $(BUILD_DIR) \
 		--output-on-failure $(CTEST_ARGS)
 
+# The curriculum through the same library the Lessons panel asks: every worked
+# answer passes its checkpoint and every starter fails it. Cheap enough to run on
+# every change, and the only thing that keeps lesson data honest -- nothing else
+# executes a `.json` file.
+teach-check: build ## Check that every lesson solution passes and starter fails
+	@test -x "$(BUILD_DIR)/time_warp_teach" \
+		|| { echo "error: time_warp_teach was not built (Qt Core is required)." >&2; exit 1; }
+	@"$(BUILD_DIR)/time_warp_teach" validate
+
 # -- Run --------------------------------------------------------------------
 
 # Guarded rather than unconditional: without Qt6 Widgets the configure step

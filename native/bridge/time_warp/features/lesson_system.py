@@ -61,7 +61,13 @@ from ..logging_config import get_logger
 logger = get_logger(__name__)
 
 #: The curriculum. Beside this module so it travels with the engine.
-LESSONS_FILE: Path = Path(__file__).with_name("lessons.json")
+# The curriculum is data the application ships, not something the reference
+# engine owns: `native/share/lessons.json` is installed beside the snippets and
+# read by the C++ lesson checker too, so a learner's verdict and a teacher's mark
+# are one file's answer rather than two copies that can disagree.
+LESSONS_FILE: Path = (
+    Path(__file__).resolve().parents[3] / "share" / "lessons.json"
+)
 
 #: How long a learner's program may run while being checked.
 #:

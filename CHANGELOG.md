@@ -1,5 +1,44 @@
 # Changelog
 
+## [Unreleased]
+
+Lesson checking moves into the application. The bridge's last runtime job was
+deciding whether a learner's program satisfied a checkpoint, which meant the
+Lessons panel asked Python and the teacher's command asked Python, and the two had
+to be kept saying the same thing.
+
+### Added
+
+- **`timewarp_lessons`** (`native/src/lessons/`): the curriculum loader, the
+  verifier and the progress file, in C++ and Qt Core only. The verifier runs a
+  program through the engines with `RecordingHost` as the surface, so a lesson can
+  be judged on a machine with no window; the three expectations are the
+  reference's — printed lines, what the turtle drew, and a reported error — and so
+  are the messages a learner reads.
+- **The curriculum is shipped data.** `lessons.json` moved from the reference
+  engine's package to `native/share/lessons.json`, installed beside the snippets,
+  and both the application and the reference now read that one file. A package and
+  a checkout teach the same course.
+- **`time_warp_teach validate`** runs all sixty worked answers and all sixty
+  starters through the native engine: every answer passes its checkpoint, every
+  starter fails it, and every language has a lesson. `make teach-check` is the
+  entry point, and the same pass is a CTest suite.
+- **`ProgressStore`** keeps a learner's place in `~/.time_warp/progress.json` in
+  the shape that file has always had, with a hint count, a reset, and completion
+  per lesson. An unreadable file is ignored rather than fatal: a learner's progress
+  is worth more than a tidy log, and refusing to start class because it is corrupt
+  is the worse failure.
+- **`lessons_tests`** (23 suites now): the whole curriculum through the engine,
+  plus the loader's refusals, the message a wrong answer gets, and the progress
+  round trip.
+
+### Notes
+
+- The Lessons panel still asks the worker, and `classroom_mode.py` (rosters,
+  handouts, marking, bundles) is still Python. Both are the remaining work of this
+  port: the panel is a view swap onto `ProgressStore`, and the classroom is the
+  same kind of move. Nothing else in the application calls Python at run time.
+
 ## [16.6.0] - 2026-10-22
 
 Sound gains a second voice. `SOUND` had been a single tone: a new note stopped the
