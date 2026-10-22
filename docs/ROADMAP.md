@@ -387,8 +387,10 @@ export keep working. `Examples/basic/star_patrol.bas` is a game built on all of 
 and `lang_tests` runs it and asserts that it asked for a screen, placed a sprite and
 read a pixel.
 
-What the screen does not do yet is scroll under a zoom — the widget scales to fit
-and centres — and the mode is named by the program rather than chosen from a menu.
+The screen scrolls under a zoom as of 17.1: the wheel zooms about the pointer, the
+scale snaps to a whole number of device pixels so a one-pixel line stays one pixel
+wide, a click reports the pixel under it, and the strip under the canvas names the
+mode. What it still does not do is let a menu choose the mode: the program names it.
 
 The reference implemented none of it, so this is the first feature the parity gates
 cannot compare: its own suite (`lang_tests`) and its own example are what hold it
@@ -403,14 +405,13 @@ measuring the wrong machine.
 | 16.5 ✓ | The framebuffer and fixed-coordinate modes, `GET`/`PUT`, gamepad input |
 | 16.6 ✓ | Audio that mixes — several voices in process, not one `paplay` per note |
 | 17.0 ✓ | No Python in the product: lessons and classroom in C++, the worker deleted, nothing Python installed; `make golden-check` is the parity gate |
-| 17.1 | `native/bridge/` deleted, the three harnesses that drive it replaced by `timewarp_check`, and `time_warp_player` replacing the copy-of-the-IDE artifact |
+| 17.1 ✓ | A screen you can look at — zoom about the pointer, click for a pixel, the mode named in the strip — sound on Windows through PowerShell, and a file fence made of components rather than a string prefix |
+| 18.0 | `native/bridge/` deleted, the three harnesses that drive it replaced by `timewarp_check`, the teacher's command line complete enough to shed `teach.py`, and `time_warp_player` replacing the copy-of-the-IDE artifact |
 
-Smaller items belong in one of those releases rather than a release of their own:
-`time_warp_player` — a player executable instead of the copy of the IDE
-[`--compile`](#distributing-a-program) writes; a Smalltalk call stack shown as
-frames rather than a Program Counter; Flatpak and an arm64 AppImage; and the
-allow-list and threat model that `SERIAL`/`PARALLEL` have been owed since 16.0 put
-device nodes within a program's reach.
+Smaller items belong in one of those releases rather than a release of their own: a
+Smalltalk call stack shown as frames rather than a Program Counter; Flatpak and an
+arm64 AppImage; and a machine-level beeper for the HB-1, which has sound through
+BASIC but no click, boot tone or disk rattle of its own.
 
 ---
 
