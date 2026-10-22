@@ -1,6 +1,6 @@
 # Time Warp Studio - AI Coding Agent Instructions
 
-**Project:** Time Warp Studio - an old-school programming environment: ten languages, an IDE, and two complete machines  
+**Project:** Time Warp Studio - an old-school programming environment: eleven languages, an IDE, and two complete machines  
 **Maintainer:** James Temple <james@honey-badger.org>  
 **Last Updated:** October 2026
 
@@ -13,7 +13,7 @@ Time Warp Studio is an old-school desktop programming environment built with **C
 **Supported Languages:** BASIC, APL, Logo, PILOT, FOCAL, Scheme, CHIP-8, COMAL, REXX, and Smalltalk.
 
 **Current State:** The Qt desktop application in `native/` is the product, and all
-ten languages run in C++ inside it. The PySide6 implementation that came before it
+eleven languages run in C++ inside it. The PySide6 implementation that came before it
 has been **removed**, and so has the Python engine the ports were judged against:
 the parity gate compares with a recorded corpus, and the harnesses drive
 `time_warp_check` (see "The gates").
@@ -303,7 +303,7 @@ Scripts/                       - generate_icon.py,
   shared `DebugSession` (a statement, a Logo top-level statement, a Smalltalk message
   send, a CHIP-8 instruction). The terminal is a real opt-in `TerminalWidget`, and the
   outline dock is a real `OutlinePanel`; nothing in the window is a `PlaceholderPanel`.
-- **Engine**: `timewarp_lang` dispatches through `executor_for`; the ten executors are
+- **Engine**: `timewarp_lang` dispatches through `executor_for`; the eleven executors are
   stateless functions returning text with an emoji prefix
 - **Expression evaluator**: native C++ (`timewarp_expr`), gated by the recorded corpus
 - **Scheme**: native C++ explicit-stack machine (`timewarp_scheme`)

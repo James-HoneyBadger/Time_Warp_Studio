@@ -7,6 +7,7 @@
 #include "timewarp/lang/comal.hpp"
 #include "timewarp/lang/executor.hpp"
 #include "timewarp/lang/focal.hpp"
+#include "timewarp/lang/forth.hpp"
 #include "timewarp/lang/logo.hpp"
 #include "timewarp/lang/pilot.hpp"
 #include "timewarp/lang/apl.hpp"
@@ -40,6 +41,8 @@ std::string_view display_name(Language language) noexcept {
             return "APL";
         case Language::Smalltalk:
             return "Smalltalk";
+        case Language::Forth:
+            return "Forth";
     }
     return "?";
 }
@@ -66,14 +69,16 @@ std::string_view key(Language language) noexcept {
             return "apl";
         case Language::Smalltalk:
             return "smalltalk";
+        case Language::Forth:
+            return "forth";
     }
     return "?";
 }
 
 std::vector<Language> all_languages() {
-    return {Language::Basic, Language::Pilot, Language::Logo, Language::Comal,
+    return {Language::Basic, Language::Pilot,  Language::Logo,  Language::Comal,
             Language::Rexx,  Language::Scheme, Language::Focal, Language::Chip8,
-            Language::Apl,   Language::Smalltalk};
+            Language::Apl,   Language::Smalltalk, Language::Forth};
 }
 
 std::optional<Language> language_from_key(std::string_view name) noexcept {
@@ -95,6 +100,7 @@ bool is_whole_program(Language language) noexcept {
         case Language::Chip8:
         case Language::Logo:
         case Language::Smalltalk:
+        case Language::Forth:
             return true;
         case Language::Basic:
         case Language::Pilot:
@@ -116,6 +122,8 @@ Executor executor_for(Language language) noexcept {
             return &execute_logo;
         case Language::Smalltalk:
             return &execute_smalltalk;
+        case Language::Forth:
+            return &execute_forth;
         // Line-by-line executors.
         case Language::Basic:
             return &execute_basic;

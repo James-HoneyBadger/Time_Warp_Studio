@@ -25,7 +25,7 @@ the next four decades taught us about making computers kind to learn on.
 
 That single premise decides everything about it:
 
-- **One ROM socket, ten languages.** The parallel 1982 did not have a format war
+- **One ROM socket, eleven languages.** The parallel 1982 did not have a format war
   over BASIC. Its machine shipped with BASIC, Logo, PILOT, FOCAL, COMAL, REXX,
   Scheme, APL, Smalltalk and CHIP-8, each a cartridge you select from the front
   panel, each keeping its own memory when you switch away.
@@ -66,7 +66,7 @@ would recognise; the right is what is actually running.
 | A CRT with phosphor and glass | `retroPalette` plus `CrtOverlay`, applied to the whole machine | The fantasy is total: choosing amber recolours header, editor, canvas and glass together |
 | A settings screen you reach with `CONFIG` | A live-preview dialog that persists under `retroComputer/config` | The ritual is period; the preview and Cancel are courtesy |
 | A 64×32 CHIP-8 screen | A 60 Hz machine with timers, a keypad, a register inspector and a memory view | The chip is small; the tools around it are not |
-| A prompt | A persistent REPL with bindings in eight of the ten ROMs | You can learn interactively, as the 1980s promised, and keep what you defined |
+| A prompt | A persistent REPL with bindings in eight of the eleven ROMs | You can learn interactively, as the 1980s promised, and keep what you defined |
 
 The machines also disagree with history where history was simply wrong. Two
 examples:
@@ -129,7 +129,7 @@ parity gate compares against is a recorded corpus, not a live engine — see
 | Book | What it covers |
 | --- | --- |
 | [Owner's Manual](hb1/README.md) | The front panel, first boot, everyday operation, what the machine remembers, the limits |
-| [The ROM library](hb1/roms.md) | All ten languages as ROMs: banner, prompt, direct mode, session, worked examples |
+| [The ROM library](hb1/roms.md) | All eleven languages as ROMs: banner, prompt, direct mode, session, worked examples |
 | [HB DOS 1.0](hb1/hb-dos.md) | The disk: every word, the catalogue, the errors, the image format |
 | [CONFIG](hb1/config.md) | Every setting, every default, the phosphors and the glass, where it is stored |
 | [Inside the HB-1](hb1/inside.md) | How a keystroke becomes ink: the objects behind the screen |
@@ -146,7 +146,7 @@ parity gate compares against is a recorded corpus, not a live engine — see
 
 - [USER_GUIDE.md](USER_GUIDE.md) — the IDE the machines live in: projects, the
   REPL bar, debugging, SQL, automation.
-- [LANGUAGE_GUIDE.md](LANGUAGE_GUIDE.md) — the command reference for all ten
+- [LANGUAGE_GUIDE.md](LANGUAGE_GUIDE.md) — the command reference for all eleven
   languages, reachable from either machine.
 - [tutorials/](tutorials/) — one tutorial per language.
 - [ARCHITECTURE.md](ARCHITECTURE.md) — how the pieces are put together, for

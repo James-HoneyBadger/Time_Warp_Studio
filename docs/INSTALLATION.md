@@ -1,7 +1,7 @@
 # Installing and Building Time Warp Studio
 
 Time Warp Studio is a **C++20 / Qt6** desktop application. Everything you need to
-run all ten languages is in this repository; nothing has to be downloaded at run
+run all eleven languages is in this repository; nothing has to be downloaded at run
 time.
 
 ---
@@ -18,7 +18,7 @@ time.
 | zlib | 1.2 | Classroom bundles are zips, read and written with it; `zlib1g-dev` on Linux, the system library on macOS, `vcpkg install zlib` on Windows |
 | Python | 3.10 | *Optional* — only for the reference engine (parity gates, command matrix and lesson checks); running a language needs no Python |
 
-All ten languages run in C++ inside the application, and so does the lesson check, so
+All eleven languages run in C++ inside the application, and so does the lesson check, so
 running a program needs **no Python at all** — and neither does the repository's gate
 suite, which compares the engines with a recorded corpus rather than with a live
 reference; see §6.
@@ -187,7 +187,7 @@ skip it: `make test` is the C++ suite and needs no Python.
 
 ## 6. The reference engine (development only)
 
-All ten languages run in C++ inside the IDE, and the lesson check does too. The
+All eleven languages run in C++ inside the IDE, and the lesson check does too. The
 Python reference engine that the ports were judged against has been **deleted**: its
 answers are frozen in `native/tests/golden/lang_corpus.json.gz`, and the harnesses
 (`example_smoke.py`, `command_matrix.py`, `repl_matrix.py`) drive `time_warp_check`
@@ -268,7 +268,7 @@ One feature differs by platform. `PLAY`, `SOUND` and the two machines' beeps wri
 a WAV and hand it to a command-line player: `afplay` on macOS, `paplay` or `aplay`
 (or `ffplay`/`play`) on Linux. Windows has no equivalent command-line player, so
 there those commands report that playback is unavailable rather than pretending to
-make a sound. Everything else -- the ten languages, the debugger, the canvas, both
+make a sound. Everything else -- the eleven languages, the debugger, the canvas, both
 machines, the SQL tab and the automation surface -- is the same code on all three.
 
 ### Windows 7

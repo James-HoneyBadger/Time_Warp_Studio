@@ -1,7 +1,7 @@
 # Examples Catalog
 
 This catalog lists the example programs currently shipped with Time Warp Studio.
-It covers all ten active languages.
+It covers all eleven active languages.
 
 Each language has a **showcase** program — the first row in each section below —
 that walks through that language's whole surface: its statements, its data types,
@@ -20,6 +20,7 @@ smaller examples beside them each teach one idea; the showcases are the tour.
 - COMAL
 - REXX
 - Smalltalk
+- Forth
 
 ## BASIC
 
@@ -137,6 +138,14 @@ so it can be opened, edited and re-assembled. The language is documented in
 | --- | --- |
 | `smalltalk/showcase.st` | The shape factory: classes, inheritance and super, blocks, collections and turtle graphics |
 | `smalltalk/shapes.st` | A Polygon class, nested figures drawn by a block, and Transcript output |
+
+## Forth
+
+| File | Description |
+| --- | --- |
+| `forth/showcase.fs` | The stack workshop: the stack words, definitions, control structures, variables and memory, recursion, and three figures in three colours |
+| `forth/hello.fs` | The first program: `.` and `CR`, a recursive `FACT`, a counted loop and `EMIT` |
+| `forth/turtle.fs` | Nested squares, a pentagon and a star, each in its own palette colour |
 
 ## Validation
 

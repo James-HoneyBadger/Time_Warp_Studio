@@ -32,7 +32,7 @@ one I would type:
   REPL, debugging, SQL, terminal tools and the API.
 - **[docs/FAQ.md](../docs/FAQ.md)** — the questions that come up most.
 - **[docs/LANGUAGE_GUIDE.md](../docs/LANGUAGE_GUIDE.md)** — the reference for all
-  ten languages, including what each one is *not* able to do.
+  eleven languages, including what each one is *not* able to do.
 - **[docs/API.md](../docs/API.md)** — the JSON-RPC methods and the linkable C++
   libraries.
 

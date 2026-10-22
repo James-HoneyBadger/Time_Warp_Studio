@@ -1147,6 +1147,118 @@
           ]
         }
       ]
+    },
+    {
+      "id": "forth_first_words",
+      "title": "First Words in Forth",
+      "language": "FORTH",
+      "difficulty": "beginner",
+      "description": "Push numbers on the stack, run the words that combine them, and write a word of your own.",
+      "objectives": [
+        "Read a Forth program as a sequence of words, each taking what it needs from the stack",
+        "Use `+`, `DUP` and `*` to build an answer",
+        "Define a new word with `:` and end it with `;`"
+      ],
+      "teacher_notes": "Forth looks like line noise to anyone who has only met BASIC, and the fastest way through is a stack diagram on paper: every number pushed goes on a pile, and every word takes from the top. `DUP` is the word that confuses beginners most, because it copies rather than consumes. A stack underflow (`. ` on an empty stack) is the commonest first error, and Forth names the word that found it.",
+      "prerequisites": [],
+      "checkpoints": [
+        {
+          "title": "Two numbers, one word",
+          "description": "Put 2 and 3 on the stack, add them with `+`, and print the answer with `.`.",
+          "starter_code": "\\ A word takes what it needs from the stack.\n\\ Push 2, then 3, then add, then print.\n",
+          "solution": "2 3 + . CR\n",
+          "hints": [
+            "Forth reads left to right: `2 3 +` leaves a single 5 on the stack.",
+            "`.` prints the top of the stack. `CR` starts a new line."
+          ],
+          "expect_lines": [
+            "5"
+          ]
+        },
+        {
+          "title": "Square a number",
+          "description": "Print 7 squared. Use `DUP` rather than typing the number twice.",
+          "starter_code": "\\ DUP copies the top of the stack, so one number can be used twice.\n7\n",
+          "solution": "7 DUP * . CR\n",
+          "hints": [
+            "`DUP` is the one word beginners expect to consume its argument; it copies instead.",
+            "`7 DUP *` is 7 × 7."
+          ],
+          "expect_lines": [
+            "49"
+          ]
+        },
+        {
+          "title": "A word of your own",
+          "description": "Define a word `DOUBLE` that multiplies by 2, then print 21 doubled.",
+          "starter_code": "\\ : starts a definition, ; ends it.\n\\ Define DOUBLE so that `21 DOUBLE` prints 42.\n\n21 DOUBLE . CR\n",
+          "solution": ": DOUBLE 2 * ;\n21 DOUBLE . CR\n",
+          "hints": [
+            "The definition reads `: DOUBLE` … body … `;` on any number of lines.",
+            "The body is just `2 *`: push 2 and multiply."
+          ],
+          "expect_lines": [
+            "42"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "forth_defining",
+      "title": "Loops, Variables and Recursion in Forth",
+      "language": "FORTH",
+      "difficulty": "intermediate",
+      "description": "Count with DO/LOOP, keep a value in a variable, and write a word that calls itself.",
+      "objectives": [
+        "Loop a fixed number of times with `DO` … `LOOP` and read the counter with `I`",
+        "Keep a value in a `VARIABLE` and read it back with `@`",
+        "Write a recursive word using `RECURSE`"
+      ],
+      "teacher_notes": "All three checkpoints are about where a value lives: the stack (transient, order matters), the loop counter (`I`, read without popping), or a variable (named, address on the stack). `RECURSE` exists because a definition is not finished when its body is compiled, so a word cannot simply name itself; Forth does allow the name, and this implementation registers the definition at `:` so either works — teach `RECURSE` because it is the standard spelling.",
+      "prerequisites": [
+        "forth_first_words"
+      ],
+      "checkpoints": [
+        {
+          "title": "Count to four",
+          "description": "Define `COUNTUP` so that it prints `0 1 2 3 4` on one line.",
+          "starter_code": "\\ DO takes `limit start`, so `5 0 DO` counts 0 to 4.\n\\ `I` reads the counter. `LOOP` goes back.\n\nCOUNTUP CR\n",
+          "solution": ": COUNTUP 5 0 DO I . LOOP ;\nCOUNTUP CR\n",
+          "hints": [
+            "The body is `I .` — read the counter, then print it.",
+            "`5 0 DO` ends at 5, so the last number printed is 4."
+          ],
+          "expect_lines": [
+            "0 1 2 3 4"
+          ]
+        },
+        {
+          "title": "A variable",
+          "description": "Make a `VARIABLE` called `TOTAL`, store 42 in it, and print it back.",
+          "starter_code": "\\ VARIABLE makes a name that pushes an address.\n\\ `!` is ( value address -- ) and `@` is ( address -- value ).\n\n",
+          "solution": "VARIABLE TOTAL\n42 TOTAL !\nTOTAL @ . CR\n",
+          "hints": [
+            "The address goes on top: value first, then the name.",
+            "`TOTAL @` pushes what the variable holds."
+          ],
+          "expect_lines": [
+            "42"
+          ]
+        },
+        {
+          "title": "Six factorial",
+          "description": "Define `FACT` so that `6 FACT .` prints 720. Use `RECURSE`.",
+          "starter_code": "\\ n! is n × (n-1)!, and 1! is 1.\n\n6 FACT . CR\n",
+          "solution": ": FACT DUP 1 > IF DUP 1- RECURSE * THEN ;\n6 FACT . CR\n",
+          "hints": [
+            "Stop when the number is not greater than 1 — the `IF` has no `ELSE`, so a non-true flag leaves the number alone.",
+            "The multiply happens after `RECURSE` returns: `DUP 1- RECURSE *`."
+          ],
+          "expect_lines": [
+            "720"
+          ]
+        }
+      ]
     }
   ]
 }

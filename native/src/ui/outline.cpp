@@ -167,6 +167,9 @@ QList<OutlineEntry> outlineFor(Language language, const QString& source) {
         case Language::Focal:
         case Language::Chip8:
         case Language::Smalltalk:
+        // A Forth outline is the list of colon definitions, which needs the same
+        // tokeniser the interpreter has; until that is shared, no outline.
+        case Language::Forth:
         case Language::Unknown:
             break;
     }

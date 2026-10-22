@@ -156,6 +156,43 @@
         "description": "A block evaluated five times, printing a counter.",
         "body": "1 to: 5 do: [:i | Transcript show: i printString; cr.]\n$CURSOR$"
       }
+    ],
+    "forth": [
+      {
+        "name": "Text output",
+        "description": "Print a string and a newline",
+        "body": ".\" Hello, Time Warp\" CR\n$CURSOR$"
+      },
+      {
+        "name": "Colon definition",
+        "description": "A named word that squares the top of the stack",
+        "body": ": SQUARE ( n -- n*n ) DUP * ;\n$CURSOR$"
+      },
+      {
+        "name": "Conditional",
+        "description": "IF ... ELSE ... THEN inside a definition",
+        "body": ": ?SIGN ( n -- )\n  DUP 0< IF .\" negative\" ELSE .\" not negative\" THEN DROP ;\n$CURSOR$"
+      },
+      {
+        "name": "Counted loop",
+        "description": "DO ... LOOP with the index word I",
+        "body": ": COUNTUP ( n -- ) 0 DO I . LOOP CR ;\n$CURSOR$"
+      },
+      {
+        "name": "Variable",
+        "description": "A cell you can store to and fetch from",
+        "body": "VARIABLE COUNT\n0 COUNT !\n$CURSOR$"
+      },
+      {
+        "name": "Turtle",
+        "description": "Draw with the machine's turtle: postfix, so the distance comes first",
+        "body": ": SQUARE ( size -- ) 4 0 DO DUP FD RT 90 LOOP DROP ;\n50 SQUARE\n$CURSOR$"
+      },
+      {
+        "name": "Poke the screen",
+        "description": "Write a character cell of the HB-1's tube from Forth",
+        "body": ": TYPE-HI ( -- )\n  72 32768 POKE\n  73 32769 POKE ;\nTYPE-HI\n$CURSOR$"
+      }
     ]
   }
 }

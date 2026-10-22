@@ -1,15 +1,15 @@
 # The ROM library
 
-Ten languages, one socket. Selecting a ROM on the front panel cold-boots the
+Eleven languages, one socket. Selecting a ROM on the front panel cold-boots the
 machine into it: both engines stop, the screen clears, the ROM's program memory is
 brought back, and the banner names the language you are about to use.
 
 This is the parallel-universe premise made concrete. A 1982 machine with a ROM
-socket could have shipped the ten languages of the era as cartridges; this one
+socket could have shipped the languages of the era as cartridges; this one
 does, and each cartridge knows how to talk to the learner in its own voice.
 
-- **Ten ROMs:** BASIC, APL, Logo, PILOT, FOCAL, Scheme, CHIP-8, COMAL, REXX,
-  Smalltalk.
+- **Eleven ROMs:** BASIC, APL, Logo, PILOT, FOCAL, Scheme, CHIP-8, COMAL, REXX,
+  Smalltalk, Forth.
 - **One prompt each:** the machine echoes what you type in the ROM's prompt —
   `READY.` for BASIC, `?` for Logo, `]` for COMAL, and so on.
 - **One memory each:** switching away keeps that ROM's program; switching back
@@ -31,6 +31,7 @@ does, and each cartridge knows how to talk to the learner in its own voice.
 | COMAL | `V2.1` | `]` | `STRUCTURED BASIC` |
 | REXX | `V3.0` | `REXX>` | `SCRIPT PROCESSOR` |
 | Smalltalk | `V80` | `ST>` | `OBJECT WORKBENCH` |
+| Forth | `V1.0` | `ok` | `STACK LANGUAGE` |
 
 The banner is assembled from those fields:
 
@@ -58,15 +59,16 @@ Every ROM is the same three things in a different costume:
 3. **A drawing surface** — the right-hand canvas in SPLIT, or the whole screen in
    GRAPHICS. A language that cannot draw simply never puts ink there.
 
-The session is where the ten differ. Eight ROMs keep bindings between prompt
+The session is where they differ. Eight ROMs keep bindings between prompt
 lines:
 
 **BASIC, FOCAL, PILOT, COMAL, REXX, APL, Logo, Scheme** — `LET X = 5` then
 `PRINT X` works, in whatever spelling the language uses. Scheme additionally
 keeps definitions and echoes the value of an expression.
 
-**Smalltalk and CHIP-8** — each submission is a whole program, so state resets
-between lines. That is the languages' own nature, not a limitation of the
+**Smalltalk, CHIP-8 and Forth** — each submission is a whole program, so state resets
+between lines. A Forth definition spans as many lines as it likes, so the prompt
+takes the whole entry as one program and the dictionary it built goes with it. That is the languages' own nature, not a limitation of the
 machine: a Smalltalk workspace is rebuilt per submission, and a CHIP-8 listing is
 assembled and run to completion.
 
@@ -211,6 +213,19 @@ that a Smalltalk expression is a message send with an answer.
 
 ---
 
+## Forth
+
+A stack machine in a `ok` prompt, and the newest ROM in the library. Type `2 3 + .`
+and it answers `5`. Definitions span as many lines as they like, so the prompt takes
+each submission as a whole program: `: DOUBLE 2 * ; 21 DOUBLE .` is one entry.
+
+The ROM is the one that teaches the dictionary rather than the syntax, because
+Forth has no syntax to teach — a word is whatever you make of it.
+
+**Start with:** `Examples/forth/hello.fs`, then `Examples/forth/turtle.fs`.
+
+---
+
 ## Switching ROMs
 
 Selecting a ROM is a cold boot, not a tab switch:
@@ -220,7 +235,7 @@ Selecting a ROM is a cold boot, not a tab switch:
 3. The new ROM's program is brought back.
 4. The screen and the canvas are cleared and the banner is printed.
 
-Nothing on the disk moves: `CATALOG` looks the same in all ten ROMs, because the
+Nothing on the disk moves: `CATALOG` looks the same in all eleven ROMs, because the
 disk is the machine's, not the language's. A saved file records the ROM that can
 run it, so `LOAD "SQUARE"` cold-boots the machine into Logo before the program
 arrives. See [HB DOS](hb-dos.md#files-and-their-roms).

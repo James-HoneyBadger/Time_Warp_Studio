@@ -300,6 +300,7 @@ add_library(timewarp_lang
     src/lang/basic_text.cpp
     src/lang/chip8.cpp
     src/lang/focal.cpp
+    src/lang/forth.cpp
     src/lang/pilot.cpp
     src/lang/comal.cpp
     src/lang/apl.cpp

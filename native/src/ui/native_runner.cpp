@@ -60,6 +60,8 @@ std::optional<timewarp::lang::Language> nativeLanguage(Language language) {
             return timewarp::lang::Language::Apl;
         case Language::Smalltalk:
             return timewarp::lang::Language::Smalltalk;
+        case Language::Forth:
+            return timewarp::lang::Language::Forth;
         case Language::Unknown:
             return std::nullopt;
     }
@@ -68,12 +70,9 @@ std::optional<timewarp::lang::Language> nativeLanguage(Language language) {
 
 NativeCanvasHost::NativeCanvasHost(timewarp::canvas::CanvasCommandQueue& queue)
     : queue_{queue} {
-    // The reference's surface colours. CHIP-8 sets slots 1 and 2 before it asks
-    // for either, but a program that remembers a slot without setting it must
-    // still get the colour the reference would have given it.
-    palette_[0] = Rgb{255, 255, 255};
-    palette_[1] = Rgb{16, 16, 20};
-    palette_[2] = Rgb{140, 255, 140};
+    // No slots are seeded here: an unset slot is answered by
+    // `reference_palette_colour`, so the picture a program gets does not depend
+    // on which host drew it. CHIP-8 sets slots 1 and 2 before it asks for either.
 }
 
 void NativeCanvasHost::submit(const CanvasCommand& command) {
@@ -293,8 +292,26 @@ void NativeCanvasHost::cycle_palette(int from, int to, int step) {
     // The canvas cycles by one slot per command, so a range is one command per
     // step: `PALETTE CYCLE 1, 15, 1` is fifteen, which is what animating a
     // palette means. A step larger than the range is clamped to one.
-    Q_UNUSED(from);
-    Q_UNUSED(to);
+    //
+    // The rotation is mirrored here as well as sent to the canvas, because a
+    // `SETPC 4` after the cycle has to name the colour slot 4 now means, and the
+    // engine resolves the colour before the canvas ever sees the command.
+    const int lo = std::clamp(from, 0, 255);
+    const int hi = std::clamp(to, lo, 255);
+    const int count = hi - lo + 1;
+    if (count > 1) {
+        std::vector<Rgb> colours;
+        colours.reserve(static_cast<std::size_t>(count));
+        for (int index = lo; index <= hi; ++index) {
+            colours.push_back(resolve_color(index));
+        }
+        const int shift = ((step % count) + count) % count;
+        for (int offset = 0; offset < count; ++offset) {
+            const int target = lo + offset;
+            const int source = lo + (offset + count - shift) % count;
+            palette_[target] = colours[static_cast<std::size_t>(source)];
+        }
+    }
     const int steps = step == 0 ? 1 : step;
     submit(timewarp::canvas::make_cycle_palette(steps));
 }
@@ -550,12 +567,11 @@ Rgb NativeCanvasHost::resolve_color(int index) const {
     if (found != palette_.end()) {
         return found->second;
     }
-    if (index >= 0 && index <= 255) {
-        // The reference treats an unset slot as the grey of its own number.
-        const int grey = index;
-        return Rgb{grey, grey, grey};
+    Rgb slot{};
+    if (reference_palette_colour(index, &slot)) {
+        return slot;
     }
-    return Rgb{255, 255, 255};
+    return pen_;
 }
 
 NativeRunner::NativeRunner(timewarp::lang::Language language,

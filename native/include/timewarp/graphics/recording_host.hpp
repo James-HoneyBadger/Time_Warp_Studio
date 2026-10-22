@@ -298,8 +298,13 @@ public:
     }
     [[nodiscard]] timewarp::lang::Rgb resolve_color(int index) const override {
         const auto found = palette_.find(index);
-        return found == palette_.end() ? timewarp::lang::Rgb{255, 255, 255}
-                                       : found->second;
+        if (found != palette_.end()) {
+            return found->second;
+        }
+        timewarp::lang::Rgb slot{};
+        return timewarp::lang::reference_palette_colour(index, &slot)
+                   ? slot
+                   : timewarp::lang::Rgb{255, 255, 255};
     }
 
     // -- scheme::Host -----------------------------------------------------
@@ -524,9 +529,10 @@ private:
     std::string placed_sprite_;
     std::pair<double, double> placed_at_{0.0, 0.0};
     bool sprite_visible_ = false;
-    std::map<int, timewarp::lang::Rgb> palette_{{0, {255, 255, 255}},
-                                                {1, {16, 16, 20}},
-                                                {2, {140, 255, 140}}};
+    /// Slots a program has set. An unset one is answered by
+    /// `reference_palette_colour`, so this host and the IDE agree about what
+    /// `SETPC 1` means without either of them naming the sixteen colours.
+    std::map<int, timewarp::lang::Rgb> palette_;
     timewarp::lang::Rgb pen_{255, 255, 255};
     timewarp::lang::Rgb background_{10, 10, 20};
     double pen_width_ = 2.0;

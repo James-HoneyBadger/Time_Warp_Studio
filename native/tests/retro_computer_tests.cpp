@@ -181,6 +181,48 @@ void test_basic_run_prints_and_supports_question_mark() {
     TW_CHECK(screen.contains(QStringLiteral("TWO")));
 }
 
+// Forth's `POKE` reaches the machine, not a private array: a program that writes
+// the character cells of $8000 has drawn on the tube, which is what makes the ROM
+// a language of *this* machine rather than a program running beside it.
+void test_forth_poke_reaches_the_tube() {
+    clearMachineSettings();
+    RetroComputerWindow machine;
+    machine.setLanguage(Language::Forth);
+    machine.loadProgram(QStringLiteral("65 32768 POKE 66 32769 POKE 67 32770 POKE"));
+
+    bool finished = false;
+    QObject::connect(&machine, &RetroComputerWindow::runFinished, &machine,
+                     [&finished] { finished = true; });
+    machine.runProgram();
+    TW_CHECK(spin_until([&finished] { return finished; }));
+    // $8000 is the first character cell, so the three bytes are the start of the
+    // tube's top row -- the same row the banner wrote, which is the point: a POKE
+    // and a PRINT write the same memory.
+    const HbMemory* screen = machine.consoleView()->memory();
+    TW_CHECK_EQ(static_cast<int>(screen->cell(0, 0)), 65);
+    TW_CHECK_EQ(static_cast<int>(screen->cell(0, 1)), 66);
+    TW_CHECK_EQ(static_cast<int>(screen->cell(0, 2)), 67);
+    TW_CHECK(screen->rowText(0).startsWith(QStringLiteral("ABC")));
+}
+
+void test_forth_poke_refuses_rom() {
+    clearMachineSettings();
+    RetroComputerWindow machine;
+    machine.setLanguage(Language::Forth);
+    // $F000 is the ROM region: the write cannot land, and the machine says so
+    // rather than accepting it.
+    machine.loadProgram(QStringLiteral("1 61440 POKE"));
+
+    bool finished = false;
+    QObject::connect(&machine, &RetroComputerWindow::runFinished, &machine,
+                     [&finished] { finished = true; });
+    machine.runProgram();
+    TW_CHECK(spin_until([&finished] { return finished; }));
+    // The refusal is reported through the machine's own output, which is the
+    // transcript as well as the screen.
+    TW_CHECK(machine.consoleView()->toPlainText().contains(QStringLiteral("ROM")));
+}
+
 void test_screen_modes_show_text_and_graphics() {
     clearMachineSettings();
     RetroComputerWindow machine;
@@ -891,7 +933,7 @@ void test_the_self_test_counts_the_memory_it_has() {
     TW_CHECK(boot.contains(QStringLiteral("HB-1 SELF TEST")));
     TW_CHECK(boot.contains(QStringLiteral("BYTES FREE")));
     TW_CHECK(boot.contains(QStringLiteral("RAM CHECK OK")));
-    TW_CHECK(boot.contains(QStringLiteral("ROM CHECK OK (10 ROMS")));
+    TW_CHECK(boot.contains(QStringLiteral("ROM CHECK OK (11 ROMS")));
 
     // Short and Off are promises about how much the machine says: neither can print a
     // self-test and still keep them.
@@ -1443,6 +1485,8 @@ int main(int argc, char** argv) {
     test_locate_positions_the_print_that_follows();
     test_cls_clears_screen_memory();
     test_a_poke_into_rom_is_refused_out_loud();
+    test_forth_poke_reaches_the_tube();
+    test_forth_poke_refuses_rom();
     test_printing_past_the_bottom_scrolls_the_screen();
     test_scrolling_moves_memory_and_peek_agrees();
     test_writing_text_wraps_and_scrolls();

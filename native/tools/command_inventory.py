@@ -57,6 +57,7 @@ SOURCES = {
     "apl": ("apl.cpp",),
     "smalltalk": ("smalltalk.cpp", "smalltalk_library.cpp", "smalltalk_driver.cpp"),
     "chip8": ("chip8.cpp",),
+    "forth": ("forth.cpp",),
 }
 
 #: Names that hold "the thing being dispatched on" in the executors.
@@ -164,6 +165,12 @@ _PREFIX = re.compile(r'\b(?:starts_with_upper|starts_with)\s*\(\s*[^,()]+,\s*"([
 #: "commands" are selectors in a class library rather than literals compared in a
 #: switch.
 _REGISTRATION = re.compile(r'\badd\s*\(\s*[^,()]+,\s*"([^"\n]{1,40})"')
+#: Forth's dictionary is a table of `{name, Primitive::X}` pairs rather than a
+#: switch on a string, so the equality scan sees only the control words. One
+#: dedicated pattern reads the primitive table; the pairs interleave identifiers
+#: with the quotes, which is why `_TABLE` cannot.
+_FORTH_PAIR = re.compile(r'\{"([^"\n]{1,40})",\s*Primitive::\w+\}')
+
 #: A brace list made *only* of quoted literals: `{"FORWARD", "FD", "BACK"}`.
 #: The stricter shape matters: `{ throw StError("super sent " + selector + ", but no
 #: superclass of " + ...) }` is a code block, and a rule that only asked for a brace
@@ -195,6 +202,9 @@ def scan_source(text: str) -> dict[str, set[str] | dict[str, list[str]]]:
         prefix.add(match.group(1))
 
     for match in _REGISTRATION.finditer(text):
+        equality.add(match.group(1))
+
+    for match in _FORTH_PAIR.finditer(text):
         equality.add(match.group(1))
 
     for match in _TABLE.finditer(text):

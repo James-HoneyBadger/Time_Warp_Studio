@@ -77,6 +77,10 @@ struct RomInfo {
             return {"V1.0", "APL>", "ARRAY PROCESSOR"};
         case Language::Smalltalk:
             return {"V80", "ST>", "OBJECT WORKBENCH"};
+        case Language::Forth:
+            // Forth's prompt is the word every Forth book starts with, and the note
+            // says what the ROM is: a stack machine in a socket.
+            return {"V1.0", "ok", "STACK LANGUAGE"};
         case Language::Unknown:
             break;
     }
@@ -2229,8 +2233,9 @@ bool RetroComputerWindow::runSelfTest() {
         }
         ++roms;
     }
-    if (roms != 10) {
-        appendConsole(QStringLiteral("?ROM CHECK: %1 OF 10 SOCKETS").arg(roms));
+    const int sockets = static_cast<int>(allLanguages().size());
+    if (roms != sockets) {
+        appendConsole(QStringLiteral("?ROM CHECK: %1 OF %2 SOCKETS").arg(roms).arg(sockets));
         return false;
     }
     appendConsole(QStringLiteral("ROM CHECK OK (%1 ROMS, %2)").arg(roms).arg(rom_sum));

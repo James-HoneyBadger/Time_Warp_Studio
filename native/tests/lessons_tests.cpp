@@ -53,7 +53,7 @@ std::vector<Lesson> curriculum() {
 void test_the_shipped_curriculum_loads() {
     announce("curriculum loads");
     const std::vector<Lesson> lessons = curriculum();
-    TW_CHECK_EQ(lessons.size(), std::size_t{20});
+    TW_CHECK_EQ(lessons.size(), std::size_t{22});
     std::size_t checkpoints = 0;
     for (const Lesson& lesson : lessons) {
         checkpoints += lesson.checkpoints.size();
@@ -62,7 +62,7 @@ void test_the_shipped_curriculum_loads() {
         TW_CHECK(lesson.difficulty == "beginner" || lesson.difficulty == "intermediate" ||
                  lesson.difficulty == "advanced");
     }
-    TW_CHECK_EQ(checkpoints, std::size_t{60});
+    TW_CHECK_EQ(checkpoints, std::size_t{66});
 }
 
 void test_every_language_has_a_lesson() {

@@ -40,6 +40,7 @@
 #include "timewarp/lang/raster.hpp"
 #include "timewarp/lang/repl.hpp"
 #include "timewarp/lang/turtle_host.hpp"
+#include "timewarp/graphics/recording_host.hpp"
 #include "timewarp/lang/watch.hpp"
 
 namespace {
@@ -73,7 +74,7 @@ std::string colour_text(Rgb colour) {
 class RecordingHost final : public TurtleHost {
 public:
     std::vector<std::string> ops;
-    std::map<int, Rgb> palette{{0, {255, 255, 255}}, {1, {16, 16, 20}}, {2, {140, 255, 140}}};
+    std::map<int, Rgb> palette;
     Rgb pen_{255, 255, 255};
 
     void forward(double distance) override { ops.push_back("forward " + number_text(distance)); }
@@ -190,7 +191,11 @@ public:
     }
     [[nodiscard]] Rgb resolve_color(int index) const override {
         const auto found = palette.find(index);
-        return found == palette.end() ? Rgb{} : found->second;
+        if (found != palette.end()) {
+            return found->second;
+        }
+        Rgb slot{};
+        return reference_palette_colour(index, &slot) ? slot : pen_;
     }
 };
 
@@ -281,6 +286,134 @@ PilotRun run_pilot(std::string_view source, std::vector<std::string> inputs = {"
     interpreter.run();
     run.output = interpreter.output();
     return run;
+}
+
+// ---------------------------------------------------------------------------
+// Forth
+// ---------------------------------------------------------------------------
+
+struct ForthRun {
+    std::vector<std::string> output;
+    RecordingHost host;
+};
+
+ForthRun run_forth(std::string_view source) {
+    ForthRun run;
+    Interpreter interpreter{Language::Forth, run.host};
+    interpreter.load_program(source);
+    interpreter.run();
+    run.output = interpreter.output();
+    return run;
+}
+
+std::string forth_text(const ForthRun& run) {
+    std::string text;
+    for (std::size_t index = 0; index < run.output.size(); ++index) {
+        if (index > 0) {
+            text += '\n';
+        }
+        text += run.output[index];
+    }
+    return text;
+}
+
+void test_forth_pushes_and_adds() {
+    TW_CHECK_EQ(forth_text(run_forth("2 3 + . CR")), std::string{"5 "});
+}
+
+// Forth is postfix: `FD` takes the distance that is already on the stack, so
+// `FD 100` is a stack underflow rather than a move.
+void test_forth_words_take_their_argument_from_the_stack() {
+    const ForthRun run = run_forth("FD 100");
+    TW_CHECK(any_error(run.output));
+    TW_CHECK(forth_text(run).find("FD: stack underflow") != std::string::npos);
+}
+
+void test_forth_defines_and_calls_a_word() {
+    TW_CHECK_EQ(forth_text(run_forth(": SQUARE DUP * ; 9 SQUARE . CR")),
+                std::string{"81 "});
+}
+
+void test_forth_recurses() {
+    TW_CHECK_EQ(forth_text(run_forth(": FACT DUP 1 > IF DUP 1- RECURSE * THEN ; 6 FACT . CR")),
+                std::string{"720 "});
+}
+
+void test_forth_do_loop_with_the_counter() {
+    const std::string text = forth_text(run_forth(": T 3 0 DO I . LOOP ; T CR"));
+    TW_CHECK_EQ(text, std::string{"0 1 2 "});
+}
+
+void test_forth_nested_loops_read_the_outer_counter_with_j() {
+    const std::string text =
+        forth_text(run_forth(": T 2 0 DO 2 0 DO J . LOOP LOOP ; T CR"));
+    TW_CHECK_EQ(text, std::string{"0 0 1 1 "});
+}
+
+void test_forth_plus_loop_steps_by_the_stack() {
+    TW_CHECK_EQ(forth_text(run_forth(": T 10 0 DO I . 2 +LOOP ; T CR")),
+                std::string{"0 2 4 6 8 "});
+}
+
+// `LEAVE` is written inside the loop but almost always inside an `IF` as well;
+// reading the top of the control stack made every such loop fail to compile.
+void test_forth_leave_inside_an_if_leaves_the_loop() {
+    TW_CHECK_EQ(forth_text(run_forth(": T 10 0 DO I DUP . 2 = IF LEAVE THEN LOOP ; T CR")),
+                std::string{"0 1 2 "});
+}
+
+void test_forth_begin_until_and_begin_while_repeat() {
+    TW_CHECK_EQ(forth_text(run_forth(": T 0 BEGIN DUP . 1+ DUP 3 = UNTIL DROP ; T CR")),
+                std::string{"0 1 2 "});
+    TW_CHECK_EQ(forth_text(run_forth(
+                    ": T 0 BEGIN DUP 3 < WHILE DUP . 1+ REPEAT DROP ; T CR")),
+                std::string{"0 1 2 "});
+}
+
+void test_forth_variables_and_memory() {
+    TW_CHECK_EQ(forth_text(run_forth("VARIABLE V 7 V ! V @ . CR")), std::string{"7 "});
+    TW_CHECK_EQ(forth_text(run_forth("VARIABLE B 65 B C! B C@ . CR")),
+                std::string{"65 "});
+    TW_CHECK_EQ(forth_text(run_forth("VARIABLE N 10 N ! 5 N +! N @ . CR")),
+                std::string{"15 "});
+    TW_CHECK_EQ(forth_text(run_forth("99 CONSTANT NINETY NINETY . CR")),
+                std::string{"99 "});
+}
+
+// `." hello"` prints `hello`: the space after the quote is Forth's delimiter, not
+// the first character of the text.
+void test_forth_string_output_drops_the_delimiter_space() {
+    TW_CHECK_EQ(forth_text(run_forth(".\" hello\" CR")), std::string{"hello"});
+}
+
+// `BYE` ends the program where it stands.
+void test_forth_bye_stops_the_program() {
+    TW_CHECK_EQ(forth_text(run_forth(".\" done\" CR BYE .\" after\" CR")),
+                std::string{"done"});
+}
+
+void test_forth_undefined_word_names_itself_and_its_line() {
+    // The failure is appended to the line the program was on, so the check is on
+    // the text rather than on a whole line: `1 .` printed `1 ` first.
+    const ForthRun run = run_forth("1 .\nNOSUCHWORD\n2 .");
+    const std::string text = forth_text(run);
+    TW_CHECK(text.find("❌ Forth, line 2: undefined word: NOSUCHWORD") != std::string::npos);
+    // Whatever ran before the failure is still printed.
+    TW_CHECK(text.rfind("1 ", 0) == 0);
+}
+
+void test_forth_unclosed_definition_is_reported() {
+    const ForthRun run = run_forth(": F 1");
+    TW_CHECK(any_error(run.output));
+    TW_CHECK(forth_text(run).find("never closed") != std::string::npos);
+}
+
+void test_forth_turtle_words_move_and_colour() {
+    const ForthRun run = run_forth("1 SETPC 100 FD 90 RT 100 FD");
+    TW_CHECK(!any_error(run.output));
+    TW_CHECK_EQ(run.host.ops.at(0), std::string{"colour #0000AA"});
+    TW_CHECK_EQ(run.host.ops.at(1), std::string{"forward 100"});
+    TW_CHECK_EQ(run.host.ops.at(2), std::string{"right 90"});
 }
 
 // ---------------------------------------------------------------------------
@@ -1540,10 +1673,32 @@ void test_a_chained_bezier_starts_where_the_last_one_finished() {
 }
 
 // `SETPC 1` is a palette slot, and it used to be accepted and change nothing:
-// the pen stayed whatever it was and the picture came out the wrong colour.
+// the pen stayed whatever it was and the picture came out the wrong colour. The
+// colour it then got was a host's idea of "slot 1", not the reference's, which is
+// why the same statement drew a different picture in Logo and in BASIC.
 void test_logo_setpc_with_a_palette_index_sets_the_pen() {
     const LogoRun run = run_logo("SETPC 1\nFD 10");
-    TW_CHECK_EQ(run.host.ops.at(0), std::string{"colour #101014"});
+    TW_CHECK_EQ(run.host.ops.at(0), std::string{"colour #0000AA"});
+}
+
+// The sixteen colours a program gets before it sets any of them, from the
+// reference's `DEFAULT_PALETTE_16`. A slot past 15 is the grey of its own number.
+void test_the_reference_palette_is_the_same_table_everywhere() {
+    Rgb slot{};
+    TW_CHECK(reference_palette_colour(1, &slot));
+    TW_CHECK_EQ(slot, (Rgb{0, 0, 170}));
+    TW_CHECK(reference_palette_colour(15, &slot));
+    TW_CHECK_EQ(slot, (Rgb{255, 255, 255}));
+    TW_CHECK(reference_palette_colour(200, &slot));
+    TW_CHECK_EQ(slot, (Rgb{200, 200, 200}));
+    TW_CHECK(!reference_palette_colour(300, &slot));
+    TW_CHECK(!reference_palette_colour(-1, &slot));
+
+    // The host the lesson checker and the API use answers the same way, so a
+    // program judged by the panel and one drawn by the IDE agree about colour.
+    timewarp::graphics::RecordingHost host;
+    TW_CHECK_EQ(host.resolve_color(1), (Rgb{0, 0, 170}));
+    TW_CHECK_EQ(host.resolve_color(4), (Rgb{170, 0, 0}));
 }
 
 void test_logo_bezier_rejects_a_short_argument_list() {
@@ -2770,6 +2925,22 @@ void test_logo_data_breakpoint_pauses_at_a_statement_boundary() {
 }
 
 int main() {
+    test_forth_pushes_and_adds();
+    test_forth_words_take_their_argument_from_the_stack();
+    test_forth_defines_and_calls_a_word();
+    test_forth_recurses();
+    test_forth_do_loop_with_the_counter();
+    test_forth_nested_loops_read_the_outer_counter_with_j();
+    test_forth_plus_loop_steps_by_the_stack();
+    test_forth_leave_inside_an_if_leaves_the_loop();
+    test_forth_begin_until_and_begin_while_repeat();
+    test_forth_variables_and_memory();
+    test_forth_string_output_drops_the_delimiter_space();
+    test_forth_bye_stops_the_program();
+    test_forth_undefined_word_names_itself_and_its_line();
+    test_forth_unclosed_definition_is_reported();
+    test_forth_turtle_words_move_and_colour();
+    test_the_reference_palette_is_the_same_table_everywhere();
     test_chip8_program_starts_at_0x200();
     test_chip8_labels_resolve_forward_references();
     test_chip8_both_hex_spellings_agree();

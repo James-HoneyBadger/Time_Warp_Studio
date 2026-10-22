@@ -21,6 +21,7 @@ enum class Language {
     Chip8,
     Apl,
     Smalltalk,
+    Forth,
 };
 
 /// The display name, spelled exactly as the IDE and the lessons spell it.

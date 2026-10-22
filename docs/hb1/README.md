@@ -338,7 +338,7 @@ control, or make one by hand:
 }
 ```
 
-`language` is a ROM's protocol key (`basic`, `logo`, `pilot`, … — the ten the Studio
+`language` is a ROM's protocol key (`basic`, `logo`, `pilot`, … — the eleven the Studio
 has), `mode` is `0` TEXT, `1` GRAPHICS or `2` SPLIT (the order of the machine's own
 `ScreenMode`, which is what the number is), and `volume` is the HB DOS volume
 itself — the file it lives in is the reader's business, so a disk handed to somebody
@@ -392,7 +392,7 @@ period features; they are the parallel-universe part.
 
 ## Where next
 
-- Learn the ten ROMs: [the ROM library](roms.md).
+- Learn the eleven ROMs: [the ROM library](roms.md).
 - Keep a program: [HB DOS 1.0](hb-dos.md).
 - Make it yours: [CONFIG](config.md).
 - Change the machine's mind: [Inside the HB-1](inside.md).

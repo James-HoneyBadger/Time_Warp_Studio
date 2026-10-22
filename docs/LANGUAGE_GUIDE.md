@@ -14,7 +14,7 @@ BASIC, APL, Logo, PILOT, FOCAL, Scheme, CHIP-8, COMAL, REXX, and Smalltalk.
 > [lessons](lessons/README.md) have two per language, each with a plan, hints and
 > a worked answer.
 
-**Tools > HB-1 Computer** (`Ctrl+Alt+W`) boots all ten languages in one
+**Tools > HB-1 Computer** (`Ctrl+Alt+W`) boots all eleven languages in one
 home-computer screen: a ROM selector, a prompt, and the same turtle canvas. It is
 the shortest way to try a command from these tables without opening a file — see
 [the HB-1 Owner's Manual](hb1/README.md) and, for each language's prompt and
@@ -39,6 +39,7 @@ direct mode, [the ROM library](hb1/roms.md). The CHIP-8 section below is joined 
 8. [FOCAL](#focal)
 9. [CHIP-8](#chip-8)
 10. [Smalltalk](#smalltalk)
+11. [Forth](#forth)
 
 [The REPL in each language](#the-repl-in-each-language) explains which bindings
 survive between commands, and [SQL in nine languages](#sql-in-nine-languages) is a
@@ -58,6 +59,7 @@ Each language also has a worked example and a tutorial:
 | **FOCAL** | `.foc`, `.focal` | [`square.foc`](../Examples/focal/square.foc) | [`showcase.foc`](../Examples/focal/showcase.foc) | [`docs/tutorials/focal.md`](tutorials/focal.md) |
 | **CHIP-8** | `.ch8`, `.c8` | [`font_and_frames.ch8`](../Examples/chip8/font_and_frames.ch8) | [`showcase.ch8`](../Examples/chip8/showcase.ch8) | [`docs/tutorials/chip8.md`](tutorials/chip8.md) |
 | **Smalltalk** | `.st`, `.smalltalk` | [`shapes.st`](../Examples/smalltalk/shapes.st) | [`showcase.st`](../Examples/smalltalk/showcase.st) | [`docs/tutorials/smalltalk.md`](tutorials/smalltalk.md) |
+| **Forth** | `.fs`, `.fth` | [`hello.fs`](../Examples/forth/hello.fs) | [`showcase.fs`](../Examples/forth/showcase.fs) | [`docs/tutorials/forth.md`](tutorials/forth.md) |
 
 ---
 
@@ -75,6 +77,7 @@ the same canvas queue.
 | Scheme | The persistent machine: `define`/`set!` and closures; expression values are echoed. |
 | Smalltalk | Nothing from the previous entry; each entry is a complete program. |
 | CHIP-8 | Nothing; each entry is an assembly listing that runs and resets the machine. |
+| Forth | Nothing; a definition spans as many lines as it likes, so each entry is run as a whole program and the dictionary it built goes with it. |
 
 In BASIC, `NEW` clears the session's bindings and prints `✅ BASIC workspace
 cleared`. Running a document stops and replaces the REPL session. The API's
@@ -1636,6 +1639,157 @@ t := Turtle new.
 
 ---
 
+## Forth
+
+**Era:** 1970 · **Paradigm:** stack, dictionary, words · **Execution:** whole program
+**Extensions:** `.fs`, `.fth` · **Example:** [`hello.fs`](../Examples/forth/hello.fs)
+
+Forth has no syntax in the sense the other languages here have. A program is a
+sequence of whitespace-separated **words**, and a word takes whatever it needs from
+the **stack**: `2 3 +` is not `2 + 3`, it is "push two, push three, add". Every
+argument is already there when the word runs, which is why the order looks
+backwards until it clicks, and why `FD 100` is an error rather than a move: `FD`
+runs first, and there is nothing under it. Write `100 FD`.
+
+The dictionary is the other half. `: NAME ... ;` adds a word, and from then on it
+is indistinguishable from a built-in one — which is how Forth programs grow a
+vocabulary suited to their problem rather than fitting the problem to the language.
+
+```forth
+: SQUARE ( n -- n*n ) DUP * ;
+: FACT ( n -- n! ) DUP 1 > IF DUP 1- RECURSE * THEN ;
+
+9 SQUARE .        \ prints 81
+6 FACT .          \ prints 720
+CR
+```
+
+Forth here is whole-program, like Scheme, Logo, Smalltalk and CHIP-8: a definition
+spans as many lines as it likes, so the engine has to see the whole source before it
+can decide where the definition ends.
+
+### The stack
+
+| Word | Effect | Notes |
+| --- | --- | --- |
+| `DUP` | `( a -- a a )` | copies the top |
+| `DROP` | `( a -- )` | discards the top |
+| `SWAP` | `( a b -- b a )` | |
+| `OVER` | `( a b -- a b a )` | copies the second |
+| `ROT` | `( a b c -- b c a )` | rotates the third to the top |
+| `-ROT` | `( a b c -- c a b )` | the other way |
+| `NIP` | `( a b -- b )` | drops the second |
+| `TUCK` | `( a b -- b a b )` | copies the top under the second |
+| `?DUP` | `( a -- a a )` or `( 0 -- 0 )` | copies only a non-zero |
+| `DEPTH` | `( -- n )` | how many items are on the stack |
+| `2DUP` `2DROP` `2SWAP` | two items at a time | |
+| `PICK` | `( ... a n -- ... a a )` | copies the n-th item down |
+| `ROLL` | `( ... a n -- ... a )` | moves the n-th item up |
+| `.` | `( a -- )` | prints the top and a space |
+| `.S` | `( -- )` | prints the whole stack as `<depth> item item ...`, leaving it alone |
+
+Stack **underflow** is an error that names the word that found it (`❌ Forth, line
+1: .: stack underflow`), because a silently missing argument is the bug that takes
+an afternoon to find.
+
+### Arithmetic, comparison and bits
+
+`+` `-` `*` `/` `MOD` `/MOD` `NEGATE` `ABS` `MIN` `MAX` `1+` `1-` all take their
+operands from the stack and leave one result. `/` and `MOD` are integer division;
+`/MOD` leaves the remainder under the quotient.
+
+Comparisons — `=` `<>` `<` `>` `<=` `>=` `0=` `0<` `0>` — answer the Forth **flag**:
+`-1` for true (all bits set) and `0` for false. Logic is bitwise: `AND` `OR` `XOR`
+`INVERT` `LSHIFT` `RSHIFT`.
+
+Integers are 64-bit and print in decimal; `$FF` is hexadecimal and `%1010` is binary.
+
+### Definitions, variables and memory
+
+```forth
+: DOUBLE ( n -- n*2 ) 2 * ;
+VARIABLE TOTAL
+0 TOTAL !
+: ADD-UP ( n -- ) 1+ 1 DO I TOTAL +! LOOP ;
+10 ADD-UP
+." 1 to 10 is " TOTAL @ . CR
+99 CONSTANT NINETY
+```
+
+`VARIABLE NAME` makes a word that pushes the variable's address; `!` is
+`( value address -- )` and `@` is `( address -- value )`, so the address is on top.
+`C!` and `C@` are the byte forms, `+!` adds to what a variable holds. `CONSTANT`
+pops a number once and pushes it forever. `@`/`!` address this language's own 64 KiB
+data space, two bytes per cell, allocated upwards from the end of the dictionary.
+
+`POKE` and `PEEK` are the machine's memory rather than the dictionary's:
+
+```forth
+65 32768 POKE      \ write 'A' into the first character cell of the tube
+32768 PEEK .       \ read it back -- 65
+```
+
+On the HB-1 those addresses *are* the screen, so a Forth program draws text by
+poking character cells (`$8000` is row 0, column 0, eighty cells to a row) exactly as
+BASIC's `POKE` does, and a write into the ROM region is refused out loud rather than
+accepted and dropped. Run anywhere else — in the IDE, or through `time_warp_check` —
+the same words read and write a memory map of their own, so a poke and a peek still
+agree.
+
+`RECURSE` compiles a call to the word being defined. A definition is registered in
+the dictionary at `:` rather than at `;`, so naming it works too — `RECURSE` is the
+standard spelling and the one the tutorial teaches.
+
+### Control structures
+
+| Form | Meaning |
+| --- | --- |
+| `flag IF ... THEN` | run the body when the flag is true |
+| `flag IF ... ELSE ... THEN` | either body |
+| `BEGIN ... flag UNTIL` | repeat until the flag is true |
+| `BEGIN ... flag WHILE ... REPEAT` | repeat while the flag is true |
+| `limit start DO ... LOOP` | run with `I` from *start* to *limit-1* |
+| `limit start DO ... 2 +LOOP` | step by the stack's top instead of by one |
+| `... LEAVE ...` | leave the innermost `DO` loop early |
+| `... EXIT` | return from the word |
+
+`I` is the innermost loop's counter and `J` the next one out; neither consumes
+anything. `LEAVE` may be written inside an `IF` within the loop body.
+
+### Turtle words
+
+`FD`/`FORWARD`, `BK`/`BACK`, `RT`/`RIGHT`, `LT`/`LEFT`, `PU`/`PENUP`,
+`PD`/`PENDOWN`, `HOME`, `CS`/`CLEARSCREEN`, `SETPC`/`SETPENCOLOR` (a palette slot),
+`SETPW` (pen width), `ST`/`SHOWTURTLE`, `HT`/`HIDETURTLE`. They are postfix like
+everything else:
+
+```forth
+: SQUARE ( size -- ) 4 0 DO DUP FD RT 90 LOOP DROP ;
+CS
+1 SETPC
+60 SQUARE
+```
+
+### Output and the rest
+
+`." text"` prints text; the space after `."` is the delimiter rather than the first
+character, so `." hello"` prints `hello`. `EMIT` prints a character from its code,
+`CR` ends a line, `SPACE` and `SPACES` print one and *n* spaces, `WORDS` lists the
+dictionary, and `BYE` ends the program where it stands. `(` ... `)` and a backslash
+to the end of the line are comments.
+
+### Deliberate simplifications
+
+- **No `CREATE ... DOES>`, vocabularies, `FIND`, metacompilation or pictured
+  numeric output.** Those are the parts of Forth that make it a language for
+  writing Forths. A learner meeting Forth for the first time needs the stack, the
+  dictionary and the loop.
+- **`IMMEDIATE` is accepted and does nothing.** There are no user immediate words,
+  and a listing copied from a book should not be rejected for one line.
+- **No floating point.** Forth here is an integer machine, like the ones it ran on.
+
+---
+
 ## Language Selection
 
 To select which language your code uses:
@@ -1654,3 +1808,4 @@ To select which language your code uses:
 | `.foc` / `.focal` | FOCAL |
 | `.ch8` / `.c8` | CHIP-8 |
 | `.st` / `.smalltalk` | Smalltalk |
+| `.fs` / `.fth` | Forth |

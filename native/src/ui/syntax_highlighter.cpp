@@ -221,6 +221,27 @@ struct LanguageRules {
             });
             break;
 
+        case Language::Forth: {
+            // `( ... )` is a comment and `\` comments to the end of the line; `."` is
+            // a string that is printed. One quote closes it, and the stack words are
+            // the keywords a reader scans for.
+            rules.block_open = QStringLiteral("(");
+            rules.block_close = QStringLiteral(")");
+            rules.strings = words({"\""});
+            rules.keywords = words({
+                ":", ";", "IF", "ELSE", "THEN", "BEGIN", "UNTIL", "WHILE", "REPEAT",
+                "DO", "LOOP", "+LOOP", "LEAVE", "EXIT", "RECURSE", "VARIABLE",
+                "CONSTANT", "DUP", "DROP", "SWAP", "OVER", "ROT", "NIP", "TUCK",
+                "DEPTH", "PICK", "ROLL", "+", "-", "*", "/", "MOD", "/MOD", "NEGATE",
+                "ABS", "MIN", "MAX", "1+", "1-", "=", "<>", "<", ">", "<=", ">=",
+                "0=", "0<", "0>", "AND", "OR", "XOR", "INVERT", "LSHIFT", "RSHIFT",
+                ".", ".S", "EMIT", "CR", "SPACE", "SPACES", "WORDS", "@", "!", "C@",
+                "C!", "+!", "I", "J", "FD", "BK", "RT", "LT", "PU", "PD", "HOME",
+                "CS", "SETPC", "SETPW", "ST", "HT", "BYE",
+            });
+            break;
+        }
+
         case Language::Smalltalk:
             // A comment is `"..."` and a string is `'...'`, which is the reverse
             // of every other language in this list.

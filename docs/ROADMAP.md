@@ -29,16 +29,16 @@ derived rather than remembered.
 | Display | 35 themes, high contrast, A+ text sizes (100/125/150%), focus mode, CRT settings, four Monitor presets |
 | Execution | Run (F9) and Stop; one program at a time; unsaved-change prompts |
 | Input | A program can ask for a line and wait for it — `INPUT`, FOCAL's `ASK`, PILOT's `ACCEPT`, REXX's `PULL` — on whichever engine runs it; BASIC's round trip is asserted on the engine, on `NativeRunner`, and through the API |
-| HB-1 machine | Tools > HB-1 Computer (`Ctrl+Alt+W`): one CRT with a boot intro, a language ROM socket for all ten languages, TEXT/SPLIT/GRAPHICS modes, a program editor, a turtle canvas, and a prompt with BASIC direct mode; CONFIG (`Ctrl+,`) sets the boot ROM and screen, start-up message, phosphor palette, text sizes and CRT glass; each ROM's program, the ROM, the screen mode and the configuration persist; HB DOS 1.0 stores programs on a 512-sector volume with an Apple DOS-style catalogue, lock bits and a two-step INIT. Manuals: [the machines](MACHINES.md), [HB-1](hb1/README.md) |
+| HB-1 machine | Tools > HB-1 Computer (`Ctrl+Alt+W`): one CRT with a boot intro, a language ROM socket for all eleven languages, TEXT/SPLIT/GRAPHICS modes, a program editor, a turtle canvas, and a prompt with BASIC direct mode; CONFIG (`Ctrl+,`) sets the boot ROM and screen, start-up message, phosphor palette, text sizes and CRT glass; each ROM's program, the ROM, the screen mode and the configuration persist; HB DOS 1.0 stores programs on a 512-sector volume with an Apple DOS-style catalogue, lock bits and a two-step INIT. Manuals: [the machines](MACHINES.md), [HB-1](hb1/README.md) |
 | CHIP-8 machine | Tools > CHIP-8 Emulator (`Ctrl+Shift+M`): a live 60 Hz CHIP-8 with a 64×32 screen (128×64 hi-res), keypad, Run/Pause/Step/Reset, 1–2000 opcodes per frame, register/memory/listing inspector, sound, and a ROM library the user points at a folder. It assembles listings and loads binary ROMs; the editor's CHIP-8 Run is the whole-program path. Manuals: [machine](chip8/README.md), [assembler](chip8/assembly.md), [instruction set](chip8/instruction-set.md) |
-| Languages | 10 languages, 61 verified example programs |
+| Languages | 11 languages, 63 verified example programs |
 | Native engines | Expression evaluator (`timewarp_expr`) and Scheme (`timewarp_scheme`) |
 | Bridged engines | None. Every language runs in process, nothing the product runs starts Python, and the reference engine itself is deleted — the parity gate compares against a frozen corpus instead |
-| Native executors | All ten — BASIC, FOCAL, PILOT, COMAL, APL and REXX line-by-line; CHIP-8, Logo, Smalltalk and Scheme whole-program |
+| Native executors | All eleven — BASIC, FOCAL, PILOT, COMAL, APL and REXX line-by-line; CHIP-8, Logo, Smalltalk, Scheme and Forth whole-program |
 | Printing | File > Print Code (Ctrl+P) and Print Drawing, through the optional Qt6 PrintSupport |
 | Profiling | View > Profile Run times every statement in the line-by-line languages and ends with a per-line report, longest first |
 | Terminal | Opt-in in Settings > Workspace: an embedded shell in the document's folder, absent in presentation and player modes |
-| Debugging | Breakpoints, Pause, Continue and Trace in all ten languages; Scheme adds a stack and frame bindings; watch expressions and data breakpoints in the Debug panel |
+| Debugging | Breakpoints, Pause, Continue and Trace in all eleven languages; Scheme adds a stack and frame bindings; watch expressions and data breakpoints in the Debug panel |
 | Database | A SQLite-backed Database tab, the shared `SQL` statement in nine languages, scripts, tables and schema; compiled programs link SQLite |
 | Automation | JSON-RPC over stdin/stdout (`language.run`, `repl.*`, `debug.*`, `sql.*`, `project.*`, `watch.evaluate`) and the `twc` terminal compiler |
 | Packaging | `make install`; tagged releases build a Windows installer and portable ZIP (Qt 6), a second Windows installer for Windows 7 (Qt 5.15), a universal macOS disk image, `.deb`, `.rpm`, AppImage, tarball and container artifacts |
@@ -207,12 +207,12 @@ everything the others have:
 Writing those rows is what turned the inventory's counts into the list of defects
 above: nine of them were found by a row that had no answer, not by reading the code.
 
-**Lessons now cover all ten languages.** Every language has two, three checkpoints
-each: sixty in all, with a plan, a worked answer and hints for every checkpoint, reachable
-from a terminal (`time_warp_learn`) and from the 🎓 Lessons panel in the IDE.
+**Lessons now cover all eleven languages.** Every language has two, three checkpoints
+each: sixty-six in all, with a plan, a worked answer and hints for every checkpoint,
+reachable from a terminal (`time_warp_learn`) and from the 🎓 Lessons panel in the IDE.
 
-The curriculum is data, and `time_warp_teach validate` **runs all sixty solutions through the
-engine** and checks that none of the sixty starters already passes. That pass is what makes
+The curriculum is data, and `time_warp_teach validate` **runs all sixty-six solutions through the
+engine** and checks that none of the sixty-six starters already passes. That pass is what makes
 a curriculum maintainable: without it, a lesson whose answer does not work would sit in
 the tree looking correct, because data is not exercised by anything unless something
 exercises it deliberately. See `docs/lessons/FORMAT.md`.
@@ -421,6 +421,7 @@ measuring the wrong machine.
 | 20.0 ✓ | The HB-1's line editor: `AUTO`, `RENUM` (which rewrites every jump), `DELETE a-b`, `LIST a-b`, `UNDO` after `NEW`, and `TRON`/`TROFF` — the first release of HB-1 2.0, where the machine's insides stop being decoration |
 | 20.1 ✓ | The 64K is real and the screen is memory: `POKE` a character into `$8000` and the tube shows it, `LOCATE` moves the cursor `PRINT` writes at, `CLS` clears cells, `MEM` reports the map, and a `POKE` into ROM is refused out loud |
 | 20.2 ✓ | The machine has a clock, a voice and a switch: a self-test that counts the RAM it has, a sound latch a program pokes, five sounds nobody asked for, a 60 Hz frame counter, `SLEEP` that waits and `ON TIMER` that fires, and a POWER lamp that turns the machine off |
+| 21.0 ✓ | The eleventh language and a palette that means one thing: Forth — dictionary, colon definitions, three control structures, `VARIABLE`, `RECURSE`, turtle words, `POKE`/`PEEK` into the machine's memory — with 86 command rows, two lessons and three programs; and `SETPC 1` now names the colour the reference gave slot 1 in every language instead of near-black |
 
 Smaller items belong in one of those releases rather than a release of their own: a
 Smalltalk call stack shown as frames rather than a Program Counter; Flatpak and an
@@ -473,7 +474,7 @@ trees and VCS directories and reports a broken pattern as an error rather than a
 
 Two of the entries that used to be on that list are built. Per-language syntax
 colouring is `native/src/ui/syntax_highlighter.cpp`, one rule table per language
-because the ten disagree about what a comment even is. Find, replace and go-to-line
+because the languages disagree about what a comment even is. Find, replace and go-to-line
 are `FindBar` (`native/src/ui/find_bar.cpp`), which sits under the editor tabs: the
 *searching* lives on `CodeEditor` — with wrapping, an undo-able Replace All — so the
 behaviour is testable without a window, and the bar is the view over it. F3 and

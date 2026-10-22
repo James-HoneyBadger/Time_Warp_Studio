@@ -47,7 +47,7 @@ body:
   - type: textarea
     id: paradigm
     attributes:
-      label: What does it teach that the ten do not?
+      label: What does it teach that the eleven do not?
       description: |
         The important question. "Another BASIC" is the answer that gets a request
         closed, and it is worth saying so plainly rather than letting somebody

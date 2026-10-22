@@ -2,6 +2,71 @@
 
 <!-- history: all -->
 
+## [21.0.0] - 2026-10-22
+
+The eleventh language, and a palette that means one thing. Forth is a whole language
+in about a thousand lines, which is the reason it was invented; the palette fix is
+the kind of defect that hides behind a passing test, and it was found by drawing with
+the new language.
+
+### Added
+
+- **Forth.** The eleventh language, and the first stack machine in the studio: a data
+  stack, a dictionary, colon definitions (`: SQUARE DUP * ;`), the three control
+  structures (`IF/ELSE/THEN`, `BEGIN/UNTIL`, `BEGIN/WHILE/REPEAT`, `DO/LOOP`/`+LOOP`
+  with `I`, `J`, `LEAVE` and `EXIT`), `VARIABLE`/`CONSTANT`, 64 KiB of data space
+  with 16-bit `@`/`!` and byte `C@`/`C!`, `RECURSE`, and the turtle words. It runs
+  whole-program — a definition spans as many lines as it likes — and it is registered
+  in every table a language has to be in: the engine enum, the IDE's language table,
+  the highlighter, the linter's and outline's "no per-language checks yet" cases, the
+  snippets, the tutorial, the ROM socket (`V1.0`, prompt `ok`, note `STACK LANGUAGE`)
+  and the curriculum.
+- **`POKE` and `PEEK` in Forth**, which reach the *machine*: `65 32768 POKE` writes
+  the first character cell of the HB-1's tube, and a write into ROM is refused out
+  loud. With no machine attached the same words read and write a map of their own, so
+  a poke and a peek still agree — the same rule the interpreter's other languages
+  follow.
+- **Two Forth lessons** (`forth_first_words`, `forth_defining`), three checkpoints
+  each, so the curriculum is 22 lessons and 66 checkpoints and every language is still
+  taught.
+- **Three Forth programs** under `Examples/forth/`: `hello.fs` (stack, definitions,
+  recursion, a loop), `turtle.fs` (three figures in three colours) and `showcase.fs`
+  (the language's whole surface, ending in a drawing).
+- **86 command rows for Forth**, one per word, plus the inventory pattern that reads
+  Forth's `{name, Primitive}` table — without it, ninety percent of the language was
+  invisible to the coverage report. `command_inventory.py` now sees 74 command-shaped
+  words and 0 are untested.
+
+### Fixed
+
+- **A palette slot meant a different colour in every language.** `SETPC 1` in Logo, a
+  bare `1` in BASIC and `1 SETPC` in Forth all name palette slot 1, and the reference
+  seeds sixteen colours before a program runs. The IDE's host seeded three of its own
+  — white, near-black, pale green — and answered grey for the rest, so `SETPC 1` drew
+  in near-black on a dark canvas: **ink that is there and cannot be seen.** The table
+  is now written once (`reference_palette_colour` in `turtle_host.hpp`), the three
+  hosts and BASIC all ask it, and the Logo test that pinned `#101014` now pins
+  `#0000AA` with a comment saying why.
+- **`PALETTE CYCLE` did not rotate the palette the engine resolves against.** It sent
+  the rotation to the canvas and left the host's copy alone, so a `SETPC 4` after a
+  cycle named the colour slot 4 used to mean.
+- **`BYE` did not end the program.** It cleared the loop stack and returned, so every
+  word after it still ran. It now stops between words and unwinds the call frames.
+- **`LEAVE` inside an `IF` failed to compile.** It looked for a `DO` on the top of the
+  control stack, which an `IF` had hidden — the shape every real loop leaves in.
+- **`." hello"` printed ` hello`.** The space after the quote is Forth's delimiter,
+  not the first character of the text.
+- **`IMMEDIATE` was only accepted while compiling**, so the ordinary
+  `: F 1 ; IMMEDIATE` — the form a book shows — was an undefined word.
+
+### A gate that says what it does not know
+
+- The golden corpus is what the *reference engine* answered, and the reference never
+  had Forth, so a ported language with no recorded programs used to look covered by a
+  clean run. `golden_check.py` now prints `note forth: no recorded corpus -- this gate
+  says nothing about it; the command matrix and lang_tests do`. A blind spot is stated
+  rather than implied by silence.
+
 ## [20.2.0] - 2026-10-22
 
 The machine has a clock, a voice and a switch. Three things a window cannot do: keep
@@ -507,6 +572,7 @@ else.
   checkout?", so the two harnesses cannot disagree about it.
 - **`native/tools/pyproject.toml`** — ruff and mypy configuration, moved with the
   scripts it configures. `make lint` checks `native/tools` now.
+
 ### Changed
 
 - **`command_inventory.py` reads the C++ executors.** It parsed the Python ones with

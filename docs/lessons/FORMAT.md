@@ -21,7 +21,7 @@ native/bridge/time_warp/features/
 paid for at least once:
 
 - the panels and tools that show the curriculum can be replaced without touching
-  it, which is how the same twenty lessons are reachable from a terminal, from the
+  it, which is how the same twenty-two lessons are reachable from a terminal, from the
   IDE, and from a printed plan;
 - a teacher can author a lesson without editing Python;
 - **the whole corpus can be verified in one pass**, which is what

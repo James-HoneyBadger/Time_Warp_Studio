@@ -67,7 +67,7 @@ void test_info() {
     const QJsonObject info = resultOf(server, QStringLiteral("studio.info")).toObject();
     TW_CHECK_EQ(info.value(QStringLiteral("apiVersion")).toString(),
                 QStringLiteral("1.0"));
-    TW_CHECK_EQ(info.value(QStringLiteral("languages")).toArray().size(), 10);
+    TW_CHECK_EQ(info.value(QStringLiteral("languages")).toArray().size(), 11);
     const QJsonObject features = info.value(QStringLiteral("features")).toObject();
     TW_CHECK(features.value(QStringLiteral("sql")).toBool());
     TW_CHECK(features.value(QStringLiteral("projects")).toBool());

@@ -3,7 +3,7 @@
 A lesson is a short piece of one language, split into **checkpoints**. Each
 checkpoint gives you a program with something missing, tells you what the
 finished program should do, and can check your work by running it. There are
-twenty lessons — two for each language — and sixty checkpoints.
+twenty-two lessons — two for each language — and sixty-six checkpoints.
 
 You can work through them at a terminal or in the IDE's **🎓 Lessons** panel.
 Both check your work the same way, so you can switch between them freely.
@@ -145,7 +145,7 @@ Open the **🎓 Lessons** tab in the right-hand column. You get the same lessons
 - **Restart** — the same as `reset`
 
 The verdict and the checkpoint text appear under the buttons, and the bar at the
-bottom shows how many of the twenty lessons you have finished.
+bottom shows how many of the twenty-two lessons you have finished.
 
 A checkpoint's program is never printed for you in the panel, and the worked
 answer is not downloaded until you press **Answer**. You are meant to type it.

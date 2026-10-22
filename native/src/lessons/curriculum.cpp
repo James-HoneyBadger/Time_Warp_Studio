@@ -262,6 +262,7 @@ std::string_view extension_for(lang::Language language) noexcept {
         case lang::Language::Chip8: return ".ch8";
         case lang::Language::Apl: return ".apl";
         case lang::Language::Smalltalk: return ".st";
+        case lang::Language::Forth: return ".fs";
     }
     return ".txt";
 }

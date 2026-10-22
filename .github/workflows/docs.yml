@@ -82,13 +82,13 @@ jobs:
           test "$missing" -eq 0
           echo "Every promised guide is present."
 
-      # One tutorial per language, because docs/INDEX.md lists ten and a missing
+      # One tutorial per language, because docs/INDEX.md lists eleven and a missing
       # one is invisible: the table still renders, with a dead link in it.
       - name: Every language has a tutorial
         run: |
           set -euo pipefail
           missing=0
-          for language in basic pilot logo comal rexx scheme focal apl chip8 smalltalk
+          for language in basic pilot logo comal rexx scheme focal apl chip8 smalltalk forth
           do
             if [ ! -f "docs/tutorials/$language.md" ]; then
               echo "::error::no tutorial for $language (docs/tutorials/$language.md)"

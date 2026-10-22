@@ -52,45 +52,6 @@ Rgb clamp_colour(double red, double green, double blue) {
     return Rgb{clamp(red), clamp(green), clamp(blue)};
 }
 
-Rgb default_colour(int index) {
-    switch (index) {
-        case 0:
-            return Rgb{0, 0, 0};
-        case 1:
-            return Rgb{0, 0, 170};
-        case 2:
-            return Rgb{0, 170, 0};
-        case 3:
-            return Rgb{0, 170, 170};
-        case 4:
-            return Rgb{170, 0, 0};
-        case 5:
-            return Rgb{170, 0, 170};
-        case 6:
-            return Rgb{170, 85, 0};
-        case 7:
-            return Rgb{170, 170, 170};
-        case 8:
-            return Rgb{85, 85, 85};
-        case 9:
-            return Rgb{85, 85, 255};
-        case 10:
-            return Rgb{85, 255, 85};
-        case 11:
-            return Rgb{85, 255, 255};
-        case 12:
-            return Rgb{255, 85, 85};
-        case 13:
-            return Rgb{255, 85, 255};
-        case 14:
-            return Rgb{255, 255, 85};
-        case 15:
-            return Rgb{255, 255, 255};
-        default:
-            return Rgb{-1, -1, -1};
-    }
-}
-
 }  // namespace
 
 std::string clock_time_text() {
@@ -461,12 +422,9 @@ Rgb Machine::palette_colour(int index) const {
     if (custom != state_.palette.end()) {
         return custom->second;
     }
-    const Rgb standard = default_colour(index);
-    if (standard.red >= 0) {
+    Rgb standard{};
+    if (reference_palette_colour(index, &standard)) {
         return standard;
-    }
-    if (index >= 0 && index <= 255) {
-        return Rgb{index, index, index};
     }
     return turtle_.pen_colour();
 }

@@ -36,11 +36,11 @@ and **Restore Defaults** returns a stock machine without closing the screen.
 
 | Setting | Values | Default | Effect |
 | --- | --- | --- | --- |
-| Boot ROM | `Last used ROM`, or any of the ten | Last used | The ROM to cold-boot into at the next power-on |
+| Boot ROM | `Last used ROM`, or any of the eleven | Last used | The ROM to cold-boot into at the next power-on |
 | Boot screen | `Last used screen`, `TEXT`, `SPLIT`, `GRAPHICS` | Last used | The screen mode at the next power-on |
 | Start-up message | `Full`, `Short`, `No start-up message` | Full | How much of the banner is printed |
 | Prompt history | `Off`, 25, 50, 100, 250, 500 lines | 100 | How many prompt lines Up and Down recall |
-| Remember each ROM's program | on / off | on | Keep all ten program buffers between sessions |
+| Remember each ROM's program | on / off | on | Keep all eleven program buffers between sessions |
 | Switch to SPLIT when a program draws | on / off | on | Show ink the moment a program makes it |
 
 **The boot settings are the exception to "live".** Boot ROM and boot screen apply
@@ -147,7 +147,7 @@ the dialog is accepted:
 | `retroComputer/config/crtTint` | Phosphor glow, 0–100 |
 
 Session state — the ROM and screen the machine was left in, the window geometry
-and the ten program buffers — is a separate group, `retroComputer`, and is
+and the eleven program buffers — is a separate group, `retroComputer`, and is
 described in the [Owner's Manual](README.md#what-the-machine-remembers). The split
 matters: cancel a preview and nothing was written; close the machine and its
 session is.

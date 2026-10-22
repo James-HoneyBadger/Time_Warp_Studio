@@ -737,6 +737,9 @@ QList<Diagnostic> lintText(Language language, const QString& text) {
         case Language::Focal:
         case Language::Apl:
         case Language::Smalltalk:
+        // Forth's checks would have to know which words the dictionary has at that
+        // point, which is the interpreter's job and not a linter's.
+        case Language::Forth:
         case Language::Unknown:
             break;
     }

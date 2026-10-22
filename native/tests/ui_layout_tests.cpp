@@ -458,7 +458,7 @@ void test_the_lesson_panel_loads_the_curriculum_without_a_bridge() {
             // Raising the tab is what makes the window ask: the panel itself does
             // not load anything at start-up.
             window->rightTabs()->setCurrentIndex(4);
-            TW_CHECK_EQ(panel->lessonCount(), 20);
+            TW_CHECK_EQ(panel->lessonCount(), 22);
             TW_CHECK(!panel->currentLesson().isEmpty());
             // The first lesson's starter is a document the learner can open.
             TW_CHECK(!panel->currentStarter().isEmpty());

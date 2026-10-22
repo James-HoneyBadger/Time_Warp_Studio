@@ -40,12 +40,12 @@ programs you can type at, debug and save to — see
 
 ### What can the Studio do?
 
-The short inventory: ten languages on native engines; an editor with find in
+The short inventory: eleven languages on native engines; an editor with find in
 files, snippets, an outline, formatting, live lint, autosave and version history;
 a turtle canvas with zoom, pan, scrubber playback, GIF recording and raster, SVG,
-PDF and HTML export; a debugger that works in all ten languages, with watches,
-data breakpoints, a Variables panel and telemetry; projects; SQLite; 20 lessons
-and 60 checkpoints with classroom tools; a JSON-RPC API and a standalone `twc`
+PDF and HTML export; a debugger that works in all eleven languages, with watches,
+data breakpoints, a Variables panel and telemetry; projects; SQLite; 22 lessons
+and 66 checkpoints with classroom tools; a JSON-RPC API and a standalone `twc`
 compiler; 35 themes with high contrast and text sizes; the two machines; and help
 inside the application. The full list, with links, is in the
 [README](../README.md#what-else-is-in-the-workbench).
@@ -268,10 +268,10 @@ language; API clients can also call `repl.reset`.
 
 Yes. **Tools → HB-1 Computer** (`Ctrl+Alt+W`, or `./run.sh --computer`)
 opens a self-contained machine: one CRT with a boot intro, a prompt underneath, a
-language ROM socket for all ten languages, and TEXT/SPLIT/GRAPHICS screen modes.
+language ROM socket for all eleven languages, and TEXT/SPLIT/GRAPHICS screen modes.
 Type at the prompt — in the BASIC ROM, `10 PRINT "HELLO"` stores a program line and
 `RUN` runs it — or edit the program on the PROGRAM page and press `F9`. Each ROM
-keeps its own program, and the ROM, the screen mode and all ten programs persist
+keeps its own program, and the ROM, the screen mode and all eleven program buffers persist
 between sessions. **CONFIG** (or `Ctrl+,`) sets what the machine boots into, the
 start-up message, the phosphor — green, amber, white or ice — the text sizes and
 the CRT glass, and **HB DOS** saves programs to a disk with `SAVE "NAME"`,

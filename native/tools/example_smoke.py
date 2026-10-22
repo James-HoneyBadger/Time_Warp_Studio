@@ -45,6 +45,7 @@ LANGUAGES = {
     "chip8": "ch8",
     "apl": "apl",
     "smalltalk": "st",
+    "forth": "fs",
 }
 
 # Languages that are expected to draw nothing *as a language*: PILOT is a
@@ -102,6 +103,8 @@ DRAWING_EXAMPLES = {
     "rexx/showcase.rexx",
     "scheme/showcase.scm",
     "smalltalk/showcase.st",
+    "forth/showcase.fs",
+    "forth/turtle.fs",
 }
 
 

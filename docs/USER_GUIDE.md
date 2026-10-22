@@ -140,6 +140,7 @@ drawing through the same canvas queue.
 | Scheme | The machine persists, so `define` and `set!` survive and expression values are echoed. |
 | Smalltalk | Each entry is a complete program; top-level variables, classes and methods do not carry over. |
 | CHIP-8 | Each entry is an assembly listing that runs as a whole program; memory and registers reset. |
+| Forth | Each entry is a whole program, because a definition spans as many lines as it likes; words defined in one entry are gone by the next, so `: DOUBLE 2 * ;` and `21 DOUBLE .` are two entries only if you retype the definition. |
 
 Practical notes:
 
@@ -171,7 +172,7 @@ Practical notes:
 
 Tools > **HB-1 Computer…** (`Ctrl+Alt+W`, or `./run.sh --computer`)
 opens a self-contained home computer: one CRT with text and graphics, a boot
-message at the top, and a prompt underneath. It is the machine the ten languages
+message at the top, and a prompt underneath. It is the machine the eleven languages
 share, presented the way a 1980s learner would have met them — a 1982 machine from
 a parallel universe, with the last forty years of design sense behind its engines.
 
@@ -180,7 +181,7 @@ the complete reference:
 
 - **[Owner's Manual](hb1/README.md)** — specifications, first boot, front
   panel, keys, what the machine remembers, the limits.
-- **[The ROM library](hb1/roms.md)** — all ten languages as cartridges.
+- **[The ROM library](hb1/roms.md)** — all eleven languages as cartridges.
 - **[HB DOS 1.0](hb1/hb-dos.md)** — every disk word, the catalogue, the
   errors, the image format.
 - **[CONFIG](hb1/config.md)** — every setting and default, the phosphors, the
@@ -189,7 +190,7 @@ the complete reference:
 - **[The machines](MACHINES.md)** — why the HB-1 and the CHIP-8 are the shape
   they are.
 
-**The ROM socket.** The **ROM** selector cold-boots the machine into any of the ten
+**The ROM socket.** The **ROM** selector cold-boots the machine into any of the eleven
 languages. The machine name, prompt and boot message change with it:
 
 | ROM | Prompt | Program memory |
@@ -206,7 +207,7 @@ languages. The machine name, prompt and boot message change with it:
 | CHIP-8 | `CHIP8>` | the editor contents |
 
 Each ROM keeps its own program. Switching away and back restores what that ROM
-was holding, and the selected ROM, screen mode and all ten program buffers persist
+was holding, and the selected ROM, screen mode and all eleven program buffers persist
 in QSettings between sessions.
 
 **The screen.** **SCREEN** selects **TEXT**, **SPLIT** (the default) or
@@ -430,7 +431,7 @@ Builds if necessary and launches the IDE. Arguments pass through, so
 
 `twc` embeds the source as bytes, links the language engine (and SQLite), and
 produces an executable that runs the program without the Studio. It works for all
-ten languages, including binary CHIP-8 ROMs. Options:
+eleven languages, including binary CHIP-8 ROMs. Options:
 
 | Option | Meaning |
 | --- | --- |

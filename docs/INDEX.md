@@ -18,7 +18,7 @@ This page is the map.
 | --- | --- |
 | [MACHINES.md](MACHINES.md) | Why there are two, what they share, and the parallel-universe premise item by item |
 | [hb1/README.md](hb1/README.md) | **HB-1 Owner's Manual** — front panel, first boot, everyday operation, persistence, limits |
-| [hb1/roms.md](hb1/roms.md) | The ROM library: all ten languages as cartridges, with prompts, direct mode and examples |
+| [hb1/roms.md](hb1/roms.md) | The ROM library: all eleven languages as cartridges, with prompts, direct mode and examples |
 | [hb1/hb-dos.md](hb1/hb-dos.md) | **HB DOS 1.0** — every word, the catalogue, the errors, the image format |
 | [hb1/config.md](hb1/config.md) | CONFIG: every setting, the phosphors, the glass, where it is stored |
 | [hb1/inside.md](hb1/inside.md) | Inside the HB-1: how a keystroke becomes ink |
@@ -35,7 +35,7 @@ This page is the map.
 | [INSTALLATION.md](INSTALLATION.md) | Requirements, building, running, troubleshooting a build |
 | [ARCHITECTURE.md](ARCHITECTURE.md) | How the IDE, the machines, the engines and the bridge fit together |
 | [USER_GUIDE.md](USER_GUIDE.md) | The IDE manual: projects, the REPL, debugging, SQL, terminal tools, automation and appearance |
-| [LANGUAGE_GUIDE.md](LANGUAGE_GUIDE.md) | Command reference for all ten languages |
+| [LANGUAGE_GUIDE.md](LANGUAGE_GUIDE.md) | Command reference for all eleven languages |
 | [lessons/](lessons/README.md) | The guided lessons: the curriculum, and the student and teacher guides |
 | [README_TESTING.md](README_TESTING.md) | The suites, the example gate and the parity harnesses |
 | [ROADMAP.md](ROADMAP.md) | What is built, what is next, what was deliberately deferred |

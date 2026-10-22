@@ -1,6 +1,6 @@
 # Architecture Guide
 
-## Time Warp Studio v20.2.0 — System Design and Implementation
+## Time Warp Studio v21.0.0 — System Design and Implementation
 
 > **This page describes the shipping product.** It was rewritten alongside the move
 > to C++20 / Qt6. Earlier revisions documented the PySide6 implementation, which has
@@ -28,11 +28,11 @@
 
 ## Overview
 
-Time Warp Studio is a desktop workbench for old-school programming: ten
+Time Warp Studio is a desktop workbench for old-school programming: eleven
 interpreters from 1964–1980 — **BASIC, APL, Logo, PILOT, FOCAL, Scheme, CHIP-8,
-COMAL, REXX and Smalltalk** — with an integrated turtle graphics canvas, and two
-complete machines. It is a C++20 / Qt application — Qt 6 for the release, Qt 5.15
-for the Windows 7 build — and all ten languages run in C++ inside it. The Python
+COMAL, REXX, Smalltalk and Forth** — with an integrated turtle graphics canvas, and
+two complete machines. It is a C++20 / Qt application — Qt 6 for the release, Qt 5.15
+for the Windows 7 build — and all eleven languages run in C++ inside it. The Python
 engine ships as the **reference** the parity gates, the command matrix and the
 lesson check use; no program is sent to it.
 
@@ -50,7 +50,7 @@ stream of JSON messages coming back.
 | `timewarp_canvas` | `native/src/canvas/` | producer: interpreter thread; consumer: GUI thread | Carries drawing across the thread boundary |
 | `timewarp_canvas_qt` | `native/src/canvas/qt_bridge.cpp` | GUI thread | Qt glue for that queue: wakeup and draining |
 | `timewarp_scheme` | `native/src/scheme/` | runner thread, in-process | Scheme, on an explicit-stack machine with no native recursion |
-| `timewarp_lang` | `native/src/lang/` | runner thread, in-process | The shared interpreter loop and every line-by-line executor: BASIC, FOCAL, PILOT, COMAL, APL and REXX, plus whole-program CHIP-8, Logo and Smalltalk |
+| `timewarp_lang` | `native/src/lang/` | runner thread, in-process | The shared interpreter loop and every line-by-line executor: BASIC, FOCAL, PILOT, COMAL, APL and REXX, plus whole-program CHIP-8, Logo, Smalltalk and Forth |
 | `timewarp_debugger` | `native/src/debugger/` | its own `QThread` | Runs a Scheme program and services pause / step / breakpoint requests |
 | `timewarp_expr` | `native/src/token.cpp`, `lexer.cpp`, `evaluator.cpp` | runner thread, in-process | The ported expression evaluator, linked into `timewarp_lang` — see the note below |
 | `timewarp_lessons` | `native/src/lessons/` | GUI thread, or a command | The curriculum, the verifier, the learner's progress and the classroom. See the libraries section |
@@ -555,7 +555,7 @@ at run time.
 
 ### Why a separate process
 
-All ten languages now have a C++ interpreter. The Python engine is kept for a
+All eleven languages now have a C++ interpreter. The Python engine is kept for a
 different job: it is the **reference** the parity gates compare each port against,
 the curriculum checker the Lessons panel calls, and the engine the command matrix
 drives. Keeping it means "did the port stay faithful?" is a question a machine
@@ -697,7 +697,7 @@ depends on the distinction:
 
 Since 17.0 the order is the other way round: the **native executor** in
 `native/src/lang/`, registered in `executor_for`, is what a language is; the bridge
-steps below record how the ten that exist were ported, and go with the reference
+steps below record how the ten that existed in 18.0 were ported, and go with the reference
 engine at 18.0.
 
 <!-- history -->

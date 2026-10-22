@@ -17,5 +17,6 @@ and for how the material is delivered see `docs/lessons/README.md`.
 | FOCAL | 2 | 6 | [focal.md](focal.md) |
 | CHIP-8 | 2 | 6 | [chip8.md](chip8.md) |
 | Smalltalk | 2 | 6 | [smalltalk.md](smalltalk.md) |
+| Forth | 2 | 6 | [forth.md](forth.md) |
 
-**Total: 20 lessons, 60 checkpoints.**
+**Total: 22 lessons, 66 checkpoints.**

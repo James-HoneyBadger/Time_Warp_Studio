@@ -168,10 +168,11 @@ void test_language_mapping() {
     }
     // The one place the product's language count is pinned. A language added to
     // the table without being added here is the drift this catches.
-    TW_CHECK_EQ(timewarp::ui::allLanguages().size(), 10);
+    TW_CHECK_EQ(timewarp::ui::allLanguages().size(), 11);
     TW_CHECK_EQ(extensions(Language::Scheme).size(), 3);
     TW_CHECK_EQ(extensions(Language::Logo).size(), 2);
     TW_CHECK_EQ(extensions(Language::Focal).size(), 2);
+    TW_CHECK_EQ(extensions(Language::Forth).size(), 2);
     TW_CHECK_EQ(extensions(Language::Chip8).size(), 2);
     TW_CHECK_EQ(extensions(Language::Apl).size(), 2);
     TW_CHECK(languageForFile(QStringLiteral("square.foc")) == Language::Focal);

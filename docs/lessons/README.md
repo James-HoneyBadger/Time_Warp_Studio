@@ -1,7 +1,7 @@
 # Lessons
 
 Time Warp Studio is a teaching environment, and lessons are the teaching
-material: twenty short pieces of curriculum, two for each of the ten languages,
+material: twenty-two short pieces of curriculum, two for each of the eleven languages,
 each one a sequence of checkpoints that a learner works through and the studio
 **checks by running what they wrote**.
 
@@ -43,7 +43,7 @@ same library the Lessons panel asks, `time_warp_teach` validates and
 `time_warp_learn` walks a learner through. There is no second reader: the curriculum
 has one implementation, and every client of it is that library.
 
-## The twenty lessons
+## The twenty-two lessons
 
 | Language | Beginner | Intermediate |
 | -------- | -------- | ------------ |
@@ -57,8 +57,9 @@ has one implementation, and every client of it is that library.
 | APL | Arrays in APL | Defined Functions and Shape in APL |
 | CHIP-8 | Drawing with CHIP-8 | Sprites and Pixels in CHIP-8 |
 | Smalltalk | Objects and Messages in Smalltalk | Classes and Blocks in Smalltalk |
+| Forth | First Words in Forth | Loops, Variables and Recursion in Forth |
 
-Sixty checkpoints in all. The plans — objectives, teacher notes, both the
+Sixty-six checkpoints in all. The plans — objectives, teacher notes, both the
 starting point and the worked answer for every checkpoint — are in
 [`docs/lessons/plans/`](plans/README.md).
 

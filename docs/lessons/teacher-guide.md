@@ -50,7 +50,7 @@ quietly offering a language the curriculum does not cover.
 python3 native/tools/teach.cpp outline
 ```
 
-Prints the twenty lessons grouped by language, in teaching order, with each
+Prints the twenty-two lessons grouped by language, in teaching order, with each
 lesson's difficulty, its checkpoint count and what it needs first. This is the
 view to plan a term from.
 

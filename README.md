@@ -1,21 +1,21 @@
 # Time Warp Studio
 
-*An old-school programming environment: ten languages, a full IDE, and two
+*An old-school programming environment: eleven languages, a full IDE, and two
 complete computers inside it.*
 
 [![C++20](https://img.shields.io/badge/C%2B%2B-20-blue)](https://en.cppreference.com/)
 [![Qt](https://img.shields.io/badge/Qt-6%20%7C%205.15-green)](https://www.qt.io/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/Version-20.2.0-orange)](https://github.com/James-HoneyBadger/Time_Warp_Studio)
+[![Version](https://img.shields.io/badge/Version-21.0.0-orange)](https://github.com/James-HoneyBadger/Time_Warp_Studio)
 
 Time Warp Studio is a native C++20 and Qt workbench for people who like old
 computers. It is the programming environment the 1980s promised and never quite
-delivered: a full IDE, ten interpreters spanning 1964 to 1980, a turtle canvas,
+delivered: a full IDE, eleven interpreters spanning 1964 to 1980, a turtle canvas,
 and a debugger that works in every one of them. Two complete machines are built
 into it as well.
 
 The **HB-1** is a bespoke 1982 home computer from a parallel universe. It has one
-CRT, a prompt, a ROM socket that accepts any of the ten languages, and **HB DOS
+CRT, a prompt, a ROM socket that accepts any of the eleven languages, and **HB DOS
 1.0** on a 512-sector disk. The **CHIP-8** is the 1977 virtual machine that made a
 computer out of four kilobytes: live at 60 Hz, with a keypad, an assembler and a
 register inspector. Both are working machines rather than a theme applied to an
@@ -37,8 +37,8 @@ people teaching with it, though nothing in the application assumes a classroom.
 
 | | **HB-1** | **CHIP-8** |
 | --- | --- | --- |
-| What it is | A complete home computer: CRT, prompt, ten-language ROM socket, real editor, turtle canvas, disk | A complete virtual machine: 4 KB of memory, sixteen registers, a 64×32 screen, sixteen keys |
-| When it belongs | 1982, where one machine shipped ten language ROMs | 1977, where the machine was written in software and ran everywhere |
+| What it is | A complete home computer: CRT, prompt, eleven-language ROM socket, real editor, turtle canvas, disk | A complete virtual machine: 4 KB of memory, sixteen registers, a 64×32 screen, sixteen keys |
+| When it belongs | 1982, where one machine shipped eleven language ROMs | 1977, where the machine was written in software and ran everywhere |
 | Storage | **HB DOS 1.0** — 512 sectors of 256 bytes, a catalogue, lock bits, a two-step `INIT` | Your own folder of listings and ROMs, browsed by a library dialog |
 | Run it | Tools > **HB-1 Computer…** (`Ctrl+Alt+W`) or `./run.sh --computer` | Tools > **CHIP-8 Emulator…** (`Ctrl+Shift+M`) |
 | Read it | [Owner's Manual](docs/hb1/README.md) · [ROMs](docs/hb1/roms.md) · [HB DOS](docs/hb1/hb-dos.md) · [CONFIG](docs/hb1/config.md) · [Inside](docs/hb1/inside.md) | [Machine Manual](docs/chip8/README.md) · [Assembler](docs/chip8/assembly.md) · [Instruction set](docs/chip8/instruction-set.md) |
@@ -47,7 +47,7 @@ What you can do with them:
 
 - **Boot a computer that never existed.** `Ctrl+Alt+W` brings the HB-1 up in
   BASIC — banner, prompt, `READY.` — and the ROM socket can be moved to any of the
-  ten languages, each of which keeps its own memory when you switch away and back.
+  eleven languages, each of which keeps its own memory when you switch away and back.
 - **Save to a period disk.** `SAVE "HELLO"` writes to a 512-sector volume with a
   catalogue, 30-character names, a per-file lock bit and a two-step `INIT`. The
   image is a single JSON file under `~/.time_warp/disks`, so you can read it, copy
@@ -148,21 +148,21 @@ rest of the environment, feature by feature.
 
 | Capability | What it is | Read |
 | --- | --- | --- |
-| **Ten languages, one editor** | BASIC, APL, Logo, PILOT, FOCAL, Scheme, CHIP-8, COMAL, REXX and Smalltalk, each running on a native engine in process — no Python at run time | [LANGUAGE_GUIDE](docs/LANGUAGE_GUIDE.md), [tutorials](docs/tutorials/) |
+| **Eleven languages, one editor** | BASIC, APL, Logo, PILOT, FOCAL, Scheme, CHIP-8, COMAL, REXX, Smalltalk and Forth, each running on a native engine in process — no Python at run time | [LANGUAGE_GUIDE](docs/LANGUAGE_GUIDE.md), [tutorials](docs/tutorials/) |
 | **Editor and console** | Gutter, current line, syntax colouring, find and replace, **find in files**, **go to line**, **snippets**, **outline**, **format code**, **live lint**, **autosave**, **version history**, two panes | [USER_GUIDE](docs/USER_GUIDE.md#1-start-and-stop) |
 | **Turtle canvas** | Live drawing while a program runs, zoom, pan, grid, auto-fit, turtle marker, **scrubber playback**, **animated GIF recording**, PNG/JPEG/BMP/SVG export | [USER_GUIDE](docs/USER_GUIDE.md#1-start-and-stop) |
-| **Debugging, in all ten** | Gutter breakpoints, Continue/Pause/Step In/Over/Out, **watch expressions**, **data breakpoints**, a Variables panel and a Telemetry HUD | [USER_GUIDE](docs/USER_GUIDE.md#5-debugging) |
-| **REPL bar** | A persistent session in the current language; eight of the ten keep bindings between entries, BASIC has `?`, numbered lines and `RUN`/`LIST`/`NEW` direct mode | [USER_GUIDE](docs/USER_GUIDE.md#3-the-repl-bar) |
+| **Debugging, in all eleven** | Gutter breakpoints, Continue/Pause/Step In/Over/Out, **watch expressions**, **data breakpoints**, a Variables panel and a Telemetry HUD | [USER_GUIDE](docs/USER_GUIDE.md#5-debugging) |
+| **REPL bar** | A persistent session in the current language; eight of the eleven keep bindings between entries, BASIC has `?`, numbered lines and `RUN`/`LIST`/`NEW` direct mode | [USER_GUIDE](docs/USER_GUIDE.md#3-the-repl-bar) |
 | **Projects** | `.twproject` groups that organise programs without moving them on disk | [USER_GUIDE](docs/USER_GUIDE.md#2-projects-and-groups) |
 | **SQL** | A SQLite Database tab, plus `SQL` statements in nine languages and through the API | [USER_GUIDE](docs/USER_GUIDE.md#6-sql-and-the-database-tab) |
 | **Automation** | JSON-RPC over stdin/stdout, a standalone `twc` compiler, and scriptable screenshots and exports | [API](docs/API.md), [USER_GUIDE](docs/USER_GUIDE.md#7-terminal-tools) |
 | **Appearance and display** | 35 themes, high contrast, 100/125/150% text, focus mode, CRT settings and four monitor presets, presentation mode | [USER_GUIDE](docs/USER_GUIDE.md#9-lessons-classroom-and-appearance) |
 | **Help that covers the whole thing** | `F1` context help, `Ctrl+F1` keyword inspector, the documentation browser, a guided tour and a shortcut reference | [Help](#help-from-inside-the-studio) |
-| **Lessons, if you teach** | 20 lessons and 60 checkpoints checked by running the program, plus rosters, handouts and marking | [lessons/](docs/lessons/README.md) |
+| **Lessons, if you teach** | 22 lessons and 66 checkpoints checked by running the program, plus rosters, handouts and marking | [lessons/](docs/lessons/README.md) |
 
-### Ten interpreters, one per era
+### Eleven interpreters, one per era
 
-Each of the ten is a working implementation of its language's own shape rather
+Each of the eleven is a working implementation of its language's own shape rather
 than a made-up dialect. The [Language Guide](docs/LANGUAGE_GUIDE.md) records what
 each one supports, command by command, and every row of that reference is
 exercised by the command matrix.
@@ -179,6 +179,7 @@ exercised by the command matrix.
 | **COMAL** | Structured BASIC / Educational | 1979 | Line-by-line |
 | **REXX** | Scripting / String processing | 1979 | Line-by-line |
 | **Smalltalk** | Object-oriented / Messages all the way down | 1980 | Whole-program |
+| **Forth** | Stack / Words all the way down | 1970 | Whole-program |
 
 ### The IDE, in detail
 
@@ -193,8 +194,8 @@ exercised by the command matrix.
 - **Two panes** — **Split Editor Right** (`Ctrl+\`) shows two documents side by side; **Run Both Panes** (`Ctrl+Alt+B`) runs both headless and reports time, turtle calls and each program's own output in one table — a comparison, not a race
 - **Output console** — program output as it is produced, with interpreter errors in their own tab
 - **Run controls** — Run (F9) and Stop, with a status bar showing language, cursor position and execution state
-- **REPL bar** — the line under the editor runs a command in the current document's language. BASIC, FOCAL, PILOT, COMAL, REXX, APL, Logo and Scheme keep bindings between commands (`LET X = 5` then `PRINT X`); Scheme also keeps definitions and echoes expression values. In BASIC, `?` is shorthand for `PRINT`, a numbered line is stored in the editor as a program line, and `RUN`, `LIST` and `NEW` work as direct-mode commands. Smalltalk and CHIP-8 run each submission as a whole program, so their state resets
-- **Debugging, in all ten languages** — gutter breakpoints and a 🐞 **Debug** panel (Continue, Pause, Step In/Over/Out, Stop) plus Debug/Continue/Trace on the toolbar. A run can stop at a statement, at a Logo top-level statement, at a Smalltalk message send or before a CHIP-8 instruction. Scheme runs on an explicit-stack machine, so it shows its own call stack and the paused frame's bindings, with values typed by the machine rather than guessed from their printed form; for a native run the Variables panel shows the bindings the pause stopped in. **Watch expressions** evaluate arithmetic over the paused bindings, and **data breakpoints** stop when a named variable changes value
+- **REPL bar** — the line under the editor runs a command in the current document's language. BASIC, FOCAL, PILOT, COMAL, REXX, APL, Logo and Scheme keep bindings between commands (`LET X = 5` then `PRINT X`); Scheme also keeps definitions and echoes expression values. In BASIC, `?` is shorthand for `PRINT`, a numbered line is stored in the editor as a program line, and `RUN`, `LIST` and `NEW` work as direct-mode commands. Smalltalk, CHIP-8 and Forth run each submission as a whole program, so their state resets
+- **Debugging, in all eleven languages** — gutter breakpoints and a 🐞 **Debug** panel (Continue, Pause, Step In/Over/Out, Stop) plus Debug/Continue/Trace on the toolbar. A run can stop at a statement, at a Logo top-level statement, at a Smalltalk message send or before a CHIP-8 instruction. Scheme runs on an explicit-stack machine, so it shows its own call stack and the paused frame's bindings, with values typed by the machine rather than guessed from their printed form; for a native run the Variables panel shows the bindings the pause stopped in. **Watch expressions** evaluate arithmetic over the paused bindings, and **data breakpoints** stop when a named variable changes value
 - **Inspection** — a 🔍 **Variables** panel listing every binding with its type and value, filtered by name, and a ⚡ **Telemetry** HUD showing what the run cost and did: steps used, engine time, steps per second, last line, recursion depth, call stack, output lines, drawing commands, BASIC's memory window, and — beside the engine's own counters — the IDE's wall clock and the ink that actually reached the canvas
 - **Projects** — a 🗂 **Projects** dock groups programs into named groups without moving them on disk. Create or open a `.twproject`, add files, a whole folder (its programs are grouped by subfolder), and groups, drag a file between groups, and the project reopens with the session; missing files are marked rather than forgotten
 - **SQL database** — a 🗄 **Database** tab opens or creates a SQLite file, lists its tables, runs scripts and shows the result grid. A program reaches the same connection with `SQL SELECT ...` (BASIC, FOCAL, PILOT, COMAL, REXX and APL), `SQL ...` in Logo, `(sql "...")` in Scheme, and `SQL run: '...'` in Smalltalk
@@ -244,7 +245,7 @@ help and the manuals in the tree are one set of documents.
 
 The Studio carries a checked curriculum, though it does not require one:
 
-- **20 lessons and 60 checkpoints**, two per language, each one checked by
+- **22 lessons and 66 checkpoints**, two per language, each one checked by
   *running* the program rather than by comparing it with an answer: `PRINT 6 * 7`
   and `PRINT 42` are the same answer, and a drawing checkpoint cannot be passed by
   printing a description of a drawing.
@@ -252,21 +253,21 @@ The Studio carries a checked curriculum, though it does not require one:
   checkpoint, hints and a Check button.
 - **At a terminal**, `time_warp_learn` walks a lesson and `time_warp_teach` writes lesson plans,
   answer keys, a class roster, handouts, marking and progress reports.
-- **Self-checking**, because `time_warp_teach validate` runs all sixty solutions and
+- **Self-checking**, because `time_warp_teach validate` runs all sixty-six solutions and
   refuses a starter that already passes its own checkpoint.
 
 See [docs/lessons/](docs/lessons/README.md) for the student and teacher guides.
 
 ### What ships with it
 
-- **61 example programs** across the ten languages, including a **showcase** per
+- **63 example programs** across the eleven languages, including a **showcase** per
   language that walks its whole surface and ends in a drawing, and
   [`star_patrol.bas`](Examples/basic/star_patrol.bas) — a small game on a
   fixed-coordinate screen. They are worth reading as reference material as much as
   running as examples, and every one of them runs in the test gates.
 - **Error hints**, which offer a syntax suggestion beside an interpreter's error
   message.
-- **Ten language tutorials**, one per language, under `docs/tutorials/`.
+- **Eleven language tutorials**, one per language, under `docs/tutorials/`.
 - **The machine manuals**: the HB-1's five books and the CHIP-8's three, with
   [the machines](docs/MACHINES.md) introducing them.
 
@@ -282,10 +283,10 @@ have drifted apart.
 ### Description
 
 ```text
-Old-school programming environment: a native C++20 and Qt workbench with ten
+Old-school programming environment: a native C++20 and Qt workbench with eleven
 interpreters from 1964-1980, a full IDE, a debugger in every language, and turtle
 graphics -- plus two complete machines inside it: the HB-1, a bespoke 1982 home
-computer from a parallel universe with a ten-language ROM socket, a CRT, a prompt
+computer from a parallel universe with an eleven-language ROM socket, a CRT, a prompt
 and its own disk operating system, and a live CHIP-8 with an assembler, keypad and
 register inspector.
 ```
@@ -321,7 +322,7 @@ smalltalk
 | ---- | ---------- |
 | Type at a 1982 computer that never existed | [the HB-1 Owner's Manual](docs/hb1/README.md), [HB DOS](docs/hb1/hb-dos.md), and the premise behind both machines in [MACHINES.md](docs/MACHINES.md) |
 | Write or run CHIP-8 | [the CHIP-8 manuals](docs/chip8/README.md), [the assembler](docs/chip8/assembly.md), [the instruction set](docs/chip8/instruction-set.md) |
-| Explore the ten languages | [`docs/LANGUAGE_GUIDE.md`](docs/LANGUAGE_GUIDE.md) and [`docs/tutorials/`](docs/tutorials/) |
+| Explore the eleven languages | [`docs/LANGUAGE_GUIDE.md`](docs/LANGUAGE_GUIDE.md) and [`docs/tutorials/`](docs/tutorials/) |
 | Use the editor, debugger, projects, SQL or the API | [`docs/USER_GUIDE.md`](docs/USER_GUIDE.md) |
 | Build from source or port it | [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) and [`native/README.md`](native/README.md) |
 | Teach with it | [`docs/lessons/README.md`](docs/lessons/README.md) |

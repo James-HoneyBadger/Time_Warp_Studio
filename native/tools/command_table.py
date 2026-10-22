@@ -1512,8 +1512,118 @@ SMALLTALK: list[Row] = [
 ]
 
 
+FORTH: list[Row] = [
+    Row("FORTH", 'DUP copies the top', "7 DUP * . CR", "prints:49"),
+    Row("FORTH", 'DROP discards the top', "1 2 DROP . CR", "prints:1"),
+    Row("FORTH", 'SWAP exchanges two', "1 2 SWAP . CR", "prints:1"),
+    Row("FORTH", 'OVER copies the second', "1 2 OVER + + . CR", "prints:4"),
+    Row("FORTH", 'ROT rotates the third to the top', "1 2 3 ROT . . . CR", "prints:1 3 2"),
+    Row("FORTH", '-ROT rotates the other way', "1 2 3 -ROT . . . CR", "prints:2 1 3"),
+    Row("FORTH", 'NIP drops the second', "1 2 NIP . CR", "prints:2"),
+    Row("FORTH", 'TUCK copies the top under the second', "1 2 TUCK . . . CR", "prints:2 1 2"),
+    Row("FORTH", '?DUP copies only a non-zero', "0 ?DUP DROP 5 ?DUP + . CR", "prints:10"),
+    Row("FORTH", 'DEPTH counts the stack', "1 2 3 DEPTH . CR", "prints:3"),
+    Row("FORTH", '2DUP copies two', "1 2 2DUP + . . . CR", "prints:3 2 1"),
+    Row("FORTH", '2DROP discards two', "1 2 3 2DROP . CR", "prints:1"),
+    Row("FORTH", '2SWAP exchanges two pairs', "1 2 3 4 2SWAP . . . . CR", "prints:2 1 4 3"),
+    Row("FORTH", 'PICK copies a deeper item', "10 20 30 2 PICK . CR", "prints:10"),
+    Row("FORTH", 'ROLL moves a deeper item up', "10 20 30 2 ROLL . CR", "prints:10"),
+    Row("FORTH", '+', "2 3 + . CR", "prints:5"),
+    Row("FORTH", '-', "9 4 - . CR", "prints:5"),
+    Row("FORTH", '*', "6 7 * . CR", "prints:42"),
+    Row("FORTH", '/', "20 4 / . CR", "prints:5"),
+    Row("FORTH", 'MOD', "7 3 MOD . CR", "prints:1"),
+    Row("FORTH", '/MOD gives both', "7 3 /MOD . . CR", "prints:2 1"),
+    Row("FORTH", 'NEGATE', "5 NEGATE . CR", "prints:-5"),
+    Row("FORTH", 'ABS', "-9 ABS . CR", "prints:9"),
+    Row("FORTH", 'MIN', "3 8 MIN . CR", "prints:3"),
+    Row("FORTH", 'MAX', "3 8 MAX . CR", "prints:8"),
+    Row("FORTH", '1+', "41 1+ . CR", "prints:42"),
+    Row("FORTH", '1-', "43 1- . CR", "prints:42"),
+    Row("FORTH", '= is true as -1', "5 5 = . CR", "prints:-1"),
+    Row("FORTH", '<>', "5 6 <> . CR", "prints:-1"),
+    Row("FORTH", '<', "3 8 < . CR", "prints:-1"),
+    Row("FORTH", '>', "8 3 > . CR", "prints:-1"),
+    Row("FORTH", '<=', "5 5 <= . CR", "prints:-1"),
+    Row("FORTH", '>= is false as 0', "5 6 >= . CR", "prints:0"),
+    Row("FORTH", '0=', "0 0= . CR", "prints:-1"),
+    Row("FORTH", '0<', "-1 0< . CR", "prints:-1"),
+    Row("FORTH", '0>', "1 0> . CR", "prints:-1"),
+    Row("FORTH", 'AND', "12 10 AND . CR", "prints:8"),
+    Row("FORTH", 'OR', "12 10 OR . CR", "prints:14"),
+    Row("FORTH", 'XOR', "12 10 XOR . CR", "prints:6"),
+    Row("FORTH", 'INVERT', "0 INVERT . CR", "prints:-1"),
+    Row("FORTH", 'LSHIFT', "1 4 LSHIFT . CR", "prints:16"),
+    Row("FORTH", 'RSHIFT', "16 4 RSHIFT . CR", "prints:1"),
+    Row("FORTH", '. prints the top', "42 . CR", "prints:42"),
+    Row("FORTH", '.S shows the whole stack', "1 2 .S CR", "prints:<2> 1 2"),
+    Row("FORTH", 'EMIT prints a character', "65 EMIT CR", "prints:A"),
+    Row("FORTH", 'CR ends a line', '." a" CR ." b" CR', "prints:b"),
+    Row("FORTH", 'SPACE separates', '." a" SPACE ." b" CR', "prints:a b"),
+    Row("FORTH", 'SPACES prints n spaces', '." a" 3 SPACES ." b" CR', "prints:a   b"),
+    Row("FORTH", 'WORDS lists the dictionary', "WORDS CR", "prints:DUP"),
+    Row("FORTH", '@ reads a variable', "VARIABLE V 7 V ! V @ . CR", "prints:7"),
+    Row("FORTH", '! stores into a variable', "VARIABLE V 7 V ! V @ . CR", "prints:7"),
+    Row("FORTH", 'C@ reads a byte', "VARIABLE B 65 B C! B C@ . CR", "prints:65"),
+    Row("FORTH", 'C! stores a byte', "VARIABLE B 65 B C! B C@ . CR", "prints:65"),
+    Row("FORTH", '+! adds to a variable', "VARIABLE N 10 N ! 5 N +! N @ . CR", "prints:15"),
+    Row("FORTH", 'I reads the loop counter', ": T 3 0 DO I . LOOP ; T CR", "prints:0 1 2"),
+    Row("FORTH", 'J reads the outer counter', ": T 2 0 DO 2 0 DO J . LOOP LOOP ; T CR", "prints:0 0 1 1"),
+    Row("FORTH", 'turtle: FD draws', "100 FD", "draws", also=("FD", "FORWARD",)),
+    Row("FORTH", 'turtle: BK draws', "50 BK", "draws", also=("BK", "BACK",)),
+    Row("FORTH", 'turtle: RT then FD', "90 RT 100 FD", "draws", also=("RT", "RIGHT",)),
+    Row("FORTH", 'turtle: LT then FD', "90 LT 100 FD", "draws", also=("LT", "LEFT",)),
+    Row("FORTH", 'turtle: PU and PD', "PD PU", "any", also=("PU", "PENUP", "PD", "PENDOWN",)),
+    Row("FORTH", 'turtle: HOME', "100 FD HOME", "any"),
+    Row("FORTH", 'turtle: CS', "100 FD CS", "any", also=("CS", "CLEARSCREEN",)),
+    Row("FORTH", 'turtle: SETPC', "1 SETPC 100 FD", "draws", also=("SETPC", "SETPENCOLOR",)),
+    Row("FORTH", 'turtle: SETPW', "3 SETPW 100 FD", "draws"),
+    Row("FORTH", 'turtle: ST shows the turtle', "ST", "any"),
+    Row("FORTH", 'turtle: HT hides the turtle', "HT", "any"),
+    Row("FORTH", 'BYE ends the program', '." done" CR BYE ." never" CR', "prints:done"),
+    Row("FORTH", 'a colon definition', ": SQUARE DUP * ; 9 SQUARE . CR", "prints:81", also=(":", ";",)),
+    Row("FORTH", 'IF then THEN', ': T IF ." yes" THEN ; -1 T CR', "prints:yes", also=("IF", "THEN",)),
+    Row("FORTH", 'IF with an ELSE', ': T IF ." yes" ELSE ." no" THEN ; 0 T CR', "prints:no"),
+    Row("FORTH", 'BEGIN then UNTIL', ": T 0 BEGIN DUP . 1+ DUP 3 = UNTIL DROP ; T CR", "prints:0 1 2", also=("BEGIN", "UNTIL",)),
+    Row("FORTH", 'BEGIN WHILE REPEAT', ": T 0 BEGIN DUP 3 < WHILE DUP . 1+ REPEAT DROP ; T CR", "prints:0 1 2", also=("WHILE", "REPEAT",)),
+    Row("FORTH", 'DO then LOOP', ": T 3 0 DO I . LOOP ; T CR", "prints:0 1 2", also=("DO", "LOOP",)),
+    Row("FORTH", '+LOOP steps by the top', ": T 10 0 DO I . 2 +LOOP ; T CR", "prints:0 2 4 6 8"),
+    Row("FORTH", 'LEAVE and EXIT', ": T 10 0 DO I DUP . 2 = IF LEAVE THEN LOOP ; T CR", "prints:0 1 2", also=("LEAVE", "EXIT",)),
+    Row(
+        "FORTH",
+        "RECURSE is a word that calls itself",
+        ": FACT DUP 1 > IF DUP 1- RECURSE * THEN ; 6 FACT . CR",
+        "prints:720",
+    ),
+    Row("FORTH", 'VARIABLE makes a name', "VARIABLE V 5 V ! V @ . CR", "prints:5"),
+    Row("FORTH", 'CONSTANT', "99 CONSTANT NINETY NINETY . CR", "prints:99"),
+    Row("FORTH", 'IMMEDIATE is accepted', ": F 1 ; IMMEDIATE F . CR", "prints:1"),
+    Row(
+        "FORTH",
+        "POKE and PEEK reach the machine's memory",
+        "65 32768 POKE 32768 PEEK . CR",
+        "prints:65",
+        also=("POKE", "PEEK"),
+    ),
+    Row("FORTH", '." prints a string', '." hello" CR', "prints:hello"),
+    Row("FORTH", 'error: undefined word', "NOSUCHWORD", "error"),
+    Row("FORTH", 'error: stack underflow', ". CR", "error"),
+    Row("FORTH", 'error: unclosed definition', ": F 1", "error"),
+    Row("FORTH", 'error: division by zero', "1 0 / . CR", "error"),
+]
+
 ROWS: list[Row] = (
-    BASIC + LOGO + PILOT + COMAL + REXX + SCHEME + FOCAL + CHIP8 + APL + SMALLTALK
+    BASIC
+    + LOGO
+    + PILOT
+    + COMAL
+    + REXX
+    + SCHEME
+    + FOCAL
+    + CHIP8
+    + APL
+    + SMALLTALK
+    + FORTH
 )
 
 

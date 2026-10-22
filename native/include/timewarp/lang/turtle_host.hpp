@@ -34,6 +34,35 @@ struct Rgb {
     [[nodiscard]] friend constexpr bool operator==(const Rgb&, const Rgb&) = default;
 };
 
+/// The sixteen colours the reference's palette starts with.
+///
+/// A program that names a palette slot -- `SETPC 1`, `COLOR 1`, `1 SETPC` --
+/// asks for the slot's colour, and the reference seeded those sixteen before any
+/// program ran. Two hosts that each invented their own answer made the same
+/// statement draw in different colours in different languages, so the table is
+/// written once, here, and every host asks it.
+///
+/// Indices past 15 are the grey of their own number, which is what the reference
+/// did for an unset slot in 0..255. Anything outside 0..255 is not a slot, and
+/// this returns false so the caller can supply its own fallback.
+[[nodiscard]] inline bool reference_palette_colour(int index, Rgb* out) {
+    static constexpr std::array<Rgb, 16> kSlots{{
+        Rgb{0, 0, 0},       Rgb{0, 0, 170},     Rgb{0, 170, 0},   Rgb{0, 170, 170},
+        Rgb{170, 0, 0},     Rgb{170, 0, 170},   Rgb{170, 85, 0},  Rgb{170, 170, 170},
+        Rgb{85, 85, 85},    Rgb{85, 85, 255},   Rgb{85, 255, 85}, Rgb{85, 255, 255},
+        Rgb{255, 85, 85},   Rgb{255, 85, 255},  Rgb{255, 255, 85}, Rgb{255, 255, 255},
+    }};
+    if (index < 0 || index > 255) {
+        return false;
+    }
+    if (out != nullptr) {
+        *out = index < static_cast<int>(kSlots.size())
+                   ? kSlots[static_cast<std::size_t>(index)]
+                   : Rgb{index, index, index};
+    }
+    return true;
+}
+
 /// A point on the drawing surface.
 struct Point {
     double x = 0.0;

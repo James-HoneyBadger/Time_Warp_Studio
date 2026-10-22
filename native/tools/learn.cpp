@@ -77,6 +77,7 @@ QString extension_for(timewarp::lang::Language language) {
         case timewarp::lang::Language::Chip8: return QStringLiteral(".ch8");
         case timewarp::lang::Language::Apl: return QStringLiteral(".apl");
         case timewarp::lang::Language::Smalltalk: return QStringLiteral(".st");
+        case timewarp::lang::Language::Forth: return QStringLiteral(".fs");
     }
     return QStringLiteral(".txt");
 }

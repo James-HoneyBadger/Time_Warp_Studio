@@ -36,6 +36,7 @@ printed rather than compared.
 from __future__ import annotations
 
 import argparse
+import collections
 import gzip
 import hashlib
 import json
@@ -324,10 +325,12 @@ def main(argv: list[str] | None = None) -> int:
     diverged = 0
     failures: list[str] = []
     skipped: list[str] = []
+    seen: collections.Counter[str] = collections.Counter()
     for entry in read_corpus(path):
         key = entry["language"]
         if key not in chosen:
             continue
+        seen[key] += 1
         name = entry["name"]
         source = entry["source"]
         reason = hardware_reason(source)
@@ -371,6 +374,16 @@ def main(argv: list[str] | None = None) -> int:
                 print(f"agree  {key}: {name}")
         else:
             failures.append(f"{key}: {detail}")
+
+    # A port with no recorded corpus is not covered by this gate, and saying so is
+    # the point: the corpus is what the reference answered, and a language the
+    # reference never had cannot have an entry. Silence would read as agreement.
+    for key in chosen:
+        if seen[key] == 0:
+            print(
+                f"note   {key}: no recorded corpus -- this gate says nothing about "
+                f"it; the command matrix and lang_tests do"
+            )
 
     for entry in skipped:
         print(f"skip   {entry}")

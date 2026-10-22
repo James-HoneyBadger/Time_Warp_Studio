@@ -34,6 +34,7 @@ enum class Language {
     Chip8,
     Apl,
     Smalltalk,
+    Forth,
     Unknown,
 };
 
