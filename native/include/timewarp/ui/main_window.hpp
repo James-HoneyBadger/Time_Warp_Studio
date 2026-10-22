@@ -343,6 +343,11 @@ public:
     /// chevron, which hides the overflow rather than making it reachable.
     [[nodiscard]] QToolBar* secondaryToolBar() const noexcept { return tool_bar_secondary_; }
     [[nodiscard]] TurtleCanvas* turtleCanvas() const noexcept { return turtle_canvas_; }
+    /// The strip under the canvas: pose, pen, the screen mode a program asked
+    /// for, and the command count. Public because a test reads what a user reads.
+    [[nodiscard]] TurtleInspector* turtleInspector() const noexcept {
+        return turtle_inspector_;
+    }
 
     /// Applies one command to everything that shows the drawing: the canvas
     /// itself, the command log and the inspector's counters. The bridge's sink is

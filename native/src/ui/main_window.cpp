@@ -895,6 +895,35 @@ void MainWindow::buildOutputColumn() {
     output_canvas_splitter_->addWidget(canvas_pane);
     output_canvas_splitter_->setSizes({kOutputHeight, kCanvasHeight});
 
+    // A program that names a screen is showing something the turtle strip cannot
+    // describe: its coordinates are pixels from the top-left, and a click is a
+    // question about one of them. The badge says which mode is on, the click is
+    // answered in the status bar, and the scrubber -- which rewinds a display
+    // list a screen does not show -- says why it is off.
+    connect(turtle_canvas_, &TurtleCanvas::framebufferChanged, this, [this] {
+        if (turtle_canvas_ == nullptr) {
+            return;
+        }
+        const bool screen = turtle_canvas_->framebufferActive();
+        if (turtle_inspector_ != nullptr) {
+            const QSize size = turtle_canvas_->framebufferSize();
+            turtle_inspector_->setScreenMode(screen ? size.width() : 0,
+                                             screen ? size.height() : 0);
+        }
+        if (scrubber_ != nullptr) {
+            scrubber_->setEnabled(!screen);
+            scrubber_->setToolTip(
+                screen ? tr("A screen shows its last frame; scrubbing works on drawings")
+                       : QString{});
+        }
+    });
+    connect(turtle_canvas_, &TurtleCanvas::pixelPicked, this,
+            [this](int x, int y, const QColor& colour) {
+                statusBar()->showMessage(
+                    tr("pixel (%1, %2) = %3").arg(x).arg(y).arg(colour.name().toUpper()),
+                    6000);
+            });
+
     connect(scrubber_, &Scrubber::frameRequested, this, [this](int frame) {
         if (turtle_canvas_ != nullptr) {
             turtle_canvas_->setVisibleFrame(frame);

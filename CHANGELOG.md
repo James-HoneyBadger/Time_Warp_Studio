@@ -1,5 +1,37 @@
 # Changelog
 
+## [17.1.0] - 2026-10-22
+
+Two things a program could do but a user could not watch. A `SCREEN` was a picture
+you pressed Play on: the wheel and the click did nothing, so a 160x100 sprite was
+whatever size the window happened to make it and "what colour is that pixel?" had
+no answer short of editing the source. And sound was real on Linux and macOS and
+silent on Windows, which is where most of the games are run.
+
+### Added
+
+- **The screen is interactive.** `TurtleCanvas::framebufferTarget()` is now the
+  one place the screen's placement is decided — whole-number fit times the zoom,
+  plus the drag — and `paintFramebuffer`, the wheel and the new
+  `framebufferPixelAt` all read it, so the picture and the answer about the
+  picture cannot disagree. The wheel zooms the screen about the pointer, and the
+  scale snaps to a whole number of device pixels per screen pixel above 2x so a
+  one-pixel line stays one pixel wide; a click emits `pixelPicked(x, y, colour)`
+  and the status bar answers `pixel (10, 20) = #FF0000`, which is the first
+  question about a screen that came out wrong.
+- **The strip says which mode is on.** `TurtleInspector::setScreenMode` shows
+  `SCREEN 320x200` while a program has a screen, because on a screen X and Y are
+  pixels from the top-left, not the turtle's world, and a learner reading
+  "X 156 Y 180" beside a 320x200 game has the wrong explanation for it. The
+  scrubber is disabled and says why while a screen is up: a framebuffer shows its
+  last frame, so there is no display list to rewind.
+- **Sound on Windows.** `powershell.exe` is the player there — no extra install,
+  because `Media.SoundPlayer` is in the framework — and a Windows machine is no
+  longer the one platform where `BEEP`, `SOUND` and `PLAY` were silent. The file
+  path goes inside a script rather than after an argument, so it is quoted as a
+  PowerShell literal with its own quote doubled: a path under
+  `C:\Users\O'Brien\` stays one token, and `ui_layout_tests` pins that.
+
 ## [17.0.0] - 2026-10-22
 
 The product contains no Python. The engine that decided whether a learner's program

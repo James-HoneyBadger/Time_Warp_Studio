@@ -692,6 +692,10 @@ public:
     void showPose(const QPointF& position, double heading, bool pen_down,
                   const QColor& pen_colour, double pen_width);
     void setCommandCount(int count);
+    /// The screen a program asked for, or 0x0 for a drawing. A mode readout is
+    /// the one thing a learner needs when a game's coordinates look wrong: on a
+    /// screen, X and Y are pixels from the top-left and not the turtle's world.
+    void setScreenMode(int width, int height);
     /// The state of a canvas that has not been drawn on.
     void clear();
 
@@ -699,12 +703,14 @@ public:
     /// reaching into the labels.
     [[nodiscard]] QString poseText() const;
     [[nodiscard]] QString penText() const;
+    [[nodiscard]] QString screenText() const;
     [[nodiscard]] int commandCount() const noexcept { return commands_; }
 
 private:
     QLabel* pose_ = nullptr;
     QLabel* pen_ = nullptr;
     QLabel* commands_label_ = nullptr;
+    QLabel* screen_label_ = nullptr;
     int commands_ = 0;
 };
 

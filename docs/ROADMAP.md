@@ -25,7 +25,7 @@ derived rather than remembered.
 | Projects | `.twproject` files, named groups, files and folders added to a project, drag-and-drop grouping, missing-file reporting, recent projects and session restore |
 | REPL | A persistent session per language under the editor; Scheme keeps definitions and echoes values, the line-loop languages and Logo keep bindings, while Smalltalk and CHIP-8 run each entry as a whole program |
 | Console | Streaming output, and interpreter errors in their own tab |
-| Canvas | Live drawing, zoom, pan, grid, auto-fit, turtle marker, scrubber playback, animated GIF recording, raster and SVG export, the pose strip and the command log, and a fixed-coordinate screen mode (`SCREEN`) with sprites, pixel read-back and a game example |
+| Canvas | Live drawing, zoom, pan, grid, auto-fit, turtle marker, scrubber playback, animated GIF recording, raster and SVG export, the pose strip and the command log, and a fixed-coordinate screen mode (`SCREEN`) with sprites, pixel read-back and a game example; in screen mode the wheel zooms the screen about the pointer and a click reads back the pixel under it |
 | Display | 35 themes, high contrast, A+ text sizes (100/125/150%), focus mode, CRT settings, four Monitor presets |
 | Execution | Run (F9) and Stop; one program at a time; unsaved-change prompts |
 | Input | A program can ask for a line and wait for it — `INPUT`, FOCAL's `ASK`, PILOT's `ACCEPT`, REXX's `PULL` — on whichever engine runs it; BASIC's round trip is asserted on the engine, on `NativeRunner`, and through the bridged worker |
@@ -282,7 +282,12 @@ and the command table exercises them. What is now true, and what is still limite
   `SOUND` and `PLAY` synthesise square/triangle/sine/noise at equal
   temperament, parse `PLAY`'s notation (tempo, lengths, octaves, accidentals,
   dotted notes, rests, `N` numbers) and play through the first of `paplay`,
-  `aplay`, `ffplay` or `play` on the machine. `SOUND` joins the mix instead of
+  `aplay`, `afplay`, `ffplay` or `play` on the machine -- and on Windows through
+  `powershell.exe`, which needs no extra install because PowerShell is already
+  there and `Media.SoundPlayer` is in the framework. A path is not a safe thing
+  to paste into a script, so it goes in as a PowerShell single-quoted string with
+  its quote doubled; `ui_layout_tests` pins that with a path containing an
+  apostrophe. `SOUND` joins the mix instead of
   replacing it: up to eight voices are summed sample by sample
   (`timewarp::audio::Mixer`, a pure function so `audio_tests` can assert that two
   notes are audible together on a machine with no sound card), and the mix is
@@ -371,7 +376,12 @@ numbered modes 1, 2, 7, 9, 12 and 13 size a real pixel surface
 `JOYINIT`/`STICK`/`STRIG` are answered by `/dev/input/js*` instead of by the
 constant 0 the reference had no backend to replace. A program that names a screen
 now gets a framebuffer to look at: the canvas paints it at whole-number scale at
-fixed coordinates, stops fitting itself to the ink, and exports it at its own size;
+fixed coordinates, stops fitting itself to the ink, and exports it at its own size. A
+screen is a place you can look *at*, not a picture you press Play on: the wheel zooms
+about the pointer so a 160x100 sprite stays legible, a click reports the pixel under
+it in the status bar as a coordinate and `&H00RRGGBB`, the strip under the canvas
+names the mode the program asked for, and the scrubber explains that it is disabled
+rather than looking broken, because a framebuffer is not a display list to replay;
 the display list is still built, so the Turtle Log, the scrubber and the vector
 export keep working. `Examples/basic/star_patrol.bas` is a game built on all of it,
 and `lang_tests` runs it and asserts that it asked for a screen, placed a sprite and

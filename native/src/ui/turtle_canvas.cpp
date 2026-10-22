@@ -647,6 +647,28 @@ void TurtleCanvas::wheelEvent(QWheelEvent* event) {
         return;
     }
     const QPointF cursor = timewarp::core::eventPosition(event);
+
+    if (framebufferActive()) {
+        // A screen zooms in its own coordinates. The anchor is the screen pixel
+        // under the cursor, which is found by working back through the same
+        // rectangle the painter used, then put back under the cursor afterwards.
+        const QPointF pixel = framebufferPixelAt(cursor);
+        zoom_ = std::clamp(zoom_ * std::pow(1.0015, static_cast<double>(steps)),
+                           kMinimumZoom, kMaximumZoom);
+        const QRectF after = framebufferTarget();
+        if (after.isEmpty()) {
+            update();
+            event->accept();
+            return;
+        }
+        const QPointF placed{after.left() + pixel.x() * after.width() / framebuffer_.width(),
+                             after.top() + pixel.y() * after.height() / framebuffer_.height()};
+        pan_pixels_ += cursor - placed;
+        update();
+        event->accept();
+        return;
+    }
+
     // Keep the world point under the cursor under the cursor. Zooming towards
     // the middle instead makes whatever you were looking at slide away.
     const QPointF anchor = toWorld(cursor);
@@ -679,6 +701,16 @@ void TurtleCanvas::mousePressEvent(QMouseEvent* event) {
     }
     dragging_ = true;
     drag_from_ = timewarp::core::eventPosition(event);
+    if (framebufferActive()) {
+        // A click on a screen is a question -- "what colour is this pixel?" --
+        // and the answer is cheap enough to give before the drag begins.
+        const QPointF pixel = framebufferPixelAt(drag_from_);
+        const int x = static_cast<int>(std::floor(pixel.x()));
+        const int y = static_cast<int>(std::floor(pixel.y()));
+        if (x >= 0 && y >= 0 && x < framebuffer_.width() && y < framebuffer_.height()) {
+            emit pixelPicked(x, y, framebuffer_.pixelColor(x, y));
+        }
+    }
     setCursor(Qt::ClosedHandCursor);
     event->accept();
 }
@@ -849,11 +881,11 @@ void TurtleCanvas::rasterize(const timewarp::canvas::CanvasCommandView& view) {
     }
 }
 
-void TurtleCanvas::paintFramebuffer(QPainter& painter) const {
+QRectF TurtleCanvas::framebufferTarget() const {
     const int screen_width = framebuffer_.width();
     const int screen_height = framebuffer_.height();
     if (screen_width <= 0 || screen_height <= 0) {
-        return;
+        return {};
     }
     // Whole-number scaling while there is room: a 320x200 screen at 3x is three
     // screen pixels per drawn pixel, and a smoothed one is a lie about what the
@@ -864,14 +896,43 @@ void TurtleCanvas::paintFramebuffer(QPainter& painter) const {
         factor = std::floor(factor);
     }
     if (factor <= 0.0) {
+        return {};
+    }
+    // The zoom and the drag are the same ones the drawing uses: a screen with a
+    // dead wheel is the one control a game author reaches for first.
+    factor *= zoom_;
+    // A screen is made of pixels, so the drawn scale snaps to a whole number and
+    // a one-pixel line stays one screen pixel wide. Zooming in therefore steps,
+    // which is what a pixel grid should do; below 2x there is no whole number
+    // left to snap to, so it scales smoothly and can still be shrunk.
+    if (factor >= 2.0) {
+        factor = std::round(factor);
+    }
+    const double drawn_width = screen_width * factor;
+    const double drawn_height = screen_height * factor;
+    return QRectF{(width() - drawn_width) / 2.0 + pan_pixels_.x(),
+                  (height() - drawn_height) / 2.0 + pan_pixels_.y(), drawn_width,
+                  drawn_height};
+}
+
+void TurtleCanvas::paintFramebuffer(QPainter& painter) const {
+    const QRectF target = framebufferTarget();
+    if (target.isEmpty()) {
         return;
     }
-    const int drawn_width = std::max(1, static_cast<int>(std::lround(screen_width * factor)));
-    const int drawn_height = std::max(1, static_cast<int>(std::lround(screen_height * factor)));
-    const QRect target{(width() - drawn_width) / 2, (height() - drawn_height) / 2,
-                       drawn_width, drawn_height};
     painter.setRenderHint(QPainter::SmoothPixmapTransform, false);
-    painter.drawImage(target, framebuffer_);
+    painter.drawImage(target, framebuffer_, QRectF{framebuffer_.rect()});
+}
+
+QPointF TurtleCanvas::framebufferPixelAt(const QPointF& widget_point) const {
+    const QRectF target = framebufferTarget();
+    if (target.isEmpty() || target.width() <= 0.0 || target.height() <= 0.0) {
+        return {-1.0, -1.0};
+    }
+    const double scale_x = target.width() / framebuffer_.width();
+    const double scale_y = target.height() / framebuffer_.height();
+    return {(widget_point.x() - target.left()) / scale_x,
+            (widget_point.y() - target.top()) / scale_y};
 }
 
 void TurtleCanvas::paintEvent(QPaintEvent* /*event*/) {

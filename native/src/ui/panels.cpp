@@ -1844,9 +1844,13 @@ TurtleInspector::TurtleInspector(QWidget* parent) : QFrame(parent) {
     commands_label_ = new QLabel{this};
     commands_label_->setObjectName(QStringLiteral("turtleCommands"));
     commands_label_->setAccessibleName(tr("Drawing commands received"));
+    screen_label_ = new QLabel{this};
+    screen_label_->setObjectName(QStringLiteral("turtleScreen"));
+    screen_label_->setAccessibleName(tr("Screen mode"));
 
     row->addWidget(pose_);
     row->addWidget(pen_);
+    row->addWidget(screen_label_);
     row->addStretch(1);
     row->addWidget(commands_label_);
 
@@ -1874,14 +1878,25 @@ void TurtleInspector::setCommandCount(int count) {
     commands_label_->setText(count == 1 ? tr("1 command") : tr("%1 commands").arg(count));
 }
 
+void TurtleInspector::setScreenMode(int width, int height) {
+    if (width <= 0 || height <= 0) {
+        screen_label_->clear();
+        return;
+    }
+    screen_label_->setText(tr("SCREEN %1x%2").arg(width).arg(height));
+}
+
 void TurtleInspector::clear() {
     showPose(QPointF{0.0, 0.0}, 0.0, true, QColor{Qt::white}, 1.0);
     setCommandCount(0);
+    setScreenMode(0, 0);
 }
 
 QString TurtleInspector::poseText() const { return pose_->text(); }
 
 QString TurtleInspector::penText() const { return pen_->text(); }
+
+QString TurtleInspector::screenText() const { return screen_label_->text(); }
 
 TurtleCommandLog::TurtleCommandLog(QWidget* parent) : QPlainTextEdit(parent) {
     setObjectName(QStringLiteral("turtleLog"));

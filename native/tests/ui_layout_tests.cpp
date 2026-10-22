@@ -82,6 +82,7 @@
 #include "timewarp/ui/project_panel.hpp"
 #include "timewarp/ui/sql_panel.hpp"
 #include "timewarp/ui/scrubber.hpp"
+#include "timewarp/ui/sound_player.hpp"
 
 #include "timewarp/ui/snippet_dialog.hpp"
 #include "timewarp/ui/snippets.hpp"
@@ -2818,6 +2819,21 @@ void test_a_program_screen_reaches_the_canvas() {
     TW_CHECK_EQ(canvas.framebufferSize().width(), 320);
     TW_CHECK_EQ(canvas.framebufferSize().height(), 200);
     TW_CHECK_EQ(canvas.framebufferPixel(5, 7), QColor(255, 0, 0));
+
+    // And the window says which mode is on: on a screen X and Y are pixels from
+    // the top-left, not the turtle's world, and a learner reading "X 156 Y 180"
+    // while looking at a 320x200 game has the wrong explanation for it.
+    const std::unique_ptr<MainWindow> window = shownWindow();
+    timewarp::ui::TurtleCanvas* shown = window->turtleCanvas();
+    TW_CHECK(shown != nullptr);
+    if (shown != nullptr) {
+        shown->apply(timewarp::canvas::CanvasCommandView{
+            timewarp::canvas::make_framebuffer(320.0, 200.0), {}, {}});
+        TW_CHECK_EQ(window->turtleInspector()->screenText(), QStringLiteral("SCREEN 320x200"));
+        shown->apply(timewarp::canvas::CanvasCommandView{
+            timewarp::canvas::make_clear_framebuffer(), {}, {}});
+        TW_CHECK(window->turtleInspector()->screenText().isEmpty());
+    }
 }
 
 /// The report shows what the engine measured, in the order the engine sorted it:
@@ -3287,6 +3303,26 @@ void test_immediate_mode_panel_contract() {
         emit input->returnPressed();
         TW_CHECK(received.isEmpty());
     }
+}
+
+void test_windows_sound_command_line() {
+    announce("windows sound command line");
+    // Windows has no `aplay` on PATH, so the player is PowerShell and a .NET
+    // class, and the file path goes inside a script rather than after an
+    // argument. A path is not a safe thing to paste into a script -- a user
+    // called O'Brien has an apostrophe in it -- so the quoting is the part
+    // worth pinning, and it can be checked from Linux.
+    const QString plain =
+        timewarp::ui::SoundPlayer::powerShellCommand(QStringLiteral("C:/Temp/tone.wav"));
+    TW_CHECK(plain.contains(QStringLiteral("'C:/Temp/tone.wav'")));
+    TW_CHECK(plain.startsWith(QStringLiteral("(New-Object Media.SoundPlayer ")));
+    TW_CHECK(plain.endsWith(QStringLiteral(".PlaySync()")));
+
+    // The doubled quote is PowerShell's escape, and it must not close the string.
+    const QString quoted = timewarp::ui::SoundPlayer::powerShellCommand(
+        QStringLiteral("C:/Users/O'Brien/AppData/Local/Temp/tone.wav"));
+    TW_CHECK(quoted.contains(QStringLiteral("'C:/Users/O''Brien/")));
+    TW_CHECK_EQ(quoted.count(QLatin1Char{'\''}), 4);  // open, doubled pair, close
 }
 
 // ---------------------------------------------------------------------------
@@ -3804,6 +3840,7 @@ int main(int argc, char** argv) {
     test_screen_presets_pair_a_theme_with_its_crt_values();
     test_immediate_mode_panel_contract();
 
+    test_windows_sound_command_line();
     test_splitter_positions_survive_a_restart();
     test_left_column_gets_the_larger_share_on_growth();
     return tw::test::summary("ui_layout");

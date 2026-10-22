@@ -449,6 +449,20 @@ void test_a_screen_is_painted_at_fixed_coordinates() {
     TW_CHECK_EQ(shot.height(), 200);
     TW_CHECK_EQ(shot.pixelColor(10, 20), QColor(255, 0, 0));
 
+    // The screen answers in its own coordinates: where it is drawn, and which
+    // pixel is under a point. A screen whose wheel and clicks did nothing would
+    // be the one control a game author reaches for first.
+    const QRectF target = canvas->framebufferTarget();
+    TW_CHECK(!target.isEmpty());
+    const QPointF centre_pixel = canvas->framebufferPixelAt(target.center());
+    TW_CHECK(std::abs(centre_pixel.x() - 160.0) < 1.5);
+    TW_CHECK(std::abs(centre_pixel.y() - 100.0) < 1.5);
+    canvas->setZoom(2.0);
+    TW_CHECK(canvas->framebufferTarget().width() > target.width());
+    canvas->setZoom(1.0);
+    // Outside the drawn screen is not a pixel.
+    TW_CHECK(canvas->framebufferPixelAt(QPointF{-5.0, -5.0}).x() < 0.0);
+
     // Fitting is what a screen must not do.
     canvas->fitToContent();
     TW_CHECK_EQ(canvas->renderedDrawing(1.0).pixelColor(10, 20), QColor(255, 0, 0));

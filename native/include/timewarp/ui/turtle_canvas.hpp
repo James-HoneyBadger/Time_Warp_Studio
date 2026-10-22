@@ -130,6 +130,11 @@ public:
     /// The colour of one screen pixel, invalid outside the buffer. What a test
     /// asks to prove a `PSET` reached the screen it claimed to.
     [[nodiscard]] QColor framebufferPixel(int x, int y) const;
+    /// Where the screen is drawn in widget coordinates, zoom and pan included.
+    /// Empty when there is no screen or no room for one.
+    [[nodiscard]] QRectF framebufferTarget() const;
+    /// The screen pixel under a widget point, or (-1, -1) outside the screen.
+    [[nodiscard]] QPointF framebufferPixelAt(const QPointF& widget_point) const;
 
     // -- coordinate conversion --------------------------------------------
     //
@@ -264,6 +269,10 @@ signals:
     /// The surface entered or left screen mode. The pose strip and the export
     /// dialog both need to know which of the two pictures a run produced.
     void framebufferChanged();
+    /// A click landed on a screen pixel. `INKEY$` is not the only thing a game
+    /// author needs from the surface: "what colour is this?" is the first
+    /// question about a screen that came out wrong.
+    void pixelPicked(int x, int y, const QColor& colour);
 
 private:
     /// One straight pen stroke, in world coordinates.
