@@ -19,6 +19,7 @@
 //     time_warp_gates golden    the ports against the frozen reference corpora
 //     time_warp_gates tree      the tree holds no Python
 //     time_warp_gates registry  the language table has one home
+//     time_warp_gates structure the files are still the size they were designed to be
 //
 // Each returns 0 only when every question it asked was answered.
 
@@ -130,5 +131,7 @@ struct ReplAnswer {
 /// Fails if a language's display name, key or extensions are written down anywhere
 /// but `timewarp/lang/registry.hpp`.
 [[nodiscard]] int runRegistry(const QStringList& arguments);
+/// Fails if a source file or the build file has grown past its budget.
+[[nodiscard]] int runStructure(const QStringList& arguments);
 
 }  // namespace timewarp::gates

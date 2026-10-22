@@ -15,7 +15,7 @@ FORWARDED := build run test test-debug asan clean distclean info test-list \
 
 .PHONY: help $(FORWARDED) smoke command-matrix repl-matrix gates-built \
         golden-check teach-check test-all lint lint-md docs-tool doc-links doc-claims \
-        tree-check registry-check
+        tree-check registry-check structure-check
 
 help:
 	@echo "Time Warp Studio"
@@ -42,6 +42,7 @@ help:
 	@echo "  doc-claims    Every path, name and make target the guides name exists"
 	@echo "  tree-check    The tree holds no Python"
 	@echo "  registry-check  The language table has one home"
+	@echo "  structure-check No file has outgrown its budget"
 	@echo ""
 	@echo "See 'make -C $(NATIVE) help' for everything the native tree offers."
 
@@ -89,7 +90,7 @@ teach-check:
 # and the documentation checks -- including the Markdown lint, which is a gate in
 # CI and was the one check a local `test-all` did not run.
 test-all: test smoke command-matrix repl-matrix teach-check golden-check doc-links \
-          doc-claims lint-md tree-check registry-check
+          doc-claims lint-md tree-check registry-check structure-check
 
 # Warnings are errors in every target, so a lint pass is the build passing. Kept as
 # a target because `make lint` is what a contributor types and because the guides
@@ -119,6 +120,9 @@ doc-claims: docs-tool
 # that live here, and this is what keeps a script from creeping back.
 registry-check: gates-built
 	@$(GATES) registry
+
+structure-check: gates-built
+	@$(GATES) structure
 
 tree-check: gates-built
 	@$(GATES) tree

@@ -22,6 +22,7 @@ void usage() {
                  "  golden    the ports against the frozen reference corpora\n"
                  "  tree      that the tree holds no Python\n"
                  "  registry  that the language table has one home\n"
+                 "  structure that no file has outgrown its budget\n"
                  "\n"
                  "Run with no command for this message. Each command returns 0 only\n"
                  "when every question it asked was answered, and prints what failed.\n");
@@ -58,6 +59,9 @@ int main(int argc, char** argv) {
     }
     if (command == QLatin1String("registry")) {
         return timewarp::gates::runRegistry(rest);
+    }
+    if (command == QLatin1String("structure")) {
+        return timewarp::gates::runStructure(rest);
     }
     if (command == QLatin1String("--help") || command == QLatin1String("-h") ||
         command == QLatin1String("help")) {
