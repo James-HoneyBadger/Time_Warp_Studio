@@ -51,8 +51,6 @@ constexpr SizeWaiver kWaivers[] = {
      "the Logo executor: lexer, evaluator, primitives and turtle in one file"},
     {"native/src/ui/retro_computer.cpp",
      "the HB-1 machine, which owns its own canvas queue, bridge and runners"},
-    {"native/src/lang/basic_statements.cpp",
-     "BASIC's statements: one file per family is the split"},
     {"native/tests/ui_layout_tests.cpp",
      "85 cases in one file: one file per case group is the split, and the next phase"},
     {"native/tests/lang_tests.cpp",

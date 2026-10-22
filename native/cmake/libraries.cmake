@@ -194,7 +194,13 @@ add_library(tw_lang_core OBJECT
 
 add_library(tw_lang_basic OBJECT
     src/lang/basic.cpp
-    src/lang/basic_statements.cpp
+    src/lang/basic_statements_helpers.cpp
+    src/lang/basic_statements_dispatch.cpp
+    src/lang/basic_statements_print.cpp
+    src/lang/basic_statements_variables.cpp
+    src/lang/basic_statements_flow.cpp
+    src/lang/basic_statements_blocks.cpp
+    src/lang/basic_statements_errors.cpp
     src/lang/basic_features.cpp
     src/lang/basic_library.cpp
     src/lang/basic_text.cpp
