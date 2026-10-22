@@ -6,7 +6,7 @@ complete computers inside it.*
 [![C++20](https://img.shields.io/badge/C%2B%2B-20-blue)](https://en.cppreference.com/)
 [![Qt](https://img.shields.io/badge/Qt-6%20%7C%205.15-green)](https://www.qt.io/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/Version-18.0.0-orange)](https://github.com/James-HoneyBadger/Time_Warp_Studio)
+[![Version](https://img.shields.io/badge/Version-18.1.0-orange)](https://github.com/James-HoneyBadger/Time_Warp_Studio)
 
 Time Warp Studio is a native C++20 and Qt workbench for people who like old
 computers. It is the programming environment the 1980s promised and never quite
@@ -133,8 +133,10 @@ source is still supported, and [native/README.md](native/README.md) describes it
 ```
 
 `run.sh` builds incrementally and forwards every argument to the IDE, including
-`--run`, `--screenshot`, `--export`, `--compile` and `--computer`. `twc` and `api` are the
-terminal compiler and the automation service; see [docs/USER_GUIDE.md](docs/USER_GUIDE.md).
+`--run`, `--screenshot`, `--export`, `--compile` and `--computer`. `--compile` produces
+a copy of `time_warp_player` with the program inside, so the artifact a learner sends
+to a friend opens as a program and not as an editor. `twc` and `api` are the terminal
+compiler and the automation service; see [docs/USER_GUIDE.md](docs/USER_GUIDE.md).
 
 ---
 

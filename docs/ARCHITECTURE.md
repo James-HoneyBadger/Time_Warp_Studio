@@ -1,6 +1,6 @@
 # Architecture Guide
 
-## Time Warp Studio v18.0.0 — System Design and Implementation
+## Time Warp Studio v18.1.0 — System Design and Implementation
 
 > **This page describes the shipping product.** It was rewritten alongside the move
 > to C++20 / Qt6. Earlier revisions documented the PySide6 implementation, which has
@@ -45,7 +45,8 @@ stream of JSON messages coming back.
 
 | Part | Sources | Runs in | Role |
 | --- | --- | --- | --- |
-| `timewarp_ui` — the IDE | `native/src/ui/`, `native/include/timewarp/ui/` | GUI thread | Documents, editor, console, canvas, menus, settings |
+| `timewarp_ui_core` — showing a program | `native/src/ui/` (canvas, runner, sound, palette, format) | GUI thread | The canvas, the runner that fills it, the sound it makes, the theme it is drawn in, and the artifact format. Everything `time_warp_player` links |
+| `timewarp_ui` — the IDE | `native/src/ui/` (the rest) | GUI thread | Documents, editor, console, menus, settings, docks. Links the core |
 | `timewarp_canvas` | `native/src/canvas/` | producer: interpreter thread; consumer: GUI thread | Carries drawing across the thread boundary |
 | `timewarp_canvas_qt` | `native/src/canvas/qt_bridge.cpp` | GUI thread | Qt glue for that queue: wakeup and draining |
 | `timewarp_scheme` | `native/src/scheme/` | runner thread, in-process | Scheme, on an explicit-stack machine with no native recursion |
@@ -215,7 +216,8 @@ and emits one signal carrying a count.
 
 ### The window
 
-`time_warp_ide` → `timewarp::ui::MainWindow`. The widget tree — editor column on the
+`time_warp_ide` → `timewarp::ui::MainWindow`, and `time_warp_player` → a window
+that links the core and nothing else. The widget tree — editor column on the
 left, output and tooling on the right, function-key bar underneath — and every sizing
 decision that changes how the window behaves when resized were translated from the
 removed PySide6 implementation: splitter orientations and handle widths,

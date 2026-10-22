@@ -21,6 +21,8 @@
 #include <QCommandLineOption>
 #include <QCommandLineParser>
 #include <QCoreApplication>
+#include <QDir>
+#include <QFileInfo>
 #include <QPixmap>
 #include <QSettings>
 #include <QStringList>
@@ -211,6 +213,19 @@ int main(int argc, char* argv[]) {
         QStringLiteral("With --compile, replace the output file if it exists.")};
     parser.addOption(forceOption);
 
+    const QCommandLineOption titleOption{
+        QStringLiteral("title"),
+        QStringLiteral("With --compile, the program's name, shown in the player's "
+                       "window and title card. Defaults to the artifact's own name."),
+        QStringLiteral("text")};
+    parser.addOption(titleOption);
+
+    const QCommandLineOption authorOption{
+        QStringLiteral("author"),
+        QStringLiteral("With --compile, who wrote it. Shown beside the title."),
+        QStringLiteral("text")};
+    parser.addOption(authorOption);
+
     // Positional arguments are files to open. Named so `--help` documents them.
     parser.addPositionalArgument(QStringLiteral("file"),
                                  QStringLiteral("Programs to open at startup."),
@@ -233,15 +248,37 @@ int main(int argc, char* argv[]) {
             std::fprintf(stderr, "time_warp_ide: --compile needs --output <path>\n");
             return 2;
         }
+        // The artifact is a copy of a *player* when one is installed beside this
+        // executable, and a copy of the IDE otherwise. That is the difference
+        // between a 2.3MB program that opens and a 4.7MB editor with its menus
+        // hidden, and it is decided by what is on disk rather than by a build
+        // flag, so a tree with the player built gets the better artifact.
+        QString host = QCoreApplication::applicationFilePath();
+        const QDir beside{QFileInfo{host}.absolutePath()};
+        const QString player = beside.filePath(QStringLiteral("time_warp_player")
+#ifdef Q_OS_WIN
+                                                   + QStringLiteral(".exe")
+#endif
+        );
+        if (QFileInfo::exists(player)) {
+            host = player;
+        }
+
+        timewarp::ui::standalone::Metadata metadata;
+        metadata.title = parser.value(titleOption);
+        metadata.author = parser.value(authorOption);
+
         QString error;
-        if (!timewarp::ui::standalone::compileFile(
-                QCoreApplication::applicationFilePath(), program, output,
-                parser.isSet(forceOption), &error)) {
+        if (!timewarp::ui::standalone::compileFile(host, program, output,
+                                                   parser.isSet(forceOption), metadata,
+                                                   &error)) {
             std::fprintf(stderr, "time_warp_ide: %s\n", qPrintable(error));
             return 5;
         }
-        std::fprintf(stderr, "%s: compiled from %s\n", qPrintable(output),
-                     qPrintable(program));
+        std::fprintf(stderr, "%s: compiled from %s (player: %s)\n", qPrintable(output),
+                     qPrintable(program),
+                     host == QCoreApplication::applicationFilePath() ? "no, IDE copy"
+                                                                    : "yes");
         return 0;
     }
 

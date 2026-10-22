@@ -4,6 +4,8 @@
 
 #include <QFile>
 #include <QFileInfo>
+#include <QJsonDocument>
+#include <QJsonObject>
 #include <QSaveFile>
 #include <QtEndian>
 
@@ -13,7 +15,9 @@ namespace timewarp::ui::standalone {
 
 namespace {
 
-/// Where the language key length sits, counted back from the end.
+/// Where the language key length sits, counted back from the end. The version
+/// byte comes after the magic, so the offsets of everything before it are the
+/// same in both formats.
 constexpr int kLanguageLengthFromEnd = kMagicLength + 1;
 /// And the eight-byte source length, before that.
 constexpr int kSourceLengthFromEnd = kLanguageLengthFromEnd + 8;
@@ -26,27 +30,91 @@ void setError(QString* error, const QString& text) {
 
 }  // namespace
 
+QByteArray metadataJson(const Metadata& metadata) {
+    QJsonObject object;
+    // Omitted rather than empty: an artifact with nothing to say carries `{}`,
+    // and a reader cannot then mistake "the author left it blank" for a title
+    // that happens to be "".
+    if (!metadata.title.isEmpty()) {
+        object.insert(QStringLiteral("title"), metadata.title);
+    }
+    if (!metadata.author.isEmpty()) {
+        object.insert(QStringLiteral("author"), metadata.author);
+    }
+    if (metadata.screen_width > 0 && metadata.screen_height > 0) {
+        object.insert(QStringLiteral("screen"),
+                      QStringLiteral("%1x%2")
+                          .arg(metadata.screen_width)
+                          .arg(metadata.screen_height));
+    }
+    if (!metadata.background.isEmpty()) {
+        object.insert(QStringLiteral("background"), metadata.background);
+    }
+    if (metadata.crt > 0) {
+        object.insert(QStringLiteral("crt"), metadata.crt);
+    }
+    return QJsonDocument{object}.toJson(QJsonDocument::Compact);
+}
+
+bool metadataFromJson(const QByteArray& json, Metadata* out) {
+    if (json.isEmpty()) {
+        return true;
+    }
+    QJsonParseError error{};
+    const QJsonDocument document = QJsonDocument::fromJson(json, &error);
+    if (error.error != QJsonParseError::NoError || !document.isObject()) {
+        return false;
+    }
+    const QJsonObject object = document.object();
+    if (out == nullptr) {
+        return true;
+    }
+    // A field this build does not know is ignored rather than refused: that is
+    // what makes the format extensible without a third version.
+    out->title = object.value(QStringLiteral("title")).toString();
+    out->author = object.value(QStringLiteral("author")).toString();
+    out->background = object.value(QStringLiteral("background")).toString();
+    out->crt = object.value(QStringLiteral("crt")).toInt();
+    const QString screen = object.value(QStringLiteral("screen")).toString();
+    const qsizetype cross = screen.indexOf(QLatin1Char('x'));
+    if (cross > 0) {
+        out->screen_width = screen.left(cross).toInt();
+        out->screen_height = screen.mid(cross + 1).toInt();
+    }
+    return true;
+}
+
 QByteArray encode(const QString& language, const QString& source) {
+    return encode(language, source, Metadata{});
+}
+
+QByteArray encode(const QString& language, const QString& source,
+                  const Metadata& metadata) {
     const QByteArray key = language.toUtf8();
     const QByteArray body = source.toUtf8();
+    const QByteArray extra = metadataJson(metadata);
 
     QByteArray payload;
-    payload.reserve(body.size() + key.size() + kSourceLengthFromEnd);
+    payload.reserve(body.size() + extra.size() + kSourceLengthFromEnd + key.size() + 4);
     payload.append(body);
+    payload.append(extra);
+
+    // The three lengths and the key, in the order a reader walking backwards
+    // meets them: metadata, source, key, key length, magic, version.
+    QByteArray extra_length(4, Qt::Uninitialized);
+    qToLittleEndian<quint32>(static_cast<quint32>(extra.size()), extra_length.data());
+    payload.append(extra_length);
 
     QByteArray length(8, Qt::Uninitialized);
     qToLittleEndian<quint64>(static_cast<quint64>(body.size()), length.data());
     payload.append(length);
 
-    // Key first, then its length, then the magic: the trailer has to be
-    // readable from the end of the file, and a length that follows what it
-    // measures cannot be found without already knowing the length.
     payload.append(key);
-    // A single byte, so a language key is capped rather than silently truncated:
-    // the longest key in the table is "smalltalk", and 255 is a bound nobody can
-    // reach by accident.
     payload.append(static_cast<char>(key.size()));
     payload.append(kMagic, kMagicLength);
+    // After the magic, so a format-1 artifact -- which stops at the magic -- reads
+    // as version 1 by having nothing there.
+    payload.append(static_cast<char>(kFormat));
     return payload;
 }
 
@@ -55,14 +123,28 @@ bool decode(const QByteArray& bytes, Embedded* out, QString* error) {
         setError(error, QStringLiteral("the file is too short to be a program"));
         return false;
     }
-    if (bytes.right(kMagicLength) != QByteArray{kMagic, kMagicLength}) {
+    if (bytes.right(kMagicLength) != QByteArray{kMagic, kMagicLength} &&
+        bytes.mid(bytes.size() - kMagicLength - 1, kMagicLength) !=
+            QByteArray{kMagic, kMagicLength}) {
         setError(error, QStringLiteral("this executable does not carry a program"));
         return false;
     }
 
-    const int size = bytes.size();
-    const int key_length =
-        static_cast<unsigned char>(bytes.at(size - kLanguageLengthFromEnd));
+    // The magic is either the last 16 bytes (format 1) or one byte from the end,
+    // because format 2 appends its version after it.
+    const bool versioned =
+        bytes.right(kMagicLength) != QByteArray{kMagic, kMagicLength};
+    const int format =
+        versioned ? static_cast<unsigned char>(bytes.back()) : 1;
+    const int end = versioned ? bytes.size() - 1 : bytes.size();
+    if (format != 1 && format != kFormat) {
+        setError(error, QStringLiteral("this program was written by a newer version "
+                                       "(format %1)").arg(format));
+        return false;
+    }
+
+    const int size = end;
+    const int key_length = static_cast<unsigned char>(bytes.at(size - kLanguageLengthFromEnd));
     const int trailer = kSourceLengthFromEnd + key_length;
     if (key_length == 0 || size < trailer) {
         setError(error, QStringLiteral("the program's language key is missing"));
@@ -72,7 +154,32 @@ bool decode(const QByteArray& bytes, Embedded* out, QString* error) {
     const int key_offset = size - kLanguageLengthFromEnd - key_length;
     const int source_length = static_cast<int>(
         qFromLittleEndian<quint64>(bytes.constData() + size - trailer));
-    const int source_offset = size - trailer - source_length;
+    // A format-2 payload has a metadata block between the source and the source
+    // length. Its own length is what says how much, so the source's offset is
+    // computed from the two rather than guessed.
+    int metadata_length = 0;
+    if (format >= 2) {
+        // The four-byte metadata length sits immediately before the eight-byte
+        // source length, so it is `trailer + 4` from the end -- the key's length
+        // is part of `trailer`, and leaving it out reads four bytes of the wrong
+        // field.
+        if (size < trailer + 4) {
+            setError(error, QStringLiteral("the program is truncated"));
+            return false;
+        }
+        metadata_length = static_cast<int>(
+            qFromLittleEndian<quint32>(bytes.constData() + size - trailer - 4));
+        if (metadata_length < 0) {
+            setError(error, QStringLiteral("the program's metadata length is invalid"));
+            return false;
+        }
+    }
+    // Walking backwards from the source length: the four-byte metadata length,
+    // then the metadata, then the source. Leaving the length field out of this
+    // sum is a four-byte lie about where the program starts.
+    const int metadata_field = format >= 2 ? 4 : 0;
+    const int source_offset =
+        size - trailer - metadata_field - metadata_length - source_length;
     if (source_length < 0 || source_offset < 0) {
         setError(error, QStringLiteral("the program is truncated"));
         return false;
@@ -80,8 +187,19 @@ bool decode(const QByteArray& bytes, Embedded* out, QString* error) {
 
     if (out != nullptr) {
         out->present = true;
+        out->format = format;
         out->language = QString::fromUtf8(bytes.constData() + key_offset, key_length);
         out->source = QString::fromUtf8(bytes.constData() + source_offset, source_length);
+        if (metadata_length > 0) {
+            const QByteArray extra{bytes.constData() + size - trailer - metadata_field -
+                                       metadata_length,
+                                   metadata_length};
+            if (!metadataFromJson(extra, &out->metadata)) {
+                setError(error, QStringLiteral("the program's metadata is not valid "
+                                               "JSON"));
+                return false;
+            }
+        }
     }
     return true;
 }
@@ -110,6 +228,13 @@ Embedded embeddedIn(const QString& executablePath) {
 
 bool compileFile(const QString& hostExecutable, const QString& sourcePath,
                  const QString& outputPath, bool overwrite, QString* error) {
+    return compileFile(hostExecutable, sourcePath, outputPath, overwrite, Metadata{},
+                       error);
+}
+
+bool compileFile(const QString& hostExecutable, const QString& sourcePath,
+                 const QString& outputPath, bool overwrite, const Metadata& metadata,
+                 QString* error) {
     const QFileInfo source_info{sourcePath};
     if (!source_info.isFile() || !source_info.isReadable()) {
         setError(error, QStringLiteral("%1 cannot be read").arg(sourcePath));
@@ -151,7 +276,14 @@ bool compileFile(const QString& hostExecutable, const QString& sourcePath,
     const QString text = QString::fromUtf8(source.readAll());
     source.close();
 
-    const QByteArray payload = encode(settingsKey(language), text);
+    // The title defaults to the artifact's own name when the author gave none:
+    // "the file I ran" is a better title than an empty one, and it is what the
+    // window would have shown anyway.
+    Metadata filled = metadata;
+    if (filled.title.isEmpty()) {
+        filled.title = artifactName(outputPath);
+    }
+    const QByteArray payload = encode(settingsKey(language), text, filled);
 
     QFile host{hostExecutable};
     if (!host.open(QIODevice::ReadOnly)) {

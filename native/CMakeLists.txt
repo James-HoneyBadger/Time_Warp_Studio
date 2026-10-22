@@ -931,6 +931,62 @@ if(TIME_WARP_QT_FOUND)
         # The window title carries the version read at the top of this file, from
         # the repository's VERSION, so the title and the packages cannot drift.
 
+        # ---- what a program needs to be *shown* ----------------------------
+        # The canvas, the runner that fills it, the sounds it makes and the
+        # palette it is drawn in. Split out of `timewarp_ui` so `time_warp_player`
+        # can link the showing without the authoring: an editor, a REPL bar, a
+        # session restore and eleven docks are not part of opening a game, and
+        # until 18.0 the only way to ship a program was to ship all of it.
+        add_library(timewarp_ui_core
+            src/ui/language.cpp
+            src/ui/native_runner.cpp
+            src/ui/sound_player.cpp
+            src/ui/standalone.cpp
+            src/ui/themes.cpp
+            src/ui/turtle_canvas.cpp
+            src/ui/ui_style.cpp
+            include/timewarp/ui/language.hpp
+            include/timewarp/ui/native_runner.hpp
+            include/timewarp/ui/sound_player.hpp
+            include/timewarp/ui/standalone.hpp
+            include/timewarp/ui/themes.hpp
+            include/timewarp/ui/turtle_canvas.hpp
+            include/timewarp/ui/ui_style.hpp
+        )
+        add_library(timewarp::ui_core ALIAS timewarp_ui_core)
+        target_include_directories(timewarp_ui_core
+            PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+        )
+        target_compile_features(timewarp_ui_core PUBLIC cxx_std_20)
+        target_link_libraries(timewarp_ui_core PUBLIC ${TIME_WARP_QT}::Widgets)
+        if(TARGET timewarp::canvas_qt)
+            target_link_libraries(timewarp_ui_core PRIVATE timewarp::canvas_qt)
+        endif()
+        # The engines. A player with no interpreter has nothing to play.
+        target_link_libraries(timewarp_ui_core PRIVATE timewarp::lang)
+        target_compile_definitions(timewarp_ui_core PRIVATE
+            TIME_WARP_VERSION="${TIME_WARP_VERSION}"
+        )
+        # Public for the same reason `timewarp_ui` makes Svg public: the save
+        # dialog's filter and the export help text are compiled into the
+        # executable and the tests.
+        if(${TIME_WARP_QT}Svg_FOUND)
+            target_link_libraries(timewarp_ui_core PUBLIC ${TIME_WARP_QT}::Svg)
+            target_compile_definitions(timewarp_ui_core PUBLIC TIME_WARP_HAVE_SVG=1)
+        endif()
+        set_target_properties(timewarp_ui_core PROPERTIES AUTOMOC ON)
+        if(MSVC)
+            target_compile_options(timewarp_ui_core PRIVATE /W4 /permissive-)
+        else()
+            target_compile_options(timewarp_ui_core PRIVATE
+                -Wall -Wextra -Wpedantic -Wshadow -Wcast-qual ${TIME_WARP_GNU_WARNING_FLAGS}
+                ${TIME_WARP_NULL_DEREFERENCE}
+            )
+            if(TIME_WARP_EXPR_WERROR)
+                target_compile_options(timewarp_ui_core PRIVATE -Werror)
+            endif()
+        endif()
+
         add_library(timewarp_ui
             src/ui/app.cpp
             src/ui/app_paths.cpp
@@ -952,9 +1008,7 @@ if(TIME_WARP_QT_FOUND)
             src/ui/hb_dos.cpp
             src/ui/help_browser.cpp
             src/ui/lint.cpp
-            src/ui/language.cpp
             src/ui/main_window.cpp
-            src/ui/native_runner.cpp
             src/ui/outline.cpp
             src/ui/panels.cpp
             src/ui/preferences.cpp
@@ -967,16 +1021,11 @@ if(TIME_WARP_QT_FOUND)
             src/ui/scrubber.cpp
             src/ui/snippet_dialog.cpp
             src/ui/snippets.cpp
-            src/ui/sound_player.cpp
             src/ui/sql_panel.cpp
-            src/ui/standalone.cpp
             src/ui/syntax_highlighter.cpp
             src/ui/terminal_widget.cpp
-            src/ui/themes.cpp
             src/ui/tour.cpp
-            src/ui/turtle_canvas.cpp
             src/ui/version_history.cpp
-            src/ui/ui_style.cpp
             # Listed so AUTOMOC scans them: the Q_OBJECT classes live in headers
             # outside this target's source directory.
             include/timewarp/ui/benchmark.hpp
@@ -996,7 +1045,6 @@ if(TIME_WARP_QT_FOUND)
             include/timewarp/ui/lint.hpp
             include/timewarp/ui/snippet_dialog.hpp
             include/timewarp/ui/main_window.hpp
-            include/timewarp/ui/native_runner.hpp
             include/timewarp/ui/panels.hpp
             include/timewarp/ui/preferences.hpp
             include/timewarp/ui/profile_report.hpp
@@ -1006,16 +1054,11 @@ if(TIME_WARP_QT_FOUND)
             include/timewarp/ui/retro_computer.hpp
             include/timewarp/ui/retro_settings.hpp
             include/timewarp/ui/scrubber.hpp
-            include/timewarp/ui/sound_player.hpp
             include/timewarp/ui/sql_panel.hpp
-            include/timewarp/ui/standalone.hpp
             include/timewarp/ui/syntax_highlighter.hpp
             include/timewarp/ui/terminal_widget.hpp
-            include/timewarp/ui/themes.hpp
             include/timewarp/ui/tour.hpp
-            include/timewarp/ui/turtle_canvas.hpp
             include/timewarp/ui/version_history.hpp
-            include/timewarp/ui/ui_style.hpp
         )
         add_library(timewarp::ui ALIAS timewarp_ui)
 
@@ -1024,6 +1067,9 @@ if(TIME_WARP_QT_FOUND)
         )
         target_compile_features(timewarp_ui PUBLIC cxx_std_20)
         target_link_libraries(timewarp_ui PUBLIC ${TIME_WARP_QT}::Widgets)
+        # The canvas, the runner and the palette. `timewarp_ui` is the authoring
+        # shell around them; `time_warp_player` links only the core.
+        target_link_libraries(timewarp_ui PUBLIC timewarp::ui_core)
         # The window owns the execution pipeline: the interpreter runs on a
         # `DebuggerRunner` thread, pushes turtle commands into the canvas queue,
         # and `CanvasBridge` drains them on the GUI thread. Guarded because the
@@ -1079,6 +1125,34 @@ if(TIME_WARP_QT_FOUND)
             )
             if(TIME_WARP_EXPR_WERROR)
                 target_compile_options(timewarp_ui PRIVATE -Werror)
+            endif()
+        endif()
+
+        # ---- the player, not the workshop ---------------------------------
+        # One program, the canvas it draws on and the output it prints. It links
+        # `timewarp::ui_core` rather than `timewarp::ui`, so an artifact compiled
+        # for a friend carries the showing and not the authoring.
+        if(WIN32)
+            add_executable(time_warp_player WIN32 tools/player.cpp)
+        elseif(APPLE)
+            add_executable(time_warp_player MACOSX_BUNDLE tools/player.cpp)
+        else()
+            add_executable(time_warp_player tools/player.cpp)
+        endif()
+        target_link_libraries(time_warp_player PRIVATE timewarp::ui_core)
+        # The version string is a definition rather than a header constant, so a
+        # target that prints it has to carry it: `--version` would otherwise be the
+        # one place in the product with no number in it.
+        target_compile_definitions(time_warp_player PRIVATE
+            TIME_WARP_VERSION="${TIME_WARP_VERSION}")
+        if(TARGET ${TIME_WARP_QT}::WinMain)
+            target_link_libraries(time_warp_player PRIVATE ${TIME_WARP_QT}::WinMain)
+        endif()
+        if(NOT MSVC)
+            target_compile_options(time_warp_player PRIVATE
+                -Wall -Wextra -Wpedantic -Wshadow)
+            if(TIME_WARP_EXPR_WERROR)
+                target_compile_options(time_warp_player PRIVATE -Werror)
             endif()
         endif()
 
@@ -1212,6 +1286,17 @@ if(TIME_WARP_QT_FOUND)
         install(TARGETS time_warp_check RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
         install(TARGETS time_warp_api
                 RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
+        # The player goes beside the IDE because `--compile` looks for it there:
+        # an artifact is a copy of whichever of the two it finds, and a package
+        # without it would compile programs into copies of the whole IDE.
+        if(TARGET time_warp_player)
+            if(APPLE)
+                install(TARGETS time_warp_player BUNDLE DESTINATION .)
+            else()
+                install(TARGETS time_warp_player
+                        RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
+            endif()
+        endif()
         # `native/bridge/` is deliberately not installed. It is the reference the
         # parity gates compare the ports against and the thing `make smoke` and
         # `make command-matrix` drive -- development tooling, in the checkout,
@@ -1340,6 +1425,26 @@ if(TIME_WARP_QT_FOUND)
         endif()
 
         if(TIME_WARP_EXPR_BUILD_TESTS)
+            # The player, spawned as a process: a compiled program is only "sent
+            # to a friend" if the executable that opens it exists and draws, and
+            # neither half is reachable from a unit test of the window.
+            add_executable(player_tests tests/player_tests.cpp)
+            target_link_libraries(player_tests PRIVATE timewarp::ui_core)
+            target_include_directories(player_tests PRIVATE
+                ${CMAKE_CURRENT_SOURCE_DIR}/tests)
+            target_compile_definitions(player_tests PRIVATE
+                TIME_WARP_TEST_PLAYER="$<TARGET_FILE:time_warp_player>"
+                TIME_WARP_TEST_SOURCE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/..")
+            add_dependencies(player_tests time_warp_player)
+            if(NOT MSVC)
+                target_compile_options(player_tests PRIVATE
+                    -Wall -Wextra -Wpedantic -Wshadow)
+                if(TIME_WARP_EXPR_WERROR)
+                    target_compile_options(player_tests PRIVATE -Werror)
+                endif()
+            endif()
+            add_test(NAME player_tests COMMAND player_tests)
+
             add_executable(ui_layout_tests tests/ui_layout_tests.cpp)
             target_link_libraries(ui_layout_tests PRIVATE timewarp::ui)
             target_include_directories(ui_layout_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/tests)

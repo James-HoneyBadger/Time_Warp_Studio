@@ -55,6 +55,7 @@
 #include <QTabWidget>
 #include <QTableWidget>
 #include <QTextCursor>
+#include <QtEndian>
 #include <QTemporaryDir>
 #include <QToolBar>
 #include <QToolButton>
@@ -1904,6 +1905,74 @@ void test_standalone_payload() {
     TW_CHECK(!timewarp::ui::standalone::embeddedIn(
                   QCoreApplication::applicationFilePath())
                   .present);
+
+    // Format 2: the program arrives with the name and the author on it, and with
+    // the size it was written for, so the window that opens is the window the
+    // author saw.
+    timewarp::ui::standalone::Metadata metadata;
+    metadata.title = QStringLiteral("Star Patrol");
+    metadata.author = QStringLiteral("A Learner");
+    metadata.screen_width = 320;
+    metadata.screen_height = 200;
+    metadata.background = QStringLiteral("#101018");
+    metadata.crt = 40;
+    Embedded versioned;
+    const QByteArray payload = timewarp::ui::standalone::encode(
+        QStringLiteral("basic"), QStringLiteral("10 SCREEN 13\n"), metadata);
+    TW_CHECK(timewarp::ui::standalone::decode(payload, &versioned, &error));
+    TW_CHECK_EQ(versioned.format, 2);
+    TW_CHECK_EQ(versioned.metadata.title, QStringLiteral("Star Patrol"));
+    TW_CHECK_EQ(versioned.metadata.author, QStringLiteral("A Learner"));
+    TW_CHECK_EQ(versioned.metadata.screen_width, 320);
+    TW_CHECK_EQ(versioned.metadata.screen_height, 200);
+    TW_CHECK_EQ(versioned.metadata.background, QStringLiteral("#101018"));
+    TW_CHECK_EQ(versioned.metadata.crt, 40);
+    TW_CHECK_EQ(versioned.source, QStringLiteral("10 SCREEN 13\n"));
+
+    // A format-1 trailer -- what 17.x wrote, and what every artifact already in a
+    // learner's folder is -- still reads, and reads as version 1. Built by hand
+    // rather than by calling the encoder, because the point is to read what an
+    // older *writer* produced: `source`, source length, key, key length, magic,
+    // and nothing after the magic.
+    const QByteArray body{"FORWARD 10\n"};
+    const QByteArray key{"logo"};
+    QByteArray legacy = body;
+    QByteArray source_length(8, Qt::Uninitialized);
+    qToLittleEndian<quint64>(static_cast<quint64>(body.size()), source_length.data());
+    legacy += source_length;
+    legacy += key;
+    legacy += static_cast<char>(key.size());
+    legacy.append(timewarp::ui::standalone::kMagic, timewarp::ui::standalone::kMagicLength);
+    Embedded one;
+    TW_CHECK(timewarp::ui::standalone::decode(legacy, &one, &error));
+    TW_CHECK_EQ(one.format, 1);
+    TW_CHECK_EQ(one.language, QStringLiteral("logo"));
+    TW_CHECK_EQ(one.source, QStringLiteral("FORWARD 10\n"));
+    TW_CHECK(one.metadata.title.isEmpty());
+
+    // And the artifact written above carries its metadata through a real file,
+    // not only through the encoder.
+    const QString titled = dir.filePath(QStringLiteral("star_patrol"));
+    TW_CHECK(timewarp::ui::standalone::compileFile(
+        QCoreApplication::applicationFilePath(), source_path, titled, false, metadata,
+        &error));
+    const Embedded carried_metadata = timewarp::ui::standalone::embeddedIn(titled);
+    TW_CHECK_EQ(carried_metadata.format, 2);
+    TW_CHECK_EQ(carried_metadata.metadata.title, QStringLiteral("Star Patrol"));
+
+    // A field this build does not know is ignored rather than refused, which is
+    // what makes the format extensible without a third version number.
+    const QByteArray forward = QByteArray{
+        R"({"title":"Later","next_year":"a field this build has never heard of"})"};
+    timewarp::ui::standalone::Metadata read;
+    TW_CHECK(timewarp::ui::standalone::metadataFromJson(forward, &read));
+    TW_CHECK_EQ(read.title, QStringLiteral("Later"));
+
+    // Anything that is not a JSON object is refused: a garbled metadata block is
+    // a truncated download, not a program with no title.
+    timewarp::ui::standalone::Metadata ignored_metadata;
+    TW_CHECK(!timewarp::ui::standalone::metadataFromJson(QByteArray{"{oops"}, nullptr));
+    TW_CHECK(!timewarp::ui::standalone::metadataFromJson(QByteArray{"[1,2]"}, &ignored_metadata));
 }
 
 void test_tool_bar_configuration() {

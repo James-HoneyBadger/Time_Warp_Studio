@@ -444,10 +444,16 @@ has ink.
 
 ### The IDE artifact
 
-`time_warp_ide --compile program.bas --output hello`, or
-`./run.sh --compile ...`, copies the IDE and appends the program. The artifact opens
-a read-only player window, runs the program, and keeps the full canvas and output.
-It needs the same Qt runtime as the IDE; `twc` is the smaller alternative.
+`time_warp_ide --compile program.bas --output hello`, or `./run.sh --compile ...`,
+copies **`time_warp_player`** — the 2.3MB player, not the 4.7MB IDE — and appends the
+program. The artifact opens one program: the canvas, its output, `R` to run again,
+`F11` for the whole screen, `Esc` to leave. `--title` and `--author` put a name on it,
+which the player shows until the program draws.
+
+A program written for an older version still opens: the trailer is read from the end
+of the file, so a format-1 artifact from 17.x reads as format 1 and a format-2 one
+carries its metadata. It needs the same Qt runtime as the player; `twc` is the
+smaller alternative for a program that needs no window at all.
 
 ---
 

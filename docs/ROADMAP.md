@@ -607,23 +607,34 @@ component: `QPdfWriter` is part of Qt Gui.
 
 ## Distributing a program
 
-`time_warp_ide --compile program.bas --output hello` writes a standalone executable:
-a byte-for-byte copy of the IDE with the program appended as a trailer
-(`native/include/timewarp/ui/standalone.hpp` documents the format). Running it opens
-the window on the drawing, with the authoring UI hidden, the document read-only and
-the program already run — what a learner means by "send it to somebody".
+`time_warp_ide --compile program.bas --output hello --title "Star Patrol" --author
+"Ada"` writes a standalone executable: a byte-for-byte copy of **`time_warp_player`**
+with the program appended as a trailer (`native/include/timewarp/ui/standalone.hpp`
+documents the format). Running it opens one program and nothing else — the canvas, its
+output, `R` to run again, `F11` for the whole screen, `Esc` to leave — with the name
+and the author on a title card until the program draws.
+
+The player is a real executable and not a hidden-menu IDE: it links
+`timewarp::ui_core` (the canvas, the runner, the sound, the palette) rather than the
+shell, and it is **2.3MB against the IDE's 4.7MB**. `--compile` copies whichever of
+the two it finds beside itself, so a package that ships both produces player
+artifacts and a tree with only the IDE still produces something that runs.
+
+Format 2 is what carries the metadata: the program's title, its author, the size it
+was written for, a background colour and a CRT strength, as JSON ahead of the source.
+The trailer is read from the end, so a format-1 artifact written by 17.x still opens —
+and `player_tests` checks that by building one by hand.
 
 Limits, stated rather than discovered:
 
-- The artifact links against Qt like the IDE does, so it needs the same Qt runtime.
+- The artifact links against Qt like the players do, so it needs the same Qt runtime.
   A static build is not made.
-- Each artifact carries a full copy of the IDE (about 6MB), not a minimal player.
-  `./twc` is the minimal alternative for a program that does not need the
-  authoring UI: it links the interpreter and the drawing recorder into a small
-  executable. A single packaged `time_warp_player` is still not built.
 - The payload is appended, not compiled: the program is still interpreted, at the
   same speed. Nothing is optimised and nothing is hidden — `strings hello` finds the
   source, which is the right answer for a teaching tool.
+- `./twc` is still the smallest alternative, for a program that does not need a
+  window at all: it links the interpreter and the drawing recorder into an executable
+  that writes an SVG.
 
 ---
 

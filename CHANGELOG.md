@@ -2,7 +2,64 @@
 
 <!-- history: all -->
 
+## [18.1.0] - 2026-10-22
+
+A program now leaves the workshop as a program. `--compile` writes a copy of
+**`time_warp_player`** — the canvas, the runner, the sound and the palette, and nothing
+else — instead of a copy of the IDE with the authoring UI hidden at start-up. 2.3MB
+against 4.7MB, and the artifact opens one program rather than a workshop with the menus
+switched off.
+
+The version after the engine deletion rather than part of it, for the reason the two
+are the same argument: an artifact is a copy of a player that links the engines the
+product ships, and there is no longer a second interpreter for it to compete with.
+
+### Added
+
+- **`time_warp_player`** (`native/tools/player.cpp`): a program leaves the workshop as
+  a program. `--compile` writes a 2.3MB copy of it rather than a 4.7MB copy of the IDE
+  with the authoring UI hidden at start-up, and the artifact opens in one window — the
+  drawing, its output, `R` to run again, `F11` for the whole screen, `Esc` to leave —
+  with the author's name on a title card until the program draws. It links
+  `timewarp::ui_core` — the canvas, the runner, the sound and the palette — and not the
+  shell. No editor, no docks, no REPL bar, no SQL, no terminal, no session restore: a
+  player with an editor in it is an IDE with the menus hidden, which is the thing this
+  replaces.
+- **`timewarp::ui_core`**: those pieces split out of `timewarp_ui`, so a player can
+  link the showing without the authoring. Six files moved and live in exactly one
+  library; `player_tests` proves the split by linking them without the shell.
+- **Standalone format 2**: a JSON metadata block ahead of the source — title, author,
+  the size the program was written for, a background colour, a CRT strength.
+  `--compile --title … --author …` fills it in. The trailer is still read from the end,
+  so a format-1 artifact written by 17.x opens and reports itself as format 1.
+- **`--compile` copies the player when it finds one**, and the IDE otherwise: a package
+  produces small artifacts and a bare tree still produces something that runs, without a
+  build flag deciding it. The player is installed beside the IDE because that is where
+  the search looks.
+- **`player_tests`** (the 24th suite): spawns the real executable headless and looks at
+  the frames it writes. A drawing example screenshots at the size asked for with more
+  than two colours in it; a compiled artifact, run as its own executable, draws; a text
+  file is refused with exit code 2 and a sentence; `--version` prints.
+
+### Changed
+
+- `time_warp_player` is installed beside the IDE, because `--compile` looks for it
+  there. A package that shipped only the IDE would compile every program into a copy of
+  the whole application.
+- `docs/ROADMAP.md`'s "Distributing a program", `docs/USER_GUIDE.md` and `README.md`
+  describe the artifact as a player copy and name the format-2 fields.
+
 ## [18.0.0] - 2026-10-22
+
+The Python engine is gone. One language builds this repository, tests it and gates it:
+C++ for the product, and a `python3` for the harness scripts, which drive the engines
+the product ships.
+
+17.0 said the *product* contained no Python; that was true and not enough. The
+repository still held 65 Python files and 33,306 lines in `native/bridge/`, and every
+gate that mattered needed a virtual environment to run. `git ls-files '*.py'` now lists
+twelve scripts: nine in `native/tools/` (the harnesses, the curated command table and
+the two documentation gates), `twc.py`, and two in `Scripts/` — and nothing else.
 
 The Python engine is gone. One language builds this repository, tests it and gates
 it: C++ for the product, and a `python3` for the harness scripts, which drive the
@@ -52,7 +109,25 @@ else.
   checkout?", so the two harnesses cannot disagree about it.
 - **`native/tools/pyproject.toml`** — ruff and mypy configuration, moved with the
   scripts it configures. `make lint` checks `native/tools` now.
-
+- **`native/tools/golden_check.py`** — the parity gate, in one command
+  (`make golden-check`). It compares the ports with 470 recorded language programs
+  (output lines, every drawing call in order, the variables left behind) and 192
+  recorded Scheme programs (whole output text), and imports no Python to do it: each
+  entry carries the program text as well as the answer, which is what lets a gate
+  outlive the engine it was recorded from. Scheme's 24 accepted divergences are kept
+  as notes rather than compared, and an entry whose note has gone stale **fails** —
+  which retired three of them, because the port had caught up with the reference.
+- **`native/tests/golden/scheme_corpus.json.gz`** — 192 programs, recorded from the
+  reference before it was deleted, in the hour before it was deleted and using the
+  reference restored from git. It is the same trick the language corpus used.
+- **`native/tools/command_table.py`** — the curated command rows moved out of the
+  engine's test package. The table is data, not engine code: it names each command
+  and the smallest program that exercises it, and the three harnesses that read it
+  now import it from here.
+- **`native/tools/harness.py`** — one answer to "which `time_warp_check`, and which
+  checkout?", so the two harnesses cannot disagree about it.
+- **`native/tools/pyproject.toml`** — ruff and mypy configuration, moved with the
+  scripts it configures. `make lint` checks `native/tools` now.
 ### Changed
 
 - **`command_inventory.py` reads the C++ executors.** It parsed the Python ones with
