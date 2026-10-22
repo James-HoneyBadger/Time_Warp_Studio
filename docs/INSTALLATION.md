@@ -197,8 +197,9 @@ with those answers are `time_warp_gates`, built here.
 
 The last Python in the tree — the two documentation gates, the version tool, the
 icon generator and the `twc` wrapper — became C++ in 22.1.0. `make tree-check`
-fails if any `.py` comes back, so "the product needs no interpreter to be built,
-tested or checked" is a claim with a gate behind it rather than a wish.
+fails if a `.py` or a Python tool's config file comes back, so "the product needs
+no interpreter to be built, tested or checked" is a claim with a gate behind it
+rather than a wish.
 
 ---
 

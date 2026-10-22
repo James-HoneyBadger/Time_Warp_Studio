@@ -2,6 +2,55 @@
 
 <!-- history: all -->
 
+## [22.3.2] - 2026-10-22
+
+No identifier or file in the tree is named after Python any more. `MersenneRandom`
+was the first; this is the rest, and the gate that should have caught them was
+matching only the extension.
+
+### Changed
+
+- **Every Python-named helper renamed** for what it reproduces rather than what it
+  was recorded from: `python_number_text` and `python_float_or_zero` in the BASIC
+  paths became `printed_number` and `float_or_zero`; Logo's `python_float_repr`,
+  `python_int`, `python_str`, `python_list_repr` and `python_g` became `repr_real`,
+  `repr_integer`, `repr_value`, `repr_list` and `general_text`; Scheme's
+  `python_str` became `shown_text`; the Markdown linter's `is_python_space` became
+  `is_whitespace_char`. Behaviour is unchecked by that difference -- the frozen
+  corpus agrees on all 468 programs as before.
+
+### Fixed
+
+- **`pytest.ini` was still tracked**, configuring a test runner for
+  `native/bridge/time_warp/tests`, deleted five releases ago. `make tree-check`
+  passed it because the gate only matched `*.py`. The gate now also refuses the
+  files that exist only to configure a Python tool or hold its output --
+  `pytest.ini`, `tox.ini`, `setup.py`/`cfg`, `pyproject.toml`, `requirements*.txt`,
+  `Pipfile`, `poetry.lock`, `mypy.ini`, `ruff.toml`, `.pylintrc`, `MANIFEST.in` and
+  the `__pycache__`/`.pytest_cache`/`.ruff_cache`/`.mypy_cache` directories -- and
+  it is what found `pytest.ini` the moment it was widened.
+- **`.vscode/settings.json` was configuring a Python environment**: Pylance
+  indexing, pylint and flake8 arguments, and a `python.defaultInterpreterPath`
+  pointing at a `.venv` that no longer exists. It now holds only the build-tree
+  excludes and the CMake source directory.
+- **`.env.example` told the reader to generate a secret with `python -c ...`**; it
+  says `openssl rand -hex 32`.
+- **The language-request issue template** described the deleted bridge in the
+  present tense ("the bridge runs Python implementations and the differential gates
+  compare the C++ ports against them"); it now points at the frozen corpus. Two
+  comments in `app.hpp` and `interpreter.hpp` described the old build in the present
+  tense as well, and `app.hpp` promised a settings migration "with the theme
+  system" that never happened -- it now says nothing reads the old file.
+- **`native/CMakeLists.txt`'s install comment** described installing "the bridge,
+  which is where `locateWorker()` looks for it" and named `python_worker.cpp` among
+  the files that search a macOS bundle; it describes the payload that is actually
+  installed.
+
+What remains is prose: comments and guides that explain the semantics a port
+reproduces ("Python's `int()` truncates toward zero") and the record of what was
+removed. Those are citations, and they make a reader's understanding better, not a
+claim that Python is here.
+
 ## [22.3.1] - 2026-10-22
 
 `PythonRandom` was the last thing in the tree named after a language the project no

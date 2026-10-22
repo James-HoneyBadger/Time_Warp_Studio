@@ -1316,7 +1316,7 @@ std::string Machine::sprite(const std::string& args) {
             sprite.placed = true;
             state_.sprites[name] = std::move(sprite);
             return "🎮 Sprite " + name + " captured " + size + " at (" +
-                   python_number_text(x) + ", " + python_number_text(y) + ")\n";
+                   printed_number(x) + ", " + printed_number(y) + ")\n";
         } catch (const std::exception& error) {
             return "❌ SPRITE error: " + std::string{error.what()} + "\n";
         }
@@ -1340,8 +1340,8 @@ std::string Machine::sprite(const std::string& args) {
         found->second.y = y;
         found->second.placed = true;
         turtle_.place_sprite(name.c_str(), x, y);
-        return "🎮 Moved sprite " + name + " to (" + python_number_text(x) + ", " +
-               python_number_text(y) + ")\n";
+        return "🎮 Moved sprite " + name + " to (" + printed_number(x) + ", " +
+               printed_number(y) + ")\n";
     } catch (const std::exception& error) {
         return "❌ SPRITE error: " + std::string{error.what()} + "\n";
     }
@@ -1390,8 +1390,8 @@ std::string Machine::sprite_move(const std::string& args) {
         found->second.x += dx;
         found->second.y += dy;
         turtle_.move_sprite(name.c_str(), dx, dy);
-        return "🎮 Moved sprite " + name + " by (" + python_number_text(dx) + ", " +
-               python_number_text(dy) + ")\n";
+        return "🎮 Moved sprite " + name + " by (" + printed_number(dx) + ", " +
+               printed_number(dy) + ")\n";
     } catch (const std::exception& error) {
         return "❌ SPRITEMOVE error: " + std::string{error.what()} + "\n";
     }
@@ -1457,13 +1457,13 @@ std::string Machine::on_timer(const std::string& args) {
     const double interval = std::stod(match[1].str());
     const long target = std::stol(match[2].str());
     if (interval <= 0.0) {
-        return "❌ ON TIMER needs a positive interval, got " + python_number_text(interval) +
+        return "❌ ON TIMER needs a positive interval, got " + printed_number(interval) +
                "\n";
     }
     state_.timer_defined = true;
     state_.timer_interval = interval;
     state_.timer_target = target;
-    return "⏱️ Timer set: every " + python_number_text(interval) + "s GOSUB " +
+    return "⏱️ Timer set: every " + printed_number(interval) + "s GOSUB " +
            std::to_string(target) + "\n";
 }
 

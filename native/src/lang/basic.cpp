@@ -287,7 +287,7 @@ void Machine::assign(std::string_view raw, const Value& value) {
         if (value.is_text()) {
             interpreter_.set_text(base + "$", value.text());
         } else if (value.is_number()) {
-            interpreter_.set_text(base + "$", python_number_text(value.number()));
+            interpreter_.set_text(base + "$", printed_number(value.number()));
         } else {
             interpreter_.set_text(base + "$", "");
         }

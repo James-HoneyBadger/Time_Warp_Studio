@@ -4,7 +4,7 @@
 repos:
   # No Python hook: there is no Python in the tree to lint, and the build is the
   # lint (every target is compiled `-Werror`). `make tree-check` is the gate that
-  # keeps a `.py` from coming back.
+  # keeps a `.py`, or the config file of a Python tool, from coming back.
   # Secret scanning. A key pasted into a file must fail the commit rather than
   # reach GitHub: once pushed it is world-readable, and removing it afterwards
   # means rewriting every commit that contains it *and* rotating the key.

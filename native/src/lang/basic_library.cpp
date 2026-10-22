@@ -410,8 +410,8 @@ std::string create_particle(Machine& machine, std::string_view raw_args) {
         if (fields.size() > 3) {
             (void)machine.eval(trim(fields[3]));  // intensity, unused without a canvas
         }
-        return "✨ Created " + effect + " effect at (" + python_number_text(x) + ", " +
-               python_number_text(y) + ")\n";
+        return "✨ Created " + effect + " effect at (" + printed_number(x) + ", " +
+               printed_number(y) + ")\n";
     } catch (const std::exception& error) {
         return "❌ PARTICLE error: " + std::string{error.what()} + "\n";
     }

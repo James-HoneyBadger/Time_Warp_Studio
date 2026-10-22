@@ -113,7 +113,7 @@ void append_utf8(std::string& out, char32_t value) {
     }
 }
 
-bool is_python_space(char32_t value) {
+bool is_whitespace_char(char32_t value) {
     switch (value) {
         case 0x09:  // tab
         case 0x0A:  // newline
@@ -291,13 +291,13 @@ bool is_space_at(std::string_view text, std::size_t position) {
     if (position >= text.size()) {
         return false;
     }
-    return is_python_space(decode_at(text, position).value);
+    return is_whitespace_char(decode_at(text, position).value);
 }
 
 std::size_t skip_space(std::string_view text, std::size_t position) {
     while (position < text.size()) {
         const CodePoint point = decode_at(text, position);
-        if (!is_python_space(point.value)) {
+        if (!is_whitespace_char(point.value)) {
             break;
         }
         position += point.length;
@@ -487,7 +487,7 @@ std::string_view trim(std::string_view text) {
     std::size_t scan = begin;
     while (scan < text.size()) {
         const CodePoint point = decode_at(text, scan);
-        if (!is_python_space(point.value)) {
+        if (!is_whitespace_char(point.value)) {
             end = scan + point.length;
         }
         scan += point.length;

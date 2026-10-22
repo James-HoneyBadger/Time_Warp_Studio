@@ -187,7 +187,7 @@ bool starts_with_upper(std::string_view text, std::string_view prefix) {
 // constantly, since PRINT shows one and COUNT measures the other's length.
 // ---------------------------------------------------------------------------
 
-std::string python_float_repr(double value) {
+std::string repr_real(double value) {
     if (std::isnan(value)) {
         return "nan";
     }
@@ -205,7 +205,7 @@ std::string python_float_repr(double value) {
     return text;
 }
 
-std::string python_g(double value) {
+std::string general_text(double value) {
     if (std::isnan(value)) {
         return "nan";
     }
@@ -219,9 +219,9 @@ std::string python_g(double value) {
 }
 
 /// `str(int(value))` -- Python truncates toward zero.
-std::string python_int(double value) {
+std::string repr_integer(double value) {
     if (std::isnan(value) || std::isinf(value)) {
-        return python_float_repr(value);
+        return repr_real(value);
     }
     const double truncated = std::trunc(value);
     char buffer[64];
@@ -231,11 +231,11 @@ std::string python_int(double value) {
 }
 
 /// `str(value)` for a value the reference may hold as a float or as a word.
-std::string python_str(double value) { return python_float_repr(value); }
+std::string repr_value(double value) { return repr_real(value); }
 
 /// `repr()` of a Python list, which is what `str(list)` prints: strings are
 /// quoted with single quotes.
-std::string python_list_repr(const std::vector<std::string>& words) {
+std::string repr_list(const std::vector<std::string>& words) {
     std::string result = "[";
     for (std::size_t index = 0; index < words.size(); ++index) {
         if (index > 0) {
@@ -912,7 +912,7 @@ std::string LogoMachine::substitute_template_variables(std::string_view expressi
                     value = 0.0;
                 }
             }
-            result += std::trunc(value) == value ? python_int(value) : python_float_repr(value);
+            result += std::trunc(value) == value ? repr_integer(value) : repr_real(value);
             index = end;
             continue;
         }
@@ -1524,7 +1524,7 @@ std::string LogoMachine::run_command(std::string_view command_text) {
             return do_forever(trimmed);
         }
         if (name == "REPCOUNT") {
-            return python_int(interpreter_.number("REPCOUNT"));
+            return repr_integer(interpreter_.number("REPCOUNT"));
         }
         if (name == "ARC") {
             return do_arc(args);
@@ -1588,7 +1588,7 @@ std::string LogoMachine::run_command(std::string_view command_text) {
             if (!args.empty()) {
                 const std::optional<double> value = eval_number(args[0]);
                 if (value.has_value()) {
-                    return python_str(*value);
+                    return repr_value(*value);
                 }
                 std::string joined;
                 for (const std::string& piece : args) {
@@ -1761,7 +1761,7 @@ std::string LogoMachine::run_command(std::string_view command_text) {
             expression += piece;
         }
         try {
-            return python_str(eval(expression));
+            return repr_value(eval(expression));
         } catch (const std::exception&) {
             // Falls through to the unknown-command message.
         }
@@ -2321,7 +2321,7 @@ std::string LogoMachine::do_output(const std::vector<std::string>& args) {
     try {
         const double value = eval(expression);
         last_output_ = value;
-        return python_str(value) + "STOP_PROCEDURE";
+        return repr_value(value) + "STOP_PROCEDURE";
     } catch (const std::exception& error) {
         return std::string{"❌ Invalid OUTPUT value: "} + error.what() + "\n";
     }
@@ -2544,7 +2544,7 @@ std::string LogoMachine::do_thing(const std::vector<std::string>& args) {
     const std::string name = upper(strip_char(args[0], '"'));
     const auto number = interpreter_.variables().find(name);
     if (number != interpreter_.variables().end()) {
-        return python_str(number->second.number());
+        return repr_value(number->second.number());
     }
     const auto word = words_.find(name);
     if (word != words_.end()) {
@@ -2552,7 +2552,7 @@ std::string LogoMachine::do_thing(const std::vector<std::string>& args) {
     }
     const auto list = lists_.find(name);
     if (list != lists_.end()) {
-        return python_list_repr(list->second);
+        return repr_list(list->second);
     }
     return "❌ Variable " + name + " not found\n";
 }
@@ -2622,7 +2622,7 @@ std::string LogoMachine::do_print(const std::vector<std::string>& args,
         }
         const auto list = lists_.find(name);
         if (list != lists_.end()) {
-            return python_list_repr(list->second) + "\n";
+            return repr_list(list->second) + "\n";
         }
     }
 
@@ -2676,7 +2676,7 @@ std::string LogoMachine::do_print(const std::vector<std::string>& args,
         }
         double value = 0.0;
         if (looks_like_number(result, value)) {
-            result = format_value(python_float_repr(value), false);
+            result = format_value(repr_real(value), false);
         }
         return result + "\n";
     }
@@ -2686,22 +2686,22 @@ std::string LogoMachine::do_print(const std::vector<std::string>& args,
         if (reporter == "POS" || reporter == "XCOR" || reporter == "YCOR" ||
             reporter == "HEADING") {
             if (reporter == "POS") {
-                return "[" + python_float_repr(pose_.x()) + " " +
-                       python_float_repr(pose_.y()) + "]\n";
+                return "[" + repr_real(pose_.x()) + " " +
+                       repr_real(pose_.y()) + "]\n";
             }
             if (reporter == "XCOR") {
-                return python_float_repr(pose_.x()) + "\n";
+                return repr_real(pose_.x()) + "\n";
             }
             if (reporter == "YCOR") {
-                return python_float_repr(pose_.y()) + "\n";
+                return repr_real(pose_.y()) + "\n";
             }
-            return python_float_repr(pose_.heading()) + "\n";
+            return repr_real(pose_.heading()) + "\n";
         }
     }
 
     try {
         const double value = eval(text);
-        return format_value(python_float_repr(value), false) + "\n";
+        return format_value(repr_real(value), false) + "\n";
     } catch (const std::exception&) {
         return text + "\n";
     }
@@ -2713,7 +2713,7 @@ std::string LogoMachine::format_value(std::string_view text, bool as_text) const
     }
     double value = 0.0;
     if (looks_like_number(text, value)) {
-        return std::trunc(value) == value ? python_int(value) : python_g(value);
+        return std::trunc(value) == value ? repr_integer(value) : general_text(value);
     }
     return std::string{text};
 }
@@ -2758,7 +2758,7 @@ std::string LogoMachine::do_word(const std::vector<std::string>& args) {
     for (const std::string& argument : args) {
         try {
             const double value = interpreter_.evaluate_expression(argument);
-            result += std::trunc(value) == value ? python_int(value) : python_float_repr(value);
+            result += std::trunc(value) == value ? repr_integer(value) : repr_real(value);
         } catch (const std::exception&) {
             result += strip_char(argument, '"');
         }
@@ -2774,7 +2774,7 @@ std::string LogoMachine::do_list(const std::vector<std::string>& args) {
     for (const std::string& argument : args) {
         try {
             const double value = interpreter_.evaluate_expression(argument);
-            items.emplace_back(true, python_float_repr(value));
+            items.emplace_back(true, repr_real(value));
         } catch (const std::exception&) {
             items.emplace_back(false, strip_char(argument, '"'));
         }
@@ -2807,12 +2807,12 @@ std::string LogoMachine::do_sentence(const std::vector<std::string>& args) {
         }
         try {
             const double value = interpreter_.evaluate_expression(argument);
-            items.push_back(python_str(value));
+            items.push_back(repr_value(value));
         } catch (const std::exception&) {
             items.push_back(strip_char(argument, '"'));
         }
     }
-    return python_list_repr(items);
+    return repr_list(items);
 }
 
 std::string LogoMachine::do_first(const std::vector<std::string>& args, bool last) {
@@ -2859,7 +2859,7 @@ std::string LogoMachine::do_first(const std::vector<std::string>& args, bool las
         return last ? items.back() : items.front();
     }
     try {
-        return python_str(interpreter_.evaluate_expression(argument));
+        return repr_value(interpreter_.evaluate_expression(argument));
     } catch (const std::exception&) {
         const std::string word = strip_char(argument, '"');
         if (word.empty()) {
@@ -2883,7 +2883,7 @@ std::string LogoMachine::do_butfirst(const std::vector<std::string>& args, bool 
         }
         std::vector<std::string> kept(items.begin() + (last ? 0 : 1),
                                       items.end() - (last ? 1 : 0));
-        return python_list_repr(kept);
+        return repr_list(kept);
     };
     const auto shorten_word = [last](const std::string& text) {
         if (text.size() <= 1) {
@@ -2911,7 +2911,7 @@ std::string LogoMachine::do_butfirst(const std::vector<std::string>& args, bool 
         return shorten(split_ws(std::string_view{argument}.substr(1, argument.size() - 2)));
     }
     try {
-        return shorten_word(python_float_repr(interpreter_.evaluate_expression(argument)));
+        return shorten_word(repr_real(interpreter_.evaluate_expression(argument)));
     } catch (const std::exception&) {
         return shorten_word(strip_char(argument, '"'));
     }
@@ -2968,7 +2968,7 @@ std::string LogoMachine::do_item(const std::vector<std::string>& args) {
         return {};
     }
     try {
-        const std::string text = python_str(interpreter_.evaluate_expression(thing));
+        const std::string text = repr_value(interpreter_.evaluate_expression(thing));
         if (index >= 0 && index < static_cast<long long>(text.size())) {
             return std::string{text[static_cast<std::size_t>(index)]};
         }
@@ -2991,7 +2991,7 @@ std::string LogoMachine::do_count(const std::vector<std::string>& args) {
             split_ws(std::string_view{argument}.substr(1, argument.size() - 2)).size());
     }
     try {
-        return std::to_string(python_str(interpreter_.evaluate_expression(argument)).size());
+        return std::to_string(repr_value(interpreter_.evaluate_expression(argument)).size());
     } catch (const std::exception&) {
         return std::to_string(strip_char(argument, '"').size());
     }
@@ -3016,16 +3016,16 @@ std::string LogoMachine::do_arithmetic(const std::vector<std::string>& args,
     }
     switch (operation) {
         case '+':
-            return python_str(first + second);
+            return repr_value(first + second);
         case '-':
-            return python_str(first - second);
+            return repr_value(first - second);
         case '*':
-            return python_str(first * second);
+            return repr_value(first * second);
         default:
             if (second == 0.0) {
                 return "❌ Division by zero\n";
             }
-            return python_str(first / second);
+            return repr_value(first / second);
     }
 }
 

@@ -557,7 +557,7 @@ std::string format_numeric(double value, std::string_view preferred) {
     return format_general(value);
 }
 
-std::string python_number_text(double value) {
+std::string printed_number(double value) {
     // `str(3.0)` is "3.0" in Python and "3" in every C++ formatter.
     if (std::isfinite(value) && value == std::trunc(value) && std::fabs(value) < 9.0e18) {
         return std::to_string(static_cast<long long>(value)) + ".0";
@@ -586,7 +586,7 @@ std::string Strings::as_text(const Argument& argument) {
     if (std::isfinite(value) && value == std::trunc(value) && std::fabs(value) < 9.0e18) {
         return std::to_string(static_cast<long long>(value));
     }
-    return python_number_text(value);
+    return printed_number(value);
 }
 
 std::string Strings::string_variable(std::string_view name) const {
@@ -893,21 +893,21 @@ std::string Strings::evaluate_function(std::string_view input) {
             if (*number == std::trunc(*number) && std::fabs(*number) < 9.0e18) {
                 return std::to_string(static_cast<long long>(*number));
             }
-            return python_number_text(*number);
+            return printed_number(*number);
         }
         double parsed = 0.0;
         if (parse_float(std::get<std::string>(value), parsed)) {
             if (parsed == std::trunc(parsed) && std::fabs(parsed) < 9.0e18) {
                 return std::to_string(static_cast<long long>(parsed));
             }
-            return python_number_text(parsed);
+            return printed_number(parsed);
         }
         try {
             const double computed = interpreter_.evaluate_expression(arguments[0]);
             if (computed == std::trunc(computed) && std::fabs(computed) < 9.0e18) {
                 return std::to_string(static_cast<long long>(computed));
             }
-            return python_number_text(computed);
+            return printed_number(computed);
         } catch (const std::exception&) {
             return std::get<std::string>(value);
         }
@@ -918,7 +918,7 @@ std::string Strings::evaluate_function(std::string_view input) {
         }
         const Argument value = evaluate_arg(arguments[0]);
         if (const auto* number = std::get_if<double>(&value)) {
-            return python_number_text(*number);
+            return printed_number(*number);
         }
         const std::string source = trim(std::get<std::string>(value));
         std::size_t index = 0;
@@ -946,7 +946,7 @@ std::string Strings::evaluate_function(std::string_view input) {
         if (parsed == std::trunc(parsed) && std::fabs(parsed) < 9.0e18) {
             return std::to_string(static_cast<long long>(parsed));
         }
-        return python_number_text(parsed);
+        return printed_number(parsed);
     }
     if (name == "CHR") {
         if (arguments.empty()) {

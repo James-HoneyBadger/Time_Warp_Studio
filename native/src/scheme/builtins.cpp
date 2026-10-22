@@ -229,7 +229,7 @@ void require_at_least(const std::vector<Value>& args, std::size_t low,
 /// reference composed strings with `str()`.  A compound value falls back to the
 /// `write` rendering, which the reference would print in Python list syntax; see
 /// the README.
-[[nodiscard]] std::string python_str(const Value& value) {
+[[nodiscard]] std::string shown_text(const Value& value) {
     switch (value.type) {
         case ValueType::Boolean:
             return value.boolean ? "True" : "False";
@@ -967,7 +967,7 @@ void Machine::apply_primitive(PrimitiveId id, const std::vector<Value>& args) {
         case PrimitiveId::StringToNumber: {
             require_between(args, 1, 2, "string->number");
             // The reference accepted a radix and then ignored it.
-            const std::string text = python_str(args[0]);
+            const std::string text = shown_text(args[0]);
             std::int64_t integer = 0;
             if (parse_integer_token(text, integer)) {
                 deliver_value(integer_value(integer));
@@ -983,18 +983,18 @@ void Machine::apply_primitive(PrimitiveId id, const std::vector<Value>& args) {
         }
         case PrimitiveId::SymbolToString: {
             require_exactly(args, 1, "symbol->string");
-            deliver_value(string_value(arena_.make_string(python_str(args[0]))));
+            deliver_value(string_value(arena_.make_string(shown_text(args[0]))));
             return;
         }
         case PrimitiveId::StringToSymbol: {
             require_exactly(args, 1, "string->symbol");
-            deliver_value(symbol_value(arena_.intern(python_str(args[0]))));
+            deliver_value(symbol_value(arena_.intern(shown_text(args[0]))));
             return;
         }
         case PrimitiveId::StringLength: {
             require_exactly(args, 1, "string-length");
             // Works on symbols too, because `Symbol` subclasses `str`.
-            const std::string text = python_str(args[0]);
+            const std::string text = shown_text(args[0]);
             deliver_value(
                 integer_value(static_cast<std::int64_t>(text.size())));
             return;
@@ -1002,7 +1002,7 @@ void Machine::apply_primitive(PrimitiveId id, const std::vector<Value>& args) {
         case PrimitiveId::StringAppend: {
             std::string combined;
             for (const Value& value : args) {
-                combined += python_str(value);
+                combined += shown_text(value);
             }
             deliver_value(string_value(arena_.make_string(combined)));
             return;
@@ -1013,7 +1013,7 @@ void Machine::apply_primitive(PrimitiveId id, const std::vector<Value>& args) {
             const std::string_view who = up ? "string-upcase"
                                             : "string-downcase";
             require_exactly(args, 1, who);
-            std::string text = python_str(args[0]);
+            std::string text = shown_text(args[0]);
             // ASCII-only case mapping; Python's is Unicode-aware.  See README.
             std::transform(text.begin(), text.end(), text.begin(),
                            [up](unsigned char ch) {
@@ -1025,7 +1025,7 @@ void Machine::apply_primitive(PrimitiveId id, const std::vector<Value>& args) {
         }
         case PrimitiveId::Substring: {
             require_between(args, 2, 3, "substring");
-            const std::string text = python_str(args[0]);
+            const std::string text = shown_text(args[0]);
             const std::int64_t start =
                 static_cast<std::int64_t>(as_real(require_number(args[1],
                                                                  "substring")));
@@ -1056,7 +1056,7 @@ void Machine::apply_primitive(PrimitiveId id, const std::vector<Value>& args) {
         }
         case PrimitiveId::StringToList: {
             require_exactly(args, 1, "string->list");
-            const std::string text = python_str(args[0]);
+            const std::string text = shown_text(args[0]);
             std::vector<Value> characters;
             characters.reserve(text.size());
             for (const char ch : text) {
@@ -1073,8 +1073,8 @@ void Machine::apply_primitive(PrimitiveId id, const std::vector<Value>& args) {
             // is vacuously true for fewer than two arguments.
             bool satisfied = true;
             for (std::size_t index = 0; index + 1 < args.size(); ++index) {
-                std::string left = python_str(args[index]);
-                std::string right = python_str(args[index + 1]);
+                std::string left = shown_text(args[index]);
+                std::string right = shown_text(args[index + 1]);
                 if (id == PrimitiveId::StringCiEq) {
                     const auto lower = [](std::string text) {
                         std::transform(

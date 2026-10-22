@@ -11,6 +11,12 @@
 // fails if a `.py` appears: not because Python is bad, but because "the product
 // needs no interpreter to be built, tested or checked" is a claim in the README and
 // a claim needs a gate.
+//
+// A `.py` is not the only shape the leftovers take. `pytest.ini` outlived the whole
+// removal because this gate only matched the extension, and it configured a runner
+// for a directory that had been deleted -- so the manifests and caches are named
+// here too, and a file that exists only to configure a Python tool is a leftover
+// whether or not it ends in `.py`.
 
 #include "gates.hpp"
 
@@ -40,6 +46,39 @@ bool isBuildOutput(const QString& path) {
     return path.endsWith(QLatin1String("/build")) || path.contains(QLatin1String("/build/"));
 }
 
+/// Files that exist only to configure a Python tool, or to hold its output.
+bool isPythonArtefact(const QString& path) {
+    const QString name = path.section(QLatin1Char('/'), -1);
+    static const QStringList exact{QStringLiteral("pytest.ini"),  QStringLiteral("tox.ini"),
+                                   QStringLiteral("setup.py"),    QStringLiteral("setup.cfg"),
+                                   QStringLiteral("pyproject.toml"),
+                                   QStringLiteral("poetry.lock"), QStringLiteral("Pipfile"),
+                                   QStringLiteral("Pipfile.lock"), QStringLiteral("mypy.ini"),
+                                   QStringLiteral("ruff.toml"),   QStringLiteral(".ruff.toml"),
+                                   QStringLiteral(".pylintrc"),   QStringLiteral("MANIFEST.in")};
+    for (const QString& candidate : exact) {
+        if (name == candidate) {
+            return true;
+        }
+    }
+    if (name.startsWith(QLatin1String("requirements")) &&
+        name.endsWith(QLatin1String(".txt"))) {
+        return true;
+    }
+    // A cache directory cannot hold a tracked file, but it can be committed by
+    // accident; `git ls-files` is the honest question and this is the other half.
+    static const QStringList directories{QStringLiteral("/__pycache__/"),
+                                         QStringLiteral("/.pytest_cache/"),
+                                         QStringLiteral("/.ruff_cache/"),
+                                         QStringLiteral("/.mypy_cache/")};
+    for (const QString& directory : directories) {
+        if (path.contains(directory)) {
+            return true;
+        }
+    }
+    return false;
+}
+
 QStringList trackedFiles(const QString& root) {
     QProcess git;
     git.setWorkingDirectory(root);
@@ -65,31 +104,35 @@ int runTree(const QStringList& arguments) {
     if (files.isEmpty()) {
         // A tarball has no index; the walk is the same question asked without git.
         source = QStringLiteral("the tree");
-        QDirIterator iterator{root,
-                              {QStringLiteral("*.py")},
-                              QDir::Files,
-                              QDirIterator::Subdirectories};
+        // Every file, because the question is now about manifests and caches too;
+        // the same predicate decides, so the two paths cannot disagree.
+        QDirIterator iterator{root, QDir::Files, QDirIterator::Subdirectories};
         while (iterator.hasNext()) {
             const QString path = iterator.next();
-            files.append(QDir{root}.relativeFilePath(path));
+            const QString relative = QDir{root}.relativeFilePath(path);
+            if (relative.endsWith(QLatin1String(".py")) || isPythonArtefact(relative)) {
+                files.append(relative);
+            }
         }
     }
 
-    QStringList python;
+    QStringList leftovers;
     for (const QString& file : files) {
-        if (!file.endsWith(QLatin1String(".py")) || isBuildOutput(QLatin1Char('/') + file)) {
+        if (isBuildOutput(QLatin1Char('/') + file)) {
             continue;
         }
-        python.append(file);
+        if (file.endsWith(QLatin1String(".py")) || isPythonArtefact(file)) {
+            leftovers.append(file);
+        }
     }
 
-    if (python.isEmpty()) {
+    if (leftovers.isEmpty()) {
         std::printf("tree: no Python in the %s (%d file(s) checked)\n",
                     qPrintable(source), static_cast<int>(files.size()));
         return 0;
     }
-    std::printf("tree: %d Python file(s) are back:\n", static_cast<int>(python.size()));
-    for (const QString& file : python) {
+    std::printf("tree: %d Python leftover(s) are back:\n", static_cast<int>(leftovers.size()));
+    for (const QString& file : leftovers) {
         std::printf("  %s\n", qPrintable(file));
     }
     std::printf("\nThe product is built, tested and checked without an interpreter. If a\n"

@@ -143,7 +143,7 @@ make golden-check
 
 # The documentation gates and the packaged icons (their own small projects)
 ./tools/docs/build/time_warp_docs links
-./build/time_warp_gates tree         # fails if any .py is tracked
+./build/time_warp_gates tree         # fails if a .py or a Python tool's config is tracked
 
 # The automation API and the terminal compiler (as processes)
 printf '%s\n' '{"jsonrpc":"2.0","id":1,"method":"ping"}' | ./api
@@ -618,7 +618,7 @@ Python evaluates exactly, so `(display 1e30)` must print
 
 **Compound values passed to `string-append`** use Python's `repr` in the
 reference (`x<time_warp.languages.scheme.Pair object at 0x...>`), which is again
-an address. `python_str` falls back to the `write` rendering.
+an address. `repr_value` falls back to the `write` rendering.
 
 **Non-ASCII case mapping.** `string-upcase`/`string-downcase` are ASCII-only;
 Python's are Unicode-aware.

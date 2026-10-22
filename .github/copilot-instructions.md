@@ -104,7 +104,8 @@ make -C native run
   version at a call site — the two compatibility headers below are the seam.
 - No interpreter of any kind. Every language runs in process, and the gates and
   documentation tools are C++ built from this tree; `make tree-check` fails if a
-  `.py` comes back.
+  `.py` comes back, or the config file of a Python tool (`pytest.ini` outlived the
+  removal because that gate only matched the extension).
 
 ### Testing Strategy
 

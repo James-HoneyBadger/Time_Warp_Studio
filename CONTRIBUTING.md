@@ -153,7 +153,7 @@ pre-commit install
 That installs one hook: `detect-secrets` fails the commit when a file contains
 something shaped like a credential. There is no Python linter any more, because
 there is no Python: the build is compiled `-Werror`, and `make tree-check` fails if
-a `.py` file comes back.
+a `.py` file or a Python tool's config file comes back.
 
 `detect-secrets` compares against the committed baseline in `.secrets.baseline`,
 which records what the tree already holds. That is deliberate: without it every

@@ -70,9 +70,9 @@ body:
       label: Is there a reference implementation to work from?
       description: |
         A public implementation with a test suite is what makes a port verifiable.
-        The bridge runs Python implementations and the differential gates compare
-        the C++ ports against them, so a language with nothing to compare against
-        would be its own correctness argument.
+        The frozen corpus in `native/tests/golden/` is what the ports are compared
+        against, so a language with nothing to compare against would be its own
+        correctness argument. Name the implementation and where its tests live.
     validations:
       required: false
 

@@ -74,7 +74,7 @@ public:
 /// A number as PRINT shows it, honouring an `int`/`long` variable's type.
 [[nodiscard]] std::string format_numeric(double value, std::string_view preferred);
 /// Python's `str(number)`: `3.0` keeps its `.0` where C++ would print `3`.
-[[nodiscard]] std::string python_number_text(double value);
+[[nodiscard]] std::string printed_number(double value);
 
 // -- the clock ------------------------------------------------------------
 

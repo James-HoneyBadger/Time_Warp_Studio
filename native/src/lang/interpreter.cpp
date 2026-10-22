@@ -53,7 +53,7 @@ std::string strip(std::string_view text) {
 
 /// Python's `float(text)`, including the rule that a non-number is zero where
 /// the reference coerces typed input.
-double python_float_or_zero(std::string_view text) {
+double float_or_zero(std::string_view text) {
     const std::string trimmed = strip(text);
     if (trimmed.empty()) {
         return 0.0;
@@ -622,7 +622,7 @@ void Interpreter::request_input(const std::string& prompt, const std::string& va
     }
     last_input_ = answer;
     if (numeric) {
-        set_number(variable, python_float_or_zero(answer));
+        set_number(variable, float_or_zero(answer));
     } else {
         set_text(variable, std::move(answer));
     }

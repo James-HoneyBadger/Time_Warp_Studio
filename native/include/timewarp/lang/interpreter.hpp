@@ -10,7 +10,7 @@
 //
 // Two deliberate differences from the reference:
 //
-//  * Input is synchronous. The Python engine stops at an ASK and is resumed by a
+//  * Input is synchronous. The reference stopped at an ASK and was resumed by a
 //    later `execute()` call; here the executor calls `request_input`, which
 //    invokes the caller's callback and stores the answer before returning. The
 //    visible behaviour is identical, and a blocking callback lets the IDE's

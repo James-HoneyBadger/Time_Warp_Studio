@@ -1326,19 +1326,23 @@ if(TIME_WARP_QT_FOUND)
 
         # ---- install ------------------------------------------------------
         # Three things have to arrive together for an installed tree to work:
-        #   bin/time_warp_ide                 the application
-        #   share/time_warp/                  the bridge, which is where
-        #                                     locateWorker() looks for it
-        #                                     (`../share/time_warp` relative to
-        #                                     the binary), so an installed build
-        #                                     needs no path configuration
-        #   share/applications + share/icons  the desktop entry
+        #   bin/time_warp_ide                         the application
+        #   share/time-warp-studio/                    the examples, the lesson
+        #                                              curriculum and the snippet
+        #                                              catalogue, which is where
+        #                                              `app_paths.cpp`,
+        #                                              `snippets.cpp` and
+        #                                              `help_browser.cpp` look
+        #                                              (`../share/time-warp-studio`
+        #                                              relative to the binary), so an
+        #                                              installed build needs no path
+        #                                              configuration
+        #   share/applications + share/icons           the desktop entry
         #
         # A macOS bundle is self-contained instead: the same payload lives under
-        # Contents/Resources/share, which is where `app_paths.cpp`,
-        # `python_worker.cpp`, `snippets.cpp` and `help_browser.cpp` look first
-        # when they are inside a .app. Installing it anywhere else would leave a
-        # user who dragged the app to /Applications with no examples and no help.
+        # Contents/Resources/share, which is the second place those three look when
+        # they are inside a .app. Installing it anywhere else would leave a user who
+        # dragged the app to /Applications with no examples and no help.
         include(GNUInstallDirs)
         if(APPLE)
             set(TIME_WARP_SHARE_DIR
@@ -1373,11 +1377,9 @@ if(TIME_WARP_QT_FOUND)
                         RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
             endif()
         endif()
-        # `native/bridge/` is deliberately not installed. It is the reference the
-        # parity gates compare the ports against and the thing `make smoke` and
-        # `make command-matrix` drive -- development tooling, in the checkout,
-        # and no part of the product. A package that carried it would be shipping
-        # a second interpreter nothing runs.
+        # The gates and their data are deliberately not installed: they are
+        # development tooling, in the checkout, and no part of the product. A
+        # package that carried them would be shipping a second thing to keep green.
         # The snippet catalogue: `snippetRoot()` looks here first, so a package
         # and a build tree offer the same snippets.
         install(
