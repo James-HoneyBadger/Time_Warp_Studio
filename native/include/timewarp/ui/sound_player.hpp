@@ -17,12 +17,15 @@
 // the language reports it, which is the honest version of "the machine has no
 // sound".
 //
-// #### One sound at a time
+// #### Mixing rather than replacing
 //
-// A starting sound stops the previous one. `SOUND` in BASIC is synchronous on the
-// original hardware and note lists are the musical case; mixing two programs'
-// tones would need a mixer thread for no educational gain, and a second tone
-// while the first still plays is almost always a mistake in the program.
+// `SOUND` joins the mix instead of stopping it: a game wants its laser over its
+// engine, and a second tone while the first still plays is exactly what a game
+// does. `timewarp::audio::Mixer` sums the voices and this class renders the mix
+// to one file, so there is still one player process -- the thing that changed is
+// that the file now holds everything that is sounding. A `PLAY` note list is
+// still a tune: it stops the mix and plays its notes in order, because that is
+// what a note list means.
 
 #pragma once
 
@@ -33,6 +36,7 @@
 
 #include <vector>
 
+#include "timewarp/audio/mixer.hpp"
 #include "timewarp/audio/music.hpp"
 
 class QProcess;
@@ -64,6 +68,8 @@ public:
     /// The WAV bytes for `tones`, exposed so a test can check the file without a
     /// speaker.
     [[nodiscard]] static QByteArray wavFor(const std::vector<timewarp::audio::Tone>& tones);
+    /// The WAV bytes for samples already mixed. Public for the same reason.
+    [[nodiscard]] static QByteArray wavBytes(const std::vector<std::int16_t>& pcm);
 
 private:
     void start(const QByteArray& wav);
@@ -71,6 +77,9 @@ private:
     QString program_;
     QStringList arguments_;
     QProcess* process_ = nullptr;
+    /// What is sounding, which is more than the file being played: a new note
+    /// is summed with the voices already in it.
+    timewarp::audio::Mixer mixer_;
     /// The file the current process is playing. Kept alive until the process
     /// exits: `aplay` reads it lazily, so deleting it on return plays silence.
     QString current_file_;

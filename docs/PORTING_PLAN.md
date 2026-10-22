@@ -988,7 +988,7 @@ Every phase must leave all of these green, in this order:
 
 ```bash
 cmake --build native/build -j
-ctest --test-dir native/build --output-on-failure        # 21 suites
+ctest --test-dir native/build --output-on-failure        # 22 suites
 python3 native/tools/differential_check.py native/build/expr_cli
 python3 native/tools/lang_differential_check.py          # 474/0/9
 python3 native/tools/example_smoke.py                   # 60 programs

@@ -281,6 +281,7 @@ endif()
 
 add_library(timewarp_lang
     src/audio/music.cpp
+    src/audio/mixer.cpp
     src/io/ports.cpp
     src/io/gamepad.cpp
     src/lang/value.cpp
@@ -354,6 +355,19 @@ if(TIME_WARP_EXPR_BUILD_TESTS)
         endif()
     endif()
     add_test(NAME lang_tests COMMAND lang_tests)
+
+    # The mixer is Qt-free and has no device, so its suite runs anywhere the
+    # engine builds -- a machine with no sound card is the normal case in CI.
+    add_executable(audio_tests tests/audio_tests.cpp)
+    target_link_libraries(audio_tests PRIVATE timewarp::lang)
+    target_include_directories(audio_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/tests)
+    if(NOT MSVC)
+        target_compile_options(audio_tests PRIVATE -Wall -Wextra -Wpedantic -Wshadow)
+        if(TIME_WARP_EXPR_WERROR)
+            target_compile_options(audio_tests PRIVATE -Werror)
+        endif()
+    endif()
+    add_test(NAME audio_tests COMMAND audio_tests)
 endif()
 
 # One native program in, what it printed and drew out, for the differential

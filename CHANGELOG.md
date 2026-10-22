@@ -1,5 +1,39 @@
 # Changelog
 
+## [16.6.0] - 2026-10-22
+
+Sound gains a second voice. `SOUND` had been a single tone: a new note stopped the
+one before it, because the machine played one WAV through one player process. That
+is right for a tune and wrong for a game, where the laser has to be audible over
+the engine.
+
+### Added
+
+- **A mixer** (`timewarp::audio::Mixer`, `native/src/audio/mixer.cpp`): up to
+  eight voices, summed sample by sample, with the synth's own attack and release
+  so a note does not click. It is a pure function of its voices — render into a
+  buffer, nothing else — which is what lets `audio_tests` assert that two notes
+  are audible *together* on a machine with no sound card at all.
+- **`SOUND` joins the mix.** The note is added to what is still sounding and the
+  mix is re-rendered to one file, so there is still one player process and
+  several voices in it. A short effect fired over a long tone is now in the
+  samples instead of replacing them.
+- **A new suite**: `audio_tests` (7 cases, 44 checks) covers two voices, an effect
+  over a tone, the sum being clipped rather than wrapped, the voice limit being
+  reported rather than silently dropping a sound, rests, deterministic noise, and
+  the render time limit. 22 suites in all.
+
+### Notes
+
+- `PLAY` is still a tune: a note list stops the mix and plays its notes in order,
+  because that is what a note list means. Chord syntax (`[CEG]`) is not parsed;
+  a chord is written as several `SOUND` statements, which now genuinely sound
+  together.
+- The sink is unchanged: a WAV through the first of `paplay`, `aplay`, `ffplay`
+  or `play`. A machine with none of them is silent and `audio_available()` says
+  so — the honest version of "this machine has no sound", rather than a feature
+  that pretends.
+
 ## [16.5.0] - 2026-10-22
 
 The machine gets a screen it can read, and a screen it can show. `SCREEN 1` had

@@ -42,7 +42,7 @@ derived rather than remembered.
 | Database | A SQLite-backed Database tab, the shared `SQL` statement in nine languages, scripts, tables and schema; compiled programs link SQLite |
 | Automation | JSON-RPC over stdin/stdout (`language.run`, `repl.*`, `debug.*`, `sql.*`, `project.*`, `watch.evaluate`) and the `twc` terminal compiler |
 | Packaging | `make install`; tagged releases build a Windows installer and portable ZIP (Qt 6), a second Windows installer for Windows 7 (Qt 5.15), a universal macOS disk image, `.deb`, `.rpm`, AppImage, tarball and container artifacts |
-| Quality gates | 21 CTest suites in 4 build configurations and on four platforms (Linux, Windows, Windows with Qt 5.15, macOS), 3 parity gates, 575 engine tests, 448 command rows, 470 parity programs |
+| Quality gates | 22 CTest suites in 4 build configurations and on four platforms (Linux, Windows, Windows with Qt 5.15, macOS), 3 parity gates, 575 engine tests, 448 command rows, 470 parity programs |
 
 ---
 
@@ -267,14 +267,21 @@ BASIC's extended statement set is ported too: shapes, particles, fractals, music
 speech and the gamepad words are in `basic_features.cpp` and `basic_library.cpp`,
 and the command table exercises them. What is now true, and what is still limited:
 
-- **Sound is real** (`native/src/audio/music.cpp` + `native/src/ui/sound_player.cpp`).
-  `BEEP`, `SOUND` and `PLAY` synthesise square/triangle/sine/noise at equal
+- **Sound is real, and it mixes** (`native/src/audio/music.cpp`,
+  `native/src/audio/mixer.cpp` + `native/src/ui/sound_player.cpp`). `BEEP`,
+  `SOUND` and `PLAY` synthesise square/triangle/sine/noise at equal
   temperament, parse `PLAY`'s notation (tempo, lengths, octaves, accidentals,
   dotted notes, rests, `N` numbers) and play through the first of `paplay`,
-  `aplay`, `ffplay` or `play` on the machine. The acknowledgement text is still
-  the reference's, so parity is unchanged. **Limits**: one sound at a time (a new
-  tone stops the previous one); no mixing; a machine with none of those players
-  is silent, and `audio_available()` says so.
+  `aplay`, `ffplay` or `play` on the machine. `SOUND` joins the mix instead of
+  replacing it: up to eight voices are summed sample by sample
+  (`timewarp::audio::Mixer`, a pure function so `audio_tests` can assert that two
+  notes are audible together on a machine with no sound card), and the mix is
+  rendered to one file, so there is still one player process. `PLAY` is a tune
+  and stops the mix first, because a note list is sequential. The
+  acknowledgement text is still the reference's, so parity is unchanged.
+  **Limits**: a machine with none of those players is silent, and
+  `audio_available()` says so; `PLAY` has no chord syntax, so a chord is written
+  as several `SOUND` statements.
 - **`SAY` refuses rather than pretending.** There is no speech synthesiser in
   the build, and the reference's was an optional `pyttsx3` it never shipped
   either. Both answer `Speech synthesis not available`, which the parity gate
@@ -351,7 +358,7 @@ measuring the wrong machine.
 | Release | Claim |
 | --- | --- |
 | 16.5 ✓ | The framebuffer and fixed-coordinate modes, `GET`/`PUT`, gamepad input |
-| 16.6 | Audio that mixes — several voices in process, not one `paplay` per note |
+| 16.6 ✓ | Audio that mixes — several voices in process, not one `paplay` per note |
 | 17.0-beta | Lesson and classroom checking native, behind a flag, with both paths compared |
 | 17.0 | `native/bridge/` and `python_worker` deleted; `make golden-check` is the parity gate |
 

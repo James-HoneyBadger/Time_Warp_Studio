@@ -4,10 +4,10 @@ Time Warp Studio - reference language engine
 The Python engine the parity gates compare the C++ ports against, the engine the
 command matrix and example smoke drive, and the engine a lesson check runs in.
 No program is routed to it at run time: every language has a native executor.
-Aligned with Time Warp Studio v16.5.0 release
+Aligned with Time Warp Studio v16.6.0 release
 """
 
-__version__ = "16.5.0"
+__version__ = "16.6.0"
 __author__ = "James-HoneyBadger"
 
 from typing import TYPE_CHECKING, Any

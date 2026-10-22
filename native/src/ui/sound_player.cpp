@@ -62,18 +62,24 @@ SoundPlayer::SoundPlayer(QObject* parent) : QObject(parent) {
 SoundPlayer::~SoundPlayer() { stop(); }
 
 QByteArray SoundPlayer::wavFor(const std::vector<timewarp::audio::Tone>& tones) {
-    const std::vector<std::int16_t> pcm = timewarp::audio::render(tones);
+    return wavBytes(timewarp::audio::render(tones));
+}
+
+QByteArray SoundPlayer::wavBytes(const std::vector<std::int16_t>& pcm) {
     const std::string bytes = timewarp::audio::wav(pcm, timewarp::audio::kDefaultSampleRate);
     return QByteArray{bytes.data(), timewarp::core::intLength(bytes.size())};
 }
 
 void SoundPlayer::note(double frequency, int milliseconds,
                        timewarp::audio::Waveform waveform) {
-    timewarp::audio::Tone tone;
-    tone.frequency = frequency > 0.0 ? frequency : 0.0;
-    tone.milliseconds = milliseconds > 0 ? milliseconds : 1;
-    tone.waveform = waveform;
-    play({tone});
+    if (!available() || frequency <= 0.0) {
+        return;
+    }
+    // The note joins the mix. The file is re-rendered so that everything still
+    // sounding is in it -- one process, several voices -- which is what makes a
+    // short effect audible over a long tone.
+    mixer_.note(frequency, milliseconds > 0 ? milliseconds : 1, waveform);
+    start(wavBytes(mixer_.render_all()));
 }
 
 void SoundPlayer::play(const std::vector<timewarp::audio::Tone>& tones) {
@@ -107,6 +113,9 @@ void SoundPlayer::start(const QByteArray& wav) {
 }
 
 void SoundPlayer::stop() {
+    // The mix is part of what is playing, so silencing the machine clears it:
+    // the next note must not arrive on top of a voice nobody can hear.
+    mixer_.clear();
     if (process_ != nullptr && process_->state() != QProcess::NotRunning) {
         // `kill` rather than `terminate`: a player told to stop politely may
         // finish the buffer, which is exactly the sound being asked to go away.
