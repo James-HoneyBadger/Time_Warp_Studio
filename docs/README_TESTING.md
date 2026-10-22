@@ -47,11 +47,12 @@ don't show up".
 python3 native/tools/example_smoke.py
 ```
 
-The 30 programs that must produce ink are listed in `DRAWING_EXAMPLES` inside that
-script; a program that is expected to draw and does not fails the run.
+The programs that must produce ink are listed in `drawingExamples()` inside
+`native/tools/gates/smoke.cpp`; a program that is expected to draw and does not fails
+the run.
 
 The command matrix is the other half of that gate: every row in
-`native/tools/command_table.py` is executed through `time_warp_check` and must
+`native/share/command_rows.json` is executed through `time_warp_check` and must
 produce output, drawing or a reported error. It also reports what the C++ executors
 dispatch on that no row or waiver mentions.
 

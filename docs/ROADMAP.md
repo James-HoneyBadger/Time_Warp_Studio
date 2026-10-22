@@ -48,8 +48,8 @@ derived rather than remembered.
 
 ## Next: interpreter defects the command examination found
 
-`native/tools/command_matrix.py` drives one row per documented command through
-`time_warp_check` and the C++ executors (`native/tools/command_table.py`). Examining
+`time_warp_gates commands` drives one row per documented command through
+`time_warp_check` and the C++ executors (`native/share/command_rows.json`). Examining
 every command turned up defects that no gate had been looking for. Those fixed have a row
 of their own so they cannot come back silently; those still open are listed here
 rather than left as folklore, and where a row cannot express them the reason is
@@ -422,6 +422,7 @@ measuring the wrong machine.
 | 20.1 ✓ | The 64K is real and the screen is memory: `POKE` a character into `$8000` and the tube shows it, `LOCATE` moves the cursor `PRINT` writes at, `CLS` clears cells, `MEM` reports the map, and a `POKE` into ROM is refused out loud |
 | 20.2 ✓ | The machine has a clock, a voice and a switch: a self-test that counts the RAM it has, a sound latch a program pokes, five sounds nobody asked for, a 60 Hz frame counter, `SLEEP` that waits and `ON TIMER` that fires, and a POWER lamp that turns the machine off |
 | 21.0 ✓ | The eleventh language and a palette that means one thing: Forth — dictionary, colon definitions, three control structures, `VARIABLE`, `RECURSE`, turtle words, `POKE`/`PEEK` into the machine's memory — with 86 command rows, two lessons and three programs; and `SETPC 1` now names the colour the reference gave slot 1 in every language instead of near-black |
+| 22.0 ✓ | The harnesses are C++: `time_warp_gates` asks the four questions the Python scripts asked -- smoke, commands, repl, golden -- the command table is `native/share/command_rows.json`, and seven scripts left the tree with every make target keeping its name |
 
 Smaller items belong in one of those releases rather than a release of their own: a
 Smalltalk call stack shown as frames rather than a Program Counter; Flatpak and an

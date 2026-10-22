@@ -26,12 +26,12 @@ and what a reader of the merged history scrolls to.
 
 | Gate | Command | Result |
 | ---- | ------- | ------ |
-| C++ suites | `make -C native test` | <!-- 21/21 --> |
+| C++ suites | `make -C native test` | <!-- 24/24 --> |
 | Debug tree | `make -C native test-debug` | <!-- 21/21, or "not run — no C++ changed" --> |
 | Engine tests | `make engine-test` | <!-- N passed, 1 xfailed --> |
-| Example corpus | `make smoke` | <!-- all 60, stroke counts unmoved --> |
-| Command coverage | `python3 native/tools/command_matrix.py` | <!-- 447 rows, 0 failed, 0 gaps --> |
-| REPL coverage | `python3 native/tools/repl_matrix.py` | <!-- 447 rows, 0 failed --> |
+| Example corpus | `make smoke` | <!-- all 63, stroke counts unmoved --> |
+| Command coverage | `make command-matrix` | <!-- 546 rows, 0 failed, 0 gaps --> |
+| REPL coverage | `make repl-matrix` | <!-- 546 rows, 0 failed --> |
 | Lesson curriculum | `./native/build/time_warp_teach validate` | <!-- clean, or "not run — no lesson changed" --> |
 | Documentation lint | `make lint-md` | <!-- 0 issues --> |
 | Documentation links | `make doc-links` | <!-- 0 broken --> |

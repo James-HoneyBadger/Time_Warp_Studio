@@ -25,7 +25,11 @@ namespace timewarp::project {
 /// The format version written by this build. A newer file is refused rather than
 /// silently half-read, because a project the user cannot open is a recoverable
 /// problem while a project that lost a group is not.
-inline constexpr int kFormatVersion = 1;
+///
+/// Version 2 added `entry`: the program **Run Project** runs. A version 1 file
+/// still loads -- it simply has no entry point -- so a project written by an
+/// older build is not a project this build refuses.
+inline constexpr int kFormatVersion = 2;
 
 /// The extension a project file carries, without the dot.
 inline constexpr auto kExtension = "twproject";
@@ -121,6 +125,19 @@ public:
     /// one from the same rule.
     [[nodiscard]] QString displayPath(const QString& path) const;
 
+    // -- the entry point ---------------------------------------------------
+
+    /// The program **Run Project** runs, as an absolute path, or empty when the
+    /// project has none. Always a member of the project, which is what keeps the
+    /// command from naming a file the dock does not show.
+    [[nodiscard]] QString entry() const noexcept { return entry_; }
+    [[nodiscard]] bool hasEntry() const noexcept { return !entry_.isEmpty(); }
+    /// Makes `path` the entry point, adding it to the project when it is not a
+    /// member already. False when the path is empty or cannot be resolved.
+    bool setEntry(const QString& path);
+    /// Forgets the entry point. False when there was none.
+    bool clearEntry();
+
     // -- serialisation ----------------------------------------------------
 
     /// The JSON this project writes. Exposed for tests and for a future
@@ -140,6 +157,7 @@ private:
     QString file_path_;
     QStringList groups_;
     QList<ProjectFile> files_;
+    QString entry_;
 };
 
 }  // namespace timewarp::project

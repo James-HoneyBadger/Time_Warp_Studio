@@ -426,8 +426,10 @@ private:
 /// `SAY`/`SPEAK`, from `features/speech.py`.
 [[nodiscard]] std::string speak(Machine& machine, std::string_view args);
 
-/// A path confined to the workspace, as `utils/validators.py` confines it.
-[[nodiscard]] std::string resolve_confined_path(std::string_view filename);
+/// A path confined to `base` (the process's working directory when it is empty),
+/// as `utils/validators.py` confines it.
+[[nodiscard]] std::string resolve_confined_path(std::string_view filename,
+                                                std::string_view base);
 
 /// The named colours `TurtleState.resolve_color` knows.
 [[nodiscard]] const std::map<std::string, Rgb>& colour_names();

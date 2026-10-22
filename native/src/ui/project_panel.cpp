@@ -168,6 +168,10 @@ void ProjectPanel::buildUi() {
          QStringLiteral("projectAddFolder"), [this] { emit addFolderRequested(); });
     tool(QStringLiteral("+ Group"), tr("Create a group"), QStringLiteral("projectAddGroup"),
          [this] { emit addGroupRequested(); });
+    run_button_ = tool(QStringLiteral("\u25B6 Run"),
+                       tr("Run the project's entry point"),
+                       QStringLiteral("projectRun"),
+                       [this] { emit runProjectRequested(); });
     tools->addStretch(1);
     layout->addWidget(tools_);
 
@@ -233,20 +237,35 @@ void ProjectPanel::rebuildTree() {
     // The toolbar stays: New and Open are exactly what the empty state needs, and
     // Add Files/Group refuse politely until a project exists.
     tools_->setVisible(true);
+    if (run_button_ != nullptr) {
+        run_button_->setEnabled(open && project_.hasEntry());
+        run_button_->setToolTip(project_.hasEntry()
+                                    ? tr("Run %1").arg(project_.displayPath(project_.entry()))
+                                    : tr("Set an entry point to run the project"));
+    }
     if (!open) {
         return;
     }
 
     const QIcon folder_icon = style()->standardIcon(QStyle::SP_DirIcon);
     const QIcon file_icon = style()->standardIcon(QStyle::SP_FileIcon);
-    const auto add_file_item = [this, file_icon](QTreeWidgetItem* parent,
+    const auto isEntry = [this](const QString& path) {
+        return project_.hasEntry() &&
+               QFileInfo{path}.absoluteFilePath() == QFileInfo{project_.entry()}.absoluteFilePath();
+    };
+    const auto add_file_item = [this, file_icon, isEntry](QTreeWidgetItem* parent,
                                                  const timewarp::project::ProjectFile& file) {
         const bool missing = !QFileInfo::exists(file.path);
         auto* item = new QTreeWidgetItem{parent};
         item->setData(0, kKindRole, static_cast<int>(ItemKind::File));
         item->setData(0, kPathRole, file.path);
         item->setData(0, kGroupRole, file.group);
-        item->setText(0, (missing ? tr("\u26A0 ") : QString{}) + project_.displayPath(file.path));
+        // The entry point is marked rather than described: a reader scanning the
+        // list for "what does Run Project run" finds the row with the play mark.
+        const bool is_entry = isEntry(file.path);
+        item->setText(0, (missing ? tr("\u26A0 ") : QString{}) +
+                             (is_entry ? tr("\u25B6 ") : QString{}) +
+                             project_.displayPath(file.path));
         item->setToolTip(0, missing ? tr("Missing: %1").arg(QDir::toNativeSeparators(file.path))
                                     : QDir::toNativeSeparators(file.path));
         item->setIcon(0, file_icon);
@@ -399,6 +418,18 @@ void ProjectPanel::showContextMenu(const QPoint& position) {
         move->addSeparator();
         move->addAction(tr("New Group..."), this,
                         [this, file] { emit fileToNewGroupRequested(file); });
+        menu.addSeparator();
+        const bool is_entry =
+            project_.hasEntry() && QFileInfo{file}.absoluteFilePath() ==
+                                       QFileInfo{project_.entry()}.absoluteFilePath();
+        if (is_entry) {
+            menu.addAction(tr("Clear Entry Point"), this,
+                           [this] { emit clearEntryRequested(); });
+        } else {
+            menu.addAction(tr("Set as Entry Point"), this,
+                           [this, file] { emit setEntryRequested(file); });
+        }
+        menu.addAction(tr("Run Project"), this, [this] { emit runProjectRequested(); });
         menu.addSeparator();
         menu.addAction(tr("Remove from Project"), this,
                        [this, file] { emit removeFileRequested(file); });

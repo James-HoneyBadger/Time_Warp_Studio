@@ -16,7 +16,7 @@
 //   * CHIP-8 is a bytecode listing: opcodes, hex literals and labels.
 //
 // So the rules are data per language. The keyword lists come from the engine: the
-// names `native/tools/command_inventory.py` extracts from the executors, which is
+// names `native/tools/gates/inventory.cpp` extracts from the executors, which is
 // the same inventory the command-coverage gate uses. That is not tidiness for its
 // own sake -- a highlighter that colours a word the engine would reject teaches
 // the wrong vocabulary, and the vocabulary is the whole point of a teaching IDE.

@@ -62,9 +62,9 @@ Three recipes cover most contributions:
   the enum and `core/language_registry.py`, the IDE's table in
   `native/src/ui/language.cpp`, an example under `Examples/`, command-table rows, a
   tutorial, a reference section, and two lessons.
-- **A command.** Add it to the executor, add a row to
-  `native/tools/command_table.py`, and run
-  `python3 native/tools/command_matrix.py`. The row is what proves the command
+- **A command.** Add it to the executor, add a row to the `rows` list in
+  `native/share/command_rows.json`, and run `make command-matrix`. The row is what
+  proves the command
   produces output, drawing or a reported error — silence is this project's
   characteristic bug. If a row's label is prose, name the command the inventory
   knows in `also=(...)`, or it is reported as untested forever.
@@ -211,14 +211,18 @@ finding is intentional, regenerate it and review the diff:
   compass heading, the bridge protocol, the coalescing canvas queue — are
   documented where they are made; match that
 
-### The harness scripts (Python)
+### The gates
 
-The Python left in the repository is `native/tools/`: the harnesses that drive the
-gates (`example_smoke.py`, `command_matrix.py`, `repl_matrix.py`,
-`golden_check.py`), the curated `command_table.py`,
-and the two documentation gates. It is standard-library only and `ruff` clean;
-`make lint` checks it against `native/tools/pyproject.toml`. Nothing here is part of
-the product, and nothing installed contains it.
+The harnesses are `time_warp_gates`, one binary built with the product: `smoke`
+runs every example, `commands` runs every row of the command table, `repl` runs the
+same rows through the API, and `golden` compares the ports with the frozen
+corpora. The rows are data in `native/share/command_rows.json`, and the inventory
+that measures their coverage reads the executors' own sources
+(`native/tools/gates/inventory.cpp`).
+
+Two documentation tools are the last Python in the tree, and they move to C++ in
+22.1.0; `make lint` checks them against `native/tools/pyproject.toml`. Nothing here
+is part of the product, and nothing installed contains it.
 
 Two things in there are not executors and break just as easily: the lesson
 curriculum (`features/lessons.json`) and the teacher's side
@@ -551,14 +555,14 @@ def test_hello_world():
 ```
 
 The second argument is the enum member, not its name. Then add a row per command
-to `native/tools/command_table.py` and run
-`python3 native/tools/command_matrix.py`: it fails on a row that has no effect and
-on a command in the inventory that has no row.
+to the `rows` list in `native/share/command_rows.json` and run
+`make command-matrix`: it fails on a row that has no effect and on a command in the
+inventory that has no row.
 
 ### 4. Add examples
 
 Directory: `Examples/newlang/`, starting with `hello`.<!-- doc-claims: ignore --> Add any program that draws
-to `DRAWING_EXAMPLES` in `native/tools/example_smoke.py`, or a program that draws
+to `drawingExamples()` in `native/tools/gates/smoke.cpp`, or a program that draws
 nothing passes by being silent.
 
 ### 5. Teach it
@@ -635,9 +639,9 @@ Time_Warp_Studio/
 │   └── tools/                    # time_warp_ide.cpp, time_warp_api.cpp, twc.py
 │                                 #   and the commands and gates: time_warp_check,
 │                                 #   time_warp_learn, time_warp_teach,
-│                                 #   golden_check.py, command_matrix.py,
-│                                 #   repl_matrix.py, example_smoke.py,
-│                                 #   check_doc_links.py, check_doc_claims.py
+│                                 #   time_warp_gates (smoke, commands, repl,
+│                                 #   golden, in gates/), check_doc_links.py,
+│                                 #   check_doc_claims.py
 │           ├── core/             #     interpreter.py, language_registry.py
 │           ├── languages/        #     one stateless function per language
 │           ├── features/         #     lesson_system.py + lessons.json,

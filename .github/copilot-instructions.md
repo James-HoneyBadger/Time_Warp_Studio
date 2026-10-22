@@ -109,9 +109,9 @@ make -C native test-debug     # Debug tree
 make -C native asan           # AddressSanitizer; ASAN=undefined for UBSan
 
 # The whole example corpus, through the native engines
-python3 native/tools/example_smoke.py
-python3 native/tools/command_matrix.py   # every command row as a program
-python3 native/tools/repl_matrix.py      # every command row through the REPL
+./native/build/time_warp_gates smoke
+./native/build/time_warp_gates commands  # every command row as a program
+./native/build/time_warp_gates repl      # every command row through the REPL
 ./run.sh --help                       # build if needed, then launch the IDE
 ./twc Examples/basic/hello.bas -o hello
 ./api                                 # JSON-RPC on stdin/stdout; docs/API.md
@@ -132,10 +132,12 @@ make doc-links doc-claims
   languages, audio, canvas queue, canvas bridge, debug, debugger runner, lessons,
   classroom, ui layout, ui document, turtle canvas, syntax highlighter, media, editor
   services, help browser, chip8 emulator, retro computer, project, sql, api)
-- `native/tools/example_smoke.py` = every `Examples/**` program through the native
-  engines; the 30 that must draw are listed in `DRAWING_EXAMPLES`
-- `native/tools/command_table.py` = the curated command rows: one per command, plus
-  the waivers for what cannot be exercised automatically
+- `native/tools/gates/` = `time_warp_gates`, one binary with a subcommand per
+  harness: `smoke` (every `Examples/**` program through the native engines, with the
+  programs that must draw listed in `smoke.cpp`), `commands` (one row per command,
+  from `native/share/command_rows.json`, plus the waivers for what cannot be
+  exercised automatically), `repl` (the same rows through the API) and `golden` (the
+  frozen corpora)
 
 ### Adding a New Language
 
@@ -149,8 +151,9 @@ The order is the native one first, because that is the only implementation there
    gets the source and runs to completion. Either way it returns text with an emoji
    prefix and keeps no UI state.
 
-3. Record what it does for the parity gate: add rows to `native/tools/command_table.py`
-   and an example under `Examples/`, then run `make golden-check` — the corpus is
+3. Record what it does for the parity gate: add rows to
+   `native/share/command_rows.json` and an example under `Examples/`, then run
+   `make golden-check` — the corpus is
    recorded answers, so a new language's entries are added to
    `native/tests/golden/lang_corpus.json.gz` by hand, with the behaviour in the same
    commit.
@@ -162,8 +165,8 @@ The order is the native one first, because that is the only implementation there
    place it is written down.
 
 5. Add an example under `Examples/my_lang/`<!-- doc-claims: ignore --> and a row to
-   `native/tools/command_table.py` so every new command is covered by
-   `native/tools/command_matrix.py`. A row's `language` string is the protocol key
+   `native/share/command_rows.json` so every new command is covered by
+   `time_warp_gates commands`. A row's `language` string is the protocol key
    (`Language[key.upper()]`), so CHIP-8's rows read `CHIP8`; a row labelled with prose
    needs `also=(...)` naming the command the inventory knows, or it is reported as
    untested forever.
@@ -220,12 +223,12 @@ maximum-contrast variant of the active theme; it does not replace it.
 1. **Executor statelessness** - Don't store UI refs in executors; return strings only.
 2. **Test isolation** - Use fixtures for interpreter instances; don't share state.
 3. **A program that runs and draws nothing is the bug users report.** Never assume a
-   silent success is a success: `example_smoke.py` exists because 5 languages once ran
-   "successfully" and produced no ink at all.
+   silent success is a success: `time_warp_gates smoke` exists because 5 languages
+   once ran "successfully" and produced no ink at all.
 4. **A path search that guesses fails at run time, not at build time.** That is why the
    launcher this build used to need was an *ordered* list rather than a clever search,
-   and why `native/tools/harness.py` is the single place the two remaining harnesses
-   ask where `time_warp_check` is.
+   and why `native/tools/gates/locate.cpp` is the single place the harnesses ask where
+   `time_warp_check` is.
 5. **Deleting Python needs a dependency check that an import trace cannot give you.**
    The engine reaches `any(Features)` through imports *inside functions* (BASIC's
    SOUND/SAY/GAMEPAD, and the evaluator's TIMER), so a module can be invisible to a

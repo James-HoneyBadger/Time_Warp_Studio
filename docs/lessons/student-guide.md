@@ -35,7 +35,7 @@ Only one language? `time_warp_learn list` groups them, and the ids say which lan
 ## 2. Working through one
 
 ```text
-python3 native/tools/learn.py walk logo_shapes
+./native/build/time_warp_learn walk logo_shapes
 ```
 
 The walk opens the current checkpoint, writes its starting program to a file, and
@@ -115,7 +115,7 @@ you nothing about where your own attempt went wrong.
 ## 5. Where you are
 
 ```text
-$ python3 native/tools/learn.py progress
+$ ./native/build/time_warp_learn progress
 ────────────────────────────────────────────────────────────────────
 Your progress
 ────────────────────────────────────────────────────────────────────
@@ -127,7 +127,7 @@ Your place is saved as you go, so `walk` always opens the checkpoint you were
 last on rather than the first one. To go back to the beginning of a lesson:
 
 ```text
-python3 native/tools/learn.py reset logo_shapes
+./native/build/time_warp_learn reset logo_shapes
 ```
 
 That forgets your progress in the lesson. **Your files are not touched**, so you
@@ -156,7 +156,7 @@ The second lesson for each language assumes the first. Nothing stops you doing
 them out of order, but if `basic_loops` feels harder than it should, it is because
 it expects that you have done `basic_first_steps`.
 
-`learn.py show <lesson>` prints everything about a lesson before you start it:
+`time_warp_learn show <lesson>` prints everything about a lesson before you start it:
 what it is for, what you will be able to do afterwards, and the description of
 every checkpoint.
 

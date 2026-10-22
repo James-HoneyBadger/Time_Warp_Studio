@@ -297,6 +297,16 @@ public:
     /// through `output_callback_`: this is the screen, that is the console.
     void machine_write_text(const std::string& line);
 
+    /// The directory a program's relative file names are confined to.
+    ///
+    /// Empty means the process's working directory, which is what `time_warp_check`,
+    /// the corpora and a terminal run see. The IDE sets it per run -- a project's
+    /// root when one is open, else the document's own folder -- so `OPEN "notes.txt"`
+    /// writes beside the program rather than beside whatever directory the IDE
+    /// happened to be launched from, which is a coin toss on a desktop launcher.
+    void set_file_base(std::string base) { file_base_ = std::move(base); }
+    [[nodiscard]] const std::string& file_base() const noexcept { return file_base_; }
+
     /// Runs SQL on the IDE's connection and returns what it says. Executors that
     /// own their statement loop call this rather than reaching the IDE directly.
     [[nodiscard]] std::string run_sql(std::string_view sql);
@@ -392,6 +402,7 @@ private:
     bool profiling_ = false;
     bool tracing_ = false;
     MachineBus machine_bus_;
+    std::string file_base_;
     std::map<std::size_t, LineProfile> profile_;
     bool timed_out_ = false;
     bool iteration_capped_ = false;

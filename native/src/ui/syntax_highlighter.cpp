@@ -63,7 +63,7 @@ struct LanguageRules {
 /// The rule table for a language.
 ///
 /// The keyword lists are the engine's own command names -- the inventory in
-/// `native/tools/command_inventory.py` extracts them from the executors' dispatch
+/// `native/tools/gates/inventory.cpp` extracts them from the executors' dispatch
 /// tables -- plus the words a *statement* needs that a dispatcher never sees
 /// (BASIC's `THEN`, COMAL's `TO`), and the registers or class names a listing
 /// names out loud. Each addition is marked where it is not from the inventory.

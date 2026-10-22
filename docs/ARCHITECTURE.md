@@ -1,6 +1,6 @@
 # Architecture Guide
 
-## Time Warp Studio v21.0.0 — System Design and Implementation
+## Time Warp Studio v22.0.0 — System Design and Implementation
 
 > **This page describes the shipping product.** It was rewritten alongside the move
 > to C++20 / Qt6. Earlier revisions documented the PySide6 implementation, which has
@@ -485,12 +485,12 @@ and execute many times, with `evaluate()` as the memoising convenience path.
 
 Every language's arithmetic goes through it: the executors call
 `Interpreter::evaluate_expression`, which is this evaluator, and the parity gate
-(`native/tools/golden_check.py`) compares it with the recorded answers.
+(`time_warp_gates golden`) compares it with the recorded answers.
 
 ### Parity as the acceptance test
 
 The language engines are compared with the recorded corpus by
-`native/tools/golden_check.py` — 470 programs, and **0 differences** is the verdict —
+`time_warp_gates golden` — 470 programs, and **0 differences** is the verdict —
 and the Scheme machine against its own corpus (`scheme_corpus.json.gz`, 192
 programs, comparing whole output text). The Scheme entries that are *documented* as
 divergent carry the reference's text and the reason beside it, and the check asserts
@@ -712,10 +712,10 @@ engine at 18.0.
    key, extensions. The IDE needs this to name the language and to pick it from a file
    name.
 4. **Add an example** under `Examples/my_lang/`<!-- doc-claims: ignore --> — adding the ones that draw to
-   `DRAWING_EXAMPLES` in `native/tools/example_smoke.py`, or a program that draws
-   nothing passes by being silent — and a row to
-   `native/tools/command_table.py` so every new command is covered by
-   `native/tools/command_matrix.py`.
+   `drawingExamples()` in `native/tools/gates/smoke.cpp`, or a program that draws
+   nothing passes by being silent — and a row to the `rows` list in
+   `native/share/command_rows.json` so every new command is covered by
+   `time_warp_gates commands`.
 5. **Add a lesson** so the curriculum can teach it: two lessons in
    `native/share/lessons.json`, then `make teach-check` (`time_warp_teach validate`
    once the tree is built) until it is silent. A checkpoint is checked by *running* the learner's program, so this
@@ -836,9 +836,9 @@ gates and a command matrix. All of them must stay green, in every build tree.
 | Debug tree | `make -C native test-debug` | Keeps `Q_ASSERT` and standard-library hardening live; a suite green in Release can crash here |
 | Sanitisers | `make -C native asan` | Reads and writes of memory that is no longer valid, which no assertion can see. `ASAN=undefined` for UBSan |
 | Example corpus | `make smoke` | Every `Examples/**` program, through the native engines, including the 30 that must produce ink |
-| Parity gate | `make golden-check` (`native/tools/golden_check.py`) | The ports against 662 recorded programs: the reference's answers, frozen before it was deleted. 0 differences |
+| Parity gate | `make golden-check` (`time_warp_gates golden`) | The ports against 662 recorded programs: the reference's answers, frozen before it was deleted. 0 differences |
 | Lesson curriculum | `make teach-check` (`time_warp_teach validate`) | That every checkpoint's own solution passes, that no starter already passes, and that every language has a lesson |
-| Command matrix | `native/tools/command_matrix.py` | One row per documented command, through `time_warp_check` and then through the REPL |
+| Command matrix | `make command-matrix` (`time_warp_gates commands`) | One row per documented command, through `time_warp_check` and then through the REPL |
 | Version metadata | `Scripts/version_sync.py` | That every hand-written copy of the version agrees with `VERSION` |
 
 Two of these exist for a failure the others cannot see:

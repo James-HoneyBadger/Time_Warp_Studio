@@ -489,6 +489,44 @@ if(NOT MSVC)
     endif()
 endif()
 
+# ---------------------------------------------------------------------------
+# The gates
+# ---------------------------------------------------------------------------
+#
+# The harnesses that ask the built binaries what each program did: the example
+# corpus, the command table, the same rows through the REPL, and the frozen
+# reference corpora. They were five Python scripts until 22.0.0; the questions are
+# the same and they are asked here, in the language the answers come from.
+#
+# `TIME_WARP_SOURCE_DIR` is compiled in so a build tree outside the repository
+# still finds the checkout it was configured from -- the row data, the examples and
+# the corpora all live there.
+
+add_executable(time_warp_gates
+    tools/gates/main.cpp
+    tools/gates/locate.cpp
+    tools/gates/runner.cpp
+    tools/gates/judge.cpp
+    tools/gates/smoke.cpp
+    tools/gates/commands.cpp
+    tools/gates/repl.cpp
+    tools/gates/golden.cpp
+    tools/gates/inventory.cpp
+)
+target_include_directories(time_warp_gates PRIVATE tools/gates)
+target_compile_definitions(time_warp_gates PRIVATE
+    TIME_WARP_SOURCE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/..")
+find_package(ZLIB REQUIRED)
+target_link_libraries(time_warp_gates PRIVATE ${TIME_WARP_QT}::Core ZLIB::ZLIB)
+set_target_properties(time_warp_gates PROPERTIES
+    AUTOMOC OFF)
+if(NOT MSVC)
+    target_compile_options(time_warp_gates PRIVATE -Wall -Wextra -Wpedantic -Wshadow)
+    if(TIME_WARP_EXPR_WERROR)
+        target_compile_options(time_warp_gates PRIVATE -Werror)
+    endif()
+endif()
+
 
 # ---------------------------------------------------------------------------
 # Qt bridge (optional)

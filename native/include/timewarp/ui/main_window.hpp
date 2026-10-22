@@ -579,6 +579,22 @@ public:
     /// the work the bridge exists to postpone -- and a Run button that refuses to
     /// run five sixths of the advertised languages is not an IDE.
     void runCurrentDocument();
+    /// Opens `path` as the project file. The dialog and the session restore both
+    /// come through here, and so does a test: the model is the thing under test,
+    /// and a modal file dialog is not.
+    [[nodiscard]] bool openProject(const QString& path, bool silent = false);
+    /// Makes `path` the project's entry point (or clears it), saves, and refreshes
+    /// the dock so the play mark moves.
+    void setProjectEntry(const QString& path);
+    void clearProjectEntry();
+    /// Forgets the open project. Its files stay where they are: closing a project
+    /// is not deleting anything.
+    void closeProject();
+    /// Runs the open project's entry point, with the project's root as the
+    /// directory its relative file names are confined to. Reports in the status bar
+    /// when there is no project or no entry point, rather than running something
+    /// the user did not ask for.
+    void runProject();
     /// Stops the running program, if any. Safe when nothing is running.
     void stopRunningDocument();
     /// Empties the output console.
@@ -746,10 +762,6 @@ private:
 
     void newProjectDialog();
     void openProjectDialog();
-    /// Opens `path`, reporting a broken file unless `silent` (the session restore
-    /// path, where a project that has been moved is not a startup error).
-    [[nodiscard]] bool openProject(const QString& path, bool silent = false);
-    void closeProject();
     [[nodiscard]] bool saveProject();
     void addFilesToProject(const QString& group);
     void addFolderToProject();
@@ -760,6 +772,10 @@ private:
     void moveProjectFile(const QString& path, const QString& group);
     void renameProject();
     void revealProjectFolder();
+    /// The directory this run's relative file names are confined to: the project's
+    /// root when one is open, else the document's own folder, else empty (the
+    /// process's working directory).
+    [[nodiscard]] QString runFileBase(const CodeEditor* editor) const;
     /// Rebuilds the panel from the model and keeps the dock's title current.
     void refreshProjectPanel();
     void restoreProject();

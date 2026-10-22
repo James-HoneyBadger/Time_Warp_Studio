@@ -247,6 +247,10 @@ public:
     /// Where tones go. Null leaves `BEEP`/`SOUND`/`PLAY` silent but accepted,
     /// which is what a headless run wants.
     void set_sound_player(SoundPlayer* player);
+    /// The directory this run's relative file names are confined to. Empty (the
+    /// default) is the process's working directory, which is what a terminal run
+    /// wants; the window passes a project's root, or the document's folder.
+    void set_file_base(const QString& directory) { file_base_ = directory; }
     /// A key typed at the canvas, queued for `INKEY$`. Callable from the GUI
     /// thread while the program runs.
     void push_key(char key);
@@ -293,6 +297,7 @@ private:
 
     timewarp::lang::Language language_;
     std::unique_ptr<NativeCanvasHost> host_;
+    QString file_base_;
     QString source_;
 
     mutable std::mutex interpreter_mutex_;

@@ -5,10 +5,11 @@
 # repository root does the obvious thing, and so every check has one obvious home.
 
 NATIVE := native
-# The harness scripts are the only Python left, and they drive `time_warp_check`
-# rather than an engine: they need an interpreter, not a virtual environment. The
-# bridge's own pytest/ruff live in .venv while `native/bridge/` still exists.
+# The gates are `time_warp_gates`, one binary with a subcommand per harness; it is
+# built with the product and needs nothing installed beside it. `PYTHON` is still
+# here for the two documentation tools, which move to C++ in 22.1.0.
 PYTHON ?= $(shell test -x .venv/bin/python3 && echo .venv/bin/python3 || echo python3)
+GATES := $(NATIVE)/build/time_warp_gates
 FORWARDED := build run test test-debug asan clean distclean info test-list \
              screenshot reset-layout
 
@@ -29,11 +30,12 @@ help:
 	@echo ""
 	@echo "The checks (development tooling):"
 	@echo "  smoke         Every example program, through the native engines"
-	@echo "  golden-check  The ports against the frozen reference corpus (no Python)"
+	@echo "  command-matrix Every command row, one program each"
+	@echo "  golden-check  The ports against the frozen reference corpus"
 	@echo "  teach-check   Every lesson solution passes and every starter fails"
 	@echo "  doc-links     Every relative link and #anchor in the guides resolves"
 	@echo "  test-all      All of the above"
-	@echo "  lint          Ruff over the bridge"
+	@echo "  lint          Ruff over the remaining tooling"
 	@echo "  lint-md       Markdownlint over every tracked Markdown file"
 	@echo "  doc-claims    Every path, name and make target the guides name exists"
 	@echo ""
@@ -44,14 +46,20 @@ $(FORWARDED):
 
 # The three harnesses drive what the product drives: `smoke` and `command-matrix`
 # spawn `time_warp_check` (the native engines) and `repl-matrix` speaks the API.
-smoke: check-built
-	@$(PYTHON) $(NATIVE)/tools/example_smoke.py
+smoke: gates-built
+	@$(GATES) smoke
 
-command-matrix: check-built
-	@$(PYTHON) $(NATIVE)/tools/command_matrix.py
+command-matrix: gates-built
+	@$(GATES) commands
 
-repl-matrix: check-built
-	@$(PYTHON) $(NATIVE)/tools/repl_matrix.py
+repl-matrix: gates-built
+	@$(GATES) repl
+
+# The gates drive `time_warp_check`, `time_warp_api`, `lang_cli` and `scheme_cli`,
+# so they are built with them. Naming that here means `make smoke` on a fresh
+# checkout builds what it needs rather than explaining that it cannot find it.
+gates-built:
+	@$(MAKE) --no-print-directory -C $(NATIVE) gates
 
 # A harness whose runner is missing reports it as a failing program, so the build
 # is named here instead: `make smoke` on a fresh checkout should build the tool it
@@ -64,8 +72,8 @@ check-built:
 # and imports no Python to do it. There is no `--record` any more: the engine those
 # answers came from is deleted, so a deliberate behaviour change edits the corpus
 # entry in the same commit that changes the behaviour.
-golden-check:
-	@$(PYTHON) $(NATIVE)/tools/golden_check.py --all
+golden-check: gates-built
+	@$(GATES) golden --all
 
 # The curriculum, checked by the same library the Lessons panel asks: every
 # worked answer passes its checkpoint and every starter fails it. Needs the build,
@@ -76,8 +84,8 @@ teach-check:
 test-all: test smoke command-matrix repl-matrix teach-check golden-check doc-links \
           doc-claims
 
-# The harness scripts are the only Python left, and they are code: they parse flags,
-# walk directories and assert on output. Ruff's configuration moved with them.
+# The two documentation tools are the only Python left. Ruff's configuration sits
+# beside them.
 lint:
 	@$(PYTHON) -m ruff check $(NATIVE)/tools
 

@@ -3549,6 +3549,98 @@ void test_project_panel_shows_groups_and_files() {
     TW_CHECK_EQ(panel->projectName(), QString{});
 }
 
+// **Run Project** is the claim: a project's entry point runs, and the program's
+// relative file names land in the project's folder rather than in whatever
+// directory the IDE was launched from. Both halves are asserted here because the
+// second is invisible until a program tries to write a file.
+void test_run_project_runs_the_entry_point_in_the_project_folder() {
+    announce("run project");
+    QTemporaryDir dir;
+    TW_CHECK(dir.isValid());
+    const QString root = dir.path();
+    const QString entry = QDir{root}.filePath(QStringLiteral("main.bas"));
+    const QString other = QDir{root}.filePath(QStringLiteral("other.bas"));
+    const auto write_file = [](const QString& path, const QByteArray& text) {
+        QFile file{path};
+        if (!file.open(QIODevice::WriteOnly | QIODevice::Truncate)) {
+            return false;
+        }
+        return file.write(text) == text.size();
+    };
+    TW_CHECK(write_file(entry,
+                        "10 OPEN \"notes.txt\" FOR OUTPUT AS #1\n"
+                        "20 PRINT #1, \"from the project\"\n"
+                        "30 CLOSE #1\n"
+                        "40 PRINT \"ENTRY RAN\"\n"));
+    TW_CHECK(write_file(other, "10 PRINT \"NOT ME\"\n"));
+
+    timewarp::project::Project project =
+        timewarp::project::Project::create(QStringLiteral("Proj"), root);
+    project.addFile(entry);
+    project.addFile(other);
+    TW_CHECK(project.setEntry(entry));
+    QString error;
+    TW_CHECK(project.save(&error));
+
+    MainWindow window;
+    TW_CHECK(window.openProject(project.filePath()));
+    auto* console = window.findChild<QPlainTextEdit*>(QStringLiteral("consoleOutput"));
+    TW_CHECK(console != nullptr);
+    if (console == nullptr) {
+        return;
+    }
+
+    window.runProject();
+    TW_CHECK(spin_until([console] {
+        return console->toPlainText().contains(QStringLiteral("ENTRY RAN"));
+    }));
+    // The entry ran; the other program did not.
+    TW_CHECK(!console->toPlainText().contains(QStringLiteral("NOT ME")));
+
+    const QString written = QDir{root}.filePath(QStringLiteral("notes.txt"));
+    TW_CHECK(QFileInfo::exists(written));
+    QFile file{written};
+    if (file.open(QIODevice::ReadOnly)) {
+        TW_CHECK(QString::fromUtf8(file.readAll()).contains(QStringLiteral("from the project")));
+    }
+    // Nothing was written beside the test runner's working directory.
+    TW_CHECK(!QFileInfo::exists(QDir::currentPath() + QStringLiteral("/notes.txt")));
+
+    window.closeProject();
+}
+
+// With no project open the document's own folder is the run's directory, which is
+// the behaviour a user opening a file from anywhere expects.
+void test_a_run_writes_beside_its_document_without_a_project() {
+    announce("a run writes beside its document");
+    QTemporaryDir dir;
+    TW_CHECK(dir.isValid());
+    const QString folder = dir.path();
+    const QString program = QDir{folder}.filePath(QStringLiteral("writer.bas"));
+    QFile file{program};
+    TW_CHECK(file.open(QIODevice::WriteOnly));
+    file.write("10 OPEN \"beside.txt\" FOR OUTPUT AS #1\n"
+               "20 PRINT #1, \"here\"\n"
+               "30 CLOSE #1\n"
+               "40 PRINT \"WROTE\"\n");
+    file.close();
+
+    MainWindow window;
+    window.closeProject();
+    TW_CHECK(window.openFile(program));
+
+    auto* console = window.findChild<QPlainTextEdit*>(QStringLiteral("consoleOutput"));
+    TW_CHECK(console != nullptr);
+    if (console == nullptr) {
+        return;
+    }
+    window.runCurrentDocument();
+    TW_CHECK(spin_until([console] {
+        return console->toPlainText().contains(QStringLiteral("WROTE"));
+    }));
+    TW_CHECK(QFileInfo::exists(QDir{folder}.filePath(QStringLiteral("beside.txt"))));
+}
+
 void test_watch_and_data_breakpoint_controls() {
     announce("watch and data breakpoint controls");
     // The panel restores the session-wide lists; a value written by an earlier
@@ -3847,6 +3939,8 @@ int main(int argc, char** argv) {
     test_run_both_panes_compares_them();
     test_the_split_editor_moves_documents_between_panes();
     test_project_panel_shows_groups_and_files();
+    test_run_project_runs_the_entry_point_in_the_project_folder();
+    test_a_run_writes_beside_its_document_without_a_project();
     test_watch_and_data_breakpoint_controls();
     test_sql_panel_runs_and_shows_results();
     test_repl_bar_runs_and_keeps_bindings();

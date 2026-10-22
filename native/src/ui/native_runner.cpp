@@ -791,6 +791,7 @@ void NativeRunner::run() {
     engine->set_profiling(profiling_);
     engine->set_tracing(tracing_);
     engine->set_machine_bus(machine_bus_);
+    engine->set_file_base(file_base_.toStdString());
 
     // A binary ROM was decoded through the codec that preserves every byte
     // (including 0x0D, which a QTextDocument would normalise); a listing is

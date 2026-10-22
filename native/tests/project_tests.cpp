@@ -168,6 +168,114 @@ void test_missing_files() {
     TW_CHECK(!project.contains(absent));
 }
 
+// The entry point is what **Run Project** runs, so it has to survive a save and a
+// load, stay inside the project's own path arithmetic (relative when it can be),
+// and never name something the dock does not show.
+void test_the_entry_point_round_trips() {
+    announce("the entry point round-trips");
+    tw::test::TempDir temp;
+    if (!temp.valid()) {
+        return;
+    }
+    const QString root = temp.path(QStringLiteral("course"));
+    const QString entry = temp.write(QStringLiteral("course/main.bas"), "10 PRINT 1\n");
+    const QString other = temp.write(QStringLiteral("course/extra.bas"), "10 PRINT 2\n");
+
+    Project project = Project::create(QStringLiteral("Course"), root);
+    TW_CHECK(!project.hasEntry());
+    TW_CHECK(project.setEntry(entry));
+    // Setting an entry that was not a member adds it: the entry is always shown.
+    TW_CHECK(project.contains(entry));
+    TW_CHECK_EQ(project.entry(), QDir::cleanPath(entry));
+    // Setting the same one twice is not a change, which is what lets the window
+    // save only after a real edit.
+    TW_CHECK(!project.setEntry(entry));
+    TW_CHECK(project.setEntry(other));
+    TW_CHECK_EQ(project.entry(), QDir::cleanPath(other));
+    TW_CHECK_EQ(project.files().size(), 2);
+
+    QString error;
+    TW_CHECK(project.save(&error));
+    // Stored relative to the root, like every other path in the file.
+    QFile saved{project.filePath()};
+    TW_CHECK(saved.open(QIODevice::ReadOnly));
+    const QJsonObject written =
+        QJsonDocument::fromJson(saved.readAll()).object();
+    TW_CHECK_EQ(written.value(QStringLiteral("entry")).toString(),
+                QStringLiteral("extra.bas"));
+
+    Project reloaded;
+    TW_CHECK(reloaded.load(project.filePath(), &error));
+    TW_CHECK_EQ(reloaded.entry(), QDir::cleanPath(other));
+    TW_CHECK(reloaded.hasEntry());
+
+    // Removing the entry from the project clears it, because a project that runs a
+    // program it no longer lists is a mystery rather than a feature.
+    TW_CHECK(reloaded.removeFile(other));
+    TW_CHECK(!reloaded.hasEntry());
+    TW_CHECK(reloaded.clearEntry() == false);
+}
+
+void test_a_version_one_project_still_loads() {
+    announce("a version 1 project still loads");
+    tw::test::TempDir temp;
+    if (!temp.valid()) {
+        return;
+    }
+    const QString root = temp.path(QStringLiteral("old"));
+    const QString program = temp.write(QStringLiteral("old/one.bas"), "10 PRINT 1\n");
+    // Exactly what 20.x wrote: no `entry`, format 1.
+    QJsonObject object;
+    object.insert(QStringLiteral("format"), 1);
+    object.insert(QStringLiteral("name"), QStringLiteral("Old"));
+    object.insert(QStringLiteral("root"), QStringLiteral("."));
+    QJsonArray files;
+    QJsonObject record;
+    record.insert(QStringLiteral("path"), QFileInfo{program}.fileName());
+    files.append(record);
+    object.insert(QStringLiteral("files"), files);
+    const QString path = temp.write(QStringLiteral("old/Old.twproject"),
+                                    QJsonDocument{object}.toJson());
+
+    Project project;
+    QString error;
+    TW_CHECK(project.load(path, &error));
+    TW_CHECK_EQ(project.files().size(), 1);
+    TW_CHECK(!project.hasEntry());
+}
+
+// A hand-edited project that names an entry it does not list must still load, with
+// the file added: the alternative is an entry point the dock cannot show.
+void test_an_entry_outside_the_file_list_is_added() {
+    announce("an unlisted entry is added");
+    tw::test::TempDir temp;
+    if (!temp.valid()) {
+        return;
+    }
+    const QString root = temp.path(QStringLiteral("hand"));
+    (void)temp.write(QStringLiteral("hand/start.logo"), "FD 10\n");
+    QJsonObject object;
+    object.insert(QStringLiteral("format"), 2);
+    object.insert(QStringLiteral("name"), QStringLiteral("Hand"));
+    object.insert(QStringLiteral("root"), QStringLiteral("."));
+    object.insert(QStringLiteral("files"), QJsonArray{});
+    object.insert(QStringLiteral("entry"), QStringLiteral("start.logo"));
+    const QString path = temp.write(QStringLiteral("hand/Hand.twproject"),
+                                    QJsonDocument{object}.toJson());
+
+    Project project;
+    QString error;
+    TW_CHECK(project.load(path, &error));
+    TW_CHECK(project.hasEntry());
+    // Named, because `files()` returns a list by value: `.first()` on the temporary
+    // would name a member of something already destroyed by the time it is read.
+    const QList<timewarp::project::ProjectFile> listed = project.files();
+    TW_CHECK_EQ(listed.size(), 1);
+    const QString expected_entry =
+        QDir::cleanPath(QDir{root}.filePath(QStringLiteral("start.logo")));
+    TW_CHECK_EQ(listed.first().path, expected_entry);
+}
+
 void test_bad_files_are_refused() {
     announce("malformed projects are refused");
     tw::test::TempDir temp;
@@ -215,6 +323,9 @@ int main() {
     test_round_trip();
     test_group_edits();
     test_missing_files();
+    test_the_entry_point_round_trips();
+    test_a_version_one_project_still_loads();
+    test_an_entry_outside_the_file_list_is_added();
     test_bad_files_are_refused();
     return tw::test::summary("project_tests");
 }

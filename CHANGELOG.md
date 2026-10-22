@@ -2,6 +2,72 @@
 
 <!-- history: all -->
 
+## [22.0.0] - 2026-10-22
+
+The harnesses are C++, and a project runs as a project. Two sentences, both about
+the same thing: the tree should not need a language the product does not use, and a
+folder of programs should be something you can run rather than something you can
+only browse.
+
+Four thousand lines of Python ran this project's most important checks, and the
+checks were the reason the tree still needed an interpreter: a contributor could not
+run `make command-matrix` without one, and the CI jobs that answer "does every
+example still draw" depended on a language the product does not use.
+
+### A project runs as a project
+
+- **`.twproject` has an entry point** (format 2, and a format 1 file still loads).
+  **Project > Set Current File as Entry Point**, the dock's ▶ **Run** button, the
+  **Run Project** action (`Ctrl+Alt+R`), and the entry marked with ▶ in the tree. A
+  project that names an entry it does not list adds it on load, and removing the
+  entry's file clears the entry: what Run Project runs is always a program the dock
+  shows.
+- **A run's file fence is the project, not the launcher's directory.** Until this
+  release `OPEN "notes.txt"` in BASIC wrote beside whatever directory the IDE was
+  started from -- the repository root, or `$HOME` from a desktop launcher. A run now
+  confines relative names to the project's root when one is open, else to the
+  document's own folder, and only falls back to the working directory for an unsaved,
+  unprojected file. `time_warp_check` and the corpora are unchanged: no base set
+  means the process's directory, as before.
+
+### Added
+
+- **`time_warp_gates`** — one binary, four questions, built with the product:
+  - `smoke`: every `Examples/**` program through the native engines, with the ones
+    that must produce ink named, so "it ran and drew nothing" still fails.
+  - `commands`: all 546 command rows, one program each, judged on output, drawing or
+    a reported error, then the coverage report against the commands the executors
+    actually dispatch on.
+  - `repl`: the same rows through `repl.eval`, one `time_warp_api` process, with a
+    restart on a wedged request so one broken row cannot hide the rest.
+  - `golden`: the ports against the frozen reference corpora, gzipped corpus included
+    (zlib directly, because gzip framing is not the zlib wrapper `qUncompress` reads).
+- **`native/share/command_rows.json`** — the command table as data: 546 rows, the
+  one waiver, and the rules a row follows. It was `command_table.py`, which was
+  data wearing a Python extension.
+
+### Removed
+
+- **Seven scripts**: `harness.py`, `example_smoke.py`, `command_matrix.py`,
+  `command_table.py`, `command_inventory.py`, `repl_matrix.py`, `golden_check.py`.
+  The `make` targets keep their names — `smoke`, `command-matrix`, `repl-matrix`,
+  `golden-check` — so every guide that names one still points at something real.
+
+### Notes for a reader checking the port
+
+- The port was verified by running both sides on the same tree and comparing the
+  text: the example corpus agrees to the stroke (63 programs, 5,712 strokes in
+  BASIC and every other count identical), the command matrix agrees to the row and
+  to every coverage figure (26/63/0/4/9/0/15/7/0/81), the REPL matrix agrees on all
+  546 rows, and `golden --all` agrees on 468 language programs and 168 Scheme ones.
+  Two differences were found and fixed during that comparison: the example corpus
+  counts ink alone (a turtle `RIGHT` is activity, not ink), and Python's float
+  formatting turns the colour `#8E9092` into `inf` — a mangling the corpus was
+  recorded through, which `QString::number` did not reproduce.
+- Each new gate was then made to fail on purpose, to prove it can: a row given the
+  wrong expected text, and a corpus entry given the wrong recorded answer. Both were
+  caught, with exit status 1, and both files restored byte-identically.
+
 ## [21.0.0] - 2026-10-22
 
 The eleventh language, and a palette that means one thing. Forth is a whole language

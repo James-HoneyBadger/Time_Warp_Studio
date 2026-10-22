@@ -1,0 +1,3682 @@
+{
+ "version": 1,
+ "note": "The command examination table: one row per command, as data. Each row is the smallest program that exercises one command plus what should happen. Read by `time_warp_gates commands` and `time_warp_gates repl`; the rules the rows follow are in the comment block below, which was the Python module's docstring until 22.0.0.",
+ "rules": [
+  "Written in documented syntax. Every invocation comes from docs/LANGUAGE_GUIDE.md or Examples/**, not from whatever the interpreter happens to tolerate.",
+  "Observable, or it is not a row. A statement whose whole effect is internal state is written together with the smallest thing that shows the state changed.",
+  "`expect` is one of: any | prints:TEXT | draws | error | optional.",
+  "`also` names the other commands the same source exercises, so the coverage check sees them as covered rather than leaving them looking untested."
+ ],
+ "scratch": "tws_matrix_scratch.txt",
+ "rows": [
+  {
+   "language": "BASIC",
+   "command": "PRINT string",
+   "source": "PRINT \"HELLO WORLD\"",
+   "expect": "prints:HELLO WORLD"
+  },
+  {
+   "language": "BASIC",
+   "command": "PRINT numeric",
+   "source": "PRINT 6 * 7",
+   "expect": "prints:42"
+  },
+  {
+   "language": "BASIC",
+   "command": "PRINT trailing separator",
+   "source": "PRINT \"A\", \"B\"",
+   "expect": "prints:A"
+  },
+  {
+   "language": "BASIC",
+   "command": "? shorthand for PRINT",
+   "source": "? 6 * 7",
+   "expect": "prints:42"
+  },
+  {
+   "language": "BASIC",
+   "command": "assignment",
+   "source": "X = 42\nPRINT X",
+   "expect": "prints:42"
+  },
+  {
+   "language": "BASIC",
+   "command": "string variable",
+   "source": "NAME$ = \"Ann\"\nPRINT NAME$",
+   "expect": "prints:Ann"
+  },
+  {
+   "language": "BASIC",
+   "command": "string concatenation",
+   "source": "A$ = \"X\" + \"Y\"\nPRINT A$",
+   "expect": "prints:XY"
+  },
+  {
+   "language": "BASIC",
+   "command": "DIM and index",
+   "source": "DIM N(10)\nN(1) = 7\nPRINT N(1)",
+   "expect": "prints:7"
+  },
+  {
+   "language": "BASIC",
+   "command": "IF / ELSE / END IF",
+   "source": "X = 20\nIF X > 10 THEN\nPRINT \"BIG\"\nELSE\nPRINT \"SMALL\"\nEND IF",
+   "expect": "prints:BIG"
+  },
+  {
+   "language": "BASIC",
+   "command": "IF false branch",
+   "source": "X = 1\nIF X > 10 THEN\nPRINT \"BIG\"\nELSE\nPRINT \"SMALL\"\nEND IF",
+   "expect": "prints:SMALL"
+  },
+  {
+   "language": "BASIC",
+   "command": "FOR / NEXT",
+   "source": "FOR I = 1 TO 3\nPRINT I\nNEXT I",
+   "expect": "prints:3"
+  },
+  {
+   "language": "BASIC",
+   "command": "FOR / NEXT with an empty body",
+   "source": "FOR F = 1 TO 3\nC = C + 1\nFOR I = 1 TO 4\nNEXT I\nNEXT F\nPRINT C",
+   "expect": "prints:3"
+  },
+  {
+   "language": "BASIC",
+   "command": "FOR with STEP",
+   "source": "FOR I = 0 TO 10 STEP 5\nPRINT I\nNEXT I",
+   "expect": "prints:10"
+  },
+  {
+   "language": "BASIC",
+   "command": "WHILE / WEND",
+   "source": "X = 0\nWHILE X < 3\nX = X + 1\nWEND\nPRINT X",
+   "expect": "prints:3"
+  },
+  {
+   "language": "BASIC",
+   "command": "DO / LOOP UNTIL",
+   "source": "X = 0\nDO\nX = X + 1\nLOOP UNTIL X >= 3\nPRINT X",
+   "expect": "prints:3"
+  },
+  {
+   "language": "BASIC",
+   "command": "GOSUB and RETURN",
+   "source": "10 X = 4\n20 GOSUB 100\n30 PRINT RESULT\n40 END\n100 RESULT = X * 2\n110 RETURN",
+   "expect": "prints:8"
+  },
+  {
+   "language": "BASIC",
+   "command": "DEF FN",
+   "source": "DEF FNA(N) = N * N\nPRINT FNA(5)",
+   "expect": "prints:25"
+  },
+  {
+   "language": "BASIC",
+   "command": "LEN",
+   "source": "PRINT LEN(\"HELLO\")",
+   "expect": "prints:5"
+  },
+  {
+   "language": "BASIC",
+   "command": "MID$",
+   "source": "PRINT MID$(\"HELLO\", 1, 3)",
+   "expect": "prints:HEL"
+  },
+  {
+   "language": "BASIC",
+   "command": "CHR$",
+   "source": "PRINT CHR$(65)",
+   "expect": "prints:A"
+  },
+  {
+   "language": "BASIC",
+   "command": "REPEAT$",
+   "source": "PRINT REPEAT$(\"ab\", 3)",
+   "expect": "prints:ababab"
+  },
+  {
+   "language": "BASIC",
+   "command": "FORMAT$ mask",
+   "source": "PRINT FORMAT$(\"#.##\", 3.14159)",
+   "expect": "prints:3.14"
+  },
+  {
+   "language": "BASIC",
+   "command": "FORMAT$ printf",
+   "source": "PRINT FORMAT$(\"%05.2f\", 3.14159)",
+   "expect": "prints:03.14"
+  },
+  {
+   "language": "BASIC",
+   "command": "TIME$",
+   "source": "A$ = TIME$\nPRINT LEN(A$)",
+   "expect": "prints:8"
+  },
+  {
+   "language": "BASIC",
+   "command": "DATE$",
+   "source": "A$ = DATE$\nPRINT LEN(A$)",
+   "expect": "prints:10"
+  },
+  {
+   "language": "BASIC",
+   "command": "TIMER",
+   "source": "PRINT TIMER >= 0",
+   "expect": "prints:1"
+  },
+  {
+   "language": "BASIC",
+   "command": "ABS",
+   "source": "PRINT ABS(-5)",
+   "expect": "prints:5"
+  },
+  {
+   "language": "BASIC",
+   "command": "SQR",
+   "source": "PRINT SQR(16)",
+   "expect": "prints:4"
+  },
+  {
+   "language": "BASIC",
+   "command": "INT",
+   "source": "PRINT INT(3.7)",
+   "expect": "prints:3"
+  },
+  {
+   "language": "BASIC",
+   "command": "SIN",
+   "source": "PRINT SIN(0)",
+   "expect": "prints:0"
+  },
+  {
+   "language": "BASIC",
+   "command": "COS",
+   "source": "PRINT COS(0)",
+   "expect": "prints:1"
+  },
+  {
+   "language": "BASIC",
+   "command": "TAN",
+   "source": "PRINT TAN(0)",
+   "expect": "prints:0"
+  },
+  {
+   "language": "BASIC",
+   "command": "ATAN",
+   "source": "PRINT ATAN(1)",
+   "expect": "prints:"
+  },
+  {
+   "language": "BASIC",
+   "command": "EXP",
+   "source": "PRINT EXP(0)",
+   "expect": "prints:1"
+  },
+  {
+   "language": "BASIC",
+   "command": "LOG",
+   "source": "PRINT LOG(1)",
+   "expect": "prints:0"
+  },
+  {
+   "language": "BASIC",
+   "command": "RND",
+   "source": "PRINT RND(1)",
+   "expect": "prints:"
+  },
+  {
+   "language": "BASIC",
+   "command": "INPUT through the protocol",
+   "source": "INPUT \"Name: \", N\nPRINT \"GOT:\", N",
+   "expect": "prints:GOT"
+  },
+  {
+   "language": "BASIC",
+   "command": "CLS",
+   "source": "CLS",
+   "expect": "any"
+  },
+  {
+   "language": "BASIC",
+   "command": "SCREEN",
+   "source": "SCREEN 1",
+   "expect": "any"
+  },
+  {
+   "language": "BASIC",
+   "command": "COLOR then PSET",
+   "source": "SCREEN 1\nCOLOR 15, 0\nPSET (1, 1)",
+   "expect": "draws"
+  },
+  {
+   "language": "BASIC",
+   "command": "LINE",
+   "source": "SCREEN 1\nLINE (10, 10) - (100, 50)",
+   "expect": "draws"
+  },
+  {
+   "language": "BASIC",
+   "command": "CIRCLE",
+   "source": "SCREEN 1\nCIRCLE (160, 100), 40",
+   "expect": "draws"
+  },
+  {
+   "language": "BASIC",
+   "command": "PSET",
+   "source": "SCREEN 1\nPSET (5, 5)",
+   "expect": "draws"
+  },
+  {
+   "language": "BASIC",
+   "command": "PAINT",
+   "source": "SCREEN 1\nLINE (10, 10) - (100, 50)\nPAINT (50, 30), 4",
+   "expect": "draws"
+  },
+  {
+   "language": "BASIC",
+   "command": "LOCATE then PRINT",
+   "source": "LOCATE 5, 5\nPRINT \"X\"",
+   "expect": "any"
+  },
+  {
+   "language": "BASIC",
+   "command": "Logo turtle words",
+   "source": "CLEARSCREEN\nFORWARD 15\nRIGHT 90\nPENUP\nPENDOWN",
+   "expect": "draws",
+   "also": [
+    "FORWARD",
+    "RIGHT",
+    "PENUP",
+    "PENDOWN"
+   ]
+  },
+  {
+   "language": "BASIC",
+   "command": "NEXT",
+   "source": "FOR I = 1 TO 2\nNEXT I\nPRINT I",
+   "expect": "prints:3"
+  },
+  {
+   "language": "BASIC",
+   "command": "WEND",
+   "source": "X = 0\nWHILE X < 2\nX = X + 1\nWEND\nPRINT X",
+   "expect": "prints:2"
+  },
+  {
+   "language": "BASIC",
+   "command": "LOOP",
+   "source": "X = 0\nDO\nX = X + 1\nLOOP UNTIL X = 2\nPRINT X",
+   "expect": "prints:2"
+  },
+  {
+   "language": "BASIC",
+   "command": "UNTIL",
+   "source": "X = 0\nDO\nX = X + 1\nLOOP UNTIL X = 2\nPRINT \"DONE\"",
+   "expect": "prints:DONE"
+  },
+  {
+   "language": "BASIC",
+   "command": "ELSE",
+   "source": "IF 1 > 2 THEN\nPRINT \"A\"\nELSE\nPRINT \"B\"\nEND IF",
+   "expect": "prints:B"
+  },
+  {
+   "language": "BASIC",
+   "command": "END IF",
+   "source": "IF 1 < 2 THEN\nPRINT \"A\"\nEND IF",
+   "expect": "prints:A"
+  },
+  {
+   "language": "BASIC",
+   "command": "ENDIF alias",
+   "source": "IF 1 < 2 THEN\nPRINT \"A\"\nENDIF",
+   "expect": "prints:A"
+  },
+  {
+   "language": "BASIC",
+   "command": "END stops the program",
+   "source": "PRINT \"A\"\nEND\nPRINT \"B\"",
+   "expect": "prints:A"
+  },
+  {
+   "language": "BASIC",
+   "command": "RETURN",
+   "source": "GOSUB 100\nPRINT RESULT\nEND\n100 RESULT = 9\n110 RETURN",
+   "expect": "prints:9"
+  },
+  {
+   "language": "BASIC",
+   "command": "REM",
+   "source": "REM ignored\nPRINT \"A\"",
+   "expect": "prints:A"
+  },
+  {
+   "language": "BASIC",
+   "command": "apostrophe comment",
+   "source": "'ignored\nPRINT \"A\"",
+   "expect": "prints:A"
+  },
+  {
+   "language": "BASIC",
+   "command": "colon separates statements",
+   "source": "PRINT \"A\": PRINT \"B\"",
+   "expect": "prints:B"
+  },
+  {
+   "language": "BASIC",
+   "command": "SELECT / CASE / END SELECT",
+   "source": "X = 2\nSELECT CASE X\nCASE 2\nPRINT \"TWO\"\nEND SELECT",
+   "expect": "prints:TWO",
+   "also": [
+    "CASE",
+    "END SELECT",
+    "SELECT"
+   ]
+  },
+  {
+   "language": "BASIC",
+   "command": "SUB / CALL / END SUB",
+   "source": "SUB DOUBLE(N)\nPRINT N * 2\nEND SUB\nCALL DOUBLE(21)",
+   "expect": "prints:42",
+   "also": [
+    "CALL",
+    "END SUB"
+   ]
+  },
+  {
+   "language": "BASIC",
+   "command": "FUNCTION / END FUNCTION",
+   "source": "FUNCTION TWICE(N)\nTWICE = N * 2\nEND FUNCTION\nCALL TWICE(21)\nPRINT TWICE",
+   "expect": "prints:42",
+   "also": [
+    "END FUNCTION"
+   ]
+  },
+  {
+   "language": "BASIC",
+   "command": "TYPE / END TYPE",
+   "source": "TYPE POINT\nX AS INTEGER\nY AS INTEGER\nEND TYPE\nPRINT \"OK\"",
+   "expect": "prints:OK",
+   "also": [
+    "END TYPE"
+   ]
+  },
+  {
+   "language": "BASIC",
+   "command": "GOTO",
+   "source": "GOTO 20\nPRINT \"SKIPPED\"\n20 PRINT \"HERE\"",
+   "expect": "prints:HERE"
+  },
+  {
+   "language": "BASIC",
+   "command": "variable starting with DO",
+   "source": "DOUBLE = 42\nPRINT DOUBLE",
+   "expect": "prints:42"
+  },
+  {
+   "language": "BASIC",
+   "command": "variable starting with RUN",
+   "source": "RUNNER = 7\nPRINT RUNNER",
+   "expect": "prints:7"
+  },
+  {
+   "language": "BASIC",
+   "command": "variable starting with CLOSE",
+   "source": "CLOSER = 3\nPRINT CLOSER",
+   "expect": "prints:3"
+  },
+  {
+   "language": "BASIC",
+   "command": "variable starting with NEXT",
+   "source": "NEXTX = 5\nPRINT NEXTX",
+   "expect": "prints:5"
+  },
+  {
+   "language": "BASIC",
+   "command": "variable starting with LOOP",
+   "source": "LOOPS = 9\nPRINT LOOPS",
+   "expect": "prints:9"
+  },
+  {
+   "language": "BASIC",
+   "command": "LET",
+   "source": "LET X = 7\nPRINT X",
+   "expect": "prints:7"
+  },
+  {
+   "language": "BASIC",
+   "command": "MAKE",
+   "source": "MAKE \"X\" 7\nPRINT X",
+   "expect": "prints:7"
+  },
+  {
+   "language": "BASIC",
+   "command": "SETXY then read the position",
+   "source": "SETXY 10 20\nPRINT \"MOVED\"",
+   "expect": "prints:MOVED"
+  },
+  {
+   "language": "BASIC",
+   "command": "DATA with READ",
+   "source": "DATA 3, 4\nREAD A\nREAD B\nPRINT A + B",
+   "expect": "prints:7",
+   "also": [
+    "DATA"
+   ]
+  },
+  {
+   "language": "BASIC",
+   "command": "RESTORE",
+   "source": "DATA 3, 4\nREAD A\nRESTORE\nREAD B\nPRINT B",
+   "expect": "prints:3",
+   "also": [
+    "DATA",
+    "READ"
+   ]
+  },
+  {
+   "language": "BASIC",
+   "command": "ON ERROR GOTO diverts",
+   "source": "ON ERROR GOTO 100\nX = 1 / 0\nPRINT \"NO\"\nEND\n100 PRINT \"CAUGHT\"",
+   "expect": "prints:CAUGHT",
+   "also": [
+    "ON ERROR GOTO"
+   ]
+  },
+  {
+   "language": "BASIC",
+   "command": "ON ERROR disables the handler",
+   "source": "ON ERROR GOTO 100\nON ERROR\nPRINT \"OK\"\nEND\n100 PRINT \"CAUGHT\"",
+   "expect": "prints:OK",
+   "also": [
+    "ON ERROR GOTO",
+    "ON ERROR"
+   ]
+  },
+  {
+   "language": "BASIC",
+   "command": "RESUME NEXT",
+   "source": "10 ON ERROR GOTO 100\n20 X = 1 / 0\n30 PRINT \"AFTER\"\n40 END\n100 RESUME NEXT",
+   "expect": "prints:AFTER",
+   "also": [
+    "RESUME",
+    "ON ERROR GOTO"
+   ]
+  },
+  {
+   "language": "BASIC",
+   "command": "RESUME",
+   "source": "ON ERROR GOTO 100\nX = 1 / 0\nEND\n100 RESUME 30\n30 PRINT \"RESUMED\"",
+   "expect": "prints:RESUMED",
+   "also": [
+    "ON ERROR GOTO"
+   ]
+  },
+  {
+   "language": "BASIC",
+   "command": "CONST",
+   "source": "CONST SIZE = 5\nPRINT SIZE",
+   "expect": "prints:5"
+  },
+  {
+   "language": "BASIC",
+   "command": "DEFINT truncates",
+   "source": "DEFINT X\nX = 3.7\nPRINT X",
+   "expect": "prints:3"
+  },
+  {
+   "language": "BASIC",
+   "command": "DEFLNG",
+   "source": "DEFLNG A-Z\nPRINT \"OK\"",
+   "expect": "prints:OK"
+  },
+  {
+   "language": "BASIC",
+   "command": "DEFSNG",
+   "source": "DEFSNG A-Z\nPRINT \"OK\"",
+   "expect": "prints:OK"
+  },
+  {
+   "language": "BASIC",
+   "command": "DEFDBL",
+   "source": "DEFDBL A-Z\nPRINT \"OK\"",
+   "expect": "prints:OK"
+  },
+  {
+   "language": "BASIC",
+   "command": "DEFSTR",
+   "source": "DEFSTR A-Z\nA = \"HI\"\nPRINT A$",
+   "expect": "prints:HI"
+  },
+  {
+   "language": "BASIC",
+   "command": "SWAP",
+   "source": "A = 1\nB = 2\nSWAP A, B\nPRINT A",
+   "expect": "prints:2"
+  },
+  {
+   "language": "BASIC",
+   "command": "SWAP strings",
+   "source": "A$ = \"X\"\nB$ = \"Y\"\nSWAP A$, B$\nPRINT A$",
+   "expect": "prints:Y"
+  },
+  {
+   "language": "BASIC",
+   "command": "ERASE",
+   "source": "DIM A(3)\nA(0) = 9\nERASE A\nPRINT A(0)",
+   "expect": "prints:0"
+  },
+  {
+   "language": "BASIC",
+   "command": "WIDTH",
+   "source": "WIDTH 80",
+   "expect": "prints:Set width to 80"
+  },
+  {
+   "language": "BASIC",
+   "command": "PRESET",
+   "source": "SCREEN 1\nPSET (5, 5), 1\nPRESET (5, 5)",
+   "expect": "draws"
+  },
+  {
+   "language": "BASIC",
+   "command": "PRINT USING",
+   "source": "PRINT USING \"##.##\"; 3.14159",
+   "expect": "prints:3.14"
+  },
+  {
+   "language": "BASIC",
+   "command": "PALETTE CYCLE",
+   "source": "SCREEN 1\nPALETTE CYCLE 1, 15, 1",
+   "expect": "prints:Palette cycled",
+   "also": [
+    "CYCLE"
+   ]
+  },
+  {
+   "language": "BASIC",
+   "command": "BEEP",
+   "source": "BEEP",
+   "expect": "prints:BEEP"
+  },
+  {
+   "language": "BASIC",
+   "command": "SOUND",
+   "source": "SOUND 440, 2",
+   "expect": "prints:SOUND 440Hz"
+  },
+  {
+   "language": "BASIC",
+   "command": "SLEEP",
+   "source": "SLEEP 1",
+   "expect": "prints:SLEEP"
+  },
+  {
+   "language": "BASIC",
+   "command": "SPEED",
+   "source": "SPEED 5",
+   "expect": "prints:Turtle speed set to 5"
+  },
+  {
+   "language": "BASIC",
+   "command": "RANDOMIZE",
+   "source": "RANDOMIZE 42\nPRINT \"OK\"",
+   "expect": "prints:OK"
+  },
+  {
+   "language": "BASIC",
+   "command": "RANDOMIZE TIMER",
+   "source": "RANDOMIZE TIMER\nPRINT \"OK\"",
+   "expect": "prints:OK",
+   "also": [
+    "TIMER"
+   ]
+  },
+  {
+   "language": "BASIC",
+   "command": "PLAY",
+   "source": "PLAY \"CDEFG\"",
+   "expect": "prints:Playing"
+  },
+  {
+   "language": "BASIC",
+   "command": "SAY",
+   "source": "SAY \"HELLO\"",
+   "expect": "optional"
+  },
+  {
+   "language": "BASIC",
+   "command": "SPEAK",
+   "source": "SPEAK \"HELLO\"",
+   "expect": "optional"
+  },
+  {
+   "language": "BASIC",
+   "command": "SPRITE define",
+   "source": "SCREEN 1\nLINE (10,10)-(40,50), 4, BF\nSPRITE SHIP, 10, 10, 30, 40",
+   "expect": "prints:Sprite SHIP captured",
+   "also": [
+    "SPRITE"
+   ]
+  },
+  {
+   "language": "BASIC",
+   "command": "SPRITE place",
+   "source": "SCREEN 1\nLINE (10,10)-(40,50), 4, BF\nSPRITE SHIP, 10, 10, 30, 40\nSPRITE SHIP, 100, 100",
+   "expect": "prints:Moved sprite SHIP",
+   "also": [
+    "SPRITE"
+   ]
+  },
+  {
+   "language": "BASIC",
+   "command": "SPRITEMOVE",
+   "source": "SCREEN 1\nLINE (10,10)-(40,50), 4, BF\nSPRITE SHIP, 10, 10, 30, 40\nSPRITE SHIP, 100, 100\nSPRITEMOVE SHIP, 5, -5",
+   "expect": "prints:Moved sprite SHIP by"
+  },
+  {
+   "language": "BASIC",
+   "command": "SPRITESHOW",
+   "source": "SCREEN 1\nLINE (10,10)-(40,50), 4, BF\nSPRITE SHIP, 10, 10, 30, 40\nSPRITE SHIP, 100, 100\nSPRITEHIDE SHIP\nSPRITESHOW SHIP",
+   "expect": "prints:Showing sprite SHIP"
+  },
+  {
+   "language": "BASIC",
+   "command": "SPRITEHIDE",
+   "source": "SCREEN 1\nLINE (10,10)-(40,50), 4, BF\nSPRITE SHIP, 10, 10, 30, 40\nSPRITE SHIP, 100, 100\nSPRITEHIDE SHIP",
+   "expect": "prints:Hiding sprite SHIP"
+  },
+  {
+   "language": "BASIC",
+   "command": "SPRITE remove",
+   "source": "SCREEN 1\nSPRITE SHIP, 10, 20, 30, 40\nSPRITE SHIP, OFF",
+   "expect": "prints:Removed sprite",
+   "also": [
+    "SPRITE"
+   ]
+  },
+  {
+   "language": "BASIC",
+   "command": "SPRITE without a screen",
+   "source": "SPRITE SHIP, 10, 20, 30, 40",
+   "expect": "error",
+   "also": [
+    "SPRITE"
+   ]
+  },
+  {
+   "language": "BASIC",
+   "command": "SPRITE place without a definition",
+   "source": "SCREEN 1\nSPRITE GHOST, 10, 10",
+   "expect": "error",
+   "also": [
+    "SPRITE"
+   ]
+  },
+  {
+   "language": "BASIC",
+   "command": "GRADIENT",
+   "source": "SCREEN 1\nGRADIENT 0, 0, 100, 50, 4, 1, 45",
+   "expect": "draws"
+  },
+  {
+   "language": "BASIC",
+   "command": "ELLIPSEGRADIENT",
+   "source": "SCREEN 1\nELLIPSEGRADIENT 0, 0, 60, 40, 2, 3",
+   "expect": "draws"
+  },
+  {
+   "language": "BASIC",
+   "command": "GRADIENT without a screen",
+   "source": "GRADIENT 0, 0, 100, 50, 4, 1",
+   "expect": "error"
+  },
+  {
+   "language": "BASIC",
+   "command": "ON TIMER",
+   "source": "ON TIMER(2) GOSUB 100",
+   "expect": "prints:Timer set"
+  },
+  {
+   "language": "BASIC",
+   "command": "TIMER ON",
+   "source": "ON TIMER(2) GOSUB 100\nTIMER ON",
+   "expect": "prints:Timer enabled"
+  },
+  {
+   "language": "BASIC",
+   "command": "TIMER OFF",
+   "source": "ON TIMER(2) GOSUB 100\nTIMER ON\nTIMER OFF",
+   "expect": "prints:Timer disabled"
+  },
+  {
+   "language": "BASIC",
+   "command": "FRACTAL lists presets",
+   "source": "FRACTAL",
+   "expect": "prints:Available fractals"
+  },
+  {
+   "language": "BASIC",
+   "command": "FRACTAL KOCH draws",
+   "source": "FRACTAL KOCH",
+   "expect": "draws"
+  },
+  {
+   "language": "BASIC",
+   "command": "SHAPE STAR",
+   "source": "SHAPE STAR, 40",
+   "expect": "draws"
+  },
+  {
+   "language": "BASIC",
+   "command": "SHAPE POLYGON with a count",
+   "source": "SHAPE POLYGON 6, 40",
+   "expect": "draws"
+  },
+  {
+   "language": "BASIC",
+   "command": "SHAPE unknown name",
+   "source": "SHAPE NOSUCH, 10",
+   "expect": "error"
+  },
+  {
+   "language": "BASIC",
+   "command": "PARTICLE",
+   "source": "PARTICLE EXPLOSION, 100, 100",
+   "expect": "prints:Created EXPLOSION effect"
+  },
+  {
+   "language": "BASIC",
+   "command": "SHELL is blocked",
+   "source": "SHELL \"echo hi\"",
+   "expect": "prints:SHELL commands are disabled"
+  },
+  {
+   "language": "BASIC",
+   "command": "SYSTEM",
+   "source": "PRINT \"A\"\nSYSTEM",
+   "expect": "prints:A"
+  },
+  {
+   "language": "BASIC",
+   "command": "RUN",
+   "source": "PRINT \"A\"\nRUN",
+   "expect": "any"
+  },
+  {
+   "language": "BASIC",
+   "command": "POKE then PEEK",
+   "source": "POKE 1000, 7\nPEEK 1000",
+   "expect": "prints:PEEK(1000) = 7",
+   "also": [
+    "PEEK"
+   ]
+  },
+  {
+   "language": "BASIC",
+   "command": "PEEK as an expression",
+   "source": "POKE 1000, 7\nX = PEEK(1000)\nPRINT X",
+   "expect": "prints:7",
+   "also": [
+    "POKE"
+   ]
+  },
+  {
+   "language": "BASIC",
+   "command": "OUT then IN",
+   "source": "OUT 100, 5\nIN 100",
+   "expect": "prints:IN(100) = 5",
+   "also": [
+    "IN"
+   ]
+  },
+  {
+   "language": "BASIC",
+   "command": "IN as an expression",
+   "source": "OUT 100, 5\nPRINT IN(100)",
+   "expect": "prints:5",
+   "also": [
+    "OUT"
+   ]
+  },
+  {
+   "language": "BASIC",
+   "command": "JOYINIT reports its backend",
+   "source": "JOYINIT",
+   "expect": "any"
+  },
+  {
+   "language": "BASIC",
+   "command": "STICK / STRIG",
+   "source": "PRINT STICK(0)\nPRINT STRIG(0)",
+   "expect": "prints:0",
+   "also": [
+    "JOYINIT"
+   ]
+  },
+  {
+   "language": "BASIC",
+   "command": "TYPE$",
+   "source": "X = 5\nPRINT TYPE$(X)",
+   "expect": "prints:DOUBLE"
+  },
+  {
+   "language": "BASIC",
+   "command": "RESUME NEXT without line numbers",
+   "source": "ON ERROR GOTO 100\nX = 1 / 0\nPRINT \"AFTER\"\nEND\n100 RESUME NEXT",
+   "expect": "prints:AFTER",
+   "also": [
+    "RESUME",
+    "ON ERROR GOTO"
+   ]
+  },
+  {
+   "language": "BASIC",
+   "command": "WRITE # round trip",
+   "source": "OPEN \"tws_matrix_scratch.txt\" FOR OUTPUT AS #3\nWRITE #3, \"BYE\"\nCLOSE #3\nPRINT \"WROTE\"",
+   "expect": "prints:WROTE",
+   "also": [
+    "OPEN",
+    "WRITE #",
+    "CLOSE"
+   ]
+  },
+  {
+   "language": "BASIC",
+   "command": "LINE INPUT",
+   "source": "LINE INPUT \"Name: \", N$\nPRINT \"GOT:\", N$",
+   "expect": "prints:GOT"
+  },
+  {
+   "language": "BASIC",
+   "command": "OPEN / PRINT # / CLOSE round trip",
+   "source": "OPEN \"tws_matrix_scratch.txt\" FOR OUTPUT AS #1\nPRINT #1, \"HELLO\"\nCLOSE #1\nPRINT \"WROTE\"",
+   "expect": "prints:WROTE",
+   "also": [
+    "PRINT #",
+    "CLOSE"
+   ]
+  },
+  {
+   "language": "BASIC",
+   "command": "INPUT # reads it back",
+   "source": "OPEN \"tws_matrix_scratch.txt\" FOR INPUT AS #1\nLINE INPUT #1, L$\nCLOSE #1\nPRINT L$",
+   "expect": "prints:HELLO",
+   "also": [
+    "INPUT #",
+    "LINE INPUT"
+   ]
+  },
+  {
+   "language": "BASIC",
+   "command": "PUT without an open channel",
+   "source": "PUT #9, , \"X\"",
+   "expect": "error"
+  },
+  {
+   "language": "BASIC",
+   "command": "GET without an open channel",
+   "source": "GET #9, 1, V$",
+   "expect": "error"
+  },
+  {
+   "language": "BASIC",
+   "command": "CLOSE with nothing open",
+   "source": "CLOSE",
+   "expect": "prints:Closed all files"
+  },
+  {
+   "language": "BASIC",
+   "command": "error: unknown statement",
+   "source": "NOSUCHSTATEMENT 1 2",
+   "expect": "error"
+  },
+  {
+   "language": "BASIC",
+   "command": "error: incomplete FOR",
+   "source": "FOR I = 1 TO",
+   "expect": "error"
+  },
+  {
+   "language": "BASIC",
+   "command": "error: division by zero",
+   "source": "PRINT 1 / 0",
+   "expect": "error"
+  },
+  {
+   "language": "Logo",
+   "command": "PRINT string",
+   "source": "PRINT \"HELLO",
+   "expect": "prints:HELLO"
+  },
+  {
+   "language": "Logo",
+   "command": "PRINT number",
+   "source": "PRINT 42",
+   "expect": "prints:42"
+  },
+  {
+   "language": "Logo",
+   "command": "MAKE then PRINT",
+   "source": "MAKE \"X 5\nPRINT :X",
+   "expect": "prints:5"
+  },
+  {
+   "language": "Logo",
+   "command": "SUM reporter",
+   "source": "PRINT SUM 1 2",
+   "expect": "prints:3"
+  },
+  {
+   "language": "Logo",
+   "command": "FD",
+   "source": "FD 50",
+   "expect": "draws"
+  },
+  {
+   "language": "Logo",
+   "command": "BK",
+   "source": "BK 50",
+   "expect": "draws"
+  },
+  {
+   "language": "Logo",
+   "command": "RT then FD",
+   "source": "RT 90\nFD 50",
+   "expect": "draws"
+  },
+  {
+   "language": "Logo",
+   "command": "LT then FD",
+   "source": "LT 90\nFD 50",
+   "expect": "draws"
+  },
+  {
+   "language": "Logo",
+   "command": "REPEAT",
+   "source": "REPEAT 4 [FD 10 RT 90]",
+   "expect": "draws"
+  },
+  {
+   "language": "Logo",
+   "command": "REPEAT with nested variable",
+   "source": "MAKE \"N 3\nREPEAT :N [FD 10 RT 120]",
+   "expect": "draws"
+  },
+  {
+   "language": "Logo",
+   "command": "PU suppresses ink",
+   "source": "PU\nFD 50",
+   "expect": "any"
+  },
+  {
+   "language": "Logo",
+   "command": "PD resumes ink",
+   "source": "PU\nFD 50\nPD\nFD 50",
+   "expect": "draws"
+  },
+  {
+   "language": "Logo",
+   "command": "SETPENCOLOR",
+   "source": "SETPENCOLOR \"RED\nFD 20",
+   "expect": "draws"
+  },
+  {
+   "language": "Logo",
+   "command": "SETPENWIDTH",
+   "source": "SETPENWIDTH 3\nFD 20",
+   "expect": "draws"
+  },
+  {
+   "language": "Logo",
+   "command": "SETXY",
+   "source": "SETXY 10 10",
+   "expect": "draws"
+  },
+  {
+   "language": "Logo",
+   "command": "SETH then FD",
+   "source": "SETH 90\nFD 20",
+   "expect": "draws"
+  },
+  {
+   "language": "Logo",
+   "command": "HOME",
+   "source": "FD 20\nHOME",
+   "expect": "draws"
+  },
+  {
+   "language": "Logo",
+   "command": "CS",
+   "source": "FD 20\nCS",
+   "expect": "any"
+  },
+  {
+   "language": "Logo",
+   "command": "procedure and call",
+   "source": "TO SQUARE :S\nREPEAT 4 [FD :S RT 90]\nEND\nSQUARE 20",
+   "expect": "draws"
+  },
+  {
+   "language": "Logo",
+   "command": "IF true branch",
+   "source": "IF 1 = 1 [FD 10]",
+   "expect": "draws"
+  },
+  {
+   "language": "Logo",
+   "command": "IF false branch falls through",
+   "source": "IF 1 = 2 [FD 10]\nPRINT \"DONE",
+   "expect": "prints:DONE"
+  },
+  {
+   "language": "Logo",
+   "command": "WHILE",
+   "source": "MAKE \"I 0\nWHILE [:I < 3] [MAKE \"I :I + 1 FD 10]",
+   "expect": "draws"
+  },
+  {
+   "language": "Logo",
+   "command": "FORWARD",
+   "source": "FORWARD 50",
+   "expect": "draws"
+  },
+  {
+   "language": "Logo",
+   "command": "BACK",
+   "source": "BACK 30",
+   "expect": "draws"
+  },
+  {
+   "language": "Logo",
+   "command": "BACKWARD",
+   "source": "BACKWARD 30",
+   "expect": "draws"
+  },
+  {
+   "language": "Logo",
+   "command": "LEFT",
+   "source": "LEFT 60\nFORWARD 20",
+   "expect": "draws"
+  },
+  {
+   "language": "Logo",
+   "command": "RIGHT",
+   "source": "RIGHT 120\nFORWARD 20",
+   "expect": "draws"
+  },
+  {
+   "language": "Logo",
+   "command": "UP",
+   "source": "UP 40",
+   "expect": "draws"
+  },
+  {
+   "language": "Logo",
+   "command": "UPWARD",
+   "source": "UPWARD 40",
+   "expect": "draws"
+  },
+  {
+   "language": "Logo",
+   "command": "DOWN",
+   "source": "DOWN 40",
+   "expect": "draws"
+  },
+  {
+   "language": "Logo",
+   "command": "DOWNWARD",
+   "source": "DOWNWARD 40",
+   "expect": "draws"
+  },
+  {
+   "language": "Logo",
+   "command": "SETX",
+   "source": "SETX 30",
+   "expect": "draws"
+  },
+  {
+   "language": "Logo",
+   "command": "SETY",
+   "source": "SETY 30",
+   "expect": "draws"
+  },
+  {
+   "language": "Logo",
+   "command": "SETPOS",
+   "source": "SETPOS [10 20]",
+   "expect": "draws"
+  },
+  {
+   "language": "Logo",
+   "command": "SETPOSITION",
+   "source": "SETPOSITION [10 20]",
+   "expect": "draws"
+  },
+  {
+   "language": "Logo",
+   "command": "SETHEADING",
+   "source": "SETHEADING 135\nFORWARD 20",
+   "expect": "draws"
+  },
+  {
+   "language": "Logo",
+   "command": "ARC",
+   "source": "ARC 90 40",
+   "expect": "draws"
+  },
+  {
+   "language": "Logo",
+   "command": "DOT",
+   "source": "DOT 6",
+   "expect": "any",
+   "also": [
+    "PX"
+   ]
+  },
+  {
+   "language": "Logo",
+   "command": "STAMP",
+   "source": "STAMP",
+   "expect": "draws"
+  },
+  {
+   "language": "Logo",
+   "command": "STAMPCLEAN",
+   "source": "STAMP\nSTAMPCLEAN",
+   "expect": "any",
+   "also": [
+    "STAMP"
+   ]
+  },
+  {
+   "language": "Logo",
+   "command": "WINDOW",
+   "source": "WINDOW",
+   "expect": "any"
+  },
+  {
+   "language": "Logo",
+   "command": "WRAP",
+   "source": "WRAP",
+   "expect": "any"
+  },
+  {
+   "language": "Logo",
+   "command": "FENCE",
+   "source": "FENCE",
+   "expect": "any"
+  },
+  {
+   "language": "Logo",
+   "command": "PENSIZE",
+   "source": "PENSIZE 3\nFORWARD 20",
+   "expect": "draws"
+  },
+  {
+   "language": "Logo",
+   "command": "SETPENSIZE",
+   "source": "SETPENSIZE 3\nFORWARD 20",
+   "expect": "draws"
+  },
+  {
+   "language": "Logo",
+   "command": "PENWIDTH",
+   "source": "PENWIDTH 3\nFORWARD 20",
+   "expect": "draws"
+  },
+  {
+   "language": "Logo",
+   "command": "SETPW",
+   "source": "SETPW 3\nFORWARD 20",
+   "expect": "draws"
+  },
+  {
+   "language": "Logo",
+   "command": "SETPC",
+   "source": "SETPC \"RED\nFORWARD 20",
+   "expect": "draws"
+  },
+  {
+   "language": "Logo",
+   "command": "SETPC palette slot",
+   "source": "SETPC 1\nFORWARD 20",
+   "expect": "draws"
+  },
+  {
+   "language": "Logo",
+   "command": "BEZIER",
+   "source": "BEZIER 0 60 60 60 60 0",
+   "expect": "draws"
+  },
+  {
+   "language": "Logo",
+   "command": "SETCOLOR",
+   "source": "SETCOLOR \"RED\nFORWARD 20",
+   "expect": "draws"
+  },
+  {
+   "language": "Logo",
+   "command": "SETBG",
+   "source": "SETBG \"BLUE",
+   "expect": "any"
+  },
+  {
+   "language": "Logo",
+   "command": "SETBGCOLOR",
+   "source": "SETBGCOLOR \"BLUE",
+   "expect": "any"
+  },
+  {
+   "language": "Logo",
+   "command": "PENERASE",
+   "source": "PENERASE\nFORWARD 20",
+   "expect": "any",
+   "also": [
+    "PE"
+   ]
+  },
+  {
+   "language": "Logo",
+   "command": "PENPAINT",
+   "source": "PENERASE\nPENPAINT\nFORWARD 20",
+   "expect": "draws"
+  },
+  {
+   "language": "Logo",
+   "command": "PENREVERSE",
+   "source": "PENREVERSE\nFORWARD 20",
+   "expect": "any"
+  },
+  {
+   "language": "Logo",
+   "command": "PENMODE",
+   "source": "PENMODE",
+   "expect": "any"
+  },
+  {
+   "language": "Logo",
+   "command": "PPT",
+   "source": "PPT",
+   "expect": "any"
+  },
+  {
+   "language": "Logo",
+   "command": "PX",
+   "source": "PX\nPENMODE",
+   "expect": "prints:reverse",
+   "also": [
+    "PENMODE"
+   ]
+  },
+  {
+   "language": "Logo",
+   "command": "CLEAN",
+   "source": "FORWARD 20\nCLEAN",
+   "expect": "any"
+  },
+  {
+   "language": "Logo",
+   "command": "CLEAR",
+   "source": "FORWARD 20\nCLEAR",
+   "expect": "any",
+   "also": [
+    "CLEARSCREEN"
+   ]
+  },
+  {
+   "language": "Logo",
+   "command": "HIDETURTLE",
+   "source": "HIDETURTLE",
+   "expect": "any",
+   "also": [
+    "HT"
+   ]
+  },
+  {
+   "language": "Logo",
+   "command": "SHOWTURTLE",
+   "source": "HIDETURTLE\nSHOWTURTLE",
+   "expect": "any",
+   "also": [
+    "ST"
+   ]
+  },
+  {
+   "language": "Logo",
+   "command": "STOP",
+   "source": "FORWARD 10\nSTOP",
+   "expect": "any"
+  },
+  {
+   "language": "Logo",
+   "command": "BYE",
+   "source": "BYE",
+   "expect": "any"
+  },
+  {
+   "language": "Logo",
+   "command": "SHOW",
+   "source": "SHOW 42",
+   "expect": "prints:42"
+  },
+  {
+   "language": "Logo",
+   "command": "THING",
+   "source": "MAKE \"X 5\nSHOW THING \"X",
+   "expect": "prints:5"
+  },
+  {
+   "language": "Logo",
+   "command": "FIRST",
+   "source": "SHOW FIRST [1 2 3]",
+   "expect": "prints:1"
+  },
+  {
+   "language": "Logo",
+   "command": "LAST",
+   "source": "SHOW LAST [1 2 3]",
+   "expect": "prints:3"
+  },
+  {
+   "language": "Logo",
+   "command": "BUTFIRST",
+   "source": "SHOW BUTFIRST [1 2 3]",
+   "expect": "prints:2"
+  },
+  {
+   "language": "Logo",
+   "command": "BUTLAST",
+   "source": "SHOW BUTLAST [1 2 3]",
+   "expect": "prints:1"
+  },
+  {
+   "language": "Logo",
+   "command": "COUNT",
+   "source": "SHOW COUNT [1 2 3]",
+   "expect": "prints:3"
+  },
+  {
+   "language": "Logo",
+   "command": "ITEM",
+   "source": "SHOW ITEM 2 [1 2 3]",
+   "expect": "prints:2"
+  },
+  {
+   "language": "Logo",
+   "command": "LIST",
+   "source": "SHOW LIST 1 2",
+   "expect": "prints:1"
+  },
+  {
+   "language": "Logo",
+   "command": "SENTENCE",
+   "source": "SHOW SENTENCE 1 2",
+   "expect": "prints:1"
+  },
+  {
+   "language": "Logo",
+   "command": "PRODUCT",
+   "source": "SHOW PRODUCT 3 4",
+   "expect": "prints:12"
+  },
+  {
+   "language": "Logo",
+   "command": "QUOTIENT",
+   "source": "SHOW QUOTIENT 8 2",
+   "expect": "prints:4"
+  },
+  {
+   "language": "Logo",
+   "command": "DIFFERENCE",
+   "source": "SHOW DIFFERENCE 5 3",
+   "expect": "prints:2"
+  },
+  {
+   "language": "Logo",
+   "command": "RANDOM",
+   "source": "SHOW RANDOM 10",
+   "expect": "prints:"
+  },
+  {
+   "language": "Logo",
+   "command": "REDUCE",
+   "source": "SHOW REDUCE \"SUM [1 2 3]",
+   "expect": "prints:"
+  },
+  {
+   "language": "Logo",
+   "command": "ROLL",
+   "source": "SHOW ROLL [1 2 3]",
+   "expect": "prints:"
+  },
+  {
+   "language": "Logo",
+   "command": "FILLED",
+   "source": "FILLED \"RED [FD 20 RT 90 FD 20 RT 90 FD 20]",
+   "expect": "draws"
+  },
+  {
+   "language": "Logo",
+   "command": "PENSTYLE",
+   "source": "PENSTYLE 1\nFD 30\nPENSTYLE 0\nFD 10",
+   "expect": "draws"
+  },
+  {
+   "language": "Logo",
+   "command": "IFELSE",
+   "source": "IFELSE 1 = 1 [PRINT \"YES\"] [PRINT \"NO\"]",
+   "expect": "prints:YES"
+  },
+  {
+   "language": "Logo",
+   "command": "TO ... END",
+   "source": "TO PAIR\nREPEAT 2 [FD 20 RT 180]\nEND\nPAIR",
+   "expect": "draws"
+  },
+  {
+   "language": "Logo",
+   "command": "FOREACH",
+   "source": "FOREACH [1 2 3] [SHOW ?]",
+   "expect": "any"
+  },
+  {
+   "language": "Logo",
+   "command": "FOREVER stops on STOP",
+   "source": "FOREVER [STOP]",
+   "expect": "any"
+  },
+  {
+   "language": "Logo",
+   "command": "REPCOUNT",
+   "source": "REPEAT 2 [SHOW REPCOUNT]",
+   "expect": "prints:1"
+  },
+  {
+   "language": "Logo",
+   "command": "LOCAL",
+   "source": "TO P\nLOCAL \"X\nMAKE \"X 5\nSHOW :X\nEND\nP",
+   "expect": "prints:5"
+  },
+  {
+   "language": "Logo",
+   "command": "OUTPUT",
+   "source": "TO P\nOUTPUT 5\nEND\nP",
+   "expect": "prints:5",
+   "also": [
+    "OP"
+   ]
+  },
+  {
+   "language": "Logo",
+   "command": "OUTPUT as a value",
+   "source": "TO DOUBLE :N\nOUTPUT :N * 2\nEND\nPRINT DOUBLE 21",
+   "expect": "prints:42",
+   "also": [
+    "OUTPUT"
+   ]
+  },
+  {
+   "language": "Logo",
+   "command": "LABEL",
+   "source": "LABEL \"HI",
+   "expect": "any"
+  },
+  {
+   "language": "Logo",
+   "command": "SETLABELHEIGHT",
+   "source": "SETLABELHEIGHT 12\nLABEL \"HI",
+   "expect": "draws"
+  },
+  {
+   "language": "Logo",
+   "command": "TEXTSIZE",
+   "source": "TEXTSIZE 12\nLABEL \"HI",
+   "expect": "draws"
+  },
+  {
+   "language": "Logo",
+   "command": "WAIT",
+   "source": "WAIT 1\nPRINT \"DONE\"",
+   "expect": "prints:DONE"
+  },
+  {
+   "language": "Logo",
+   "command": "ENABLE3D",
+   "source": "ENABLE3D",
+   "expect": "any"
+  },
+  {
+   "language": "Logo",
+   "command": "DISABLE3D",
+   "source": "ENABLE3D\nDISABLE3D",
+   "expect": "any",
+   "also": [
+    "ENABLE3D"
+   ]
+  },
+  {
+   "language": "Logo",
+   "command": "PITCH",
+   "source": "ENABLE3D\nPITCH 30\nFORWARD 40",
+   "expect": "any",
+   "also": [
+    "ENABLE3D"
+   ]
+  },
+  {
+   "language": "Logo",
+   "command": "TILTUP",
+   "source": "TILTUP 10",
+   "expect": "any"
+  },
+  {
+   "language": "Logo",
+   "command": "TILTDOWN",
+   "source": "TILTDOWN 10",
+   "expect": "any"
+  },
+  {
+   "language": "Logo",
+   "command": "TILTROLL",
+   "source": "TILTROLL 10",
+   "expect": "any"
+  },
+  {
+   "language": "Logo",
+   "command": "ROLL",
+   "source": "ROLL 10",
+   "expect": "any"
+  },
+  {
+   "language": "Logo",
+   "command": "YAW",
+   "source": "YAW 45",
+   "expect": "any"
+  },
+  {
+   "language": "Logo",
+   "command": "2DON",
+   "source": "3DON\n2DON",
+   "expect": "any",
+   "also": [
+    "3DON"
+   ]
+  },
+  {
+   "language": "Logo",
+   "command": "3DON",
+   "source": "3DON",
+   "expect": "any"
+  },
+  {
+   "language": "Logo",
+   "command": "3DOFF",
+   "source": "3DON\n3DOFF",
+   "expect": "any"
+  },
+  {
+   "language": "Logo",
+   "command": "error: unknown command",
+   "source": "NOTACOMMAND",
+   "expect": "error"
+  },
+  {
+   "language": "Logo",
+   "command": "error: missing argument",
+   "source": "FD",
+   "expect": "error"
+  },
+  {
+   "language": "PILOT",
+   "command": "T: text",
+   "source": "T: Hello there",
+   "expect": "prints:Hello there",
+   "also": [
+    "T"
+   ]
+  },
+  {
+   "language": "PILOT",
+   "command": "several T: units",
+   "source": "T: One\nT: Two",
+   "expect": "prints:Two"
+  },
+  {
+   "language": "PILOT",
+   "command": "A: accept, then TY/TN on no match",
+   "source": "T: Q\nA:\nM: PARIS\nTY: Correct\nTN: Wrong",
+   "expect": "prints:Wrong",
+   "also": [
+    "A",
+    "M"
+   ]
+  },
+  {
+   "language": "PILOT",
+   "command": "J: jump",
+   "source": "J: SKIP\nT: NOT REACHED\nE:\n*SKIP\nT: LANDED",
+   "expect": "prints:LANDED",
+   "also": [
+    "J"
+   ]
+  },
+  {
+   "language": "PILOT",
+   "command": "U: subroutine",
+   "source": "U: *SUB\nT: BACK\nE:\n*SUB\nT: INSIDE\nE:",
+   "expect": "prints:INSIDE",
+   "also": [
+    "U"
+   ]
+  },
+  {
+   "language": "PILOT",
+   "command": "E: ends the program",
+   "source": "T: BEFORE\nE:\nT: AFTER",
+   "expect": "prints:BEFORE",
+   "also": [
+    "E"
+   ]
+  },
+  {
+   "language": "PILOT",
+   "command": "REMARK is ignored",
+   "source": "REMARK a note\nT: AFTER REMARK",
+   "expect": "prints:AFTER REMARK",
+   "also": [
+    "R"
+   ]
+  },
+  {
+   "language": "PILOT",
+   "command": "C: compute stores a string",
+   "source": "C:$GREETING = Hello\nT: Said $GREETING",
+   "expect": "prints:Said Hello",
+   "also": [
+    "C"
+   ]
+  },
+  {
+   "language": "PILOT",
+   "command": "B: branch taken on a non-zero condition",
+   "source": "C:X = 5\nB:X=*HIT\nT: MISSED\nE:\n*HIT\nT: BRANCHED",
+   "expect": "prints:BRANCHED",
+   "also": [
+    "B"
+   ]
+  },
+  {
+   "language": "PILOT",
+   "command": "Y: jumps when the match succeeded",
+   "source": "T: Q\nA:\nM:*\nY: HIT\nT: MISSED\nE:\n*HIT\nT: HIT",
+   "expect": "prints:HIT",
+   "also": [
+    "Y"
+   ]
+  },
+  {
+   "language": "PILOT",
+   "command": "N: prints when the match failed",
+   "source": "N: NO MATCH\nT: DONE",
+   "expect": "prints:NO MATCH",
+   "also": [
+    "N"
+   ]
+  },
+  {
+   "language": "PILOT",
+   "command": "D: delay of zero seconds",
+   "source": "D: 0\nT: AFTER DELAY",
+   "expect": "prints:AFTER DELAY",
+   "also": [
+    "D"
+   ]
+  },
+  {
+   "language": "PILOT",
+   "command": "P: pause resumes on Enter",
+   "source": "P:\nT: AFTER PAUSE",
+   "expect": "prints:AFTER PAUSE",
+   "also": [
+    "P"
+   ]
+  },
+  {
+   "language": "PILOT",
+   "command": "H: hint message",
+   "source": "H: Try the other one",
+   "expect": "prints:Try the other one",
+   "also": [
+    "H"
+   ]
+  },
+  {
+   "language": "PILOT",
+   "command": "S: subroutine, the alias of U:",
+   "source": "S: *SUB\nT: BACK\nE:\n*SUB\nT: INSIDE\nE:",
+   "expect": "prints:INSIDE",
+   "also": [
+    "S"
+   ]
+  },
+  {
+   "language": "PILOT",
+   "command": "TU: long-form subroutine call",
+   "source": "TU SUB\nT: BACK\nE:\n*SUB\nT: INSIDE\nE:",
+   "expect": "prints:INSIDE",
+   "also": [
+    "TU"
+   ]
+  },
+  {
+   "language": "PILOT",
+   "command": "G: turtle move",
+   "source": "G: FD 50\nG: RT 90\nG: FD 50",
+   "expect": "draws",
+   "also": [
+    "G"
+   ]
+  },
+  {
+   "language": "PILOT",
+   "command": "G: FILL uses the pen colour",
+   "source": "G: FD 50\nG: RT 120\nG: FD 50\nG: RT 120\nG: FD 50\nG: FILL",
+   "expect": "draws",
+   "also": [
+    "FILL"
+   ]
+  },
+  {
+   "language": "PILOT",
+   "command": "G: TEXT labels the drawing",
+   "source": "G: TEXT A label",
+   "expect": "prints:A label",
+   "also": [
+    "TEXT"
+   ]
+  },
+  {
+   "language": "PILOT",
+   "command": "L: declares a label that J: can reach",
+   "source": "J: MARK\nT: NOT REACHED\nL: MARK\nT: LANDED",
+   "expect": "prints:LANDED",
+   "also": [
+    "L:"
+   ]
+  },
+  {
+   "language": "PILOT",
+   "command": "LINK reports that chaining is not implemented",
+   "source": "LINK lesson.pilot\nT: DONE",
+   "expect": "error",
+   "also": [
+    "LINK"
+   ]
+  },
+  {
+   "language": "PILOT",
+   "command": "F: rejects a mode it does not know",
+   "source": "F: OPEN notes.txt X",
+   "expect": "error",
+   "also": [
+    "F"
+   ]
+  },
+  {
+   "language": "PILOT",
+   "command": "error: jump to a missing label",
+   "source": "J: NOWHERE\nT: NOT REACHED",
+   "expect": "error"
+  },
+  {
+   "language": "COMAL",
+   "command": "PRINT string",
+   "source": "PRINT \"Hello, World!\"",
+   "expect": "prints:Hello, World!"
+  },
+  {
+   "language": "COMAL",
+   "command": "PRINT expression",
+   "source": "PRINT 6 * 7",
+   "expect": "prints:42"
+  },
+  {
+   "language": "COMAL",
+   "command": "assignment and print",
+   "source": "COUNT := 5\nPRINT COUNT",
+   "expect": "prints:5"
+  },
+  {
+   "language": "COMAL",
+   "command": "string variable",
+   "source": "TITLE$ := \"Report\"\nPRINT TITLE$",
+   "expect": "prints:Report"
+  },
+  {
+   "language": "COMAL",
+   "command": "IF / ENDIF",
+   "source": "SCORE := 87\nIF SCORE >= 90 THEN\nPRINT \"Grade A\"\nELSE\nPRINT \"Keep going\"\nENDIF",
+   "expect": "prints:Keep going"
+  },
+  {
+   "language": "COMAL",
+   "command": "IF / ELIF / ENDIF",
+   "source": "SCORE := 85\nIF SCORE >= 90 THEN\nPRINT \"A\"\nELIF SCORE >= 80 THEN\nPRINT \"B\"\nELSE\nPRINT \"C\"\nENDIF",
+   "expect": "prints:B",
+   "also": [
+    "ELIF"
+   ]
+  },
+  {
+   "language": "COMAL",
+   "command": "FOR / NEXT",
+   "source": "FOR I := 1 TO 3\nPRINT I\nNEXT I",
+   "expect": "prints:3"
+  },
+  {
+   "language": "COMAL",
+   "command": "WHILE / ENDWHILE",
+   "source": "N := 0\nWHILE N < 3\nN := N + 1\nENDWHILE\nPRINT N",
+   "expect": "prints:3"
+  },
+  {
+   "language": "COMAL",
+   "command": "REPEAT / UNTIL",
+   "source": "N := 0\nREPEAT\nN := N + 1\nUNTIL N >= 3\nPRINT N",
+   "expect": "prints:3"
+  },
+  {
+   "language": "COMAL",
+   "command": "PROC and CALL",
+   "source": "PROC GREET(NAME$)\nPRINT \"Hello, \"; NAME$\nENDPROC\nCALL GREET(\"World\")",
+   "expect": "prints:Hello, World"
+  },
+  {
+   "language": "COMAL",
+   "command": "DIM and index",
+   "source": "DIM SCORES(5)\nSCORES(1) := 9\nPRINT SCORES(1)",
+   "expect": "prints:9"
+  },
+  {
+   "language": "COMAL",
+   "command": "DATA and READ",
+   "source": "DATA 4, 5\nREAD A, B\nPRINT A + B",
+   "expect": "prints:9",
+   "also": [
+    "DATA"
+   ]
+  },
+  {
+   "language": "COMAL",
+   "command": "MOVE",
+   "source": "MOVE 100",
+   "expect": "draws"
+  },
+  {
+   "language": "COMAL",
+   "command": "TURN",
+   "source": "MOVE 50\nTURN 90\nMOVE 50",
+   "expect": "draws",
+   "also": [
+    "MOVE"
+   ]
+  },
+  {
+   "language": "COMAL",
+   "command": "PENUP / PENDOWN",
+   "source": "MOVE 50\nPENUP\nMOVE 50\nPENDOWN\nMOVE 50",
+   "expect": "draws",
+   "also": [
+    "PENDOWN"
+   ]
+  },
+  {
+   "language": "COMAL",
+   "command": "PLOT",
+   "source": "MOVE 20\nPLOT",
+   "expect": "draws",
+   "also": [
+    "MOVE"
+   ]
+  },
+  {
+   "language": "COMAL",
+   "command": "FUNC / ENDFUNC",
+   "source": "10 FUNC DOUBLE(N)\n20 RETURN N * 2\n30 ENDFUNC\n40 CALL DOUBLE(21)\n50 PRINT RESULT",
+   "expect": "prints:42",
+   "also": [
+    "CALL",
+    "RETURN"
+   ]
+  },
+  {
+   "language": "COMAL",
+   "command": "FUNC called in an expression",
+   "source": "10 FUNC DOUBLE(N)\n20 RETURN N * 2\n30 ENDFUNC\n40 PRINT DOUBLE(21)",
+   "expect": "prints:42",
+   "also": [
+    "FUNC",
+    "RETURN"
+   ]
+  },
+  {
+   "language": "COMAL",
+   "command": "error: unknown statement",
+   "source": "NOSUCH",
+   "expect": "error"
+  },
+  {
+   "language": "REXX",
+   "command": "SAY string",
+   "source": "SAY 'Hello, World!'",
+   "expect": "prints:Hello, World!"
+  },
+  {
+   "language": "REXX",
+   "command": "SAY expression",
+   "source": "SAY 6 * 7",
+   "expect": "prints:42"
+  },
+  {
+   "language": "REXX",
+   "command": "assignment and SAY",
+   "source": "name = 'Ann'\nSAY name",
+   "expect": "prints:Ann"
+  },
+  {
+   "language": "REXX",
+   "command": "concatenation with ||",
+   "source": "SAY 'Hello' || ' ' || 'World'",
+   "expect": "prints:Hello World"
+  },
+  {
+   "language": "REXX",
+   "command": "IF / THEN",
+   "source": "score = 70\nIF score > 50 THEN SAY 'pass'",
+   "expect": "prints:pass",
+   "also": [
+    "THEN"
+   ]
+  },
+  {
+   "language": "REXX",
+   "command": "IF / THEN DO / ELSE DO",
+   "source": "score = 95\nIF score >= 90 THEN DO\nSAY 'Grade A'\nEND\nELSE DO\nSAY 'Keep going'\nEND",
+   "expect": "prints:Grade A"
+  },
+  {
+   "language": "REXX",
+   "command": "DO counted loop",
+   "source": "DO i = 1 TO 3\nSAY i\nEND",
+   "expect": "prints:3"
+  },
+  {
+   "language": "REXX",
+   "command": "DO with BY",
+   "source": "DO n = 10 TO 1 BY -3\nSAY n\nEND",
+   "expect": "prints:1",
+   "also": [
+    "BY"
+   ]
+  },
+  {
+   "language": "REXX",
+   "command": "DO WHILE",
+   "source": "count = 0\nDO WHILE count < 3\ncount = count + 1\nEND\nSAY count",
+   "expect": "prints:3"
+  },
+  {
+   "language": "REXX",
+   "command": "DO OVER",
+   "source": "DO word OVER 'alpha beta gamma'\nSAY word\nEND",
+   "expect": "prints:gamma",
+   "also": [
+    "OVER"
+   ]
+  },
+  {
+   "language": "REXX",
+   "command": "SELECT / WHEN / OTHERWISE",
+   "source": "score = 95\nSELECT\nWHEN score > 90 THEN SAY 'huge'\nOTHERWISE SAY 'small'\nEND",
+   "expect": "prints:huge",
+   "also": [
+    "WHEN",
+    "OTHERWISE"
+   ]
+  },
+  {
+   "language": "REXX",
+   "command": "PARSE VAR",
+   "source": "line = 'red green blue'\nPARSE VAR line first second third\nSAY second",
+   "expect": "prints:green"
+  },
+  {
+   "language": "REXX",
+   "command": "internal subroutine and RESULT",
+   "source": "CALL DOUBLE 5\nSAY RESULT\nEXIT\nDOUBLE:\nRETURN ARG(1) * 2",
+   "expect": "prints:10",
+   "also": [
+    "ARG"
+   ]
+  },
+  {
+   "language": "REXX",
+   "command": "LENGTH",
+   "source": "SAY LENGTH('HELLO')",
+   "expect": "prints:5"
+  },
+  {
+   "language": "REXX",
+   "command": "SUBSTR",
+   "source": "SAY SUBSTR('HELLO', 2, 3)",
+   "expect": "prints:ELL"
+  },
+  {
+   "language": "REXX",
+   "command": "WORD",
+   "source": "SAY WORD('alpha beta gamma', 2)",
+   "expect": "prints:beta"
+  },
+  {
+   "language": "REXX",
+   "command": "PULL reads a line",
+   "source": "SAY 'before'\nPULL name\nSAY 'after' name",
+   "expect": "prints:after"
+  },
+  {
+   "language": "REXX",
+   "command": "PARSE PULL splits a line",
+   "source": "PARSE PULL first rest\nSAY 'got' first",
+   "expect": "prints:got",
+   "also": [
+    "PARSE PULL"
+   ]
+  },
+  {
+   "language": "REXX",
+   "command": "COPIES",
+   "source": "SAY COPIES('ab', 3)",
+   "expect": "prints:ababab"
+  },
+  {
+   "language": "REXX",
+   "command": "DATATYPE",
+   "source": "SAY DATATYPE('12')",
+   "expect": "prints:NUM"
+  },
+  {
+   "language": "REXX",
+   "command": "INDEX",
+   "source": "SAY INDEX('hello', 'll')",
+   "expect": "prints:3"
+  },
+  {
+   "language": "REXX",
+   "command": "LOWER",
+   "source": "SAY LOWER('ABC')",
+   "expect": "prints:abc"
+  },
+  {
+   "language": "REXX",
+   "command": "SIGN",
+   "source": "SAY SIGN(-7)",
+   "expect": "prints:-1"
+  },
+  {
+   "language": "REXX",
+   "command": "SPACE",
+   "source": "SAY SPACE('a b c', 3)",
+   "expect": "prints:a   b   c"
+  },
+  {
+   "language": "REXX",
+   "command": "STRIP",
+   "source": "SAY STRIP('  hi  ')",
+   "expect": "prints:hi"
+  },
+  {
+   "language": "REXX",
+   "command": "TRUNC",
+   "source": "SAY TRUNC(3.7)",
+   "expect": "prints:3"
+  },
+  {
+   "language": "REXX",
+   "command": "UPPER",
+   "source": "SAY UPPER('abc')",
+   "expect": "prints:ABC"
+  },
+  {
+   "language": "REXX",
+   "command": "WORDS",
+   "source": "SAY WORDS('a b c')",
+   "expect": "prints:3"
+  },
+  {
+   "language": "REXX",
+   "command": "error: unknown statement",
+   "source": "@@@ nonsense @@@",
+   "expect": "error"
+  },
+  {
+   "language": "Scheme",
+   "command": "display string",
+   "source": "(display \"HELLO\")",
+   "expect": "prints:HELLO"
+  },
+  {
+   "language": "Scheme",
+   "command": "display arithmetic",
+   "source": "(display (* 6 7))",
+   "expect": "prints:42"
+  },
+  {
+   "language": "Scheme",
+   "command": "newline",
+   "source": "(display 1)\n(newline)\n(display 2)",
+   "expect": "prints:2"
+  },
+  {
+   "language": "Scheme",
+   "command": "define and use",
+   "source": "(define pi 3.14159)\n(display pi)",
+   "expect": "prints:3.14"
+  },
+  {
+   "language": "Scheme",
+   "command": "define a procedure",
+   "source": "(define (square n) (* n n))\n(display (square 7))",
+   "expect": "prints:49"
+  },
+  {
+   "language": "Scheme",
+   "command": "cond",
+   "source": "(define (sign n) (cond ((> n 0) \"positive\") ((< n 0) \"negative\") (else \"zero\")))\n(display (sign -3))",
+   "expect": "prints:negative"
+  },
+  {
+   "language": "Scheme",
+   "command": "if and recursion",
+   "source": "(define (fact n) (if (= n 0) 1 (* n (fact (- n 1)))))\n(display (fact 5))",
+   "expect": "prints:120"
+  },
+  {
+   "language": "Scheme",
+   "command": "car of a list",
+   "source": "(display (car (list 1 2 3)))",
+   "expect": "prints:1"
+  },
+  {
+   "language": "Scheme",
+   "command": "map with lambda",
+   "source": "(display (map (lambda (x) (* x x)) (list 1 2 3 4)))",
+   "expect": "prints:"
+  },
+  {
+   "language": "Scheme",
+   "command": "filter with a predicate",
+   "source": "(display (filter odd? (list 1 2 3 4 5)))",
+   "expect": "prints:"
+  },
+  {
+   "language": "Scheme",
+   "command": "apply",
+   "source": "(display (apply + (list 10 20 30)))",
+   "expect": "prints:60"
+  },
+  {
+   "language": "Scheme",
+   "command": "let",
+   "source": "(display (let ((x 3) (y 4)) (+ x y)))",
+   "expect": "prints:7"
+  },
+  {
+   "language": "Scheme",
+   "command": "closure",
+   "source": "(define (make-adder n) (lambda (x) (+ x n)))\n(define add10 (make-adder 10))\n(display (add10 5))",
+   "expect": "prints:15"
+  },
+  {
+   "language": "Scheme",
+   "command": "turtle: forward",
+   "source": "(forward 100)",
+   "expect": "draws"
+  },
+  {
+   "language": "Scheme",
+   "command": "turtle: square procedure",
+   "source": "(define (square size) (define (loop n) (when (> n 0) (forward size) (right 90) (loop (- n 1)))) (loop 4))\n(square 100)",
+   "expect": "draws"
+  },
+  {
+   "language": "Scheme",
+   "command": "error: arity",
+   "source": "(car)",
+   "expect": "error"
+  },
+  {
+   "language": "Scheme",
+   "command": "error: unbound procedure",
+   "source": "(no-such-procedure 1)",
+   "expect": "error"
+  },
+  {
+   "language": "FOCAL",
+   "command": "TYPE",
+   "source": "01.10 T \"HELLO\"",
+   "expect": "prints:HELLO"
+  },
+  {
+   "language": "FOCAL",
+   "command": "TYPE with a format",
+   "source": "01.10 T %0,\"N=\",7/2",
+   "expect": "prints:N=4"
+  },
+  {
+   "language": "FOCAL",
+   "command": "SET",
+   "source": "01.10 S X=7\n01.20 T X",
+   "expect": "prints:7.00"
+  },
+  {
+   "language": "FOCAL",
+   "command": "SET several at once",
+   "source": "01.10 S A=1,B=2\n01.20 T A+B",
+   "expect": "prints:3.00"
+  },
+  {
+   "language": "FOCAL",
+   "command": "COMMENT",
+   "source": "01.10 C this text is ignored\n01.20 T \"after\"",
+   "expect": "prints:after"
+  },
+  {
+   "language": "FOCAL",
+   "command": "ASK",
+   "source": "01.10 ASK \"How many? \" N\n01.20 T \"asked\"",
+   "expect": "prints:asked"
+  },
+  {
+   "language": "FOCAL",
+   "command": "IF on a sign",
+   "source": "01.10 S X=0\n01.20 IF (X) 1.40,1.30,1.40\n01.30 T \"ZERO\"\n01.40 Q",
+   "expect": "prints:ZERO"
+  },
+  {
+   "language": "FOCAL",
+   "command": "FOR",
+   "source": "01.10 FOR I=1,3;T I",
+   "expect": "prints:3.00"
+  },
+  {
+   "language": "FOCAL",
+   "command": "DO a group",
+   "source": "01.10 DO 2.10\n01.20 T \"AFTER\"\n01.30 Q\n02.10 T \"GROUP\"",
+   "expect": "prints:GROUP"
+  },
+  {
+   "language": "FOCAL",
+   "command": "GOTO",
+   "source": "01.10 GOTO 1.30\n01.20 T \"SKIPPED\"\n01.30 T \"THERE\"",
+   "expect": "prints:THERE"
+  },
+  {
+   "language": "FOCAL",
+   "command": "ERASE",
+   "source": "01.10 S A=1\n01.20 E ALL\n01.30 T A",
+   "expect": "prints:0.00"
+  },
+  {
+   "language": "FOCAL",
+   "command": "QUIT",
+   "source": "01.10 T \"BEFORE\"\n01.20 Q\n01.30 T \"AFTER\"",
+   "expect": "prints:BEFORE"
+  },
+  {
+   "language": "FOCAL",
+   "command": "FPI",
+   "source": "01.10 T FPI",
+   "expect": "prints:3.14"
+  },
+  {
+   "language": "FOCAL",
+   "command": "FRAN",
+   "source": "01.10 T FRAN",
+   "expect": "prints"
+  },
+  {
+   "language": "FOCAL",
+   "command": "turtle: FORWARD",
+   "source": "01.10 FORWARD 100",
+   "expect": "draws",
+   "also": [
+    "FD"
+   ]
+  },
+  {
+   "language": "FOCAL",
+   "command": "turtle: BACK",
+   "source": "01.10 BACK 50",
+   "expect": "draws",
+   "also": [
+    "BK"
+   ]
+  },
+  {
+   "language": "FOCAL",
+   "command": "turtle: RIGHT",
+   "source": "01.10 RIGHT 90",
+   "expect": "draws",
+   "also": [
+    "RT"
+   ]
+  },
+  {
+   "language": "FOCAL",
+   "command": "turtle: LEFT",
+   "source": "01.10 LEFT 90",
+   "expect": "draws",
+   "also": [
+    "LT"
+   ]
+  },
+  {
+   "language": "FOCAL",
+   "command": "turtle: PENUP",
+   "source": "01.10 PENUP",
+   "expect": "any"
+  },
+  {
+   "language": "FOCAL",
+   "command": "turtle: PENDOWN",
+   "source": "01.10 PENDOWN",
+   "expect": "any"
+  },
+  {
+   "language": "FOCAL",
+   "command": "turtle: HOME",
+   "source": "01.10 HOME",
+   "expect": "any"
+  },
+  {
+   "language": "FOCAL",
+   "command": "error: unknown command",
+   "source": "01.10 TIPE X",
+   "expect": "error"
+  },
+  {
+   "language": "FOCAL",
+   "command": "error: unquoted text",
+   "source": "01.10 T HELLO",
+   "expect": "error"
+  },
+  {
+   "language": "FOCAL",
+   "command": "error: missing label",
+   "source": "01.10 GOTO 9.9",
+   "expect": "error"
+  },
+  {
+   "language": "CHIP8",
+   "command": "CLS",
+   "source": "start: CLS\n       LD I, dot\n       DRW V0, V1, 1\n       HALT\ndot: DB 0x80",
+   "expect": "draws"
+  },
+  {
+   "language": "CHIP8",
+   "command": "LD a byte",
+   "source": "start: LD V0, 4\n       LD V1, 4\n       LD I, dot\n       DRW V0, V1, 1\n       HALT\ndot: DB 0x80",
+   "expect": "draws"
+  },
+  {
+   "language": "CHIP8",
+   "command": "LD one register from another",
+   "source": "start: LD V0, 6\n       LD V1, V0\n       LD I, dot\n       DRW V0, V1, 1\n       HALT\ndot: DB 0x80",
+   "expect": "draws"
+  },
+  {
+   "language": "CHIP8",
+   "command": "LD I",
+   "source": "start: LD I, dot\n       DRW V0, V1, 1\n       HALT\ndot: DB 0x80",
+   "expect": "draws"
+  },
+  {
+   "language": "CHIP8",
+   "command": "LD I from the font",
+   "source": "start: LD V0, 3\n       LD F, V0\n       LD V0, 0\n       DRW V0, V1, 5\n       HALT",
+   "expect": "draws",
+   "also": [
+    "LD F"
+   ]
+  },
+  {
+   "language": "CHIP8",
+   "command": "LD BCD of a register",
+   "source": "start: LD V0, 205\n       LD I, buf\n       LD B, V0\n       LD V0, 0\n       LD I, buf\n       DRW V0, V1, 1\n       HALT\nbuf: DB 0\n     DB 0\n     DB 0",
+   "expect": "draws",
+   "also": [
+    "LD B"
+   ]
+  },
+  {
+   "language": "CHIP8",
+   "command": "LD a block through I",
+   "source": "start: LD V0, 0xFF\n       LD I, buf\n       LD [I], V0\n       LD I, buf\n       DRW V0, V1, 1\n       HALT\nbuf: DB 0",
+   "expect": "draws",
+   "also": [
+    "LD [I], V0",
+    "LD V0, [I]"
+   ]
+  },
+  {
+   "language": "CHIP8",
+   "command": "LD the delay timer",
+   "source": "start: LD V0, 30\n       LD DT, V0\n       LD V0, 0\n       LD I, dot\n       DRW V0, V1, 1\n       HALT\ndot: DB 0x80",
+   "expect": "draws",
+   "also": [
+    "LD DT, V0",
+    "LD V0, DT"
+   ]
+  },
+  {
+   "language": "CHIP8",
+   "command": "LD from the keypad",
+   "source": "start: LD V0, K\n       LD I, dot\n       DRW V0, V1, 1\n       HALT\ndot: DB 0x80",
+   "expect": "draws",
+   "also": [
+    "LD V0, K"
+   ]
+  },
+  {
+   "language": "CHIP8",
+   "command": "ADD",
+   "source": "start: LD V0, 3\n       ADD V0, 1\n       LD I, dot\n       DRW V0, V1, 1\n       HALT\ndot: DB 0x80",
+   "expect": "draws"
+  },
+  {
+   "language": "CHIP8",
+   "command": "ADD two registers",
+   "source": "start: LD V0, 2\n       LD V1, 3\n       ADD V0, V1\n       LD I, dot\n       DRW V0, V1, 1\n       HALT\ndot: DB 0x80",
+   "expect": "draws"
+  },
+  {
+   "language": "CHIP8",
+   "command": "AND",
+   "source": "start: LD V0, 3\n       LD V1, 1\n       AND V0, V1\n       LD I, dot\n       DRW V0, V1, 1\n       HALT\ndot: DB 0x80",
+   "expect": "draws"
+  },
+  {
+   "language": "CHIP8",
+   "command": "OR",
+   "source": "start: LD V0, 4\n       LD V1, 3\n       OR V0, V1\n       LD I, dot\n       DRW V0, V1, 1\n       HALT\ndot: DB 0x80",
+   "expect": "draws"
+  },
+  {
+   "language": "CHIP8",
+   "command": "XOR",
+   "source": "start: LD V0, 6\n       LD V1, 3\n       XOR V0, V1\n       LD I, dot\n       DRW V0, V1, 1\n       HALT\ndot: DB 0x80",
+   "expect": "draws"
+  },
+  {
+   "language": "CHIP8",
+   "command": "SUB",
+   "source": "start: LD V0, 5\n       LD V1, 2\n       SUB V0, V1\n       LD I, dot\n       DRW V0, V1, 1\n       HALT\ndot: DB 0x80",
+   "expect": "draws"
+  },
+  {
+   "language": "CHIP8",
+   "command": "SUBN",
+   "source": "start: LD V0, 2\n       LD V1, 5\n       SUBN V0, V1\n       LD I, dot\n       DRW V0, V1, 1\n       HALT\ndot: DB 0x80",
+   "expect": "draws"
+  },
+  {
+   "language": "CHIP8",
+   "command": "SHR",
+   "source": "start: LD V0, 6\n       SHR V0\n       LD I, dot\n       DRW V0, V1, 1\n       HALT\ndot: DB 0x80",
+   "expect": "draws"
+  },
+  {
+   "language": "CHIP8",
+   "command": "SHL",
+   "source": "start: LD V0, 3\n       SHL V0\n       LD I, dot\n       DRW V0, V1, 1\n       HALT\ndot: DB 0x80",
+   "expect": "draws"
+  },
+  {
+   "language": "CHIP8",
+   "command": "RND",
+   "source": "start: RND V0, 0x0F\n       LD V1, 0\n       LD I, dot\n       DRW V0, V1, 1\n       HALT\ndot: DB 0x80",
+   "expect": "draws"
+  },
+  {
+   "language": "CHIP8",
+   "command": "DRW",
+   "source": "start: LD I, dot\n       DRW V0, V1, 1\n       HALT\ndot: DB 0x80",
+   "expect": "draws"
+  },
+  {
+   "language": "CHIP8",
+   "command": "DB data for a sprite",
+   "source": "start: LD I, spr\n       DRW V0, V1, 2\n       HALT\nspr: DB 0xFF\n     DB 0x81",
+   "expect": "draws"
+  },
+  {
+   "language": "CHIP8",
+   "command": "DW data for a sprite",
+   "source": "start: LD I, word\n       DRW V0, V1, 2\n       HALT\nword: DW 0xFF81",
+   "expect": "draws"
+  },
+  {
+   "language": "CHIP8",
+   "command": "JP",
+   "source": "start: JP draw\n       HALT\ndraw:  LD I, dot\n       DRW V0, V1, 1\n       HALT\ndot: DB 0x80",
+   "expect": "draws"
+  },
+  {
+   "language": "CHIP8",
+   "command": "JP with an offset in V0",
+   "source": "start: LD V0, 2\n       JP V0, draw\n       HALT\ndraw: LD I, dot\n       DRW V0, V1, 1\n       HALT\ndot: DB 0x80",
+   "expect": "draws",
+   "also": [
+    "JP V0, addr"
+   ]
+  },
+  {
+   "language": "CHIP8",
+   "command": "CALL and RET",
+   "source": "start: CALL draw\n       HALT\ndraw:  LD I, dot\n       DRW V0, V1, 1\n       RET\ndot: DB 0x80",
+   "expect": "draws",
+   "also": [
+    "RET"
+   ]
+  },
+  {
+   "language": "CHIP8",
+   "command": "SE skips when equal",
+   "source": "start: LD V0, 1\n       SE V0, 1\n       HALT\n       LD I, dot\n       DRW V0, V1, 1\n       HALT\ndot: DB 0x80",
+   "expect": "draws"
+  },
+  {
+   "language": "CHIP8",
+   "command": "SNE skips when different",
+   "source": "start: LD V0, 1\n       SNE V0, 2\n       HALT\n       LD I, dot\n       DRW V0, V1, 1\n       HALT\ndot: DB 0x80",
+   "expect": "draws"
+  },
+  {
+   "language": "CHIP8",
+   "command": "; keys presents a held key",
+   "source": "; keys 3\nstart: LD V0, 3\n       SKP V0\n       HALT\n       LD I, dot\n       DRW V0, V1, 1\n       HALT\ndot: DB 0x80",
+   "expect": "draws",
+   "also": [
+    "SKP",
+    "; keys"
+   ]
+  },
+  {
+   "language": "CHIP8",
+   "command": "SKNP skips when the key is up",
+   "source": "start: LD V0, 3\n       SKNP V0\n       HALT\n       LD I, dot\n       DRW V0, V1, 1\n       HALT\ndot: DB 0x80",
+   "expect": "draws"
+  },
+  {
+   "language": "CHIP8",
+   "command": "HALT",
+   "source": "start: LD I, dot\n       DRW V0, V1, 1\n       HALT\ndot: DB 0x80",
+   "expect": "draws"
+  },
+  {
+   "language": "CHIP8",
+   "command": "SYS is ignored",
+   "source": "start: SYS 0x123\n       LD I, dot\n       DRW V0, V1, 1\n       HALT\ndot: DB 0x80",
+   "expect": "draws",
+   "also": [
+    "SYS"
+   ]
+  },
+  {
+   "language": "CHIP8",
+   "command": "error: unknown mnemonic",
+   "source": "start: FROB V0",
+   "expect": "error"
+  },
+  {
+   "language": "CHIP8",
+   "command": "error: byte out of range",
+   "source": "start: LD V0, 999",
+   "expect": "error"
+  },
+  {
+   "language": "CHIP8",
+   "command": "error: unknown opcode",
+   "source": "start: DW 0xF0FF",
+   "expect": "error"
+  },
+  {
+   "language": "APL",
+   "command": "IOTA",
+   "source": "IOTA 5",
+   "expect": "prints:1 2 3 4 5"
+  },
+  {
+   "language": "APL",
+   "command": "RHO reshape",
+   "source": "2 3 RHO IOTA 6",
+   "expect": "prints:1 2 3"
+  },
+  {
+   "language": "APL",
+   "command": "RHO shape",
+   "source": "RHO 2 3 RHO IOTA 6",
+   "expect": "prints:2 3",
+   "also": [
+    "RHO"
+   ]
+  },
+  {
+   "language": "APL",
+   "command": "TIMES",
+   "source": "3 TIMES 4",
+   "expect": "prints:12"
+  },
+  {
+   "language": "APL",
+   "command": "DIVIDE",
+   "source": "6 DIVIDE 2",
+   "expect": "prints:3"
+  },
+  {
+   "language": "APL",
+   "command": "POWER",
+   "source": "2 POWER 10",
+   "expect": "prints:1024"
+  },
+  {
+   "language": "APL",
+   "command": "CEILING",
+   "source": "CEILING 2.2",
+   "expect": "prints:3"
+  },
+  {
+   "language": "APL",
+   "command": "FLOOR",
+   "source": "FLOOR 2.8",
+   "expect": "prints:2"
+  },
+  {
+   "language": "APL",
+   "command": "MAX",
+   "source": "3 MAX 5",
+   "expect": "prints:5"
+  },
+  {
+   "language": "APL",
+   "command": "MIN",
+   "source": "3 MIN 5",
+   "expect": "prints:3"
+  },
+  {
+   "language": "APL",
+   "command": "ABS",
+   "source": "ABS -3",
+   "expect": "prints:3",
+   "also": [
+    "BAR"
+   ]
+  },
+  {
+   "language": "APL",
+   "command": "RESIDUE",
+   "source": "3 RESIDUE 10",
+   "expect": "prints:1"
+  },
+  {
+   "language": "APL",
+   "command": "SIGNUM",
+   "source": "SIGNUM -3",
+   "expect": "prints:¯1"
+  },
+  {
+   "language": "APL",
+   "command": "RECIPROCAL",
+   "source": "RECIPROCAL 4",
+   "expect": "prints:0.25"
+  },
+  {
+   "language": "APL",
+   "command": "AND",
+   "source": "1 AND 1",
+   "expect": "prints:1"
+  },
+  {
+   "language": "APL",
+   "command": "OR",
+   "source": "0 OR 1",
+   "expect": "prints:1"
+  },
+  {
+   "language": "APL",
+   "command": "NAND",
+   "source": "1 NAND 1",
+   "expect": "prints:0"
+  },
+  {
+   "language": "APL",
+   "command": "NOR",
+   "source": "0 NOR 0",
+   "expect": "prints:1"
+  },
+  {
+   "language": "APL",
+   "command": "NOT",
+   "source": "NOT 0",
+   "expect": "prints:1"
+  },
+  {
+   "language": "APL",
+   "command": "REVERSE",
+   "source": "REVERSE 1 2 3",
+   "expect": "prints:3 2 1"
+  },
+  {
+   "language": "APL",
+   "command": "ROTATE",
+   "source": "1 ROTATE 1 2 3",
+   "expect": "prints:2 3 1"
+  },
+  {
+   "language": "APL",
+   "command": "TAKE",
+   "source": "3 TAKE 1 2",
+   "expect": "prints:1 2 0"
+  },
+  {
+   "language": "APL",
+   "command": "DROP",
+   "source": "1 DROP 1 2 3",
+   "expect": "prints:2 3"
+  },
+  {
+   "language": "APL",
+   "command": "CATENATE",
+   "source": "1 2 CATENATE 3",
+   "expect": "prints:1 2 3"
+  },
+  {
+   "language": "APL",
+   "command": "RAVEL",
+   "source": "RAVEL 2 2 RHO IOTA 4",
+   "expect": "prints:1 2 3 4"
+  },
+  {
+   "language": "APL",
+   "command": "TRANSPOSE",
+   "source": "TRANSPOSE 2 3 RHO IOTA 6",
+   "expect": "prints:1 4"
+  },
+  {
+   "language": "APL",
+   "command": "GRADEUP",
+   "source": "GRADEUP 3 1 2",
+   "expect": "prints:2 3 1"
+  },
+  {
+   "language": "APL",
+   "command": "GRADEDOWN",
+   "source": "GRADEDOWN 1 3 2",
+   "expect": "prints:2 3 1"
+  },
+  {
+   "language": "APL",
+   "command": "MEMBERSHIP",
+   "source": "1 MEMBERSHIP 1 2 3",
+   "expect": "prints:1 0 0"
+  },
+  {
+   "language": "APL",
+   "command": "FORMAT",
+   "source": "FORMAT 42",
+   "expect": "prints:42"
+  },
+  {
+   "language": "APL",
+   "command": "INDEXOF",
+   "source": "1 2 3 INDEXOF 2",
+   "expect": "prints:2"
+  },
+  {
+   "language": "APL",
+   "command": "REDUCE",
+   "source": "+REDUCE IOTA 5",
+   "expect": "prints:15",
+   "also": [
+    "+/"
+   ]
+  },
+  {
+   "language": "APL",
+   "command": "SCAN",
+   "source": "+SCAN IOTA 3",
+   "expect": "prints:1 3 6",
+   "also": [
+    "+\\"
+   ]
+  },
+  {
+   "language": "APL",
+   "command": "SHAPE",
+   "source": "RHO 1 2 3",
+   "expect": "prints:3"
+  },
+  {
+   "language": "APL",
+   "command": "RESHAPE",
+   "source": "3 RHO 1",
+   "expect": "prints:1 1 1"
+  },
+  {
+   "language": "APL",
+   "command": "a defined function",
+   "source": "∇ R ← DOUBLE X\n  R ← X TIMES 2\n∇\nDOUBLE 21",
+   "expect": "prints:42"
+  },
+  {
+   "language": "APL",
+   "command": "turtle: FD",
+   "source": "FD 100",
+   "expect": "draws",
+   "also": [
+    "FORWARD"
+   ]
+  },
+  {
+   "language": "APL",
+   "command": "turtle: BK",
+   "source": "BK 50",
+   "expect": "draws",
+   "also": [
+    "BACK"
+   ]
+  },
+  {
+   "language": "APL",
+   "command": "turtle: RT",
+   "source": "RT 90",
+   "expect": "draws",
+   "also": [
+    "RIGHT"
+   ]
+  },
+  {
+   "language": "APL",
+   "command": "turtle: LT",
+   "source": "LT 90",
+   "expect": "draws",
+   "also": [
+    "LEFT"
+   ]
+  },
+  {
+   "language": "APL",
+   "command": "turtle: PU and PD",
+   "source": "PU\nPD",
+   "expect": "any",
+   "also": [
+    "PENUP",
+    "PENDOWN"
+   ]
+  },
+  {
+   "language": "APL",
+   "command": "turtle: HOME",
+   "source": "HOME",
+   "expect": "any"
+  },
+  {
+   "language": "APL",
+   "command": "error: mismatched lengths",
+   "source": "1 2 + 4 5 6",
+   "expect": "error"
+  },
+  {
+   "language": "APL",
+   "command": "error: unknown variable",
+   "source": "NOSUCHNAME",
+   "expect": "error"
+  },
+  {
+   "language": "APL",
+   "command": "error: unmatched parenthesis",
+   "source": "(IOTA 3",
+   "expect": "error"
+  },
+  {
+   "language": "Smalltalk",
+   "command": "subclass:instanceVariableNames: defines a class",
+   "source": "Object subclass: #Thing\n  instanceVariableNames: ''\n\nThing >> greet\n  ^'hi'\n\nThing new greet",
+   "expect": "prints:hi"
+  },
+  {
+   "language": "Smalltalk",
+   "command": "new",
+   "source": "Object subclass: #Bare\n  instanceVariableNames: ''\n\nBare >> hello\n  ^'made'\n\nBare new hello",
+   "expect": "prints:made"
+  },
+  {
+   "language": "Smalltalk",
+   "command": "initialize",
+   "source": "Object subclass: #Seeded\n  instanceVariableNames: 'seed'\n\nSeeded >> initialize\n  seed := 7\n\nSeeded >> seed\n  ^seed\n\nSeeded new seed",
+   "expect": "prints:7"
+  },
+  {
+   "language": "Smalltalk",
+   "command": "an instance variable through messages",
+   "source": "Object subclass: #Counter\n  instanceVariableNames: 'count'\n\nCounter >> initialize\n  count := 0\n\nCounter >> bump\n  count := count + 1\n\nCounter >> value\n  ^count\n\n| c |\nc := Counter new.\nc bump.\nc bump.\nc value",
+   "expect": "prints:2"
+  },
+  {
+   "language": "Smalltalk",
+   "command": "a block and its closure",
+   "source": "| total |\ntotal := 10.\n[:n | total := total + n] value: 5.\ntotal",
+   "expect": "prints:15"
+  },
+  {
+   "language": "Smalltalk",
+   "command": "a block controls the loop",
+   "source": "| s |\ns := 0.\n(1 to: 4) do: [:i | s := s + i].\ns",
+   "expect": "prints:10"
+  },
+  {
+   "language": "Smalltalk",
+   "command": "show: writes through the Transcript",
+   "source": "Transcript show: 'hello'; cr",
+   "expect": "prints:hello"
+  },
+  {
+   "language": "Smalltalk",
+   "command": "cr ends a transcript line",
+   "source": "Transcript show: 'a'; cr. Transcript show: 'b'; cr",
+   "expect": "prints:a",
+   "also": [
+    "show:"
+   ]
+  },
+  {
+   "language": "Smalltalk",
+   "command": "turtle: forward:",
+   "source": "| t |\nt := Turtle new.\nt forward: 100",
+   "expect": "draws",
+   "also": [
+    "forward:"
+   ]
+  },
+  {
+   "language": "Smalltalk",
+   "command": "turtle: back:",
+   "source": "| t |\nt := Turtle new.\nt back: 40",
+   "expect": "draws",
+   "also": [
+    "back:"
+   ]
+  },
+  {
+   "language": "Smalltalk",
+   "command": "turtle: right:",
+   "source": "| t |\nt := Turtle new.\nt right: 90",
+   "expect": "draws",
+   "also": [
+    "right:"
+   ]
+  },
+  {
+   "language": "Smalltalk",
+   "command": "turtle: left:",
+   "source": "| t |\nt := Turtle new.\nt left: 90",
+   "expect": "draws",
+   "also": [
+    "left:"
+   ]
+  },
+  {
+   "language": "Smalltalk",
+   "command": "turtle: penUp",
+   "source": "| t |\nt := Turtle new.\nt forward: 50.\nt penUp.\nt forward: 50",
+   "expect": "draws",
+   "also": [
+    "penDown"
+   ]
+  },
+  {
+   "language": "Smalltalk",
+   "command": "turtle: home",
+   "source": "| t |\nt := Turtle new.\nt forward: 50.\nt home",
+   "expect": "any"
+  },
+  {
+   "language": "Smalltalk",
+   "command": "turtle: clear",
+   "source": "| t |\nt := Turtle new.\nt clear",
+   "expect": "any"
+  },
+  {
+   "language": "Smalltalk",
+   "command": "super sends above the defining class",
+   "source": "Object subclass: #Base\n  instanceVariableNames: ''\n\nBase >> talk\n  ^'base'\n\nBase subclass: #Kid\n  instanceVariableNames: ''\n\nKid >> talk\n  ^'kid and ', super talk\n\nKid new talk",
+   "expect": "prints:kid and base",
+   "also": [
+    "super"
+   ]
+  },
+  {
+   "language": "Smalltalk",
+   "command": "a cascade sends to the original receiver",
+   "source": "Transcript show: 'a'; show: 'b'; cr",
+   "expect": "prints:ab"
+  },
+  {
+   "language": "Smalltalk",
+   "command": "error: does not understand",
+   "source": "3 foo",
+   "expect": "error"
+  },
+  {
+   "language": "Smalltalk",
+   "command": "error: unknown variable",
+   "source": "noSuchThing",
+   "expect": "error"
+  },
+  {
+   "language": "Smalltalk",
+   "command": "error: division by zero",
+   "source": "1 / 0",
+   "expect": "error"
+  },
+  {
+   "language": "Smalltalk",
+   "command": "error: index out of range",
+   "source": "#(1 2) at: 9",
+   "expect": "error"
+  },
+  {
+   "language": "FORTH",
+   "command": "DUP copies the top",
+   "source": "7 DUP * . CR",
+   "expect": "prints:49"
+  },
+  {
+   "language": "FORTH",
+   "command": "DROP discards the top",
+   "source": "1 2 DROP . CR",
+   "expect": "prints:1"
+  },
+  {
+   "language": "FORTH",
+   "command": "SWAP exchanges two",
+   "source": "1 2 SWAP . CR",
+   "expect": "prints:1"
+  },
+  {
+   "language": "FORTH",
+   "command": "OVER copies the second",
+   "source": "1 2 OVER + + . CR",
+   "expect": "prints:4"
+  },
+  {
+   "language": "FORTH",
+   "command": "ROT rotates the third to the top",
+   "source": "1 2 3 ROT . . . CR",
+   "expect": "prints:1 3 2"
+  },
+  {
+   "language": "FORTH",
+   "command": "-ROT rotates the other way",
+   "source": "1 2 3 -ROT . . . CR",
+   "expect": "prints:2 1 3"
+  },
+  {
+   "language": "FORTH",
+   "command": "NIP drops the second",
+   "source": "1 2 NIP . CR",
+   "expect": "prints:2"
+  },
+  {
+   "language": "FORTH",
+   "command": "TUCK copies the top under the second",
+   "source": "1 2 TUCK . . . CR",
+   "expect": "prints:2 1 2"
+  },
+  {
+   "language": "FORTH",
+   "command": "?DUP copies only a non-zero",
+   "source": "0 ?DUP DROP 5 ?DUP + . CR",
+   "expect": "prints:10"
+  },
+  {
+   "language": "FORTH",
+   "command": "DEPTH counts the stack",
+   "source": "1 2 3 DEPTH . CR",
+   "expect": "prints:3"
+  },
+  {
+   "language": "FORTH",
+   "command": "2DUP copies two",
+   "source": "1 2 2DUP + . . . CR",
+   "expect": "prints:3 2 1"
+  },
+  {
+   "language": "FORTH",
+   "command": "2DROP discards two",
+   "source": "1 2 3 2DROP . CR",
+   "expect": "prints:1"
+  },
+  {
+   "language": "FORTH",
+   "command": "2SWAP exchanges two pairs",
+   "source": "1 2 3 4 2SWAP . . . . CR",
+   "expect": "prints:2 1 4 3"
+  },
+  {
+   "language": "FORTH",
+   "command": "PICK copies a deeper item",
+   "source": "10 20 30 2 PICK . CR",
+   "expect": "prints:10"
+  },
+  {
+   "language": "FORTH",
+   "command": "ROLL moves a deeper item up",
+   "source": "10 20 30 2 ROLL . CR",
+   "expect": "prints:10"
+  },
+  {
+   "language": "FORTH",
+   "command": "+",
+   "source": "2 3 + . CR",
+   "expect": "prints:5"
+  },
+  {
+   "language": "FORTH",
+   "command": "-",
+   "source": "9 4 - . CR",
+   "expect": "prints:5"
+  },
+  {
+   "language": "FORTH",
+   "command": "*",
+   "source": "6 7 * . CR",
+   "expect": "prints:42"
+  },
+  {
+   "language": "FORTH",
+   "command": "/",
+   "source": "20 4 / . CR",
+   "expect": "prints:5"
+  },
+  {
+   "language": "FORTH",
+   "command": "MOD",
+   "source": "7 3 MOD . CR",
+   "expect": "prints:1"
+  },
+  {
+   "language": "FORTH",
+   "command": "/MOD gives both",
+   "source": "7 3 /MOD . . CR",
+   "expect": "prints:2 1"
+  },
+  {
+   "language": "FORTH",
+   "command": "NEGATE",
+   "source": "5 NEGATE . CR",
+   "expect": "prints:-5"
+  },
+  {
+   "language": "FORTH",
+   "command": "ABS",
+   "source": "-9 ABS . CR",
+   "expect": "prints:9"
+  },
+  {
+   "language": "FORTH",
+   "command": "MIN",
+   "source": "3 8 MIN . CR",
+   "expect": "prints:3"
+  },
+  {
+   "language": "FORTH",
+   "command": "MAX",
+   "source": "3 8 MAX . CR",
+   "expect": "prints:8"
+  },
+  {
+   "language": "FORTH",
+   "command": "1+",
+   "source": "41 1+ . CR",
+   "expect": "prints:42"
+  },
+  {
+   "language": "FORTH",
+   "command": "1-",
+   "source": "43 1- . CR",
+   "expect": "prints:42"
+  },
+  {
+   "language": "FORTH",
+   "command": "= is true as -1",
+   "source": "5 5 = . CR",
+   "expect": "prints:-1"
+  },
+  {
+   "language": "FORTH",
+   "command": "<>",
+   "source": "5 6 <> . CR",
+   "expect": "prints:-1"
+  },
+  {
+   "language": "FORTH",
+   "command": "<",
+   "source": "3 8 < . CR",
+   "expect": "prints:-1"
+  },
+  {
+   "language": "FORTH",
+   "command": ">",
+   "source": "8 3 > . CR",
+   "expect": "prints:-1"
+  },
+  {
+   "language": "FORTH",
+   "command": "<=",
+   "source": "5 5 <= . CR",
+   "expect": "prints:-1"
+  },
+  {
+   "language": "FORTH",
+   "command": ">= is false as 0",
+   "source": "5 6 >= . CR",
+   "expect": "prints:0"
+  },
+  {
+   "language": "FORTH",
+   "command": "0=",
+   "source": "0 0= . CR",
+   "expect": "prints:-1"
+  },
+  {
+   "language": "FORTH",
+   "command": "0<",
+   "source": "-1 0< . CR",
+   "expect": "prints:-1"
+  },
+  {
+   "language": "FORTH",
+   "command": "0>",
+   "source": "1 0> . CR",
+   "expect": "prints:-1"
+  },
+  {
+   "language": "FORTH",
+   "command": "AND",
+   "source": "12 10 AND . CR",
+   "expect": "prints:8"
+  },
+  {
+   "language": "FORTH",
+   "command": "OR",
+   "source": "12 10 OR . CR",
+   "expect": "prints:14"
+  },
+  {
+   "language": "FORTH",
+   "command": "XOR",
+   "source": "12 10 XOR . CR",
+   "expect": "prints:6"
+  },
+  {
+   "language": "FORTH",
+   "command": "INVERT",
+   "source": "0 INVERT . CR",
+   "expect": "prints:-1"
+  },
+  {
+   "language": "FORTH",
+   "command": "LSHIFT",
+   "source": "1 4 LSHIFT . CR",
+   "expect": "prints:16"
+  },
+  {
+   "language": "FORTH",
+   "command": "RSHIFT",
+   "source": "16 4 RSHIFT . CR",
+   "expect": "prints:1"
+  },
+  {
+   "language": "FORTH",
+   "command": ". prints the top",
+   "source": "42 . CR",
+   "expect": "prints:42"
+  },
+  {
+   "language": "FORTH",
+   "command": ".S shows the whole stack",
+   "source": "1 2 .S CR",
+   "expect": "prints:<2> 1 2"
+  },
+  {
+   "language": "FORTH",
+   "command": "EMIT prints a character",
+   "source": "65 EMIT CR",
+   "expect": "prints:A"
+  },
+  {
+   "language": "FORTH",
+   "command": "CR ends a line",
+   "source": ".\" a\" CR .\" b\" CR",
+   "expect": "prints:b"
+  },
+  {
+   "language": "FORTH",
+   "command": "SPACE separates",
+   "source": ".\" a\" SPACE .\" b\" CR",
+   "expect": "prints:a b"
+  },
+  {
+   "language": "FORTH",
+   "command": "SPACES prints n spaces",
+   "source": ".\" a\" 3 SPACES .\" b\" CR",
+   "expect": "prints:a   b"
+  },
+  {
+   "language": "FORTH",
+   "command": "WORDS lists the dictionary",
+   "source": "WORDS CR",
+   "expect": "prints:DUP"
+  },
+  {
+   "language": "FORTH",
+   "command": "@ reads a variable",
+   "source": "VARIABLE V 7 V ! V @ . CR",
+   "expect": "prints:7"
+  },
+  {
+   "language": "FORTH",
+   "command": "! stores into a variable",
+   "source": "VARIABLE V 7 V ! V @ . CR",
+   "expect": "prints:7"
+  },
+  {
+   "language": "FORTH",
+   "command": "C@ reads a byte",
+   "source": "VARIABLE B 65 B C! B C@ . CR",
+   "expect": "prints:65"
+  },
+  {
+   "language": "FORTH",
+   "command": "C! stores a byte",
+   "source": "VARIABLE B 65 B C! B C@ . CR",
+   "expect": "prints:65"
+  },
+  {
+   "language": "FORTH",
+   "command": "+! adds to a variable",
+   "source": "VARIABLE N 10 N ! 5 N +! N @ . CR",
+   "expect": "prints:15"
+  },
+  {
+   "language": "FORTH",
+   "command": "I reads the loop counter",
+   "source": ": T 3 0 DO I . LOOP ; T CR",
+   "expect": "prints:0 1 2"
+  },
+  {
+   "language": "FORTH",
+   "command": "J reads the outer counter",
+   "source": ": T 2 0 DO 2 0 DO J . LOOP LOOP ; T CR",
+   "expect": "prints:0 0 1 1"
+  },
+  {
+   "language": "FORTH",
+   "command": "turtle: FD draws",
+   "source": "100 FD",
+   "expect": "draws",
+   "also": [
+    "FD",
+    "FORWARD"
+   ]
+  },
+  {
+   "language": "FORTH",
+   "command": "turtle: BK draws",
+   "source": "50 BK",
+   "expect": "draws",
+   "also": [
+    "BK",
+    "BACK"
+   ]
+  },
+  {
+   "language": "FORTH",
+   "command": "turtle: RT then FD",
+   "source": "90 RT 100 FD",
+   "expect": "draws",
+   "also": [
+    "RT",
+    "RIGHT"
+   ]
+  },
+  {
+   "language": "FORTH",
+   "command": "turtle: LT then FD",
+   "source": "90 LT 100 FD",
+   "expect": "draws",
+   "also": [
+    "LT",
+    "LEFT"
+   ]
+  },
+  {
+   "language": "FORTH",
+   "command": "turtle: PU and PD",
+   "source": "PD PU",
+   "expect": "any",
+   "also": [
+    "PU",
+    "PENUP",
+    "PD",
+    "PENDOWN"
+   ]
+  },
+  {
+   "language": "FORTH",
+   "command": "turtle: HOME",
+   "source": "100 FD HOME",
+   "expect": "any"
+  },
+  {
+   "language": "FORTH",
+   "command": "turtle: CS",
+   "source": "100 FD CS",
+   "expect": "any",
+   "also": [
+    "CS",
+    "CLEARSCREEN"
+   ]
+  },
+  {
+   "language": "FORTH",
+   "command": "turtle: SETPC",
+   "source": "1 SETPC 100 FD",
+   "expect": "draws",
+   "also": [
+    "SETPC",
+    "SETPENCOLOR"
+   ]
+  },
+  {
+   "language": "FORTH",
+   "command": "turtle: SETPW",
+   "source": "3 SETPW 100 FD",
+   "expect": "draws"
+  },
+  {
+   "language": "FORTH",
+   "command": "turtle: ST shows the turtle",
+   "source": "ST",
+   "expect": "any"
+  },
+  {
+   "language": "FORTH",
+   "command": "turtle: HT hides the turtle",
+   "source": "HT",
+   "expect": "any"
+  },
+  {
+   "language": "FORTH",
+   "command": "BYE ends the program",
+   "source": ".\" done\" CR BYE .\" never\" CR",
+   "expect": "prints:done"
+  },
+  {
+   "language": "FORTH",
+   "command": "a colon definition",
+   "source": ": SQUARE DUP * ; 9 SQUARE . CR",
+   "expect": "prints:81",
+   "also": [
+    ":",
+    ";"
+   ]
+  },
+  {
+   "language": "FORTH",
+   "command": "IF then THEN",
+   "source": ": T IF .\" yes\" THEN ; -1 T CR",
+   "expect": "prints:yes",
+   "also": [
+    "IF",
+    "THEN"
+   ]
+  },
+  {
+   "language": "FORTH",
+   "command": "IF with an ELSE",
+   "source": ": T IF .\" yes\" ELSE .\" no\" THEN ; 0 T CR",
+   "expect": "prints:no"
+  },
+  {
+   "language": "FORTH",
+   "command": "BEGIN then UNTIL",
+   "source": ": T 0 BEGIN DUP . 1+ DUP 3 = UNTIL DROP ; T CR",
+   "expect": "prints:0 1 2",
+   "also": [
+    "BEGIN",
+    "UNTIL"
+   ]
+  },
+  {
+   "language": "FORTH",
+   "command": "BEGIN WHILE REPEAT",
+   "source": ": T 0 BEGIN DUP 3 < WHILE DUP . 1+ REPEAT DROP ; T CR",
+   "expect": "prints:0 1 2",
+   "also": [
+    "WHILE",
+    "REPEAT"
+   ]
+  },
+  {
+   "language": "FORTH",
+   "command": "DO then LOOP",
+   "source": ": T 3 0 DO I . LOOP ; T CR",
+   "expect": "prints:0 1 2",
+   "also": [
+    "DO",
+    "LOOP"
+   ]
+  },
+  {
+   "language": "FORTH",
+   "command": "+LOOP steps by the top",
+   "source": ": T 10 0 DO I . 2 +LOOP ; T CR",
+   "expect": "prints:0 2 4 6 8"
+  },
+  {
+   "language": "FORTH",
+   "command": "LEAVE and EXIT",
+   "source": ": T 10 0 DO I DUP . 2 = IF LEAVE THEN LOOP ; T CR",
+   "expect": "prints:0 1 2",
+   "also": [
+    "LEAVE",
+    "EXIT"
+   ]
+  },
+  {
+   "language": "FORTH",
+   "command": "RECURSE is a word that calls itself",
+   "source": ": FACT DUP 1 > IF DUP 1- RECURSE * THEN ; 6 FACT . CR",
+   "expect": "prints:720"
+  },
+  {
+   "language": "FORTH",
+   "command": "VARIABLE makes a name",
+   "source": "VARIABLE V 5 V ! V @ . CR",
+   "expect": "prints:5"
+  },
+  {
+   "language": "FORTH",
+   "command": "CONSTANT",
+   "source": "99 CONSTANT NINETY NINETY . CR",
+   "expect": "prints:99"
+  },
+  {
+   "language": "FORTH",
+   "command": "IMMEDIATE is accepted",
+   "source": ": F 1 ; IMMEDIATE F . CR",
+   "expect": "prints:1"
+  },
+  {
+   "language": "FORTH",
+   "command": "POKE and PEEK reach the machine's memory",
+   "source": "65 32768 POKE 32768 PEEK . CR",
+   "expect": "prints:65",
+   "also": [
+    "POKE",
+    "PEEK"
+   ]
+  },
+  {
+   "language": "FORTH",
+   "command": ".\" prints a string",
+   "source": ".\" hello\" CR",
+   "expect": "prints:hello"
+  },
+  {
+   "language": "FORTH",
+   "command": "error: undefined word",
+   "source": "NOSUCHWORD",
+   "expect": "error"
+  },
+  {
+   "language": "FORTH",
+   "command": "error: stack underflow",
+   "source": ". CR",
+   "expect": "error"
+  },
+  {
+   "language": "FORTH",
+   "command": "error: unclosed definition",
+   "source": ": F 1",
+   "expect": "error"
+  },
+  {
+   "language": "FORTH",
+   "command": "error: division by zero",
+   "source": "1 0 / . CR",
+   "expect": "error"
+  }
+ ],
+ "waivers": [
+  {
+   "language": "BASIC",
+   "command": "INKEY$",
+   "reason": "polls a keyboard buffer that only an interactive session fills"
+  }
+ ]
+}

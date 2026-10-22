@@ -24,6 +24,7 @@ class QAction;
 class QDropEvent;
 class QLabel;
 class QPoint;
+class QToolButton;
 class QTreeWidget;
 class QTreeWidgetItem;
 
@@ -69,6 +70,11 @@ signals:
     void removeGroupRequested(const QString& group);
     void renameProjectRequested();
     void closeProjectRequested();
+    /// The user asked to run the project's entry point.
+    void runProjectRequested();
+    /// The user asked to make `path` the entry point, or to clear it.
+    void setEntryRequested(const QString& path);
+    void clearEntryRequested();
     void revealRequested();
     void removeSelectionRequested();
     /// A program was chosen for removal from the project.
@@ -95,6 +101,7 @@ private:
     QLabel* subtitle_ = nullptr;
     QLabel* empty_ = nullptr;
     QWidget* tools_ = nullptr;
+    QToolButton* run_button_ = nullptr;
     QTreeWidget* tree_ = nullptr;
 };
 

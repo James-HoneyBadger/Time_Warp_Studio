@@ -1159,6 +1159,21 @@ void MainWindow::buildMenuBar() {
     add(project_menu, tr("Rename Project..."), QKeySequence{},
         [this] { renameProject(); })
         ->setObjectName(QStringLiteral("renameProjectAction"));
+    add(project_menu, tr("Set Current File as &Entry Point"), QKeySequence{},
+        [this] {
+            CodeEditor* editor = currentEditor();
+            const QString path = editor != nullptr ? pathOf(editor) : QString{};
+            if (path.isEmpty()) {
+                setExecutionState(tr("ready"), tr("Save the document first: an entry "
+                                                  "point is a file on disk."));
+                return;
+            }
+            setProjectEntry(path);
+        })
+        ->setObjectName(QStringLiteral("setProjectEntryAction"));
+    add(project_menu, tr("Clear Entry Point"), QKeySequence{},
+        [this] { clearProjectEntry(); })
+        ->setObjectName(QStringLiteral("clearProjectEntryAction"));
     add(project_menu, tr("Reveal Project &Folder"), QKeySequence{},
         [this] { revealProjectFolder(); })
         ->setObjectName(QStringLiteral("revealProjectAction"));
@@ -1244,6 +1259,11 @@ void MainWindow::buildMenuBar() {
     add(run, tr("Run &Both Panes"), timewarp::core::keySequence(Qt::CTRL | Qt::ALT, Qt::Key_B),
         [this] { runBothPanes(); })
         ->setObjectName(QStringLiteral("runBothPanesAction"));
+    // A project is a set of programs with one of them the way in, so running the
+    // set is running that one -- with the project's folder as the run's directory.
+    add(run, tr("Run Pro&ject"), timewarp::core::keySequence(Qt::CTRL | Qt::ALT, Qt::Key_R),
+        [this] { runProject(); })
+        ->setObjectName(QStringLiteral("runProjectAction"));
     run->addSeparator();
     // Reset is not Stop: Stop ends a program that is still running, Reset puts
     // the screen back to how it looked before a program that has already ended
@@ -3364,6 +3384,12 @@ void MainWindow::buildDocks() {
             &MainWindow::closeProject);
     connect(project_panel_, &ProjectPanel::revealRequested, this,
             &MainWindow::revealProjectFolder);
+    connect(project_panel_, &ProjectPanel::runProjectRequested, this,
+            &MainWindow::runProject);
+    connect(project_panel_, &ProjectPanel::setEntryRequested, this,
+            &MainWindow::setProjectEntry);
+    connect(project_panel_, &ProjectPanel::clearEntryRequested, this,
+            &MainWindow::clearProjectEntry);
     connect(project_panel_, &ProjectPanel::removeFileRequested, this,
             [this](const QString& path) {
                 if (project_.removeFile(path) && saveProject()) {
@@ -5095,6 +5121,80 @@ void MainWindow::runCurrentDocument() {
     runSource(editor, source);
 }
 
+QString MainWindow::runFileBase(const CodeEditor* editor) const {
+    // A project is a folder of programs that belong together, so a program inside
+    // one reads and writes beside the project's other programs -- which is also the
+    // only reading of `OPEN "data.txt"` that survives the folder being copied or
+    // handed to a learner.
+    if (project_.isValid()) {
+        return project_.root();
+    }
+    const QString path = editor != nullptr ? pathOf(editor) : QString{};
+    if (!path.isEmpty()) {
+        return QFileInfo{path}.absolutePath();
+    }
+    // Unsaved and unprojected: the process's working directory, which is what a
+    // terminal run has always used.
+    return {};
+}
+
+void MainWindow::runProject() {
+    if (!project_.isValid()) {
+        setExecutionState(tr("ready"), tr("Open a project first; there is nothing to run."));
+        return;
+    }
+    if (!project_.hasEntry()) {
+        setExecutionState(
+            tr("ready"),
+            tr("This project has no entry point. Right-click a program and choose "
+               "\u201cSet as Entry Point\u201d."));
+        return;
+    }
+    const QString entry = project_.entry();
+    if (!QFileInfo::exists(entry)) {
+        setExecutionState(tr("ready"),
+                          tr("The entry point is missing: %1")
+                              .arg(QDir::toNativeSeparators(entry)));
+        return;
+    }
+    // Raising the entry is what makes "Run Project" legible: the program the user
+    // is watching run is the program in front of them.
+    if (!openFile(entry)) {
+        return;
+    }
+    CodeEditor* editor = currentEditor();
+    if (editor == nullptr || pathOf(editor) != QFileInfo{entry}.absoluteFilePath()) {
+        // Opened, but not the tab in front: a run that executes a document other
+        // than the one on screen is the confusion this check exists to prevent.
+        setExecutionState(tr("ready"),
+                          tr("Could not bring the entry point to the front: %1")
+                              .arg(QDir::toNativeSeparators(entry)));
+        return;
+    }
+    runCurrentDocument();
+}
+
+void MainWindow::setProjectEntry(const QString& path) {
+    if (!project_.isValid() || !project_.setEntry(path)) {
+        return;
+    }
+    if (saveProject()) {
+        refreshProjectPanel();
+        setExecutionState(tr("ready"),
+                          tr("Entry point: %1").arg(project_.displayPath(project_.entry())));
+    }
+}
+
+void MainWindow::clearProjectEntry() {
+    if (!project_.clearEntry()) {
+        return;
+    }
+    if (saveProject()) {
+        refreshProjectPanel();
+        setExecutionState(tr("ready"), tr("Entry point cleared"));
+    }
+}
+
 void MainWindow::runSelection() {
     CodeEditor* editor = currentEditor();
     if (editor == nullptr) {
@@ -5188,6 +5288,8 @@ void MainWindow::runSource(CodeEditor* editor, const QString& source) {
             return database->executeForOutput(sql);
         });
     }
+    // No file base here: Scheme has no file words, and a base this runner never
+    // reads would be a setting that quietly does nothing. `NativeRunner` takes one.
     runner->set_host(turtle_host_.get());
 
     connect(runner, &timewarp::debugger::DebuggerRunner::output_available, this,
@@ -5321,6 +5423,9 @@ void MainWindow::runNatively(CodeEditor* editor, timewarp::lang::Language langua
 
     auto* runner = new NativeRunner{language, *canvas_queue_, this};
     native_runner_ = runner;
+    // The run's own directory: a project's root, or the document's folder. See
+    // `runFileBase` for why the process's working directory is the last resort.
+    runner->set_file_base(runFileBase(editor));
     // The queue has no consumer of its own: a run that fills it waits until the
     // GUI drains it, so every command has to say "look at the queue now".
     runner->set_wakeup([this] { canvas_bridge_->wake(); });

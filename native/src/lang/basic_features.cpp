@@ -655,8 +655,13 @@ std::string Machine::sprite_put(const std::string& args) {
 
 // -- files -----------------------------------------------------------------
 
-std::string resolve_confined_path(std::string_view filename) {
-    std::filesystem::path base = std::filesystem::current_path();
+std::string resolve_confined_path(std::string_view filename, std::string_view base_dir) {
+    // The base is the run's own directory -- a project's root, or the folder the
+    // program was opened from -- and only falls back to the process's working
+    // directory when no run has named one.
+    std::filesystem::path base = base_dir.empty()
+                                     ? std::filesystem::current_path()
+                                     : std::filesystem::path{std::string{base_dir}};
     std::error_code error;
     const std::filesystem::path resolved_base = std::filesystem::weakly_canonical(base, error);
     if (!error) {
@@ -721,7 +726,7 @@ std::string Machine::open_file(const std::string& args) {
         file_mode = "r+";
     }
     try {
-        const std::string path = resolve_confined_path(filename);
+        const std::string path = resolve_confined_path(filename, interpreter_.file_base());
         if (mode == "RANDOM" && !std::filesystem::exists(path)) {
             std::FILE* created = std::fopen(path.c_str(), "w");
             if (created != nullptr) {

@@ -135,27 +135,28 @@ jobs:
       # The parity gate, against the corpora recorded from the reference engine
       # before it was deleted: 470 language programs (output, every drawing call,
       # the variables each left behind) and 192 Scheme programs (whole output text,
-      # with the 24 documented divergences listed rather than compared). It imports
-      # no Python to do it, which is why the corpora carry the program text.
+      # with the 24 documented divergences listed rather than compared). The gate is
+      # `time_warp_gates`, built from this repository, which is why the corpora carry
+      # the program text: nothing outside the build is needed to check it.
       - name: 'Parity: the ports against the frozen corpora'
-        run: python3 native/tools/golden_check.py --all
+        run: ./native/build/time_warp_gates golden --all
 
       # Every example program, in every language, through the native engines. This
       # is the gate for the failure the unit tests cannot see: a language that runs
       # successfully and draws nothing, which is exactly what a user reports as
       # "the graphics don't show up".
       - name: Example programs
-        run: python3 native/tools/example_smoke.py
+        run: ./native/build/time_warp_gates smoke
 
       # Every command in the command table, first as a whole program, then as a
       # REPL submission through the native API. The REPL is a separate execution
       # path: it preserves bindings, replaces the program text each time and runs
       # whole-program languages as one entry.
       - name: Every language command
-        run: python3 native/tools/command_matrix.py
+        run: ./native/build/time_warp_gates commands
 
       - name: Every language command through the REPL
-        run: python3 native/tools/repl_matrix.py
+        run: ./native/build/time_warp_gates repl
 
       # The curriculum is also checked here, not in the documentation job: both
       # checks need `time_warp_teach`, and this is the job that has built it. The

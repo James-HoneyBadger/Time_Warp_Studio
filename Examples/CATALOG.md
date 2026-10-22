@@ -153,5 +153,5 @@ The example verifier runs active examples in isolated subprocesses and reports
 syntax, execution, and timeout failures. Run it from the repository root with:
 
 ```bash
-python3 native/tools/example_smoke.py
+make smoke
 ```

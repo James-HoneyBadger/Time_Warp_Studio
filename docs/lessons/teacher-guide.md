@@ -1,11 +1,11 @@
 # Teacher guide: planning, marking and running a class
 
-Everything a teacher needs is in `native/tools/teach.cpp`. Half of it needs no
+Everything a teacher needs is in ``time_warp_teach``. Half of it needs no
 class at all — it is about the curriculum — and half of it is about the people in
 front of you.
 
 ```text
-python3 native/tools/teach.cpp --help
+./native/build/time_warp_teach --help
 ```
 
 Nothing here is a separate copy of the lessons. The plans are generated from the
@@ -20,7 +20,7 @@ solutions themselves. If a lesson changes, every one of those changes with it.
 Run this first, and again after editing any lesson:
 
 ```text
-$ python3 native/tools/teach.cpp validate
+$ ./native/build/time_warp_teach validate
 lessons: 20   checkpoints: 60
 
 ✅ every solution passes its own checkpoint
@@ -47,7 +47,7 @@ quietly offering a language the curriculum does not cover.
 ## 2. The scheme of work
 
 ```text
-python3 native/tools/teach.cpp outline
+./native/build/time_warp_teach outline
 ```
 
 Prints the twenty-two lessons grouped by language, in teaching order, with each
@@ -57,8 +57,8 @@ view to plan a term from.
 ## 3. Lesson plans
 
 ```text
-python3 native/tools/teach.cpp plans --lang BASIC
-python3 native/tools/teach.cpp plans > all-plans.txt
+./native/build/time_warp_teach plans --lang BASIC
+./native/build/time_warp_teach plans > all-plans.txt
 ```
 
 Each plan carries what you need to teach it and nothing you do not:
@@ -79,7 +79,7 @@ The same plans are committed as documents, one file per language, in
 curriculum:
 
 ```text
-python3 native/tools/teach.cpp write-plans docs/lessons/plans
+./native/build/time_warp_teach write-plans docs/lessons/plans
 ```
 
 They are **generated rather than written**, because two copies of a lesson drift
@@ -88,8 +88,8 @@ and the copy that drifts is always the one being read.
 ## 4. Answer keys
 
 ```text
-python3 native/tools/teach.cpp answers logo_shapes
-python3 native/tools/teach.cpp answers --all > answers.txt
+./native/build/time_warp_teach answers logo_shapes
+./native/build/time_warp_teach answers --all > answers.txt
 ```
 
 Each checkpoint's **worked answer** with what it is checked against, so you can
@@ -138,11 +138,11 @@ Use `--classroom DIR` to keep a class somewhere else.
 ### Adding the class
 
 ```text
-$ python3 native/tools/teach.cpp roster add "Ada Lovelace"
+$ ./native/build/time_warp_teach roster add "Ada Lovelace"
 ✅ added Ada Lovelace as ada-lovelace
 
-$ python3 native/tools/teach.cpp roster add "Grace Hopper"
-$ python3 native/tools/teach.cpp roster
+$ ./native/build/time_warp_teach roster add "Grace Hopper"
+$ ./native/build/time_warp_teach roster
 ```
 
 The id is derived from the name unless you pass `--student-id`. Removing somebody
@@ -152,10 +152,10 @@ must not be able to delete an afternoon's work.
 ### Setting and handing out work
 
 ```text
-$ python3 native/tools/teach.cpp assign logo_shapes --note "For Tuesday"
+$ ./native/build/time_warp_teach assign logo_shapes --note "For Tuesday"
 ✅ assigned 1 lesson(s): logo_shapes
 
-$ python3 native/tools/teach.cpp distribute
+$ ./native/build/time_warp_teach distribute
   /home/you/.time_warp/classroom/students/ada-lovelace/logo_shapes-1.logo
   ...
 ✅ handed out 6 file(s) to 2 student(s)
@@ -169,7 +169,7 @@ the second run hands out only the files that are not there.
 ### Taking it in
 
 ```text
-$ python3 native/tools/teach.cpp collect -v
+$ ./native/build/time_warp_teach collect -v
   … ada-lovelace logo_shapes            2/3 checkpoint(s) passed
         logo_shapes-1.logo           checkpoint 1: pass
         logo_shapes-2.logo           checkpoint 2: pass
@@ -189,7 +189,7 @@ and hiding the third would send you to re-teach something already learnt.
 ### Where each learner has got to
 
 ```text
-$ python3 native/tools/teach.cpp report
+$ ./native/build/time_warp_teach report
 student       name                   started  finished  hints
 ada-lovelace  Ada Lovelace                 1         1      2
 grace-hopper  Grace Hopper                 0         0      0
@@ -205,14 +205,14 @@ To read a single progress file with no classroom at all — for instance one cop
 off a learner's machine — point `--progress` at it:
 
 ```text
-python3 native/tools/teach.cpp --progress /media/usb/progress.json report
+./native/build/time_warp_teach --progress /media/usb/progress.json report
 ```
 
 ### Moving a class between machines
 
 ```text
-python3 native/tools/teach.cpp bundle class.zip
-python3 native/tools/teach.cpp --classroom /path/new unbundle class.zip
+./native/build/time_warp_teach bundle class.zip
+./native/build/time_warp_teach --classroom /path/new unbundle class.zip
 ```
 
 A bundle is the whole classroom directory zipped: the roster, the assignment, the
@@ -225,7 +225,7 @@ additive, and refreshing one wants to be authoritative. A bundle whose member
 names try to point outside the classroom is refused rather than followed.
 
 The Classroom panel has the same pair as **Save Bundle...** and **Load Bundle...**.
-They ask the engine, so the file the IDE writes is the one `teach.py unbundle`
+They ask the engine, so the file the IDE writes is the one `time_warp_teach unbundle`
 reads and the other way round. Loading asks whether to replace files that are
 already there, because that is the one answer it cannot take back; the panel then
 re-reads the class it has just changed.
@@ -245,7 +245,7 @@ Both manuals are installed with the application and listed under Help >
 Documentation, so a class can follow along on its own copies.
 
 ```text
-$ python3 native/tools/teach.cpp present 24
+$ ./native/build/time_warp_teach present 24
 ✅ presentation size 24, fullscreen True
 ```
 
@@ -280,7 +280,7 @@ class hand-in, and the PDF is the same content on A4.
 ## 7. Writing a new lesson
 
 ```text
-python3 native/tools/teach.cpp new my_topic --language BASIC
+./native/build/time_warp_teach new my_topic --language BASIC
 ```
 
 Prints a lesson skeleton in the shape the **loader accepts**, so an author
@@ -307,7 +307,7 @@ Next to it is the **🏫 Classroom** panel, which is the teacher's view: the cla
 list, what has been assigned and the note that goes with it, and one row per
 learner per lesson showing how many checkpoints were handed in and how many
 passed. **Open Student Folder** jumps to the selected learner's work. It reads
-the same files `teach.py` writes — the panel's marks and `collect`'s are the same
+the same files `time_warp_teach` writes — the panel's marks and `collect`'s are the same
 marking code — so a class can be set up from the command line and then watched
 from the IDE, or the other way round. **Refresh** re-reads those files, so a
 student added or a handout marked while the IDE is open appears without

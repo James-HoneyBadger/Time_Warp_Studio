@@ -196,6 +196,13 @@ check: build ## Build the run-report tool the harnesses drive
 	@test -x "$(BUILD_DIR)/time_warp_check" \
 		|| { echo "error: time_warp_check was not built (Qt Core is required)." >&2; exit 1; }
 
+# The gates: one binary with a subcommand per harness (smoke, commands, repl,
+# golden). Built with the product, because it drives the four binaries the product
+# builds -- and named here so `make smoke` at the top level builds it first.
+gates: build ## Build the gates binary the harness targets run
+	@test -x "$(BUILD_DIR)/time_warp_gates" \
+		|| { echo "error: time_warp_gates was not built (Qt Core is required)." >&2; exit 1; }
+
 # The curriculum through the same library the Lessons panel asks: every worked
 # answer passes its checkpoint and every starter fails it. Cheap enough to run on
 # every change, and the only thing that keeps lesson data honest -- nothing else
@@ -281,5 +288,5 @@ uninstall: ## Remove what install put in PREFIX
 	@echo "Removed the files listed in $(BUILD_DIR)/install_manifest.txt"
 
 .PHONY: all build configure debug rebuild strict lenient test test-list \
-        test-debug asan ctest-run check teach-check run screenshot reset-layout \
+        test-debug asan ctest-run check gates teach-check run screenshot reset-layout \
         info clean distclean install uninstall help

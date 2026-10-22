@@ -101,9 +101,11 @@ bool Project::load(const QString& filePath, QString* error) {
     }
     const QJsonObject object = document.object();
     const int format = object.value(QStringLiteral("format")).toInt(0);
-    if (format != kFormatVersion) {
+    // Neither 0 nor a negative number is a format this build ever wrote: 0 means
+    // the field is missing, and a file without one is not a project.
+    if (format < 1 || format > kFormatVersion) {
         if (error != nullptr) {
-            *error = QStringLiteral("%1 uses project format %2; this build reads %3")
+            *error = QStringLiteral("%1 uses project format %2; this build reads 1 to %3")
                          .arg(path)
                          .arg(format)
                          .arg(kFormatVersion);
@@ -175,6 +177,25 @@ bool Project::load(const QString& filePath, QString* error) {
         }
     }
 
+    // The entry point is a member by definition. A hand-edited file that names one
+    // without listing it still loads, with the file added: the alternative is a
+    // project whose Run Project names something the dock does not show.
+    QString entry;
+    const QString stored_entry = object.value(QStringLiteral("entry")).toString();
+    if (!stored_entry.trimmed().isEmpty()) {
+        const QString member = resolve(stored_entry, root);
+        if (!member.isEmpty()) {
+            entry = member;
+            const bool listed = std::any_of(
+                files.cbegin(), files.cend(), [&member](const ProjectFile& listed_file) {
+                    return samePath(listed_file.path, member);
+                });
+            if (!listed) {
+                files.append(ProjectFile{member, QString{}});
+            }
+        }
+    }
+
     // Only now, with every field read and validated, replace the object. A
     // failed load leaves the caller's open project exactly as it was.
     name_ = name;
@@ -182,6 +203,7 @@ bool Project::load(const QString& filePath, QString* error) {
     file_path_ = path;
     groups_ = groups;
     files_ = files;
+    entry_ = entry;
     return true;
 }
 
@@ -318,6 +340,13 @@ bool Project::removeFile(const QString& path) {
         return false;
     }
     files_.removeAt(index);
+    // The entry point is a member, so removing it from the project removes the
+    // entry too: a project that runs a program it no longer lists is a project
+    // whose Run Project is a mystery. `path` is asked, not the list, because the
+    // member that was at `index` has just gone.
+    if (samePath(entry_, path)) {
+        entry_.clear();
+    }
     return true;
 }
 
@@ -334,6 +363,32 @@ bool Project::setGroup(const QString& path, const QString& group) {
         return false;
     }
     files_[index].group = target;
+    return true;
+}
+
+bool Project::setEntry(const QString& path) {
+    if (path.trimmed().isEmpty()) {
+        return false;
+    }
+    const QString member = absolute(path);
+    if (member.isEmpty()) {
+        return false;
+    }
+    // Adding it is what makes the entry a thing the dock can show; a caller that
+    // set an entry from outside the project gets both edits, as it asked.
+    (void)addFile(member);
+    if (samePath(entry_, member)) {
+        return false;
+    }
+    entry_ = member;
+    return true;
+}
+
+bool Project::clearEntry() {
+    if (entry_.isEmpty()) {
+        return false;
+    }
+    entry_.clear();
     return true;
 }
 
@@ -354,6 +409,9 @@ int Project::pruneMissing() {
                                     return !QFileInfo::exists(file.path);
                                 }),
                  files_.end());
+    if (!entry_.isEmpty() && !QFileInfo::exists(entry_)) {
+        entry_.clear();
+    }
     return before - files_.size();
 }
 
@@ -390,6 +448,9 @@ QByteArray Project::toJson() const {
         files.append(record);
     }
     object.insert(QStringLiteral("files"), files);
+    if (!entry_.isEmpty()) {
+        object.insert(QStringLiteral("entry"), relativeTo(entry_, root_));
+    }
     return QJsonDocument{object}.toJson(QJsonDocument::Indented);
 }
 
