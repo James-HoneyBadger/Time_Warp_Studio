@@ -205,7 +205,14 @@ add_library(tw_lang_basic OBJECT
     src/lang/basic_library.cpp
     src/lang/basic_text.cpp
 )
-add_library(tw_lang_logo OBJECT src/lang/logo.cpp)
+add_library(tw_lang_logo OBJECT
+    src/lang/logo.cpp
+    src/lang/logo_support.cpp
+    src/lang/logo_machine.cpp
+    src/lang/logo_motion.cpp
+    src/lang/logo_control.cpp
+    src/lang/logo_data.cpp
+)
 add_library(tw_lang_chip8 OBJECT src/lang/chip8.cpp)
 add_library(tw_lang_focal OBJECT src/lang/focal.cpp)
 add_library(tw_lang_pilot OBJECT src/lang/pilot.cpp)

@@ -47,8 +47,6 @@ struct SizeWaiver {
 };
 
 constexpr SizeWaiver kWaivers[] = {
-    {"native/src/lang/logo.cpp",
-     "the Logo executor: lexer, evaluator, primitives and turtle in one file"},
     {"native/src/ui/retro_computer.cpp",
      "the HB-1 machine, which owns its own canvas queue, bridge and runners"},
     {"native/tests/ui_layout_tests.cpp",
