@@ -276,7 +276,17 @@ foreach(objects IN LISTS TIME_WARP_LANGUAGE_OBJECTS)
     target_sources(timewarp_lang PRIVATE $<TARGET_OBJECTS:${objects}>)
 endforeach()
 if(TIME_WARP_EXPR_BUILD_TESTS)
-    add_executable(lang_tests tests/lang_tests.cpp)
+    add_executable(lang_tests
+        tests/lang_tests.cpp
+        tests/lang_apl_rexx_smalltalk_tests.cpp
+        tests/lang_basic_tests.cpp
+        tests/lang_chip8_assembler_tests.cpp
+        tests/lang_chip8_machine_tests.cpp
+        tests/lang_focal_pilot_comal_tests.cpp
+        tests/lang_forth_tests.cpp
+        tests/lang_logo_tests.cpp
+        tests/lang_repl_tests.cpp
+    )
     target_link_libraries(lang_tests PRIVATE timewarp::lang)
     target_include_directories(lang_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/tests)
     # The shipped examples are a gate as well as a sample: a game that runs and

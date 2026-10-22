@@ -929,7 +929,16 @@ if(TIME_WARP_QT_FOUND)
             timewarp_enable_warnings(player_tests)
             add_test(NAME player_tests COMMAND player_tests)
 
-            add_executable(ui_layout_tests tests/ui_layout_tests.cpp)
+            add_executable(ui_layout_tests
+                tests/ui_layout_tests.cpp
+                tests/ui_layout_appearance_tests.cpp
+                tests/ui_layout_editor_tests.cpp
+                tests/ui_layout_menu_tests.cpp
+                tests/ui_layout_panel_tests.cpp
+                tests/ui_layout_run_tests.cpp
+                tests/ui_layout_shell_tests.cpp
+                tests/ui_layout_turtle_tests.cpp
+            )
             target_link_libraries(ui_layout_tests PRIVATE timewarp::ui)
             target_include_directories(ui_layout_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/tests)
             # The snippet picker's suite reads the checkout's catalogue. The

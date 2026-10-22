@@ -22,6 +22,7 @@
 #include <QProcess>
 #include <QStringList>
 
+#include <array>
 #include <cstdio>
 
 namespace timewarp::gates {
@@ -41,17 +42,16 @@ constexpr int kBuildLineBudget = 200;
 /// `SizeWaiver` rather than `Waiver`: the command table already has a `Waiver`, for
 /// a row that cannot be tested, and one name for two ideas is how a reader ends up
 /// in the wrong file.
+///
+/// It is empty: every file that was over the budget has been split. An entry added
+/// here needs a reason in the field beside it, and the entry is a promise to come
+/// back for it.
 struct SizeWaiver {
     const char* path;
     const char* reason;
 };
 
-constexpr SizeWaiver kWaivers[] = {
-    {"native/tests/ui_layout_tests.cpp",
-     "85 cases in one file: one file per case group is the split, and the next phase"},
-    {"native/tests/lang_tests.cpp",
-     "every executor's cases in one file: one file per language is the split"},
-};
+constexpr std::array<SizeWaiver, 0> kWaivers{};
 
 int countLines(const QString& path) {
     QFile file{path};
