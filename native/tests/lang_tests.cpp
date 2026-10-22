@@ -36,7 +36,7 @@
 #include "timewarp/io/gamepad.hpp"
 #include "timewarp/lang/debug.hpp"
 #include "timewarp/lang/interpreter.hpp"
-#include "timewarp/lang/python_random.hpp"
+#include "timewarp/lang/mersenne_random.hpp"
 #include "timewarp/lang/raster.hpp"
 #include "timewarp/lang/repl.hpp"
 #include "timewarp/lang/turtle_host.hpp"
@@ -49,7 +49,7 @@ using timewarp::lang::Chip8Machine;
 using timewarp::lang::Chip8Program;
 using timewarp::lang::Interpreter;
 using timewarp::lang::Language;
-using timewarp::lang::PythonRandom;
+using timewarp::lang::MersenneRandom;
 using timewarp::lang::Raster;
 using timewarp::lang::ReplSession;
 using timewarp::lang::Rgb;
@@ -1759,13 +1759,15 @@ void test_turtle_pose_matches_the_reference_in_three_dimensions() {
 }
 
 // ---------------------------------------------------------------------------
-// Python-compatible randomness
+// The seeded generator `RND` and `FRAN` answer with
 // ---------------------------------------------------------------------------
 
-void test_python_random_matches_the_reference_sequence() {
-    // CPython: `random.seed(1); [random.random() for _ in range(3)]`
-    //   0.13436424411240122, 0.8474337369372327, 0.763774618976614
-    PythonRandom random;
+void test_mersenne_random_matches_the_recorded_sequence() {
+    // Seed 1, then three draws, recorded from the reference before it was deleted.
+    // The command rows assert only that `RND` and `FRAN` print something, so this
+    // is the one place the sequence itself is held: a change here moves the output
+    // of every seeded program.
+    MersenneRandom random;
     random.seed(1);
     TW_CHECK_NEAR(random.random(), 0.13436424411240122, 1e-15);
     TW_CHECK_NEAR(random.random(), 0.8474337369372327, 1e-15);
@@ -3050,7 +3052,7 @@ int main() {
     test_logo_unknown_command_is_reported_with_the_statement_number();
     test_logo_heading_starts_north_and_turns_clockwise();
     test_turtle_pose_matches_the_reference_in_three_dimensions();
-    test_python_random_matches_the_reference_sequence();
+    test_mersenne_random_matches_the_recorded_sequence();
     test_apl_iota_and_reshape();
     test_apl_scalar_functions_are_pervasive();
     test_apl_reduce_and_scan();

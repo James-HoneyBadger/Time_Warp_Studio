@@ -1,20 +1,20 @@
 // SPDX-License-Identifier: MIT
 
-#include "timewarp/lang/python_random.hpp"
+#include "timewarp/lang/mersenne_random.hpp"
 
 #include <cstdlib>
 
 namespace timewarp::lang {
 
-void PythonRandom::seed(std::int64_t value) {
+void MersenneRandom::seed(std::int64_t value) {
     seed_unsigned(value < 0 ? static_cast<std::uint64_t>(-(value + 1)) + 1U
                             : static_cast<std::uint64_t>(value));
 }
 
-void PythonRandom::seed_unsigned(std::uint64_t value) {
-    // `_randommodule.c` turns the absolute value into little-endian 32-bit
-    // words and passes them to init_by_array. A zero seed is a one-word `[0]`,
-    // not an empty array.
+void MersenneRandom::seed_unsigned(std::uint64_t value) {
+    // The recorded seeding takes the absolute value, splits it into
+    // little-endian 32-bit words and passes them to init_by_array. A zero seed is
+    // a one-word `[0]`, not an empty array.
     std::uint32_t key[2]{};
     std::size_t length = 1;
     key[0] = static_cast<std::uint32_t>(value & 0xFFFFFFFFU);
@@ -25,7 +25,7 @@ void PythonRandom::seed_unsigned(std::uint64_t value) {
     init_by_array(key, length);
 }
 
-void PythonRandom::init_genrand(std::uint32_t seed) {
+void MersenneRandom::init_genrand(std::uint32_t seed) {
     state_[0] = seed;
     for (std::size_t index = 1; index < kStateSize; ++index) {
         state_[index] =
@@ -35,7 +35,7 @@ void PythonRandom::init_genrand(std::uint32_t seed) {
     index_ = kStateSize;
 }
 
-void PythonRandom::init_by_array(const std::uint32_t* key, std::size_t length) {
+void MersenneRandom::init_by_array(const std::uint32_t* key, std::size_t length) {
     init_genrand(19650218U);
     std::size_t i = 1;
     std::size_t j = 0;
@@ -67,7 +67,7 @@ void PythonRandom::init_by_array(const std::uint32_t* key, std::size_t length) {
     index_ = kStateSize;
 }
 
-std::uint32_t PythonRandom::next_uint32() {
+std::uint32_t MersenneRandom::next_uint32() {
     if (index_ >= kStateSize) {
         for (std::size_t i = 0; i < kStateSize; ++i) {
             const std::uint32_t value =
@@ -87,7 +87,7 @@ std::uint32_t PythonRandom::next_uint32() {
     return value;
 }
 
-std::uint32_t PythonRandom::getrandbits(unsigned bits) {
+std::uint32_t MersenneRandom::getrandbits(unsigned bits) {
     if (bits == 0) {
         return 0;
     }
@@ -98,14 +98,14 @@ std::uint32_t PythonRandom::getrandbits(unsigned bits) {
     return value;
 }
 
-double PythonRandom::random() {
+double MersenneRandom::random() {
     const std::uint32_t high = next_uint32() >> 5;
     const std::uint32_t low = next_uint32() >> 6;
     return (static_cast<double>(high) * 67108864.0 + static_cast<double>(low)) *
            (1.0 / 9007199254740992.0);
 }
 
-int PythonRandom::randint(int low, int high) {
+int MersenneRandom::randint(int low, int high) {
     const auto width = static_cast<std::uint32_t>(high - low) + 1U;
     if (width == 0) {
         return low;

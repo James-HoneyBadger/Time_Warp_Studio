@@ -25,7 +25,7 @@
 #pragma once
 
 #include "timewarp/lang/executor.hpp"
-#include "timewarp/lang/python_random.hpp"
+#include "timewarp/lang/mersenne_random.hpp"
 
 #include <array>
 #include <cstdint>
@@ -150,7 +150,7 @@ private:
     /// a fresh seed-0 generator per RND opcode would return the same byte
     /// every time. Seeded from the OS so two runs differ, as the reference's
     /// do.
-    PythonRandom random_;
+    MersenneRandom random_;
     unsigned keys_ = 0;
     bool interactive_ = false;
     bool waiting_for_key_ = false;

@@ -296,7 +296,7 @@ add_library(timewarp_lang
     src/lang/watch.cpp
     src/lang/repl.cpp
     src/lang/interpreter.cpp
-    src/lang/python_random.cpp
+    src/lang/mersenne_random.cpp
     src/lang/basic.cpp
     src/lang/basic_statements.cpp
     src/lang/basic_features.cpp

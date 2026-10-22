@@ -19,7 +19,7 @@
 #include "timewarp/core/charconv.hpp"
 
 #include "timewarp/lang/interpreter.hpp"
-#include "timewarp/lang/python_random.hpp"
+#include "timewarp/lang/mersenne_random.hpp"
 #include "timewarp/lang/turtle_host.hpp"
 
 #include <algorithm>
@@ -60,7 +60,7 @@ struct FocalState {
     int format = 2;
     int do_depth = 0;
     long steps = 0;
-    PythonRandom random;
+    MersenneRandom random;
 };
 
 bool is_space(char character) {

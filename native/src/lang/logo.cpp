@@ -27,7 +27,7 @@
 #include "timewarp/core/charconv.hpp"
 
 #include "timewarp/lang/interpreter.hpp"
-#include "timewarp/lang/python_random.hpp"
+#include "timewarp/lang/mersenne_random.hpp"
 #include "timewarp/lang/turtle_host.hpp"
 
 #include <algorithm>
@@ -591,7 +591,7 @@ private:
     /// Called after every pose change, as the reference's `on_change` hook is.
     /// FILLED uses it to trace the path the body walks.
     std::function<void()> on_change_;
-    PythonRandom random_;
+    MersenneRandom random_;
 };
 
 void LogoMachine::tick() {

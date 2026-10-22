@@ -1,17 +1,22 @@
 // SPDX-License-Identifier: MIT
 //
-// Python's `random` module, reproduced exactly, for parity.
+// The seeded generator `RND` and `FRAN` answer with.
 //
-// Several languages expose randomness (`FRAN` in FOCAL, `RND` in BASIC and
-// CHIP-8). A port that used `std::mt19937` directly would be an implementation
-// of something the reference does not do: the same seed would produce a
-// different sequence, so the differential harness could not tell a real defect
-// from a different generator. This is CPython's Mersenne Twister seeded the way
-// `random.seed(int)` seeds it, with `random()` and `randint()` built the way
-// `_randommodule.c` builds them.
+// Several languages expose randomness (`FRAN` in FOCAL, `RND` in BASIC, CHIP-8 and
+// Logo). A port that used `std::mt19937` directly would implement something else:
+// the same seed would produce a different sequence, so a program that seeds itself
+// would print different numbers after the port than before it. So this is MT19937
+// with the seeding and the sampling the reference used -- an integer seed split
+// little-endian into 32-bit words through `init_by_array`, `random()` taking 53
+// bits and scaling to [0, 1), and `randint(low, high)` inclusive by rejection
+// sampling.
+//
+// The command rows assert only that these commands *produce output*, so the
+// sequence itself is held in one place: the recorded draws asserted in `lang_tests`.
+// A change here is a change to a program's output, which is why that test exists.
 //
 // Deliberately small: only the operations the executors use. Adding one means
-// copying CPython's definition of it, not inventing an equivalent.
+// reproducing the reference's definition of it, not inventing an equivalent.
 
 #pragma once
 
@@ -20,9 +25,9 @@
 
 namespace timewarp::lang {
 
-class PythonRandom {
+class MersenneRandom {
 public:
-    PythonRandom() { seed(0); }
+    MersenneRandom() { seed(0); }
 
     /// `random.seed(n)` for an integer: the absolute value, little-endian
     /// 32-bit words, through MT19937's `init_by_array`.

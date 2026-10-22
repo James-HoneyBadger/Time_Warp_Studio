@@ -2,6 +2,24 @@
 
 <!-- history: all -->
 
+## [22.3.1] - 2026-10-22
+
+`PythonRandom` was the last thing in the tree named after a language the project no
+longer contains. It is `MersenneRandom` in `mersenne_random.{hpp,cpp}`: the class
+implements MT19937 with a documented seeding and sampling, and the name now says
+which generator it is rather than which interpreter it was recorded from.
+
+Its comments were also making a claim the gates do not support. They said the
+recorded corpus pinned the sequence; no corpus program calls `RND`, `FRAN` or
+`RANDOM` at all, and the command rows assert only that those commands produce
+output. The true statement is in the header now: the sequence is held by the draws
+asserted in `lang_tests`, recorded before the reference was deleted, and that test
+is the only thing standing between a change here and every seeded program printing
+different numbers.
+
+The sequence itself is unchanged: `lang_tests` still answers with the same three
+draws for seed 1, and all 24 suites, the corpora and the gates are green.
+
 ## [22.3.0] - 2026-10-22
 
 An audit of 19.1 to 22.2 against the tree as it now stands, and the fixes it asked
