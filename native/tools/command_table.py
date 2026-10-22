@@ -22,6 +22,14 @@ implemented and can never be exercised automatically has to be listed with the
 reason, so "not tested" is a decision on the record rather than an oversight.
 `native/tools/command_inventory.py` extracts the implemented set to check the
 table and the waivers against.
+
+#### Why it lives here
+
+It was `native/bridge/time_warp/tests/command_table.py` while a Python engine
+existed: that is where the engine was, and pytest collected the module beside it.
+The table is not engine code -- it is a data file naming each command and the
+smallest program that exercises it -- so it moved to `native/tools/` when the engine
+went, and the three harnesses that read it import it from here.
 """
 
 from __future__ import annotations

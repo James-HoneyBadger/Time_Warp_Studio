@@ -7,10 +7,10 @@
 | 16.x    | :white_check_mark:  |
 | < 16.0  | :x:                 |
 
-The application is the Qt build in `native/`. The Python engine in
-`native/bridge/` is a development reference used by the test gates and (until
-17.0) the classroom page; it is not part of the shipped program, and nothing a
-learner runs executes in it.
+The application is the Qt build in `native/`, and every language it runs is a C++
+executor in that build. The Python reference engine the ports were judged against
+was deleted at 18.0: its answers are frozen in `native/tests/golden/lang_corpus.json.gz`,
+which is data read by a command and executed by nothing.
 
 ## Reporting a Vulnerability
 
@@ -98,8 +98,9 @@ block device, or escape the classroom and progress directories it is given.
   contains the source in plain bytes — `strings hello` finds it — because the
   program is interpreted and nothing is hidden. Send one only to somebody who may
   see its source.
-- **The reference engine** in `native/bridge/` is development tooling. It is not
-  installed and no learner program is routed to it.
+- **The parity corpus** (`native/tests/golden/lang_corpus.json.gz`) is data: program
+  text and the reference's answers, read by `make golden-check` and executed by the
+  native engines only. It is development tooling and is not installed.
 
 ### Dependencies
 

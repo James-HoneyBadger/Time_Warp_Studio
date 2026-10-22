@@ -13,10 +13,10 @@ Time Warp Studio is an old-school desktop programming environment built with **C
 **Supported Languages:** BASIC, APL, Logo, PILOT, FOCAL, Scheme, CHIP-8, COMAL, REXX, and Smalltalk.
 
 **Current State:** The Qt desktop application in `native/` is the product, and all
-ten languages run in C++ inside it. The PySide6 implementation that came before
-it has been **removed**; the Python engine that remains (`native/bridge/`) is the
-reference the parity gates, the command matrix and the lesson check run in (see
-"The language bridge").
+ten languages run in C++ inside it. The PySide6 implementation that came before it
+has been **removed**, and so has the Python engine the ports were judged against:
+the parity gate compares with a recorded corpus, and the harnesses drive
+`time_warp_check` (see "The gates").
 
 ## Architecture: The Big Picture
 
@@ -38,14 +38,16 @@ reference the parity gates, the command matrix and the lesson check run in (see
   transport of its own). The IDE's Projects dock, Database tab and `./api` are
   views over these; `./twc` links the language engines into a standalone
   executable.
-- **The Python reference engine** — `native/bridge/`.
-  - No program is routed to it at run time: `executor_for()` answers for all ten.
-    It is kept for one reason only: the differential harnesses compare each port
-    against it, and `golden-record` re-freezes the corpus from it. Nothing in the
-    product runs it, and since 17.2 the gates do not either -- `time_warp_check`
-    (`native/tools/check.cpp`) answers "what did this program do?" from the native
-    engines, and it goes at 18.0.
-  - It is the part that goes away once lesson checking runs natively.
+- **The frozen parity corpus** — `native/tests/golden/lang_corpus.json.gz`.
+  - The Python reference engine was deleted at 18.0. The corpus is what remains of
+    it: 470 programs, each with the program text, what it printed, every drawing
+    call and the variables it left. `make golden-check` compares the ports with
+    those answers and imports no Python to do it.
+  - It is a weaker gate than the live differential it replaced and says so: a
+    recording cannot notice a mistake in the recording, so a deliberate behaviour
+    change edits the corpus entry in the same commit that changes the behaviour.
+  - `time_warp_check` (`native/tools/check.cpp`) is what answers "what did this
+    program do?" now, from the engines the product ships.
 
 **Critical Design Decision:** Language executors are stateless command processors returning text output. All UI state (turtle canvas, output display, themes) lives in the Qt application, not in an interpreter. Drawing crosses the thread boundary as commands on a `CanvasCommandQueue`, which the GUI thread drains into `TurtleCanvas`.
 
@@ -94,8 +96,9 @@ make -C native run
   reason the second Qt exists: `-DTIME_WARP_QT5=ON` selects it and
   `-DTIME_WARP_WIN7=ON` states the Windows 7 API level. Never `#if` on the Qt
   version at a call site — the two compatibility headers below are the seam.
-- Python 3.10+ **only** for the reference engine the gates and the lesson check
-  use; every language runs in-process with no Python at all
+- Python 3.10+ **only** to run the harness and documentation scripts in
+  `native/tools/`; every language runs in-process with no Python at all, and there is
+  no Python engine any more
 
 ### Testing Strategy
 
@@ -105,7 +108,7 @@ ctest --test-dir native/build --output-on-failure
 make -C native test-debug     # Debug tree
 make -C native asan           # AddressSanitizer; ASAN=undefined for UBSan
 
-# The whole example corpus, through the real bridge
+# The whole example corpus, through the native engines
 python3 native/tools/example_smoke.py
 python3 native/tools/command_matrix.py   # every command row as a program
 python3 native/tools/repl_matrix.py      # every command row through the REPL
@@ -113,75 +116,54 @@ python3 native/tools/repl_matrix.py      # every command row through the REPL
 ./twc Examples/basic/hello.bas -o hello
 ./api                                 # JSON-RPC on stdin/stdout; docs/API.md
 
-# The bridge engine's own tests. They need pytest, which the repository's .venv
-# carries; a bare `python3 -m pytest` fails with "No module named pytest".
-make engine-test    # or: PYTHONPATH=native/bridge .venv/bin/python3 -m pytest -q
+# The parity gate: the ports against the corpus recorded from the reference engine
+# before it was deleted. 0 differences is the verdict, and it needs no Python
+# engine -- only a python3 to run the script.
+make golden-check     # both corpora: 470 language programs and 192 Scheme ones
 
-# Parity gates against the Python reference (0 unexpected mismatches)
-python3 native/tools/differential_check.py native/build/expr_cli
-cd native/tools && python3 scheme_differential_check.py
-python3 native/tools/lang_differential_check.py   # all nine bridged-once languages, 483 programs
-
-# The documentation gates, which .github/workflows/docs.yml runs on every docs
-# change; the `time_warp_teach plans --write` output is then checked with git diff --exit-code
+# The curriculum and the documentation gates
 ./native/build/time_warp_teach validate
-make lint-md
+make doc-links doc-claims
 ```
 
 **Test Organization:**
 
-- `native/tests/*_tests.cpp` = the 21 C++ suites (lexer, evaluator, scheme, native
-  languages, canvas queue, canvas bridge, debug, debugger runner, ui layout, ui
-  document, turtle canvas, syntax highlighter, python bridge, media, editor
+- `native/tests/*_tests.cpp` = the C++ suites (lexer, evaluator, scheme, native
+  languages, audio, canvas queue, canvas bridge, debug, debugger runner, lessons,
+  classroom, ui layout, ui document, turtle canvas, syntax highlighter, media, editor
   services, help browser, chip8 emulator, retro computer, project, sql, api)
-- `native/tools/example_smoke.py` = every `Examples/**` program through the reference
-  engine; the 30 that must draw are listed in `DRAWING_EXAMPLES`
-- `native/bridge/time_warp/tests/` = the bridge engine's tests (the 10 language executors,
-  the expression evaluator, validators)
+- `native/tools/example_smoke.py` = every `Examples/**` program through the native
+  engines; the 30 that must draw are listed in `DRAWING_EXAMPLES`
+- `native/tools/command_table.py` = the curated command rows: one per command, plus
+  the waivers for what cannot be exercised automatically
 
 ### Adding a New Language
 
-1. Create the reference executor first, because the parity gate compares against
-   it: `native/bridge/time_warp/languages/my_lang.py`<!-- doc-claims: ignore -->:
+The order is the native one first, because that is the only implementation there is:
 
-   ```python
-   from __future__ import annotations
-   from typing import TYPE_CHECKING
+1. Add the `Language` member (`native/include/timewarp/lang/language.hpp`), its key,
+   its display name and its extensions in `native/src/lang/language.cpp`.
 
-   if TYPE_CHECKING:
-       from ..core.interpreter import Interpreter
-       from ..graphics.turtle_state import TurtleState
+2. Implement the executor in `native/src/lang/` and register it in `executor_for`.
+   A line-by-line language gets one `execute_x` per statement; a whole-program one
+   gets the source and runs to completion. Either way it returns text with an emoji
+   prefix and keeps no UI state.
 
-   def execute_my_lang(interpreter: Interpreter, source: str, turtle: TurtleState) -> str:
-       """Execute MyLang source code."""
-       output_lines = []
-       # Parse and execute source
-       output_lines.append("✅ MyLang output")
-       return "\n".join(output_lines) + "\n"
-   ```
+3. Record what it does for the parity gate: add rows to `native/tools/command_table.py`
+   and an example under `Examples/`, then run `make golden-check` — the corpus is
+   recorded answers, so a new language's entries are added to
+   `native/tests/golden/lang_corpus.json.gz` by hand, with the behaviour in the same
+   commit.
 
-2. Register it in the bridge:
-   - Import: `from ..languages.my_lang import execute_my_lang` in `native/bridge/time_warp/languages/__init__.py`
-   - Add `Language.MY_LANG` in `native/bridge/time_warp/core/interpreter.py`
-   - Add the extension in `Language.from_extension()` and in `core/language_registry.py`
-
-3. Implement the native executor in `native/src/lang/` and register it in
-   `executor_for` (`native/src/lang/language.cpp`). Every language runs in C++ in
-   the application; the bridge executor is the reference the parity gate compares
-   the native one against, not a fallback.
-
-4. Register it in the Qt side so the IDE knows the name and the extensions:
-   `native/src/ui/language.cpp` (display name, settings key, file extensions)
-
-   The display name is what the lesson documents and panels show, and it comes from
-   `core/language_registry.py` on the Python side and `kLanguages` on the C++ side.
-   They are two copies of one fact and must agree: the enum member spells CHIP-8 as
-   `CHIP8`, the display name is `CHIP-8`, and using one where the other belongs is a
-   wrong name in the one place it is written down.
+4. Register it in the Qt side so the IDE knows its settings key and extensions:
+   `native/src/ui/language.cpp` (`kLanguages`). The display name is what the lesson
+   documents and panels show: the enum member spells CHIP-8 as `CHIP8`, the display
+   name is `CHIP-8`, and using one where the other belongs is a wrong name in the one
+   place it is written down.
 
 5. Add an example under `Examples/my_lang/`<!-- doc-claims: ignore --> and a row to
-   `native/bridge/time_warp/tests/command_table.py` so every new command is covered
-   by `native/tools/command_matrix.py`. A row's `language` string is the protocol key
+   `native/tools/command_table.py` so every new command is covered by
+   `native/tools/command_matrix.py`. A row's `language` string is the protocol key
    (`Language[key.upper()]`), so CHIP-8's rows read `CHIP8`; a row labelled with prose
    needs `also=(...)` naming the command the inventory knows, or it is reported as
    untested forever.
@@ -217,7 +199,7 @@ result = evaluator.evaluate("2 + 3 * X")  # Returns 17
 
 ### Turtle Graphics State
 
-- Turtle state managed via `graphics/turtle_state.py` in the bridge, and by
+- Turtle state is managed by
   `TurtleCanvas` in the Qt application, which owns the display list
 - Graphics rendered with the Qt painter with zoom/pan support in `native/src/ui/turtle_canvas.cpp`
 - Canvas clearing happens in the Qt UI, not in an executor
@@ -258,7 +240,6 @@ native/                        - the Qt application (the product)
     project/                   - .twproject model (groups, relative paths)
     sql/                       - SQLite connection and result type
     api/                       - JSON-RPC 2.0 dispatcher (server.cpp)
-  bridge/                      - the Python reference engine (gates, lesson check)
     worker.py                  - the JSON-lines protocol it answered (gone at 18.0)
     pyproject.toml             - ruff/mypy config for the engine
     time_warp/
@@ -273,7 +254,7 @@ native/                        - the Qt application (the product)
       tests/                   - the engine's own tests
 Examples/                      - 60 example programs across the 10 active languages
 docs/                          - USER_GUIDE, API, language guide and tutorials
-Scripts/                       - audit_interpreters.py, generate_icon.py,
+Scripts/                       - generate_icon.py,
                                  version_sync.py
 ```
 
@@ -322,10 +303,9 @@ Scripts/                       - audit_interpreters.py, generate_icon.py,
   shared `DebugSession` (a statement, a Logo top-level statement, a Smalltalk message
   send, a CHIP-8 instruction). The terminal is a real opt-in `TerminalWidget`, and the
   outline dock is a real `OutlinePanel`; nothing in the window is a `PlaceholderPanel`.
-- **Engine (reference)**: `time_warp/core/interpreter.py` dispatches; the 10
-  executors in `time_warp/languages/` are stateless functions
-- **Expression evaluator**: native C++ (`timewarp_expr`) and, in the bridge, the
-  reference in `time_warp/utils/expression_evaluator.py` that gates it
+- **Engine**: `timewarp_lang` dispatches through `executor_for`; the ten executors are
+  stateless functions returning text with an emoji prefix
+- **Expression evaluator**: native C++ (`timewarp_expr`), gated by the recorded corpus
 - **Scheme**: native C++ explicit-stack machine (`timewarp_scheme`)
 
 ## Dependencies
@@ -342,10 +322,9 @@ versions live in `native/include/timewarp/core/qt_compat.hpp` (`intLength`,
 `fromUtf8`) and `qt_gui_compat.hpp` (`eventPosition`, `keySequence`). `native.yml`
 builds and tests that configuration on every push.
 
-The Python reference engine (needed by the parity gates, the command matrix and
-the lesson check, not by a Run): Python 3.10+, standard library only. Optional
-extras -- `pyttsx3` (the reference's BASIC `SAY` backend), `pygame` and `inputs`
-(BASIC `SOUND`/`GAMEPAD`) -- are imported defensively and are not required.
+The harness scripts in `native/tools/` (needed by the gates, not by a Run): Python
+3.10+, standard library only. `make lint` wants ruff. Neither is needed to build or
+run the application.
 
 The removed PySide6 application's dependencies are no longer installed or referenced.
 

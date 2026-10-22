@@ -5,9 +5,10 @@ name: Docs
 # with nothing but python3 from the runner image: it has to answer in seconds, on
 # every documentation change, and it must not depend on the C++ build.
 #
-# It watches `lessons.json` and the two commands as well as `docs/`, because the lesson
-# plans are *generated* from the curriculum and the failure that matters is
-# somebody editing the curriculum without regenerating them.
+# It watches the curriculum and the teacher's command as well as `docs/`: a lesson
+# edit changes a document, and the checks here are the ones that notice a guide
+# describing something that moved. Regenerating the plans needs the C++ build, so
+# that check lives in `native.yml` -- this job stays the fast one.
 
 on:
   push:
@@ -16,7 +17,7 @@ on:
       - 'docs/**'
       - 'README.md'
       - 'Examples/CATALOG.md'
-      - 'native/bridge/time_warp/features/lessons.json'
+      - 'native/share/lessons.json'
       - 'native/tools/teach.cpp'
       - 'native/tools/check_doc_links.py'
       - 'native/tools/check_doc_claims.py'
@@ -27,7 +28,7 @@ on:
       - 'docs/**'
       - 'README.md'
       - 'Examples/CATALOG.md'
-      - 'native/bridge/time_warp/features/lessons.json'
+      - 'native/share/lessons.json'
       - 'native/tools/teach.cpp'
       - 'native/tools/check_doc_links.py'
       - 'native/tools/check_doc_claims.py'

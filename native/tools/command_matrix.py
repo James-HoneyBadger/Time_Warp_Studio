@@ -47,10 +47,9 @@ import subprocess
 import sys
 import threading
 
-BRIDGE = pathlib.Path(__file__).resolve().parents[1] / "bridge"
-sys.path.insert(0, str(BRIDGE))
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 
-from time_warp.tests.command_table import ROWS, SCRATCH, WAIVERS  # noqa: E402
+from command_table import ROWS, SCRATCH, WAIVERS  # noqa: E402
 
 from harness import locate_check, repository_root  # noqa: E402
 
@@ -378,10 +377,25 @@ def main(argv: list[str] | None = None) -> int:
     # dispatch on, report what is neither exercised nor waived. The inventory is
     # a candidate list (it cannot tell a command from a punctuation mark), so a
     # gap here is a prompt to look, not proof of a defect.
+    #
+    # Read the numbers with their scope in mind. The table covers *statements*: one
+    # row is the smallest program that names one command. The inventory also sees
+    # built-in functions (`ASC`, `CHR$`, Logo's `ACOS`) and, for Smalltalk, the
+    # selectors its class library registers -- none of which have or want a row,
+    # because `lang_tests` exercises them as functions through the programs that
+    # call them. The count is printed rather than suppressed: it was zero for
+    # Smalltalk until 18.0 only because the Python inventory could not see a
+    # selector registered with `add(...)`, and a clean bill from a blind spot is
+    # worse than a number that needs a sentence of explanation.
     if not options.language:
         import command_inventory
 
         inventory = command_inventory.collect()
+        print()
+        print("  Coverage of the *statement* table against what the executors "
+              "dispatch on.")
+        print("  Functions and library selectors are counted here too, and are "
+              "covered by lang_tests.")
         for language, entry in sorted(inventory.items()):
             implemented = set(entry["dispatch_literals"]) | set(entry["table_commands"])
             effective: set[str] = set()
@@ -398,7 +412,8 @@ def main(argv: list[str] | None = None) -> int:
                 name for name in implemented if _normalise(name) not in effective
             }
             print(
-                f"  {language}: {len(missing)} candidate(s) neither tested nor waived"
+                f"  {language}: {len(missing)} command-shaped candidate(s) with no "
+                f"row (statements only are rows)"
             )
             if options.verbose:
                 for name in sorted(missing):

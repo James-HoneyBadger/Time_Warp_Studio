@@ -33,7 +33,7 @@ derived rather than remembered.
 | CHIP-8 machine | Tools > CHIP-8 Emulator (`Ctrl+Shift+M`): a live 60 Hz CHIP-8 with a 64×32 screen (128×64 hi-res), keypad, Run/Pause/Step/Reset, 1–2000 opcodes per frame, register/memory/listing inspector, sound, and a ROM library the user points at a folder. It assembles listings and loads binary ROMs; the editor's CHIP-8 Run is the whole-program path. Manuals: [machine](chip8/README.md), [assembler](chip8/assembly.md), [instruction set](chip8/instruction-set.md) |
 | Languages | 10 languages, 61 verified example programs |
 | Native engines | Expression evaluator (`timewarp_expr`) and Scheme (`timewarp_scheme`) |
-| Bridged engines | None — every language runs in process, and nothing the product runs starts Python. `native/bridge/` remains as development tooling: the fixture the parity corpus was recorded from |
+| Bridged engines | None. Every language runs in process, nothing the product runs starts Python, and the reference engine itself is deleted — the parity gate compares against a frozen corpus instead |
 | Native executors | All ten — BASIC, FOCAL, PILOT, COMAL, APL and REXX line-by-line; CHIP-8, Logo, Smalltalk and Scheme whole-program |
 | Printing | File > Print Code (Ctrl+P) and Print Drawing, through the optional Qt6 PrintSupport |
 | Profiling | View > Profile Run times every statement in the line-by-line languages and ends with a per-line report, longest first |
@@ -48,9 +48,9 @@ derived rather than remembered.
 
 ## Next: interpreter defects the command examination found
 
-`native/tools/command_matrix.py` drives one row per documented command through the
-real bridge (`native/bridge/time_warp/tests/command_table.py`). Examining every
-command turned up defects that no gate had been looking for. Those fixed have a row
+`native/tools/command_matrix.py` drives one row per documented command through
+`time_warp_check` and the C++ executors (`native/tools/command_table.py`). Examining
+every command turned up defects that no gate had been looking for. Those fixed have a row
 of their own so they cannot come back silently; those still open are listed here
 rather than left as folklore, and where a row cannot express them the reason is
 written down in `WAIVERS`.
@@ -195,8 +195,8 @@ libraries.
 **APL, FOCAL, CHIP-8 and Smalltalk** arrived after the original six. Each now has
 everything the others have:
 
-- a native **executor** in `native/src/lang/`, and the reference executor and test
-  module in `native/bridge/time_warp/` that the parity gate compares it with,
+- a native **executor** in `native/src/lang/`, and rows in the recorded parity
+  corpus that `make golden-check` compares it with,
 - a **worked example** under `Examples/` that `example_smoke.py` runs and checks for
   ink (all four draw),
 - a **command reference** in `docs/LANGUAGE_GUIDE.md` and a **tutorial** in
@@ -247,19 +247,24 @@ Four limits are recorded rather than left to be discovered:
 
 ---
 
-## Ports complete: what remains of the bridge
+## Ports complete: the bridge is gone
 
-Every language runs in C++ now. The Python engine in `native/bridge/` was the
-reference each port was judged against, and it keeps three jobs that the gates
-depend on:
+Every language runs in C++ now, and the Python engine those ports were judged
+against has been deleted. The three jobs it kept have each been taken over:
 
-1. `lang_differential_check.py` runs every program through both engines.
-2. `command_matrix.py` and `example_smoke.py` drive the reference.
-3. The Lessons panel asks the worker to check a learner's program, so the
-   panel's verdict and `time_warp_teach`'s are one function's answer.
+1. **The parity gate** compares each port with a *recording* —
+   `native/tests/golden/lang_corpus.json.gz`, the reference's answers to 470
+   programs, which carry the program text so the corpus outlives the engine.
+2. **`command_matrix.py` and `example_smoke.py`** drive `time_warp_check`, the
+   native engines, so a language that runs and draws nothing is still caught.
+3. **The lesson check** is `timewarp_lessons` — the same library the Lessons panel
+   asks, so the panel's verdict and `time_warp_teach`'s are one function's answer.
 
-The IDE itself no longer sends a program to it: `executor_for()` answers for all
-ten languages, so `runInBridge` has no runtime case left.
+That is a weaker first item than a live differential and the difference is written
+down rather than glossed: a recording cannot notice a mistake in the recording. In
+exchange the repository needs no Python toolchain, and the gate runs against the
+engines the product actually ships rather than against the ones that were ported
+*from*.
 
 **BASIC was the last port.** The core language, `PRINT`/`INPUT`/`FOR`/`WHILE`,
 narrowing variable types, `SUB`/`FUNCTION`, records and the file channel, the VGA
@@ -267,11 +272,11 @@ statements, and the reference's Logo fallback (a `.bas` file's `FORWARD` is
 Logo's `FORWARD`) are all in `native/src/lang/basic*.cpp`. It is gated by the
 same rows and examples the reference is: 138 programs, 0 differences.
 
-Lesson checking, the curriculum and the classroom are native now, and the worker
-classes are gone from the application and from the installed payload. What remains
-is `native/bridge/` itself: development tooling that the parity corpus was recorded
-from and the example and command harnesses drive. Deleting it is what retires those
-three harnesses.
+Lesson checking, the curriculum and the classroom are native, the worker classes are
+gone from the application and from the installed payload, and the reference engine
+itself is deleted. What a contributor needs to run every gate is a C++ compiler,
+CMake, Qt and a `python3` for the harness scripts — no virtual environment, and no
+second interpreter to keep in step.
 
 BASIC's extended statement set is ported too: shapes, particles, fractals, music,
 speech and the gamepad words are in `basic_features.cpp` and `basic_library.cpp`,
@@ -408,7 +413,7 @@ measuring the wrong machine.
 | 16.6 ✓ | Audio that mixes — several voices in process, not one `paplay` per note |
 | 17.0 ✓ | No Python in the product: lessons and classroom in C++, the worker deleted, nothing Python installed; `make golden-check` is the parity gate |
 | 17.1 ✓ | A screen you can look at — zoom about the pointer, click for a pixel, the mode named in the strip — sound on Windows through PowerShell, and a file fence made of components rather than a string prefix |
-| 18.0 | `native/bridge/` deleted, the three harnesses that drive it replaced by `timewarp_check`, and `time_warp_player` replacing the copy-of-the-IDE artifact |
+| 18.0 ✓ | the reference engine deleted and every gate driving the native engines; the teacher's and learner's commands are the C++ ones; `time_warp_player` and a format-2 artefact replacing the copy-of-the-IDE; the two machines exportable as files |
 
 Smaller items belong in one of those releases rather than a release of their own: a
 Smalltalk call stack shown as frames rather than a Program Counter; Flatpak and an

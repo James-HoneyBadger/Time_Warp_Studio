@@ -2,6 +2,94 @@
 
 <!-- history: all -->
 
+## [18.0.0] - 2026-10-22
+
+The Python engine is gone. One language builds this repository, tests it and gates
+it: C++ for the product, and a `python3` for the harness scripts, which drive the
+engines the product ships.
+
+17.0 said the *product* contained no Python; that was true and not enough. The
+repository still held 65 Python files and 33,306 lines in `native/bridge/`, and
+every gate that mattered needed a virtual environment to run. `git ls-files '*.py'`
+now lists twelve scripts: nine in `native/tools/` (the harnesses, the curated command
+table and the two documentation gates), `twc.py`, and two in `Scripts/` — and nothing
+else.
+
+### Removed
+
+- **`native/bridge/`** — the reference engine: the ten executors, the expression
+  evaluator, the validators, the lesson curriculum reader, the classroom and the
+  JSON-lines worker. 68 files.
+- **`Scripts/audit_interpreters.py`**, which walked the engine's executor modules.
+- **The three differential harnesses**, which each imported an interpreter from it:
+  `differential_check.py` (expressions), `lang_differential_check.py` (languages) and
+  `scheme_differential_check.py` (Scheme), with `scheme_reference.py` and
+  `scheme_probe.py` behind the last one.
+- **`make engine-test`** (the engine's pytest suite), **`make golden-record`** (which
+  asked the engine to freeze the corpus again) and the `lint` target's dependency on
+  `native/bridge/pyproject.toml`.
+- **The Windows CI step that drove `worker.py`** directly, and the three
+  `PYTHONPATH: native/bridge` environment blocks.
+
+### Added
+
+- **`native/tools/golden_check.py`** — the parity gate, in one command
+  (`make golden-check`). It compares the ports with 470 recorded language programs
+  (output lines, every drawing call in order, the variables left behind) and 192
+  recorded Scheme programs (whole output text), and imports no Python to do it: each
+  entry carries the program text as well as the answer, which is what lets a gate
+  outlive the engine it was recorded from. Scheme's 24 accepted divergences are kept
+  as notes rather than compared, and an entry whose note has gone stale **fails** —
+  which retired three of them, because the port had caught up with the reference.
+- **`native/tests/golden/scheme_corpus.json.gz`** — 192 programs, recorded from the
+  reference before it was deleted, in the hour before it was deleted and using the
+  reference restored from git. It is the same trick the language corpus used.
+- **`native/tools/command_table.py`** — the curated command rows moved out of the
+  engine's test package. The table is data, not engine code: it names each command
+  and the smallest program that exercises it, and the three harnesses that read it
+  now import it from here.
+- **`native/tools/harness.py`** — one answer to "which `time_warp_check`, and which
+  checkout?", so the two harnesses cannot disagree about it.
+- **`native/tools/pyproject.toml`** — ruff and mypy configuration, moved with the
+  scripts it configures. `make lint` checks `native/tools` now.
+
+### Changed
+
+- **`command_inventory.py` reads the C++ executors.** It parsed the Python ones with
+  `ast`; the engines that ship are in `native/src/lang/`, so measuring completeness
+  anywhere else measured the thing being deleted. It recognises the four dispatch
+  shapes this codebase uses — `cmd == "X"`, `starts_with_upper(text, "TO ")`, brace
+  lists of literals, and Smalltalk's `add(class, "selector", …)` registration — and
+  it accepts APL's non-ASCII glyphs as commands, which the letter test had called
+  punctuation.
+- **The completeness number is bigger, and that is the honest answer.** The report
+  used to say "0 candidates neither tested nor waived" for Smalltalk; it says 81 now,
+  because the Python inventory could not see a selector registered with `add(…)`. A
+  clean bill from a blind spot is worse than a number that needs a sentence of
+  explanation, so the report explains what it counts: statements have rows, functions
+  and library selectors are covered by `lang_tests`.
+- **The curriculum gate moved to `native.yml`**, the job that has built
+  `time_warp_teach`; `docs.yml` keeps the text checks that need no compiler.
+
+### Fixed
+
+- **The documentation gate earned its keep on this change.** Deleting the engine
+  falsified thirty-one sentences across thirteen files — `docs/ARCHITECTURE.md`
+  documented a live "engine" section, `docs/INSTALLATION.md` promised a Python
+  prerequisite, `.github/SUPPORT.md` offered the engine as an unsupported API,
+  `docs/MACHINES.md` and `docs/LANGUAGES_GUIDE.md` pointed at test modules under
+  `native/bridge/`, and `native/README.md`'s tool listing still described five
+  deleted scripts. `check_doc_claims.py` found all of them, and the two that were
+  genuinely history are wrapped in `<!-- history -->` regions rather than deleted.
+
+### The trade, stated
+
+A live differential is stronger than a recording: it notices a mistake in *both*
+engines at once. Comparing with a frozen corpus cannot say the recording is right, so
+a deliberate behaviour change edits the corpus entry in the same commit that changes
+the behaviour. What that buys is a gate that runs against the engines the product
+ships, needs no second interpreter, and cannot rot when one drifts.
+
 ## [17.3.0] - 2026-10-22
 
 The teacher's command has every verb the Python one had, and the Python one is gone.

@@ -28,8 +28,9 @@ on:
 #    are only live without -DNDEBUG. A use-after-free in a queued Qt connection
 #    reproduced 6 times out of 6 there and never in Release.
 #  * ASan, which is what actually named that defect: `stack-use-after-return`.
-#  * The differential harnesses, which are the only check that the ports agree
-#    with the Python reference they replace.
+#  * The parity gate: 662 recorded programs, compared with the ports byte for byte.
+#    It is weaker than a live differential and says so -- the engine the answers came
+#    from is deleted, so a wrong recording cannot be detected here.
 #  * `--version` and `--help`, so the shipped entry point is known to start and
 #    exit rather than merely known to link.
 
@@ -131,39 +132,13 @@ jobs:
           make -C native asan ASAN=undefined SAN_DIR=build-ubsan \
             ASAN_FLAGS='-fsanitize=undefined -fno-omit-frame-pointer -g'
 
-      # The differential gates: the C++ ports must agree with the Python
-      # implementation on the cases where agreement is expected, and must match
-      # the documented list of known divergences exactly. A new divergence fails.
-      #
-      # The greps are padded-safe on purpose: the report lines are column-aligned,
-      # so `UNEXPECTED mismatches: 0` with one space matches nothing and the guard
-      # would pass while asserting nothing at all.
-      - name: 'Differential check: expressions'
-        working-directory: native/tools
-        run: |
-          python3 differential_check.py ../build/expr_cli | tee differential-expr.log
-          grep -qE "UNEXPECTED mismatches *: *0" differential-expr.log
-        env:
-          PYTHONPATH: ${{ github.workspace }}/native/bridge
-
-      - name: 'Differential check: Scheme'
-        working-directory: native/tools
-        run: |
-          python3 scheme_differential_check.py | tee differential-scheme.log
-          grep -qE "UNEXPECTED mismatches *: *0" differential-scheme.log
-        env:
-          PYTHONPATH: ${{ github.workspace }}/native/bridge
-
-      # The native language gate runs every command-table row and every example
-      # for a ported language through both engines. Its exit code is the verdict;
-      # `pipefail` keeps `tee` from hiding it.
-      - name: 'Differential check: native languages'
-        working-directory: native/tools
-        run: |
-          set -euo pipefail
-          python3 lang_differential_check.py | tee differential-lang.log
-        env:
-          PYTHONPATH: ${{ github.workspace }}/native/bridge
+      # The parity gate, against the corpora recorded from the reference engine
+      # before it was deleted: 470 language programs (output, every drawing call,
+      # the variables each left behind) and 192 Scheme programs (whole output text,
+      # with the 24 documented divergences listed rather than compared). It imports
+      # no Python to do it, which is why the corpora carry the program text.
+      - name: 'Parity: the ports against the frozen corpora'
+        run: python3 native/tools/golden_check.py --all
 
       # Every example program, in every language, through the native engines. This
       # is the gate for the failure the unit tests cannot see: a language that runs
@@ -313,41 +288,6 @@ jobs:
         if: runner.os == 'macOS'
         timeout-minutes: 30
         run: ctest --test-dir native/build --timeout 180 --output-on-failure
-
-      # The bridge is the only part of the product that runs Python, and it is what
-      # a lesson check uses. This drives it directly -- requests on stdin, the JSON
-      # lines back -- so a platform where it cannot answer shows its traceback here
-      # instead of as a row of test timeouts that say only "no reply". Closing
-      # stdin is the documented one-shot use, and `always()` so it runs after the
-      # failing test step rather than instead of it.
-      - name: The bridge worker answers (Windows)
-        if: always() && runner.os == 'Windows'
-        timeout-minutes: 3
-        run: |
-          $env:PYTHONPATH = Join-Path $PWD "native/bridge"
-          # Both requests the failed tests wait on: the curriculum, which is a
-          # file read, and a run, which starts an interpreter. This drives the
-          # *reference engine* directly -- the application no longer speaks this
-          # protocol -- so it stays as a harness check while the engine exists.
-          # Built with ConvertTo-Json rather than written out: the program text
-          # has quotes and newlines in it, and hand-escaped JSON here once sent a
-          # malformed request that the worker -- correctly -- rejected.
-          $run = @{
-            t = "run"
-            language = "basic"
-            source = "10 PRINT `"HI`"`n20 END`n"
-            name = "hello.bas"
-          } | ConvertTo-Json -Compress
-          $requests = @('{"t":"lessons"}', $run)
-          $output = $requests | & python native/bridge/worker.py 2>&1 | Out-String
-          Write-Host $output
-          $missing = @()
-          if ($output -notmatch '"t":"lessons"') { $missing += "lessons" }
-          if ($output -notmatch '"t":"done"') { $missing += "run" }
-          if ($missing.Count -gt 0) {
-            Write-Error ("the worker never answered: " + ($missing -join ", "))
-            exit 1
-          }
 
       - name: The entry point starts and exits (Windows)
         if: runner.os == 'Windows'

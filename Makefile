@@ -13,8 +13,7 @@ FORWARDED := build run test test-debug asan clean distclean info test-list \
              screenshot reset-layout
 
 .PHONY: help $(FORWARDED) engine-test smoke command-matrix repl-matrix \
-        golden-record golden-check teach-check test-all lint lint-md doc-links \
-        doc-claims
+        golden-check teach-check test-all lint lint-md doc-links doc-claims
 
 help:
 	@echo "Time Warp Studio"
@@ -29,10 +28,8 @@ help:
 	@echo "  clean         Remove build output"
 	@echo ""
 	@echo "The checks (development tooling):"
-	@echo "  engine-test   The reference engine's own pytest suite"
 	@echo "  smoke         Every example program, through the native engines"
 	@echo "  golden-check  The ports against the frozen reference corpus (no Python)"
-	@echo "  golden-record Freeze the reference's answers again (needs the bridge)"
 	@echo "  teach-check   Every lesson solution passes and every starter fails"
 	@echo "  doc-links     Every relative link and #anchor in the guides resolves"
 	@echo "  test-all      All of the above"
@@ -45,20 +42,8 @@ help:
 $(FORWARDED):
 	@$(MAKE) --no-print-directory -C $(NATIVE) $@
 
-# A missing pytest is a setup problem rather than a failing test, so it is
-# reported as one: the alternative is a traceback that reads like the engine
-# broke.
-engine-test:
-	@$(PYTHON) -c "import pytest" 2>/dev/null || { \
-		echo "pytest is not installed for $(PYTHON)."; \
-		echo "Create the virtual environment: python3 -m venv .venv && .venv/bin/pip install pytest ruff"; \
-		exit 1; \
-	}
-	@PYTHONPATH=$(NATIVE)/bridge $(PYTHON) -m pytest -q $(NATIVE)/bridge/time_warp/tests
-
 # The three harnesses drive what the product drives: `smoke` and `command-matrix`
-# spawn `time_warp_check` (the native engines) and `repl-matrix` speaks the API,
-# so none of them needs the reference engine to be present.
+# spawn `time_warp_check` (the native engines) and `repl-matrix` speaks the API.
 smoke: check-built
 	@$(PYTHON) $(NATIVE)/tools/example_smoke.py
 
@@ -74,15 +59,13 @@ repl-matrix: check-built
 check-built:
 	@$(MAKE) --no-print-directory -C $(NATIVE) check
 
-# The parity gate's answer, frozen. `--record` asks the Python reference and is
-# run only while the reference still exists; `--golden` asks the recorded corpus
-# and needs neither Python nor `native/bridge/`, so the ports stay honest after
-# the engine they were ported from is deleted.
-golden-record:
-	@$(PYTHON) $(NATIVE)/tools/lang_differential_check.py --record
-
+# The parity gate. `native/tests/golden/` holds the reference engine's answers --
+# 470 language programs and 192 Scheme programs; this compares the ports with those
+# and imports no Python to do it. There is no `--record` any more: the engine those
+# answers came from is deleted, so a deliberate behaviour change edits the corpus
+# entry in the same commit that changes the behaviour.
 golden-check:
-	@$(PYTHON) $(NATIVE)/tools/lang_differential_check.py --golden
+	@$(PYTHON) $(NATIVE)/tools/golden_check.py --all
 
 # The curriculum, checked by the same library the Lessons panel asks: every
 # worked answer passes its checkpoint and every starter fails it. Needs the build,
@@ -93,8 +76,10 @@ teach-check:
 test-all: test smoke command-matrix repl-matrix teach-check golden-check doc-links \
           doc-claims
 
+# The harness scripts are the only Python left, and they are code: they parse flags,
+# walk directories and assert on output. Ruff's configuration moved with them.
 lint:
-	@$(PYTHON) -m ruff check $(NATIVE)/bridge
+	@$(PYTHON) -m ruff check $(NATIVE)/tools
 
 # The guides link to each other; a dead link is how a reader learns the map is wrong.
 # Python only, because the documentation job must not need the C++ build.

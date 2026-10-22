@@ -63,7 +63,7 @@ Three recipes cover most contributions:
   `native/src/ui/language.cpp`, an example under `Examples/`, command-table rows, a
   tutorial, a reference section, and two lessons.
 - **A command.** Add it to the executor, add a row to
-  `native/bridge/time_warp/tests/command_table.py`, and run
+  `native/tools/command_table.py`, and run
   `python3 native/tools/command_matrix.py`. The row is what proves the command
   produces output, drawing or a reported error — silence is this project's
   characteristic bug. If a row's label is prose, name the command the inventory
@@ -211,12 +211,14 @@ finding is intentional, regenerate it and review the diff:
   compass heading, the bridge protocol, the coalescing canvas queue — are
   documented where they are made; match that
 
-### Bridge engine code (Python)
+### The harness scripts (Python)
 
-The Python in `native/bridge/` is the reference engine the parity gates, the
-command matrix and the lesson check run in. It is standard-library only, `ruff`
-clean, and each
-executor is a stateless function returning text with an emoji prefix.
+The Python left in the repository is `native/tools/`: the harnesses that drive the
+gates (`example_smoke.py`, `command_matrix.py`, `repl_matrix.py`,
+`golden_check.py`), the curated `command_table.py`,
+and the two documentation gates. It is standard-library only and `ruff` clean;
+`make lint` checks it against `native/tools/pyproject.toml`. Nothing here is part of
+the product, and nothing installed contains it.
 
 Two things in there are not executors and break just as easily: the lesson
 curriculum (`features/lessons.json`) and the teacher's side
@@ -549,7 +551,7 @@ def test_hello_world():
 ```
 
 The second argument is the enum member, not its name. Then add a row per command
-to `native/bridge/time_warp/tests/command_table.py` and run
+to `native/tools/command_table.py` and run
 `python3 native/tools/command_matrix.py`: it fails on a row that has no effect and
 on a command in the inventory that has no row.
 
@@ -629,16 +631,13 @@ Time_Warp_Studio/
 │   ├── CMakeLists.txt
 │   ├── include/ src/             # ui/, canvas/, scheme/, lang/, debugger/,
 │   │                             #   bridge/, project/, sql/, api/
-│   ├── tests/                    # 20 CTest suites
-│   ├── tools/                    # time_warp_ide.cpp, time_warp_api.cpp, twc.py
-│   │                             #   and the gates: time_warp_learn, time_warp_teach,
-│   │                             #   command_matrix.py, repl_matrix.py,
-│   │                             #   example_smoke.py, differential_check.py
-│   └── bridge/                   # The Python reference engine, kept only as the
-│       │                         #   record the frozen corpus was recorded from;
-│       │                         #   nothing in the product or the gates runs it
-│       ├── worker.py             #   the JSON-lines protocol it answered (gone at 18.0)
-│       └── time_warp/            #   the engine itself
+│   ├── tests/                    # 23 CTest suites, and the golden corpora
+│   └── tools/                    # time_warp_ide.cpp, time_warp_api.cpp, twc.py
+│                                 #   and the commands and gates: time_warp_check,
+│                                 #   time_warp_learn, time_warp_teach,
+│                                 #   golden_check.py, command_matrix.py,
+│                                 #   repl_matrix.py, example_smoke.py,
+│                                 #   check_doc_links.py, check_doc_claims.py
 │           ├── core/             #     interpreter.py, language_registry.py
 │           ├── languages/        #     one stateless function per language
 │           ├── features/         #     lesson_system.py + lessons.json,

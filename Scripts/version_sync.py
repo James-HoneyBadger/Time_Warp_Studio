@@ -3,8 +3,13 @@
 
 `VERSION` is the source of truth. The Qt application reads it at configure time, so
 the binary, the window title and the About box cannot drift apart; what this script
-looks after are the copies a person writes by hand -- the documentation and the
-bridge package metadata.
+looks after are the copies a person writes by hand -- the two documentation files
+that state the version in prose.
+
+The bridge package's `__version__` was a third copy while a Python engine existed.
+It is deleted at 18.0, and this script no longer looks for it: a copy target that
+outlives its file is how a release stops passing after the thing it tracked went
+away.
 
 Without `--write` nothing is modified and any disagreement makes the exit status 1,
 which is what CI uses to refuse a change where the numbers no longer agree.
@@ -57,18 +62,6 @@ def _read_version() -> str:
 
 def _copies(version: str) -> list[Copy]:
     return [
-        Copy(
-            path=REPO_ROOT / "native" / "bridge" / "time_warp" / "__init__.py",
-            pattern=r'(?m)^__version__ = ".*"$',
-            replacement=f'__version__ = "{version}"',
-            description="bridge package __version__",
-        ),
-        Copy(
-            path=REPO_ROOT / "native" / "bridge" / "time_warp" / "__init__.py",
-            pattern=r"Aligned with Time Warp Studio v[0-9.]+ release",
-            replacement=f"Aligned with Time Warp Studio v{version} release",
-            description="bridge package docstring version",
-        ),
         # The README's only version marker is the badge. It used to end with a
         # "- **Version:**" line as well, and tracked that too, but the line was
         # dropped when the page was shortened -- which is what the "no match"

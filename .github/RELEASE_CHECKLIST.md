@@ -14,17 +14,17 @@ a hand-written copy, kept in step by `Scripts/version_sync.py` and checked by th
       this exists but will not write it: the newest heading in that file is usually a
       release that has already shipped, so renaming it would rewrite history
 - [ ] Run `python3 Scripts/version_sync.py --write` to update the copies it owns (the
-      bridge package metadata, the README badge, the architecture guide title)
+      README badge and the architecture guide title)
 - [ ] Run `python3 Scripts/version_sync.py` and confirm it exits 0 before tagging
 - [ ] Check any prose that names a version by hand — the script only knows the places
       listed above
 
 ### Testing
 
-- [ ] `make test` — the 21 C++ suites
+- [ ] `make test` — the C++ suites
 - [ ] `make test-debug` and `make asan` — the other build trees
-- [ ] `make engine-test` — the bridge engine's pytest suite
-- [ ] `make smoke` — all 60 example programs through the reference engine
+- [ ] `make golden-check` — the ports against the frozen parity corpus
+- [ ] `make smoke` — all 60 example programs through the native engines
 - [ ] `make command-matrix` — every command row as a program
 - [ ] `make repl-matrix` — every command row through the native REPL
 - [ ] All three differential gates (expression, Scheme, languages) report 0 unexpected mismatches

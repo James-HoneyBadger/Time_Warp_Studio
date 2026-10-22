@@ -116,10 +116,9 @@ Neither machine is a special case inside the application:
 - both are driven, in tests, through the same public surface a user touches:
   `submitCommand()`, `runProgram()`, `emulator()->step()`, `disk()`.
 
-The Python engine under `native/bridge/` is not involved in either. It remains
-the reference the parity gates compare the native engines against and the
-function that checks a learner's program — see
-[ARCHITECTURE.md](ARCHITECTURE.md).
+Both machines are native and neither involves a second interpreter. What the
+parity gate compares against is a recorded corpus, not a live engine — see
+[ARCHITECTURE.md](ARCHITECTURE.md) and [README_TESTING.md](README_TESTING.md).
 
 ---
 

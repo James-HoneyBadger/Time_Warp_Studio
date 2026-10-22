@@ -3,17 +3,30 @@
 
 This is the *implemented* side of the command inventory, read out of the code so
 it cannot inherit the documentation's optimism. It is a **candidate generator,
-not a verdict**: a dispatch literal can also be a syntax character (`op == ","`
-in the Scheme reader) or an operator (`<=` in COMAL), and no machine can tell a
-command from a punctuation mark by shape alone. The command table in
-`native/bridge/time_warp/tests/command_table.py` is the curated answer; this
-exists so that "not tested" is measured against something rather than assumed.
+not a verdict**: a dispatch literal can also be a syntax character (`op == ","`)
+or an operator (`<=`), and no machine can tell a command from a punctuation mark
+by shape alone. The command table in `native/tools/command_table.py` is the
+curated answer; this exists so that "not tested" is measured against something
+rather than assumed.
 
-Four dispatch styles are recognised:
-  * ``cmd == "PRINT"``             equality against a command variable
-  * ``cmd.startswith("FRACTAL ")`` prefix dispatch
-  * ``cmd in ("A", "B")``          membership tests
-  * ``NAME = {"A", "B"}``          module-level command tables
+#### Why it reads C++
+
+It parsed the Python executors with `ast` while those existed. The engines that
+ship are the C++ ones in `native/src/lang/`, so measuring completeness anywhere
+else measured the thing that was deleted. The C++ has no single dispatch idiom, so
+the scan recognises the four shapes this codebase actually uses:
+
+  * ``cmd == "PRINT"``                    equality against a command variable
+  * ``name == "FORWARD" || name == "FD"`` either side of a comparison chain
+  * ``starts_with_upper(text, "TO ")``     prefix dispatch
+  * ``{"FORWARD", "FD", "BACK", ...}``     brace lists of literals, which is how
+                                           Logo and COMAL name their words
+
+A regex scan is a blunt instrument, and blunter than an AST walk was: a literal in
+a *message* (`"not an instruction"`) can appear here as a candidate. That is
+accepted rather than hidden -- the tool says "candidate", the curated table is the
+record, and a false candidate costs one waiver review while a missed command costs
+an untested command.
 
 Usage:
     python3 native/tools/command_inventory.py                 # counts per language
@@ -23,14 +36,28 @@ Usage:
 from __future__ import annotations
 
 import argparse
-import ast
 import json
 import pathlib
+import re
 import sys
 
-LANGUAGES = (
-    pathlib.Path(__file__).resolve().parents[1] / "bridge" / "time_warp" / "languages"
-)
+LANG_SOURCES = pathlib.Path(__file__).resolve().parents[1] / "src" / "lang"
+
+#: Which source files belong to which language. Scheme is not in `src/lang/`: it is
+#: the separate machine in `src/scheme/`, and its dispatch is the special-form table
+#: there.
+SOURCES = {
+    "basic": ("basic.cpp", "basic_statements.cpp", "basic_text.cpp",
+              "basic_features.cpp", "basic_library.cpp"),
+    "pilot": ("pilot.cpp",),
+    "logo": ("logo.cpp",),
+    "comal": ("comal.cpp",),
+    "rexx": ("rexx.cpp",),
+    "focal": ("focal.cpp",),
+    "apl": ("apl.cpp",),
+    "smalltalk": ("smalltalk.cpp", "smalltalk_library.cpp", "smalltalk_driver.cpp"),
+    "chip8": ("chip8.cpp",),
+}
 
 #: Names that hold "the thing being dispatched on" in the executors.
 COMMAND_VARIABLES = {
@@ -41,6 +68,13 @@ COMMAND_VARIABLES = {
     "command_type",
     "kw",
     "keyword",
+    # APL dispatches on the statement's leading glyph or word; CHIP-8 on the
+    # mnemonic the assembler split off; Smalltalk compares a whole send against a
+    # selector name; COMAL upper-cases the statement into `up` and compares that.
+    # All of them are "the thing being dispatched on".
+    "glyph",
+    "mnemonic",
+    "up",
     "name",
     "op",
     "stmt",
@@ -108,91 +142,105 @@ def is_command_literal(literal: str) -> bool:
     text = literal.strip().lstrip(":").strip()
     if not text or literal.strip().upper() in _NOT_COMMANDS_UPPER:
         return False
-    return any(character.isalpha() for character in text)
+    if any(character.isalpha() for character in text):
+        return True
+    # APL's commands *are* symbols: `⍳` is index-of and `⌽` is reverse, and a rule
+    # that wanted a letter called the whole language untested. Anything outside
+    # ASCII is taken as a word rather than as punctuation; punctuation in these
+    # sources is ASCII.
+    return any(ord(character) > 127 for character in text)
 
 
-def _text(node: ast.AST) -> str | None:
-    if isinstance(node, ast.Constant) and isinstance(node.value, str):
-        return node.value
-    return None
+#: `cmd == "PRINT"`, `name == "FORWARD"`, `op != "<="`, either way round. The left
+#: side has to be one of `COMMAND_VARIABLES` so that `status == "ok"` is not a
+#: candidate.
+_EQUALITY = re.compile(
+    r'(?:\b(\w+)\s*[!=]=\s*"([^"\n]{1,40})")|(?:"([^"\n]{1,40})"\s*[!=]=\s*(\w+)\b)'
+)
+#: `starts_with_upper(line, "TO ")` and its bare `starts_with` sibling.
+_PREFIX = re.compile(r'\b(?:starts_with_upper|starts_with)\s*\(\s*[^,()]+,\s*"([^"\n]{1,40})"')
+#: `add(result.object, "isKindOf:", {"aClass"}, ...)` -- Smalltalk registers a
+#: message send as the first string argument of a call to `add`, because its
+#: "commands" are selectors in a class library rather than literals compared in a
+#: switch.
+_REGISTRATION = re.compile(r'\badd\s*\(\s*[^,()]+,\s*"([^"\n]{1,40})"')
+#: A brace list made *only* of quoted literals: `{"FORWARD", "FD", "BACK"}`.
+#: The stricter shape matters: `{ throw StError("super sent " + selector + ", but no
+#: superclass of " + ...) }` is a code block, and a rule that only asked for a brace
+#: group containing three quoted strings harvested its message clauses as commands.
+_TABLE = re.compile(r'\{\s*((?:"[^"\n]{1,40}"\s*,?\s*){3,})\}')
+_QUOTED = re.compile(r'"([^"\n]{1,40})"')
+
+#: A literal that is really a C++ string in a message rather than a command. Only
+#: used to keep the *report* readable; `is_command_literal` does the deciding.
+_MESSAGE_HINTS = (" ", ":", "'", "(", ")", "%", "\\n")
 
 
-class _Finder(ast.NodeVisitor):
-    def __init__(self) -> None:
-        self.equality: set[str] = set()
-        self.prefix: set[str] = set()
-        self.membership: set[str] = set()
-        self.tables: dict[str, list[str]] = {}
+def scan_source(text: str) -> dict[str, set[str] | dict[str, list[str]]]:
+    """The candidate literals in one source file, by the shape that produced them."""
+    equality: set[str] = set()
+    prefix: set[str] = set()
+    tables: dict[str, list[str]] = {}
 
-    def visit_Compare(self, node: ast.Compare) -> None:
-        operands = [node.left, *node.comparators]
-        for index, operator in enumerate(node.ops):
-            if not isinstance(operator, (ast.Eq, ast.In)):
-                continue
-            left, right = operands[index], operands[index + 1]
-            names = {n.id for n in ast.walk(left) if isinstance(n, ast.Name)}
-            if not (names & COMMAND_VARIABLES):
-                continue
-            if isinstance(operator, ast.Eq):
-                for candidate in (right, left):
-                    value = _text(candidate)
-                    if value:
-                        self.equality.add(value)
-            else:
-                for element in getattr(right, "elts", []):
-                    value = _text(element)
-                    if value:
-                        self.membership.add(value)
-        self.generic_visit(node)
+    for match in _EQUALITY.finditer(text):
+        variable, right = match.group(1), match.group(2)
+        left, value = match.group(3), match.group(4)
+        if variable is not None:
+            if variable in COMMAND_VARIABLES and right is not None:
+                equality.add(right)
+        elif left is not None and value in COMMAND_VARIABLES:
+            equality.add(left)
 
-    def visit_Call(self, node: ast.Call) -> None:
-        func = node.func
-        if isinstance(func, ast.Attribute) and func.attr == "startswith" and node.args:
-            value = _text(node.args[0])
-            if value:
-                self.prefix.add(value)
-        self.generic_visit(node)
+    for match in _PREFIX.finditer(text):
+        prefix.add(match.group(1))
 
-    def visit_Assign(self, node: ast.Assign) -> None:
-        for target in node.targets:
-            if not isinstance(target, ast.Name):
-                continue
-            if not any(hint in target.id.upper() for hint in TABLE_HINTS):
-                continue
-            values = [
-                v for v in (_text(e) for e in getattr(node.value, "elts", [])) if v
-            ]
-            if values:
-                self.tables[target.id] = sorted(values)
-        self.generic_visit(node)
+    for match in _REGISTRATION.finditer(text):
+        equality.add(match.group(1))
+
+    for match in _TABLE.finditer(text):
+        literals = _QUOTED.findall(match.group(1))
+        # Three or more in one brace list is a word table; two is a pair of
+        # alternatives written inline, which equality already found.
+        if len(literals) >= 3:
+            tables[literals[0]] = sorted(set(literals))
+
+    return {"equality": equality, "prefix": prefix, "tables": tables}
 
 
-def collect(languages: pathlib.Path = LANGUAGES) -> dict[str, dict[str, object]]:
-    """The candidate command inventory, keyed by module name."""
+def collect(sources: dict[str, tuple[str, ...]] | None = None) -> dict[str, dict[str, object]]:
+    """The candidate command inventory, keyed by language."""
+    sources = sources if sources is not None else SOURCES
     inventory: dict[str, dict[str, object]] = {}
-    for path in sorted(languages.glob("*.py")):
-        if path.name in {"__init__.py", "base.py"}:
-            continue
-        finder = _Finder()
-        finder.visit(ast.parse(path.read_text(encoding="utf-8")))
+    for language, filenames in sources.items():
+        equality: set[str] = set()
+        prefix: set[str] = set()
+        tables: dict[str, list[str]] = {}
+        for filename in filenames:
+            path = LANG_SOURCES / filename
+            if not path.is_file():
+                continue
+            scanned = scan_source(path.read_text(encoding="utf-8"))
+            equality |= scanned["equality"]
+            prefix |= scanned["prefix"]
+            for name, values in scanned["tables"].items():
+                tables[f"{filename}:{name}"] = values
 
-        dispatched = {text.strip() for text in finder.equality | finder.membership}
-        dispatched |= {text.strip() for text in finder.prefix}
+        dispatched = {text.strip() for text in equality | prefix}
         from_tables: set[str] = set()
-        for values in finder.tables.values():
+        for values in tables.values():
             from_tables.update(values)
 
-        inventory[path.stem] = {
+        inventory[language] = {
             "dispatch_literals": sorted(
                 name for name in dispatched if name and is_command_literal(name)
             ),
             "not_commands": sorted(
                 name for name in dispatched if name and not is_command_literal(name)
             ),
-            "tables": finder.tables,
-            # A module-level table is not automatically a command table: Logo's
-            # operator table holds "%", "+" and "<=", which are not commands and
-            # would otherwise sit in the report forever as untested.
+            "tables": tables,
+            # A brace list is not automatically a command table: Logo's operator
+            # table holds "%", "+" and "<=", which are not commands and would
+            # otherwise sit in the report forever as untested.
             "table_commands": sorted(
                 name for name in from_tables if is_command_literal(name)
             ),

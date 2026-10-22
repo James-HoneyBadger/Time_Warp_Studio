@@ -51,8 +51,9 @@ The 30 programs that must produce ink are listed in `DRAWING_EXAMPLES` inside th
 script; a program that is expected to draw and does not fails the run.
 
 The command matrix is the other half of that gate: every row in
-`native/bridge/time_warp/tests/command_table.py` is executed and must produce output,
-drawing or a reported error. It reports commands that no test or example exercises.
+`native/tools/command_table.py` is executed through `time_warp_check` and must
+produce output, drawing or a reported error. It also reports what the C++ executors
+dispatch on that no row or waiver mentions.
 
 ```bash
 python3 native/tools/command_matrix.py
@@ -68,80 +69,67 @@ python3 native/tools/repl_matrix.py
 
 Both are also `make command-matrix` and `make repl-matrix`.
 
-## The bridge engine's own tests
-
-The suite needs `pytest`, which is not in the standard library, so it runs from
-the repository's virtual environment. `make engine-test` is the command to use:
-it picks `.venv/bin/python3` when that exists and falls back to `python3`.
-
-```bash
-make engine-test                                          # from the repository root
-PYTHONPATH=native/bridge .venv/bin/python3 -m pytest -q    # what it runs
-```
-
-A system interpreter without `pytest` fails with `No module named pytest`. Give
-the virtual environment a `pytest` with `python3 -m venv .venv` and
-`.venv/bin/pip install pytest ruff`, as the troubleshooting section of
-[INSTALLATION.md](INSTALLATION.md) describes.
-
 ## Parity gates
 
-The C++ engines are compared against the Python reference on a fixed corpus. All
-three must report **0 unexpected mismatches**; documented divergences are listed in
-the harness output and are expected.
-
-The language gate runs every command-table row and every example for a ported
-language through both engines and compares output lines, every drawing call in
-order, and the final variables. Programs using randomness are reported and skipped:
-both sides seed from the OS, so they cannot agree by construction.
+The C++ engines are compared with a **recorded corpus** — the Python reference's
+answers, frozen before the engine was deleted. `0 differences` is the verdict, and
+documented divergences are listed in the harness output and are expected.
 
 ```bash
-python3 native/tools/differential_check.py native/build/expr_cli
-cd native/tools && python3 scheme_differential_check.py
-python3 native/tools/lang_differential_check.py   # 474 programs, 0 differences, 9 skipped
+make golden-check                      # both corpora; 662 programs
+python3 native/tools/golden_check.py --scheme   # the Scheme machine alone
 ```
 
-### The recorded corpus
+The language corpus (`native/tests/golden/lang_corpus.json.gz`) holds 470 programs:
+every command-table row and every example for a ported language, with the output
+lines it printed, every drawing call in order, and the variables it left behind.
+The Scheme corpus (`scheme_corpus.json.gz`) holds 192 programs and compares the
+whole output text, because that is what the Scheme harness always compared.
 
-The reference engine is going away, and a gate that needs it cannot check a tree
-that no longer has it. `--record` freezes the reference's answers into
-`native/tests/golden/lang_corpus.json.gz` — the program text travels with the
-answer, so the corpus outlives the command table it was recorded from — and
-`--golden` compares the C++ ports with that file instead of a live interpreter.
-Golden mode imports no Python at all, which the gate itself is run to prove.
+### Why a recording, and what it costs
 
-```bash
-make golden-check    # native/build/lang_cli against the corpus; needs no Python
-make golden-record   # re-freeze from the reference; needs the bridge
-```
+The program text travels with the answer in both corpora, which is what lets the
+gate run on a tree with no second interpreter. There is no `--record` any more: the
+engine the answers came from is deleted, so a deliberate behaviour change edits the
+corpus entry in the same commit that changes the behaviour — the same discipline the
+rest of the suite asks for.
 
-Three programs are excluded from the corpus and cannot be recorded: the `TIME$`
-and `DATE$` rows read the clock, and `INPUT # reads it back` reads a file another
-row wrote. The live gate still compares them, because both engines run moments
-apart in the same directory; a file recorded today cannot know either.
+The price is stated plainly rather than glossed: **a gate that compares with a
+recording cannot notice a mistake in the recording.** The live differential could.
+What that buys is a gate that runs against the engines the product ships, needs no
+Python toolchain, and cannot rot when a second interpreter drifts.
 
-The `JOYINIT`, `STICK` and `STRIG` rows are skipped in *both* modes. A gamepad is
-hardware: the reference shipped no backend and answers "none", while the port opens
-`/dev/input/js0`, so comparing the two would report a plugged-in joystick as a
+A note on the Scheme corpus: its 24 documented divergences keep the *reference's*
+text and a reason. The check asserts two things about each — that the port still
+differs (an entry whose note has gone stale fails, which is how three of them were
+retired when the port caught up) and that the reason is written down.
+
+Three kinds of program are not in the language corpus because they cannot be
+recorded: the `TIME$` and `DATE$` rows read the clock, `INPUT #` reads a file
+another row wrote, and the `JOYINIT`/`STICK`/`STRIG` rows read whatever gamepad is
+plugged in. Each is exercised by `lang_tests` against the engine directly. A gamepad
+is hardware: the reference shipped no backend and answered "none", while the port
+opens `/dev/input/js0`, so comparing the two would report a plugged-in joystick as a
 language difference on the machine that has one and pass on the machine that does
 not.
 
-A tampered or stale entry is a failure, not a skip: each entry carries a SHA-256
-of its program, so editing an example without re-recording is reported as a
-corpus problem rather than as a mismatch in the engine.
+A tampered or stale entry is a failure, not a skip: each entry carries a SHA-256 of
+its program, so editing an example without re-recording is reported as a corpus
+problem rather than as a mismatch in the engine.
 
 ## Curriculum and documentation gates
 
 ```bash
-python3 native/tools/teach.py validate                 # lessons, checkpoints and solutions
-python3 native/tools/teach.py write-plans docs/lessons/plans
+./native/build/time_warp_teach validate                 # lessons, checkpoints and solutions
+./native/build/time_warp_teach plans --write docs/lessons/plans
 git diff --exit-code --stat docs/lessons/plans         # generated plans match
 make lint-md                                           # Markdown style
 make doc-links                                         # every link and anchor resolves
+make doc-claims                                        # every path and name it mentions exists
 ```
 
 `validate` runs every lesson solution through its checkpoint and refuses a starter
-that already passes. `write-plans` regenerates the teacher-facing plans from the
+that already passes. `plans --write` regenerates the teacher-facing plans from the
 curriculum; CI fails if the regenerated files differ from the committed ones.
 `doc-links` walks `docs/**/*.md` and `README.md`, resolves every relative link and
 checks every `#anchor` against the headings GitHub would slug it from, so the two

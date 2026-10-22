@@ -31,9 +31,9 @@ import sys
 import time
 
 ROOT = pathlib.Path(__file__).resolve().parents[2]
-sys.path.insert(0, str(ROOT / "native" / "bridge"))
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 
-from time_warp.tests.command_table import (  # noqa: E402  # pylint: disable=wrong-import-position,import-error
+from command_table import (  # noqa: E402  # pylint: disable=wrong-import-position,import-error
     ROWS,
     SCRATCH,
 )

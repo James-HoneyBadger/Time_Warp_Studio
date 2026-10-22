@@ -18,10 +18,10 @@ time.
 | zlib | 1.2 | Classroom bundles are zips, read and written with it; `zlib1g-dev` on Linux, the system library on macOS, `vcpkg install zlib` on Windows |
 | Python | 3.10 | *Optional* — only for the reference engine (parity gates, command matrix and lesson checks); running a language needs no Python |
 
-All ten languages run in C++ inside the application, so running a program needs
-**no Python at all**. The bundled Python engine in `native/bridge/` remains the
-reference the parity gates and the command matrix compare against, and the engine a
-lesson check runs in; see §6.
+All ten languages run in C++ inside the application, and so does the lesson check, so
+running a program needs **no Python at all** — and neither does the repository's gate
+suite, which compares the engines with a recorded corpus rather than with a live
+reference; see §6.
 
 ### Installing the toolchain
 
@@ -188,10 +188,11 @@ skip it: `make test` is the C++ suite and needs no Python.
 ## 6. The reference engine (development only)
 
 All ten languages run in C++ inside the IDE, and the lesson check does too. The
-Python engine in `native/bridge/` is **not installed**: it is the fixture the
-parity corpus was recorded from, and the harnesses (`example_smoke.py`,
-`command_matrix.py`, `repl_matrix.py`) drive it while it exists. Nothing the
-product runs reaches it.
+Python reference engine that the ports were judged against has been **deleted**: its
+answers are frozen in `native/tests/golden/lang_corpus.json.gz`, and the harnesses
+(`example_smoke.py`, `command_matrix.py`, `repl_matrix.py`) drive `time_warp_check`
+— the native engines — instead. A `python3` is needed to run those scripts and the
+two documentation gates, and for nothing else.
 
 Optional extras are imported defensively and are **not** required: `pyttsx3`
 (the reference's BASIC `SAY` backend), `pygame` and `inputs` (BASIC `SOUND` and

@@ -1,6 +1,6 @@
 # Architecture Guide
 
-## Time Warp Studio v17.3.0 — System Design and Implementation
+## Time Warp Studio v18.0.0 — System Design and Implementation
 
 > **This page describes the shipping product.** It was rewritten alongside the move
 > to C++20 / Qt6. Earlier revisions documented the PySide6 implementation, which has
@@ -53,11 +53,11 @@ stream of JSON messages coming back.
 | `timewarp_debugger` | `native/src/debugger/` | its own `QThread` | Runs a Scheme program and services pause / step / breakpoint requests |
 | `timewarp_expr` | `native/src/token.cpp`, `lexer.cpp`, `evaluator.cpp` | runner thread, in-process | The ported expression evaluator, linked into `timewarp_lang` — see the note below |
 | `timewarp_lessons` | `native/src/lessons/` | GUI thread, or a command | The curriculum, the verifier, the learner's progress and the classroom. See the libraries section |
-| the reference engine | `native/bridge/` | a separate Python process, in development only | The fixture the parity corpus was recorded from and the harnesses drive. Not installed, and never reached by the application |
+| the frozen corpus | `native/tests/golden/lang_corpus.json.gz` | read by a command, never at run time | The reference engine's answers to 470 programs: what each printed, every drawing call, the variables it left. The parity gate compares the ports with these. The engine itself is deleted |
 
 > **`timewarp_expr` is part of a Run now.** It builds, it has 485 checks of its
-> own, `native/tools/differential_check.py` compares it against the Python
-> reference on a fixed corpus, and `timewarp_lang` links it: BASIC, FOCAL,
+> own, the expression cases are in the recorded parity corpus, and `timewarp_lang`
+> links it: BASIC, FOCAL,
 > PILOT, COMAL, APL and Logo evaluate every arithmetic expression through it. The
 > parity gate is what keeps the native evaluator honest.
 
@@ -468,16 +468,17 @@ and execute many times, with `evaluate()` as the memoising convenience path.
 
 Every language's arithmetic goes through it: the executors call
 `Interpreter::evaluate_expression`, which is this evaluator, and the parity gate
-(`differential_check.py`) compares it against the Python reference.
+(`native/tools/golden_check.py`) compares it with the recorded answers.
 
 ### Parity as the acceptance test
 
-Both engines are compared against their Python originals on a fixed corpus by
-`native/tools/differential_check.py` and `native/tools/scheme_differential_check.py`,
-and the language port by `native/tools/lang_differential_check.py` over the
-command-table rows and every example. All three must report **0 unexpected
-mismatches**; the divergences that are accepted are
-printed and listed, each with a reason. That is what makes "did the port stay faithful?"
+The language engines are compared with the recorded corpus by
+`native/tools/golden_check.py` — 470 programs, and **0 differences** is the verdict —
+and the Scheme machine against its own corpus (`scheme_corpus.json.gz`, 192
+programs, comparing whole output text). The Scheme entries that are *documented* as
+divergent carry the reference's text and the reason beside it, and the check asserts
+that the port still differs — an entry whose note has gone stale fails, which is how
+three of them were retired when the port caught up with the reference. That is what makes "did the port stay faithful?"
 a measurable question rather than a matter of opinion.
 
 ---
@@ -604,11 +605,15 @@ here".
 Nothing is located now. Every language has an executor in this process, the lessons
 and the classroom are `timewarp_lessons`, and `locateWorker` went with the worker.
 
-### The engine
+### The engine that is gone
 
-`native/bridge/time_warp/` is the engine the PySide6 application used, with its UI
-removed. It is standard library only; `pyttsx3` (BASIC `SAY`) and `pygame` / `inputs`
-(BASIC `SOUND` / `GAMEPAD`) are imported defensively and are not required.
+The reference engine was the PySide6 application's interpreter, with its UI removed.
+It is deleted at 18.0, and this is what replaced each of its jobs: the parity gate
+reads a frozen corpus; the harnesses drive `time_warp_check`; the lesson check,
+curriculum and classroom are `timewarp_lessons`. Its optional extras — `pyttsx3` for
+`SAY`, `pygame`/`inputs` for `SOUND` and `GAMEPAD` — have no counterpart, and the
+native `SAY` reports that speech synthesis is unavailable, which is what the
+reference did when its extra was missing.
 
 | Directory | Contents |
 | --- | --- |
@@ -692,7 +697,7 @@ engine at 18.0.
 4. **Add an example** under `Examples/my_lang/`<!-- doc-claims: ignore --> — adding the ones that draw to
    `DRAWING_EXAMPLES` in `native/tools/example_smoke.py`, or a program that draws
    nothing passes by being silent — and a row to
-   `native/bridge/time_warp/tests/command_table.py` so every new command is covered by
+   `native/tools/command_table.py` so every new command is covered by
    `native/tools/command_matrix.py`.
 5. **Add a lesson** so the curriculum can teach it: two lessons in
    `native/share/lessons.json`, then `make teach-check` (`time_warp_teach validate`
@@ -813,11 +818,10 @@ gates and a command matrix. All of them must stay green, in every build tree.
 | C++ suites (23) | `make -C native test` | Lexer, evaluator, Scheme, native languages, canvas queue, canvas bridge, debug, debugger runner, UI layout, UI documents, turtle canvas, syntax highlighter, media, editor services, help browser, CHIP-8 emulator, retro computer, project, SQL, API, audio, lessons, classroom |
 | Debug tree | `make -C native test-debug` | Keeps `Q_ASSERT` and standard-library hardening live; a suite green in Release can crash here |
 | Sanitisers | `make -C native asan` | Reads and writes of memory that is no longer valid, which no assertion can see. `ASAN=undefined` for UBSan |
-| Engine tests | `make engine-test` | The bridge engine: the ten executors, the evaluator, the validators, the lesson curriculum and the classroom |
 | Example corpus | `make smoke` | Every `Examples/**` program, through the native engines, including the 30 that must produce ink |
-| Parity gates | `differential_check.py`, `scheme_differential_check.py`, `lang_differential_check.py` | The ported engines against the Python reference: 0 unexpected mismatches |
+| Parity gate | `make golden-check` (`native/tools/golden_check.py`) | The ports against 662 recorded programs: the reference's answers, frozen before it was deleted. 0 differences |
+| Lesson curriculum | `make teach-check` (`time_warp_teach validate`) | That every checkpoint's own solution passes, that no starter already passes, and that every language has a lesson |
 | Command matrix | `native/tools/command_matrix.py` | One row per documented command, through `time_warp_check` and then through the REPL |
-| Lesson curriculum | `teach.py validate` (and `test_lessons.py` on every build) | That every checkpoint's own solution passes, that no starter already passes, and that every language has a lesson |
 | Version metadata | `Scripts/version_sync.py` | That every hand-written copy of the version agrees with `VERSION` |
 
 Two of these exist for a failure the others cannot see:
@@ -924,10 +928,9 @@ coming from the Python application starts from this build's defaults.
   release builds `.deb`, `.rpm` and tarball artifacts for x86_64 and arm64, an
   AppImage for x86_64, and a container image from the same install rules. Flatpak,
   Snap, a Windows installer and a macOS bundle are not built.
-- **Lesson checking still runs in the Python engine**, which is what keeps
-  `native/bridge/` itself, which is development tooling now.
-- **No pixel framebuffer.** Graphics are a display list of strokes and shapes
-  with fit-to-content, so there is no `GET`/`PUT` sprite capture and no fixed
-  screen coordinate system; a game draws primitives and polls `INKEY$`.
+- **No pixel framebuffer in the drawing display list.** A drawing is a list of
+  strokes and shapes fitted to the content; only a program that names a `SCREEN`
+  gets the fixed-coordinate framebuffer, which is where `GET`/`PUT` and `POINT`
+  live. A game written without `SCREEN` draws primitives and polls `INKEY$`.
 - **Speech** (`SAY`) reports that speech synthesis is unavailable: there is no
   speech synthesiser in the build, and the reference never shipped one either.

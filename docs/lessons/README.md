@@ -40,12 +40,8 @@ The machine-readable curriculum is [`native/share/lessons.json`](../../native/sh
 and the code that loads, checks and records it is
 [`timewarp_lessons`](../../native/include/timewarp/lessons/curriculum.hpp) — the
 same library the Lessons panel asks, `time_warp_teach` validates and
-`time_warp_learn` walks a learner through. The reference
-engine keeps its own reader
-([`lesson_system.py`](../../native/bridge/time_warp/features/lesson_system.py)) and
-its classroom
-([`classroom_mode.py`](../../native/bridge/time_warp/features/classroom_mode.py))
-until the port is finished; both read that one curriculum file.
+`time_warp_learn` walks a learner through. There is no second reader: the curriculum
+has one implementation, and every client of it is that library.
 
 ## The twenty lessons
 
@@ -98,7 +94,7 @@ lessons: 20   checkpoints: 60
 A lesson whose solution does not pass is a lesson nobody can finish, and a lesson
 whose starter already passes has nothing to do. Both are invisible in a file
 listing and both are found here. The same pass runs as an ordinary test
-(`native/bridge/time_warp/tests/test_lessons.py`) on every build.
+(`lessons_tests`) on every build.
 
 ## Where a learner's progress lives
 

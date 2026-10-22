@@ -55,11 +55,11 @@ anybody could send.
 Debug, AddressSanitizer and UndefinedBehaviorSanitizer. A crash or a diagnostic
 that appears in only one of them is a real bug and worth reporting.
 
-**The languages.** All ten are supported, and each has an executor, a test
-module, an example, command coverage, a tutorial, a reference section and a
-lesson. Every language runs in C++ in the application. The Python engine in
-`native/bridge/` is the reference the parity gates compare against and the
-engine a lesson check runs in; it is not a supported API.
+**The languages.** All ten are supported, and each has an executor, a test suite,
+an example, command coverage, a tutorial, a reference section and a lesson. Every
+language runs in C++ in the application, and so does the lesson check. The Python
+reference engine they were ported from was deleted at 18.0; what the parity gate
+compares against is a recorded corpus, which is not a supported API either.
 
 **The lessons.** Both tools are supported — `native/tools/learn.cpp` for a
 learner, `native/tools/teach.cpp` for a teacher — and so is the curriculum. A
@@ -77,9 +77,9 @@ build and launch from a checkout.
   `.rpm`, a tarball, an AppImage (x86_64) and a container image, and `make -C native install` produces the same
   tree locally, with Qt deployed into it. Flatpak, Snap, an arm64 AppImage and
   code-signed (Developer ID / Authenticode) builds are not made.
-- **Moving lesson checking into C++.** The Lessons panel asks the Python engine
-  for a verdict; that is the remaining use of the bridge, and it is queued work
-  without a date.
+- **A player executable.** `--compile` writes a copy of the IDE with the authoring
+  UI hidden; a small `time_warp_player` that opens a program is queued work without a
+  date.
 - **Keeping your programs working across versions.** The languages are
   reimplementations of languages older than most of the people using them, so
   their semantics are stable — but Time Warp Studio's own file formats, settings
@@ -95,8 +95,8 @@ Please include:
 1. **What you did, and what happened instead** — the exact program if one is
    involved. A ten-line program that shows the problem is worth more than a
    paragraph describing it.
-2. **How you are running it** — from a build tree, or installed. These take
-   different paths to the bridge, so the answer changes where to look.
+2. **How you are running it** — from a build tree, or installed. These find the
+   curriculum and the examples differently, so the answer changes where to look.
 3. **Your platform and Qt version** (`make -C native info` prints both).
 4. **The Errors tab, or the terminal output.** If it crashed, a backtrace.
 

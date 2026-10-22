@@ -188,10 +188,10 @@ Two invariants are worth naming because they are easy to break:
 
 Every ROM runs on a native engine: `timewarp_lang` for the line-by-line
 languages, `timewarp_scheme` for Scheme, and the assembler and machine behind
-CHIP-8. The machine never starts `python3`. The Python reference under
-`native/bridge/` exists for the parity gates and for checking a learner's lesson
-program — two jobs the machines do not do — and remains the thing the native
-engines are compared against. See [ARCHITECTURE.md](../ARCHITECTURE.md).
+CHIP-8. The machine never starts `python3`, and neither does anything else in the product:
+the native engines are the only implementation. The parity gate compares them with a
+recorded corpus rather than with a live reference. See
+[ARCHITECTURE.md](../ARCHITECTURE.md).
 
 That is also why the HB-1 loads instantly and cannot fail for want of an
 interpreter: it is the same in-process code the editor runs, wearing a CRT.

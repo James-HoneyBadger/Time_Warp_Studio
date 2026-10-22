@@ -168,8 +168,8 @@ than "the answer is not right yet".
 
 ## 5. What `validate_curriculum` refuses
 
-Run as `time_warp_teach validate`, `time_warp_learn --self-check`, and on every build as
-`native/bridge/time_warp/tests/test_lessons.py::test_the_curriculum_is_sound`.
+Run as `time_warp_teach validate`, `time_warp_learn --self-check`, and on every build
+by `lessons_tests`, which asks the same library the same question.
 
 For each checkpoint:
 

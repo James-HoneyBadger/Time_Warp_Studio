@@ -3,12 +3,11 @@
 Time Warp Studio actively implements and ships **10 programming languages**:
 BASIC, APL, Logo, PILOT, FOCAL, Scheme, CHIP-8, COMAL, REXX, and Smalltalk.
 
-> **All ten have reference sections below.** Each language also has a test module
-> under `native/bridge/time_warp/tests/`, a worked example and a showcase under
-> `Examples/`, and rows in `native/bridge/time_warp/tests/command_table.py`; running
-> `python3 native/tools/command_matrix.py` exercises every command through the
-> real bridge, so the tables here are checked against the code rather than
-> written from memory.
+> **All ten have reference sections below.** Each language also has a suite in
+> `native/tests/`, a worked example and a showcase under `Examples/`, and rows in
+> `native/tools/command_table.py`; running `python3 native/tools/command_matrix.py`
+> exercises every command through the native engines, so the tables here are checked
+> against the code rather than written from memory.
 >
 > This page is the *reference*. To learn a language, start with the
 > [tutorial](tutorials/) for it; to be taught it, the

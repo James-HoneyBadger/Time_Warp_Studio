@@ -257,8 +257,7 @@ grid, point at data, draw, move the world.
 | --- | --- |
 | `lang_tests` | The assembler, the machine, every flag, the skips, the wrap, the fonts, hi-res grids, `CLS` in both modes |
 | `chip8_emulator_tests` | The window's machine: loading, stepping, the clock, the keypad, sound, the ROM library |
-| [the Python engine's tests](../../native/bridge/time_warp/tests/) | The reference the native machine is compared against |
-| `native/tools/lang_differential_check.py` | The two machines, side by side, program by program |
+| `make golden-check` | Every CHIP-8 program in the recorded corpus, compared with the reference's answer byte for byte |
 
 The quirks in this book are not folklore: each one is asserted, because a quirk
 nobody tests is a bug waiting to be reported as a feature.
