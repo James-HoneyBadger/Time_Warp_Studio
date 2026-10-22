@@ -749,6 +749,16 @@ if(TIME_WARP_QT_FOUND)
         add_test(NAME lessons_tests COMMAND lessons_tests)
     endif()
 
+    # The learner's command, from the same library the panel uses.
+    add_executable(time_warp_learn tools/learn.cpp)
+    target_link_libraries(time_warp_learn PRIVATE timewarp::lessons)
+    if(NOT MSVC)
+        target_compile_options(time_warp_learn PRIVATE -Wall -Wextra -Wpedantic -Wshadow)
+        if(TIME_WARP_EXPR_WERROR)
+            target_compile_options(time_warp_learn PRIVATE -Werror)
+        endif()
+    endif()
+
     # The teacher's command: validate the curriculum, and (with --write) the
     # lesson plans the documentation job compares against it.
     add_executable(time_warp_teach tools/teach.cpp)

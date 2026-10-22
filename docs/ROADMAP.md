@@ -331,7 +331,10 @@ package, so a package and a checkout teach the same course — and judges a prog
 through the engines with `RecordingHost` as the surface, which is what makes a
 lesson checkable on a machine with no window. `time_warp_teach validate` runs all
 sixty worked answers and all sixty starters through it: every answer passes, every
-starter fails, every language is taught. The `lessons_tests` suite asserts the same
+starter fails, every language is taught. `time_warp_learn` is the learner's side of
+the same library — `list`, `show`, `start`, `check`, `hint`, `solution`,
+`progress`, `reset` — so a learner at a terminal and a learner in the panel are
+asking one verifier. The `lessons_tests` suite asserts the same
 thing, so the curriculum is data that something executes deliberately rather than
 data that sits in the tree looking correct.
 

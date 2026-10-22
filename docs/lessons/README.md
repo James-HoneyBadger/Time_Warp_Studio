@@ -39,7 +39,8 @@ read:
 The machine-readable curriculum is [`native/share/lessons.json`](../../native/share/lessons.json),
 and the code that loads, checks and records it is
 [`timewarp_lessons`](../../native/include/timewarp/lessons/curriculum.hpp) — the
-same library the Lessons panel asks and `time_warp_teach` runs. The reference
+same library the Lessons panel asks, `time_warp_teach` validates and
+`time_warp_learn` walks a learner through. The reference
 engine keeps its own reader
 ([`lesson_system.py`](../../native/bridge/time_warp/features/lesson_system.py)) and
 its classroom

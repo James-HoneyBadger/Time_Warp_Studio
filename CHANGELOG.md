@@ -28,6 +28,10 @@ to be kept saying the same thing.
   per lesson. An unreadable file is ignored rather than fatal: a learner's progress
   is worth more than a tidy log, and refusing to start class because it is corrupt
   is the worse failure.
+- **`time_warp_learn`** is the learner's side of the same library: `list`, `show`,
+  `start` (writes the current starter to a file), `check`, `hint`, `solution`,
+  `progress` and `reset`. The counter of the reference's `learn.py`, and it gives
+  the same verdicts for the same reason.
 - **`lessons_tests`** (23 suites now): the whole curriculum through the engine,
   plus the loader's refusals, the message a wrong answer gets, and the progress
   round trip.
