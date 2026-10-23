@@ -2,7 +2,6 @@
 
 #include "main_window_internal.hpp"
 
-#include "timewarp/core/qt_gui_compat.hpp"
 #include "timewarp/ui/main_window.hpp"
 
 #include "timewarp/lang/executor.hpp"
@@ -10,59 +9,32 @@
 #include "timewarp/ui/native_runner.hpp"
 
 #include <QAction>
-#include <QActionGroup>
 #include <QApplication>
 #include <QCloseEvent>
-#include <QClipboard>
 #include <QComboBox>
 #include <QDateTime>
-#include <QDesktopServices>
 #include <QDir>
-#include <QDirIterator>
-#include <QDockWidget>
 #include <QFile>
 #include <QFileDialog>
 #include <QFileInfo>
-#include <QFont>
-#include <QHBoxLayout>
-#include <QInputDialog>
-#include <QKeySequence>
 #include <QLabel>
-#include <QLineEdit>
 #include <QMenu>
-#include <QMenuBar>
 #include <QMessageBox>
-#include <QPageLayout>
 #include <QPlainTextEdit>
 #ifdef TIME_WARP_HAVE_PRINT
-#include <QPrintDialog>
-#include <QPrinter>
 #endif
-#include <QPushButton>
 #include <QSaveFile>
-#include <QSet>
 #include <QSettings>
-#include <QShortcut>
 #include <QSignalBlocker>
-#include <QSlider>
 #include <QSplitter>
 #include <QStatusBar>
 #include <QTabWidget>
-#include <QTimer>
 #include <QTextDocument>
-#include <QToolBar>
-#include <QToolButton>
-#include <QUrl>
-#include <QVBoxLayout>
 
-#include <algorithm>
-#include <functional>
-#include <map>
 #include <memory>
 #include <string>
 #include <vector>
 
-#include "timewarp/canvas/command_queue.hpp"
 #include "timewarp/canvas/host_adapter.hpp"
 #include "timewarp/canvas/qt_bridge.hpp"
 #include "timewarp/ui/app.hpp"

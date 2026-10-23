@@ -69,7 +69,11 @@ the five tools. Two new gates keep each of those from growing back.
   removal checked by compiling the unit with its own recorded command line -- and the
   check that mattered was the one for *incomplete* types: `main_window_actions.cpp`
   uses `QDockWidget` through `window->findChild<QDockWidget*>()` without ever naming
-  the class, so a scan for names removes the include that makes it complete.
+  the class, so a scan for names removes the include that makes it complete. The rest
+  of the window's files were trimmed by putting back what the compiler named as
+  incomplete, one round at a time; `main_window_actions.cpp` kept its list, because
+  four rounds did not settle it and a file that compiles is worth more than a file
+  that is short.
 - **The shared headers now hold only what is shared.** A split leaves a header behind,
   and the first draft of each one declared everything the split moved rather than
   everything more than one part reads. An audit of each header against its own family
