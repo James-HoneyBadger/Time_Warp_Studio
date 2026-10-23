@@ -69,30 +69,6 @@ struct Line {
     }
 };
 
-/// `^\s{0,3}(`{3,}|~{3,})(info)$`, with the runs reported.
-struct FenceMatch {
-    char character = '\0';
-    std::size_t length = 0;
-    std::string_view info;
-    std::size_t indent = 0;
-};
-
-/// `^\s{0,3}#{1,6}(\s|$)`.
-struct HeadingMatch {
-    int level = 0;
-    std::size_t indent = 0;
-    std::size_t spaces_after_hashes = 0;
-    bool closed = false;
-    std::string_view text;
-};
-
-struct ListMatch {
-    bool ordered = false;
-    char marker = '\0';
-    std::size_t indent = 0;
-    std::size_t spaces_after = 0;
-};
-
 struct Document {
     std::vector<Line> lines;
     /// The index of the first line after front matter, or 0.
@@ -121,23 +97,8 @@ struct ListBlock {
 
 [[nodiscard]] bool is_ascii_digit(char character);
 
-/// A fence marker. A line indented four spaces or more is code, not a fence,
-/// which is the one CommonMark rule that changes how the rest of a file is read.
-[[nodiscard]] std::optional<FenceMatch> fence_of(std::string_view line);
-
-[[nodiscard]] std::optional<HeadingMatch> heading_of(std::string_view line);
-
-[[nodiscard]] bool is_thematic_break(std::string_view line);
-
-[[nodiscard]] std::optional<ListMatch> list_of(std::string_view line);
-
 /// The columns of a table row, split on unescaped `|`.
 [[nodiscard]] std::vector<std::string_view> table_cells(std::string_view line);
-
-[[nodiscard]] bool is_table_delimiter(std::string_view line);
-
-/// Whether `line` opens or continues an HTML comment block.
-[[nodiscard]] bool opens_html_comment(std::string_view line, bool* closes_same_line);
 
 [[nodiscard]] Document parse(std::string_view text);
 

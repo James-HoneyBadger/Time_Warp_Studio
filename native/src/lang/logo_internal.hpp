@@ -34,11 +34,8 @@ namespace timewarp::lang::logo_detail {
 
 // -- text, the way Python's str methods behave ------------------------------
 
-constexpr double kPi = 3.14159265358979323846;
-
 bool is_space(char character);
 std::string upper(std::string_view text);
-std::string lstrip(std::string_view text);
 std::string rstrip(std::string_view text);
 std::string strip(std::string_view text);
 std::string strip_char(std::string_view text, char character);
@@ -64,7 +61,6 @@ const std::set<std::string_view>& logo_reporters();
 const std::set<std::string_view>& colour_reporters();
 const std::set<std::string_view>& math_prefix_functions();
 const std::set<std::string_view>& spaced_call_functions();
-const std::map<std::string_view, Rgb>& colour_names();
 std::optional<Rgb> named_colour(std::string_view name);
 int clamp_channel(double value);
 bool looks_like_number(std::string_view text, double& value);
@@ -76,16 +72,10 @@ std::size_t matching_bracket(std::string_view text, std::size_t start);
 /// steps. The reference raises out of `tick()` for the same reason.
 struct BudgetStop {};
 
-/// Thrown when a Logo error must abandon the current statement.
-struct LogoError : std::runtime_error {
-    using std::runtime_error::runtime_error;
-};
-
 /// Puts the `[line N]` annotation on each `❌` line, as the reference's
 /// `_inject_line_number` does. A Logo statement has no number of its own, so
 /// `line` is the position the loader gave it.
 std::string annotate(std::string_view text, int line);
-
 
 class LogoMachine {
 public:

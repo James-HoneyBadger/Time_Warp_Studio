@@ -45,6 +45,14 @@ namespace timewarp::ui {
 
 using namespace retro_detail;
 
+namespace {
+
+constexpr int kScreenTextStretch = 1;
+constexpr int kScreenGraphicsStretch = 1;
+constexpr auto kBootCopyright = "(C) 1982 HB SYSTEMS";
+
+}  // namespace
+
 
 RetroComputerWindow::RetroComputerWindow(QWidget* parent) : QMainWindow(parent) {
     setObjectName(QStringLiteral("retroComputerWindow"));

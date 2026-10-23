@@ -7,6 +7,7 @@
 
 namespace tw::ui_layout {
 
+/// `text` without its keyboard mnemonics, so "Zoom &In" matches "Zoom In".
 void test_tool_bar_configuration() {
     announce("tool bar");
     MainWindow window;

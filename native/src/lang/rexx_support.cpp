@@ -23,6 +23,53 @@
 namespace timewarp::lang {
 namespace rexx_detail {
 
+namespace {
+
+// Read by nothing outside this file: a formatter used by `fmt`, the label pattern and
+// the two questions the machine asks about a line.
+
+/// The reference's `repr(float)` is the shortest round-trip form.
+std::string float_repr(double value) {
+    if (std::isfinite(value) && std::trunc(value) == value &&
+        std::fabs(value) < 9.0e15) {
+        char buffer[32];
+        std::snprintf(buffer, sizeof buffer, "%.0f", value);
+        return buffer;
+    }
+    char buffer[64];
+    const std::size_t length =
+        timewarp::core::format_double(buffer, buffer + sizeof buffer, value);
+    if (length != 0) {
+        return std::string{buffer, length};
+    }
+    std::snprintf(buffer, sizeof buffer, "%g", value);
+    return buffer;
+}
+
+
+const std::regex& label_pattern() {
+    static const std::regex pattern{R"(^\s*([A-Za-z_!?][A-Za-z0-9_!?.]*)\s*:\s*(.*)$)",
+                                    std::regex::ECMAScript};
+    return pattern;
+}
+
+/// Whether the text at a line starts a DO block.
+bool line_starts_do(Interpreter& interpreter, std::size_t line) {
+    const auto& lines = interpreter.program_lines();
+    if (line >= lines.size()) {
+        return false;
+    }
+    return starts_with(upper(statement_after_label(strip_comment(lines[line].text))), "DO");
+}
+
+
+const std::vector<std::string>& block_openers() {
+    static const std::vector<std::string> words = {"DO", "SELECT"};
+    return words;
+}
+
+}  // namespace
+
 std::string upper(std::string_view text) {
     std::string result{text};
     for (char& character : result) {
@@ -52,23 +99,7 @@ bool starts_with(std::string_view text, std::string_view prefix) {
     return text.size() >= prefix.size() && text.substr(0, prefix.size()) == prefix;
 }
 
-/// The reference's `repr(float)` is the shortest round-trip form.
-std::string float_repr(double value) {
-    if (std::isfinite(value) && std::trunc(value) == value &&
-        std::fabs(value) < 9.0e15) {
-        char buffer[32];
-        std::snprintf(buffer, sizeof buffer, "%.0f", value);
-        return buffer;
-    }
-    char buffer[64];
-    const std::size_t length =
-        timewarp::core::format_double(buffer, buffer + sizeof buffer, value);
-    if (length != 0) {
-        return std::string{buffer, length};
-    }
-    std::snprintf(buffer, sizeof buffer, "%g", value);
-    return buffer;
-}
+
 
 std::string fmt(const RValue& value) {
     return value.text ? value.words : float_repr(value.number);
@@ -324,10 +355,6 @@ std::vector<std::string> code_words(const std::string& line) {
     return words;
 }
 
-const std::vector<std::string>& block_openers() {
-    static const std::vector<std::string> words = {"DO", "SELECT"};
-    return words;
-}
 
 bool in_words(const std::vector<std::string>& words, std::string_view value) {
     return std::find(words.begin(), words.end(), value) != words.end();
@@ -354,11 +381,6 @@ std::size_t scan_block_end(Interpreter& interpreter, std::size_t start) {
     throw RexxError("missing END for block");
 }
 
-const std::regex& label_pattern() {
-    static const std::regex pattern{R"(^\s*([A-Za-z_!?][A-Za-z0-9_!?.]*)\s*:\s*(.*)$)",
-                                    std::regex::ECMAScript};
-    return pattern;
-}
 
 std::map<std::string, std::size_t> labels(Interpreter& interpreter) {
     RexxState& state = interpreter.executor_state<RexxState>();
@@ -385,14 +407,7 @@ std::string statement_after_label(const std::string& text) {
     return trim(text);
 }
 
-/// Whether the text at a line starts a DO block.
-bool line_starts_do(Interpreter& interpreter, std::size_t line) {
-    const auto& lines = interpreter.program_lines();
-    if (line >= lines.size()) {
-        return false;
-    }
-    return starts_with(upper(statement_after_label(strip_comment(lines[line].text))), "DO");
-}
+
 
 std::size_t after_else_clause(Interpreter& interpreter, std::size_t else_line);
 

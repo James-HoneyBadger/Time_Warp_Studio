@@ -17,29 +17,20 @@
 
 namespace docs::md::detail {
 
-[[nodiscard]] std::string_view rtrim(std::string_view text) {
-    std::size_t end = text.size();
-    while (end > 0 && (text[end - 1] == ' ' || text[end - 1] == '\t')) {
-        --end;
-    }
-    return text.substr(0, end);
-}
-[[nodiscard]] std::size_t leading_spaces(std::string_view line) {
-    std::size_t count = 0;
-    while (count < line.size() && (line[count] == ' ' || line[count] == '\t')) {
-        ++count;
-    }
-    return count;
-}
-/// Whether a line is invisible to a rule that asks what surrounds a block. An
-/// HTML comment renders as nothing, and this tree uses one to bracket the
-/// history sections, so a list that runs across one has not been interrupted.
-[[nodiscard]] bool is_transparent(Kind kind) {
-    return kind == Kind::Blank || kind == Kind::FrontMatter || kind == Kind::HtmlComment;
-}
-[[nodiscard]] bool is_ascii_digit(char character) {
-    return character >= '0' && character <= '9';
-}
+namespace {
+
+// What only this file reads: the shapes the line scanners answer with, and the
+// scanners themselves. `parse` is built from them; a rule sees the `Line`s it
+// produces and never asks how a line was classified.
+
+/// `^\s{0,3}(`{3,}|~{3,})(info)$`, with the runs reported.
+struct FenceMatch {
+    char character = '\0';
+    std::size_t length = 0;
+    std::string_view info;
+    std::size_t indent = 0;
+};
+
 /// A fence marker. A line indented four spaces or more is code, not a fence,
 /// which is the one CommonMark rule that changes how the rest of a file is read.
 [[nodiscard]] std::optional<FenceMatch> fence_of(std::string_view line) {
@@ -65,6 +56,16 @@ namespace docs::md::detail {
     match.info = trim(line.substr(indent + length));
     return match;
 }
+
+/// `^\s{0,3}#{1,6}(\s|$)`.
+struct HeadingMatch {
+    int level = 0;
+    std::size_t indent = 0;
+    std::size_t spaces_after_hashes = 0;
+    bool closed = false;
+    std::string_view text;
+};
+
 [[nodiscard]] std::optional<HeadingMatch> heading_of(std::string_view line) {
     const std::size_t indent = leading_spaces(line);
     if (indent > 3 || indent >= line.size() || line[indent] != '#') {
@@ -109,6 +110,7 @@ namespace docs::md::detail {
     match.text = rest;
     return match;
 }
+
 [[nodiscard]] bool is_thematic_break(std::string_view line) {
     const std::string_view body = trim(line);
     if (body.size() < 3) {
@@ -128,6 +130,14 @@ namespace docs::md::detail {
     }
     return count >= 3;
 }
+
+struct ListMatch {
+    bool ordered = false;
+    char marker = '\0';
+    std::size_t indent = 0;
+    std::size_t spaces_after = 0;
+};
+
 [[nodiscard]] std::optional<ListMatch> list_of(std::string_view line) {
     const std::size_t indent = leading_spaces(line);
     if (indent >= line.size()) {
@@ -166,6 +176,55 @@ namespace docs::md::detail {
     match.spaces_after = at - indent - marker_width;
     return match;
 }
+
+[[nodiscard]] bool is_table_delimiter(std::string_view line) {
+    const std::string_view body = trim(line);
+    if (body.empty() || body.find('|') == std::string_view::npos) {
+        return false;
+    }
+    for (const char character : body) {
+        if (character != '|' && character != '-' && character != ':' && character != ' ') {
+            return false;
+        }
+    }
+    return body.find('-') != std::string_view::npos;
+}
+
+/// Whether `line` opens or continues an HTML comment block.
+[[nodiscard]] bool opens_html_comment(std::string_view line, bool* closes_same_line) {
+    const std::string_view body = trim(line);
+    if (body.rfind("<!--", 0) != 0) {
+        return false;
+    }
+    *closes_same_line = body.find("-->", 4) != std::string_view::npos;
+    return true;
+}
+
+}  // namespace
+
+[[nodiscard]] std::string_view rtrim(std::string_view text) {
+    std::size_t end = text.size();
+    while (end > 0 && (text[end - 1] == ' ' || text[end - 1] == '\t')) {
+        --end;
+    }
+    return text.substr(0, end);
+}
+[[nodiscard]] std::size_t leading_spaces(std::string_view line) {
+    std::size_t count = 0;
+    while (count < line.size() && (line[count] == ' ' || line[count] == '\t')) {
+        ++count;
+    }
+    return count;
+}
+/// Whether a line is invisible to a rule that asks what surrounds a block. An
+/// HTML comment renders as nothing, and this tree uses one to bracket the
+/// history sections, so a list that runs across one has not been interrupted.
+[[nodiscard]] bool is_transparent(Kind kind) {
+    return kind == Kind::Blank || kind == Kind::FrontMatter || kind == Kind::HtmlComment;
+}
+[[nodiscard]] bool is_ascii_digit(char character) {
+    return character >= '0' && character <= '9';
+}
 /// The columns of a table row, split on unescaped `|`.
 [[nodiscard]] std::vector<std::string_view> table_cells(std::string_view line) {
     std::vector<std::string_view> cells;
@@ -198,27 +257,6 @@ namespace docs::md::detail {
         cells.pop_back();
     }
     return cells;
-}
-[[nodiscard]] bool is_table_delimiter(std::string_view line) {
-    const std::string_view body = trim(line);
-    if (body.empty() || body.find('|') == std::string_view::npos) {
-        return false;
-    }
-    for (const char character : body) {
-        if (character != '|' && character != '-' && character != ':' && character != ' ') {
-            return false;
-        }
-    }
-    return body.find('-') != std::string_view::npos;
-}
-/// Whether `line` opens or continues an HTML comment block.
-[[nodiscard]] bool opens_html_comment(std::string_view line, bool* closes_same_line) {
-    const std::string_view body = trim(line);
-    if (body.rfind("<!--", 0) != 0) {
-        return false;
-    }
-    *closes_same_line = body.find("-->", 4) != std::string_view::npos;
-    return true;
 }
 [[nodiscard]] Document parse(std::string_view text) {
     Document document;

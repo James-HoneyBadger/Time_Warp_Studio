@@ -17,6 +17,12 @@
 namespace timewarp::lang {
 namespace logo_detail {
 
+namespace {
+
+constexpr double kPi = 3.14159265358979323846;
+
+}  // namespace
+
 // -- variables and data ----------------------------------------------------
 
 std::string LogoMachine::do_make(const std::vector<std::string>& args,

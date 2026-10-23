@@ -6,6 +6,55 @@
 
 namespace tw::lang_tests {
 
+// Read by this file only: it arrived here with the cases that need it.
+
+struct FocalRun {
+    std::vector<std::string> output;
+    std::vector<std::string> prompts;
+    RecordingHost host;
+};
+
+FocalRun run_focal(std::string_view source, std::vector<std::string> inputs = {"4"}) {
+    FocalRun run;
+    Interpreter interpreter{Language::Focal, run.host};
+    std::size_t next = 0;
+    run.prompts = {};
+    interpreter.set_input_callback([&](const std::string& prompt) {
+        run.prompts.push_back(prompt);
+        if (next < inputs.size()) {
+            return inputs[next++];
+        }
+        return std::string{"4"};
+    });
+    interpreter.load_program(source);
+    interpreter.run();
+    run.output = interpreter.output();
+    return run;
+}
+
+struct PilotRun {
+    std::vector<std::string> output;
+    std::vector<std::string> prompts;
+    RecordingHost host;
+};
+
+PilotRun run_pilot(std::string_view source, std::vector<std::string> inputs = {""}) {
+    PilotRun run;
+    Interpreter interpreter{Language::Pilot, run.host};
+    std::size_t next = 0;
+    interpreter.set_input_callback([&](const std::string& prompt) {
+        run.prompts.push_back(prompt);
+        if (next < inputs.size()) {
+            return inputs[next++];
+        }
+        return std::string{};
+    });
+    interpreter.load_program(source);
+    interpreter.run();
+    run.output = interpreter.output();
+    return run;
+}
+
 // ---------------------------------------------------------------------------
 // FOCAL
 // ---------------------------------------------------------------------------

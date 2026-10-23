@@ -45,6 +45,12 @@ namespace timewarp::ui {
 
 using namespace retro_detail;
 
+namespace {
+
+constexpr auto kNoProgram = "?NO PROGRAM";
+
+}  // namespace
+
 void RetroComputerWindow::handlePromptLine() {
     if (input_ == nullptr) {
         return;

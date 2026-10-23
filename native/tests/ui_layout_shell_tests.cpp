@@ -6,6 +6,45 @@
 
 namespace tw::ui_layout {
 
+// Read by this file only: it arrived here with the cases that need it.
+
+/// A page that asks for a lot of room, to prove size hints follow it.
+class BulkyPage final : public QWidget {
+public:
+    explicit BulkyPage(QWidget* parent = nullptr) : QWidget(parent) {}
+    [[nodiscard]] QSize sizeHint() const override { return {1400, 900}; }
+    [[nodiscard]] QSize minimumSizeHint() const override { return {1400, 900}; }
+};
+
+/// A page with a valid but small hint, which still has to clear the floor.
+class SmallPage final : public QWidget {
+public:
+    explicit SmallPage(QWidget* parent = nullptr) : QWidget(parent) {}
+    [[nodiscard]] QSize sizeHint() const override { return {60, 40}; }
+    [[nodiscard]] QSize minimumSizeHint() const override { return {60, 40}; }
+};
+
+[[nodiscard]] QString tabTitles(const QTabWidget* tabs) {
+    QStringList titles;
+    for (int index = 0; index < tabs->count(); ++index) {
+        titles << tabs->tabText(index);
+    }
+    return titles.join(QLatin1Char('|'));
+}
+
+/// `QSplitter` has no stretch-factor getter -- only `setStretchFactor` -- and Qt
+/// implements that by writing the child's size policy. Reading the policy back is
+/// therefore the only way to assert a stretch factor directly; the independent
+/// check is the resize-ratio test at the end of this file. If a future Qt stops
+/// keeping the two in step, these will disagree, which is the signal to look.
+[[nodiscard]] int horizontalStretch(const QSplitter* splitter, int index) {
+    return splitter->widget(index)->sizePolicy().horizontalStretch();
+}
+
+[[nodiscard]] int verticalStretch(const QSplitter* splitter, int index) {
+    return splitter->widget(index)->sizePolicy().verticalStretch();
+}
+
 void test_editor_tabs_refuse_to_be_sized_by_their_largest_page() {
     announce("ResizableTabWidget size hints");
     ResizableTabWidget tabs;

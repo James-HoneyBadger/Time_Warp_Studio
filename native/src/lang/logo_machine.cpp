@@ -18,6 +18,17 @@
 namespace timewarp::lang {
 namespace logo_detail {
 
+namespace {
+
+// Thrown when a Logo error must abandon the current statement, and caught by the
+// same file's statement loop.
+/// Thrown when a Logo error must abandon the current statement.
+struct LogoError : std::runtime_error {
+    using std::runtime_error::runtime_error;
+};
+
+}  // namespace
+
 void LogoMachine::tick() {
     interpreter_.note_step();
     if (!interpreter_.check_budget()) {

@@ -37,6 +37,26 @@ namespace timewarp::ui {
 using namespace canvas_detail;
 using timewarp::canvas::CanvasCommandKind;
 
+namespace {
+
+/// The world window shown when nothing has been drawn yet. Chosen to match the
+/// Python canvas's default extent closely enough that a program's first
+/// `forward 100` looks the same size in both.
+constexpr double kDefaultWorldHalfExtent = 250.0;
+
+/// Breathing room left around the ink when fitting, as a fraction of its size.
+constexpr double kFitMargin = 0.08;
+
+/// Smallest world window the fit will produce, so a program that draws a single
+/// point does not get magnified to a meaningless scale.
+constexpr double kMinimumFitExtent = 10.0;
+
+constexpr double kMinimumZoom = 0.05;
+constexpr double kMaximumZoom = 50.0;
+
+}  // namespace
+
+
 void TurtleCanvas::growBounds(const QRectF& box) {
     if (!has_bounds_) {
         content_bounds_ = box;

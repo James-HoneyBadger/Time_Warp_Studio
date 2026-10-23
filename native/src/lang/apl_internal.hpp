@@ -100,18 +100,13 @@ struct AplState {
 };
 
 bool is_array(const Value& value);
-bool is_number(const Value& value);
 std::string upper(std::string_view text);
 bool is_space(char character);
 std::string trim(std::string_view text);
 bool starts_with(std::string_view text, std::string_view prefix);
 std::string replace_all(std::string text, std::string_view from,
                         std::string_view to);
-/// APL's own number spelling: `¯` for negative, no trailing `.0`, and `%g`
-/// otherwise -- the same six significant digits the reference prints.
-std::string number_text(double value);
 std::string display_text(const Value& value);
-std::string row_text(const Value& value);
 // ---------------------------------------------------------------------------
 // Arrays
 // ---------------------------------------------------------------------------
@@ -120,12 +115,6 @@ std::vector<Value> items_of(const Value& value);
 std::vector<Value> raze(const Value& value);
 std::vector<double> shape_of(const Value& value);
 Value from_flat(const std::vector<double>& shape, const std::vector<Value>& flat);
-/// Pervasive application: at matching positions, keeping the array shape.
-///
-/// This is what "pervasive" means in APL, and why `1 2 3 + 10` and
-/// `1 2 3 + 4 5 6` both work while `1 2 3 + 4 5` is a length error.
-Value each(const std::function<Value(const std::vector<Value>&)>& function,
-           const std::vector<Value>& values);
 Value each1(const std::function<Value(const Value&)>& function, const Value& value);
 Value each2(const std::function<Value(const Value&, const Value&)>& function,
             const Value& left, const Value& right);
@@ -159,22 +148,14 @@ Value reshape(const Value& left, const Value& right);
 // ---------------------------------------------------------------------------
 // Function tables
 // ---------------------------------------------------------------------------
-
-const std::map<std::string, std::string>& aliases();
 const std::vector<std::string>& structural();
 const std::vector<std::string>& scalars();
 bool in_list(const std::vector<std::string>& list, std::string_view value);
 const std::map<std::string, std::string>& turtle_words();
 std::string canonical(std::string_view token);
-std::string format_value(const Value& value);
 // ---------------------------------------------------------------------------
 // Tokens
 // ---------------------------------------------------------------------------
-
-const std::vector<std::string>& glyphs();
-bool is_digit(char character);
-bool is_name_start(char character);
-bool is_name_char(char character);
 std::vector<std::string> tokenize(std::string_view text);
 bool is_function(const std::string& token, const AplState* state);
 bool is_operand(const std::string& token, const AplState* state);
@@ -185,18 +166,10 @@ Value value_of(const std::string& token, const std::map<std::string, Value>& var
 
 Value evaluate(const std::vector<std::string>& tokens, AplState& state,
                TurtleHost* turtle);;
-std::pair<Value, int> operand(const std::vector<std::string>& tokens, int index,
-                              AplState& state, TurtleHost* turtle);
-std::pair<Value, int> strand(const std::vector<std::string>& tokens, int index,
-                             AplState& state, TurtleHost* turtle);
 Value apply(const std::string& token, const Value* left, const Value& right,
             AplState& state, TurtleHost* turtle);;
-Value expression(const std::vector<std::string>& tokens, AplState& state,
-                 TurtleHost* turtle);
 Value reduce(const std::string& operation, const Value& right);
 Value scan(const std::string& operation, const Value& right);
-std::optional<std::tuple<std::string, std::size_t, std::string>> split_operator(
-    const std::vector<std::string>& tokens);
 Value call_user_function(const std::string& name, const Value* left,
                          const Value& right, AplState& state,
                          TurtleHost* turtle);;
@@ -207,7 +180,6 @@ Value call_user_function(const std::string& name, const Value* left,
 std::pair<Value, bool> statement(const std::string& line, AplState& state,
                                  TurtleHost* turtle);
 Header parse_header(const std::string& text);
-double round6(double value);
 Value turtle_state_value(double raw);
 
 }  // namespace timewarp::lang::apl_detail

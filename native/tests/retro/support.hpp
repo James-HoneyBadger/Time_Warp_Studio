@@ -46,7 +46,6 @@
 
 namespace tw::retro {
 
-
 using timewarp::ui::BootBanner;
 using timewarp::ui::DosFile;
 using timewarp::ui::HbDos;
@@ -99,22 +98,6 @@ inline QStringList nonEmptyLines(const QString& text) {
         }
     }
     return lines;
-}
-
-/// The configuration screen, opened and accepted the way a person would.
-inline RetroComputerSettingsDialog* openSettingsFor(RetroComputerWindow& machine) {
-    auto* dialog = machine.openSettings();
-    TW_CHECK(dialog != nullptr);
-    return dialog;
-}
-
-inline void acceptSettings(RetroComputerSettingsDialog* dialog) {
-    auto* buttons = dialog->findChild<QDialogButtonBox*>(
-        QStringLiteral("retroSettingsButtons"));
-    TW_CHECK(buttons != nullptr);
-    if (buttons != nullptr) {
-        buttons->button(QDialogButtonBox::Ok)->click();
-    }
 }
 
 }  // namespace tw::retro

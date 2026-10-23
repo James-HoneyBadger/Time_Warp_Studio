@@ -37,6 +37,24 @@ namespace timewarp::ui {
 using namespace canvas_detail;
 using timewarp::canvas::CanvasCommandKind;
 
+
+namespace {
+
+/// Target on-screen spacing between grid lines. Below this the grid stops being
+/// a reference and becomes noise, so the step moves up a decade instead.
+constexpr double kMinimumGridSpacingPixels = 14.0;
+
+/// Grid steps a person reads without counting: 1, 2, 5, 10, 20, 50, ...
+constexpr double kGridSteps[] = {0.1,  0.2,  0.5,  1.0,   2.0,   5.0,
+                                 10.0, 20.0, 50.0, 100.0, 200.0, 500.0,
+                                 1000.0, 2000.0, 5000.0, 10000.0};
+
+/// The turtle marker's size in *screen* pixels. Deliberately not world units: a
+/// turtle that grows when you zoom out stops being a position cue.
+constexpr double kTurtlePixels = 9.0;
+
+}  // namespace
+
 void TurtleCanvas::paintEvent(QPaintEvent* /*event*/) {
     QPainter painter{this};
     painter.fillRect(rect(), background_);

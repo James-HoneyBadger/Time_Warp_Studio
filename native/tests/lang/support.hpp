@@ -48,7 +48,6 @@
 
 namespace tw::lang_tests {
 
-
 using timewarp::lang::Chip8Machine;
 using timewarp::lang::Chip8Program;
 using timewarp::lang::Interpreter;
@@ -237,59 +236,12 @@ inline std::size_t lit_pixels(const Chip8Machine& machine) {
         std::count(machine.framebuffer().begin(), machine.framebuffer().end(), 1));
 }
 
-struct FocalRun {
-    std::vector<std::string> output;
-    std::vector<std::string> prompts;
-    RecordingHost host;
-};
-
-inline FocalRun run_focal(std::string_view source, std::vector<std::string> inputs = {"4"}) {
-    FocalRun run;
-    Interpreter interpreter{Language::Focal, run.host};
-    std::size_t next = 0;
-    run.prompts = {};
-    interpreter.set_input_callback([&](const std::string& prompt) {
-        run.prompts.push_back(prompt);
-        if (next < inputs.size()) {
-            return inputs[next++];
-        }
-        return std::string{"4"};
-    });
-    interpreter.load_program(source);
-    interpreter.run();
-    run.output = interpreter.output();
-    return run;
-}
-
 inline std::vector<std::string> run_chip8(std::string_view source) {
     RecordingHost host;
     Interpreter interpreter{Language::Chip8, host};
     interpreter.load_program(source);
     interpreter.run();
     return interpreter.output();
-}
-
-struct PilotRun {
-    std::vector<std::string> output;
-    std::vector<std::string> prompts;
-    RecordingHost host;
-};
-
-inline PilotRun run_pilot(std::string_view source, std::vector<std::string> inputs = {""}) {
-    PilotRun run;
-    Interpreter interpreter{Language::Pilot, run.host};
-    std::size_t next = 0;
-    interpreter.set_input_callback([&](const std::string& prompt) {
-        run.prompts.push_back(prompt);
-        if (next < inputs.size()) {
-            return inputs[next++];
-        }
-        return std::string{};
-    });
-    interpreter.load_program(source);
-    interpreter.run();
-    run.output = interpreter.output();
-    return run;
 }
 
 }  // namespace tw::lang_tests

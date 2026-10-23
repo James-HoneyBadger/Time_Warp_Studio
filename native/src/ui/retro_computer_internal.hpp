@@ -25,13 +25,9 @@
 
 namespace timewarp::ui::retro_detail {
 
-constexpr int kScreenTextStretch = 1;
 
-constexpr int kScreenGraphicsStretch = 1;
 
-constexpr int kConsoleBlockLimit = 4000;
 
-constexpr auto kBootCopyright = "(C) 1982 HB SYSTEMS";
 
 /// The part of a ROM a user sees and types at.
 struct RomInfo {
@@ -74,7 +70,6 @@ struct RomInfo {
 /// The catalogue's type column: the ROM the file belongs to, in capitals.
 [[nodiscard]] QString dosTypeName(const QString& language_key);
 
-constexpr auto kNoProgram = "?NO PROGRAM";
 
 /// One line of a listing, matched the same way the machine stores one.
 [[nodiscard]] QRegularExpression numberedLine();
@@ -88,8 +83,6 @@ struct LineRange {
 
 [[nodiscard]] LineRange parseLineRange(const QString& text);
 
-/// True for the words whose following number is a *line number*.
-[[nodiscard]] bool isTargetWord(const QString& word);
 
 /// Rewrites the line numbers a statement jumps to, leaving everything else alone.
 ///

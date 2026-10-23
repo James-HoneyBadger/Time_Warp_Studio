@@ -10,6 +10,17 @@
 namespace timewarp::ui {
 namespace retro_detail {
 
+namespace {
+
+/// The words whose following number is a *line number*.
+bool isTargetWord(const QString& word) {
+    return word == QLatin1String("GOTO") || word == QLatin1String("GOSUB") ||
+           word == QLatin1String("THEN") || word == QLatin1String("ELSE") ||
+           word == QLatin1String("RESTORE");
+}
+
+}  // namespace
+
 [[nodiscard]] RomInfo romFor(Language language) {
     switch (language) {
         case Language::Basic:
@@ -282,11 +293,7 @@ namespace retro_detail {
 }
 
 /// True for the words whose following number is a *line number*.
-[[nodiscard]] bool isTargetWord(const QString& word) {
-    return word == QLatin1String("GOTO") || word == QLatin1String("GOSUB") ||
-           word == QLatin1String("THEN") || word == QLatin1String("ELSE") ||
-           word == QLatin1String("RESTORE");
-}
+[[nodiscard]] 
 
 /// Rewrites the line numbers a statement jumps to, leaving everything else alone.
 ///

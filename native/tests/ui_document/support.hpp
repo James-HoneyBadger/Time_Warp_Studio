@@ -89,11 +89,6 @@ inline void announce(const char* name) {
     return done();
 }
 
-/// The editor in the window's current tab.
-[[nodiscard]] inline CodeEditor* currentEditorOf(const MainWindow& window) {
-    return qobject_cast<CodeEditor*>(window.editorTabs()->currentWidget());
-}
-
 /// The text of a status-bar badge, by object name.
 [[nodiscard]] inline QString badgeText(const MainWindow& window, const char* name) {
     const auto* label = window.statusBar()->findChild<QLabel*>(QString::fromLatin1(name));

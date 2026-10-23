@@ -63,6 +63,14 @@ the five tools. Two new gates keep each of those from growing back.
   model in `md_lines.cpp`, five rule files -- headings, code, lists, whitespace, inline
   content -- one command file, and two headers that say what the rules pass around and
   what the set of them is.
+- **The shared headers now hold only what is shared.** A split leaves a header behind,
+  and the first draft of each one declared everything the split moved rather than
+  everything more than one part reads. An audit of each header against its own family
+  found the difference: `turtle_canvas_internal.hpp` went from 68 lines to 24 (nine of
+  its ten constants had one reader each), the Markdown line model's scanners and the
+  shapes they answer with went back into the file that builds them, fifteen APL
+  declarations went back to their single callers, and the four test support headers
+  stopped carrying the helpers one case file uses. Nothing that two parts read moved.
 - **The size budget came down from 2,000 to 1,500 lines.** It was set at 2,000 while
   the tree still had 3,548-line files to work down; with every file under 1,500 it is a
   ceiling with headroom rather than one that gets raised. `main_window_run.cpp` (1,495)

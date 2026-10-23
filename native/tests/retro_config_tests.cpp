@@ -7,6 +7,24 @@
 
 namespace tw::retro {
 
+// Read by this file only: it arrived here with the cases that need it.
+
+/// The configuration screen, opened and accepted the way a person would.
+RetroComputerSettingsDialog* openSettingsFor(RetroComputerWindow& machine) {
+    auto* dialog = machine.openSettings();
+    TW_CHECK(dialog != nullptr);
+    return dialog;
+}
+
+void acceptSettings(RetroComputerSettingsDialog* dialog) {
+    auto* buttons = dialog->findChild<QDialogButtonBox*>(
+        QStringLiteral("retroSettingsButtons"));
+    TW_CHECK(buttons != nullptr);
+    if (buttons != nullptr) {
+        buttons->button(QDialogButtonBox::Ok)->click();
+    }
+}
+
 void test_config_button_opens_the_settings_screen() {
     clearMachineSettings();
     RetroComputerWindow machine;

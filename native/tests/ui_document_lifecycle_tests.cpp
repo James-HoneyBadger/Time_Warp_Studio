@@ -7,6 +7,13 @@
 
 namespace tw::ui_document {
 
+// Read by this file only: it arrived here with the cases that need it.
+
+/// The editor in the window's current tab.
+[[nodiscard]] CodeEditor* currentEditorOf(const MainWindow& window) {
+    return qobject_cast<CodeEditor*>(window.editorTabs()->currentWidget());
+}
+
 void test_a_fresh_window_has_one_real_document() {
     announce("fresh window document");
     MainWindow window;

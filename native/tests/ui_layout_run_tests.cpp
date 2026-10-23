@@ -6,6 +6,26 @@
 
 namespace tw::ui_layout {
 
+// Read by this file only: it arrived here with the cases that need it.
+
+/// A window that has restored its saved layout, in the order the header
+/// documents: construct, resize, restore, *then* show.
+///
+/// The order matters. `restoreGeometry()` applied to an already-visible window
+/// lets Qt re-fit it to the screen instead of honouring the stored size -- under
+/// the offscreen platform a 1200x800 window came back as 900x774, which is its
+/// minimum width. Restoring first avoids the whole question.
+[[nodiscard]] std::unique_ptr<MainWindow> restoredWindow(int width = 1200,
+                                                        int height = 800) {
+    auto window = std::make_unique<MainWindow>();
+    window->resize(width, height);
+    window->restoreLayout();
+    window->show();
+    QApplication::processEvents();
+    QApplication::processEvents();
+    return window;
+}
+
 void test_gif_recording_toggles_and_samples_the_canvas() {
     announce("record canvas as GIF");
     const std::unique_ptr<MainWindow> window = shownWindow();

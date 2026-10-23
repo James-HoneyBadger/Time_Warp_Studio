@@ -59,6 +59,24 @@ TurtleCanvas::TurtleCanvas(QWidget* parent) : QWidget(parent) {
 // Commands
 // ---------------------------------------------------------------------------
 
+namespace {
+
+/// Brings an angle into `[0, 360)`, the way Python's `%` does.
+///
+/// `std::fmod` alone is not enough: it keeps the sign of its argument, so
+/// `right(720)` and `left(360)` would leave the heading negative here while the
+/// reference leaves it positive, and an identical program would then disagree
+/// about the heading from its first left turn onwards.
+[[nodiscard]] double normaliseHeading(double degrees) noexcept {
+    double result = std::fmod(degrees, 360.0);
+    if (result < 0.0) {
+        result += 360.0;
+    }
+    return result;
+}
+
+}  // namespace
+
 void TurtleCanvas::apply(const timewarp::canvas::CanvasCommandView& view) {
     const timewarp::canvas::CanvasCommand& command = view.command;
     const QPointF before = position_;

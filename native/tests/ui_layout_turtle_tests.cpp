@@ -6,6 +6,28 @@
 
 namespace tw::ui_layout {
 
+// Read by this file only: it arrived here with the cases that need it.
+
+/// Renders the overlay into an image and counts the pixels it touched, which is
+/// the only way to say "paints nothing" without looking at a screen.
+[[nodiscard]] int overlayInk(CrtOverlay& overlay) {
+    overlay.resize(80, 60);
+    QImage image{80, 60, QImage::Format_ARGB32_Premultiplied};
+    image.fill(Qt::transparent);
+    QPainter painter{&image};
+    overlay.render(&painter);
+    painter.end();
+    int inked = 0;
+    for (int y = 0; y < image.height(); ++y) {
+        for (int x = 0; x < image.width(); ++x) {
+            if (image.pixelColor(x, y).alpha() > 0) {
+                ++inked;
+            }
+        }
+    }
+    return inked;
+}
+
 void test_run_both_panes_compares_them() {
     announce("run both panes");
     const std::unique_ptr<MainWindow> window = shownWindow();

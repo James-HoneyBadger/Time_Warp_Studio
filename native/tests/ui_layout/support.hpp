@@ -99,7 +99,6 @@
 #include "timewarp/ui/version_history.hpp"
 #include "timewarp/ui/resizable_tab_widget.hpp"
 
-
 /// Pumps the event loop until `done()`, so a signal from a runner thread has
 /// somewhere to arrive.
 template <typename Predicate>
@@ -118,7 +117,6 @@ bool spin_until(Predicate done, int timeout_ms = 10000) {
 
 namespace tw::ui_layout {
 
-
 using timewarp::ui::CrtOverlay;
 using timewarp::ui::CodeEditor;
 using timewarp::ui::FunctionKeyBar;
@@ -136,43 +134,6 @@ using timewarp::ui::VariablesPanel;
 inline void announce(const char* name) {
     std::printf("-- %s\n", name);
     std::fflush(stdout);
-}
-
-/// A page that asks for a lot of room, to prove size hints follow it.
-class BulkyPage final : public QWidget {
-public:
-    explicit BulkyPage(QWidget* parent = nullptr) : QWidget(parent) {}
-    [[nodiscard]] QSize sizeHint() const override { return {1400, 900}; }
-    [[nodiscard]] QSize minimumSizeHint() const override { return {1400, 900}; }
-};
-
-/// A page with a valid but small hint, which still has to clear the floor.
-class SmallPage final : public QWidget {
-public:
-    explicit SmallPage(QWidget* parent = nullptr) : QWidget(parent) {}
-    [[nodiscard]] QSize sizeHint() const override { return {60, 40}; }
-    [[nodiscard]] QSize minimumSizeHint() const override { return {60, 40}; }
-};
-
-[[nodiscard]] inline QString tabTitles(const QTabWidget* tabs) {
-    QStringList titles;
-    for (int index = 0; index < tabs->count(); ++index) {
-        titles << tabs->tabText(index);
-    }
-    return titles.join(QLatin1Char('|'));
-}
-
-/// `QSplitter` has no stretch-factor getter -- only `setStretchFactor` -- and Qt
-/// implements that by writing the child's size policy. Reading the policy back is
-/// therefore the only way to assert a stretch factor directly; the independent
-/// check is the resize-ratio test at the end of this file. If a future Qt stops
-/// keeping the two in step, these will disagree, which is the signal to look.
-[[nodiscard]] inline int horizontalStretch(const QSplitter* splitter, int index) {
-    return splitter->widget(index)->sizePolicy().horizontalStretch();
-}
-
-[[nodiscard]] inline int verticalStretch(const QSplitter* splitter, int index) {
-    return splitter->widget(index)->sizePolicy().verticalStretch();
 }
 
 /// A *shown* window.
@@ -202,24 +163,6 @@ public:
     return total > 0 ? static_cast<double>(sizes.at(index)) / total : 0.0;
 }
 
-/// A window that has restored its saved layout, in the order the header
-/// documents: construct, resize, restore, *then* show.
-///
-/// The order matters. `restoreGeometry()` applied to an already-visible window
-/// lets Qt re-fit it to the screen instead of honouring the stored size -- under
-/// the offscreen platform a 1200x800 window came back as 900x774, which is its
-/// minimum width. Restoring first avoids the whole question.
-[[nodiscard]] inline std::unique_ptr<MainWindow> restoredWindow(int width = 1200,
-                                                        int height = 800) {
-    auto window = std::make_unique<MainWindow>();
-    window->resize(width, height);
-    window->restoreLayout();
-    window->show();
-    QApplication::processEvents();
-    QApplication::processEvents();
-    return window;
-}
-
 /// `text` without its keyboard mnemonics, so "Zoom &In" matches "Zoom In".
 inline QString withoutMnemonic(const QString& text) {
     return QString{text}.remove(QLatin1Char('&'));
@@ -246,26 +189,6 @@ inline QAction* entryContaining(QMenu* menu, const QString& fragment) {
         }
     }
     return nullptr;
-}
-
-/// Renders the overlay into an image and counts the pixels it touched, which is
-/// the only way to say "paints nothing" without looking at a screen.
-[[nodiscard]] inline int overlayInk(CrtOverlay& overlay) {
-    overlay.resize(80, 60);
-    QImage image{80, 60, QImage::Format_ARGB32_Premultiplied};
-    image.fill(Qt::transparent);
-    QPainter painter{&image};
-    overlay.render(&painter);
-    painter.end();
-    int inked = 0;
-    for (int y = 0; y < image.height(); ++y) {
-        for (int x = 0; x < image.width(); ++x) {
-            if (image.pixelColor(x, y).alpha() > 0) {
-                ++inked;
-            }
-        }
-    }
-    return inked;
 }
 
 }  // namespace tw::ui_layout

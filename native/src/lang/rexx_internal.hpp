@@ -61,7 +61,6 @@ bool is_space(char character);
 std::string trim(std::string_view text);
 bool starts_with(std::string_view text, std::string_view prefix);
 /// The reference's `repr(float)` is the shortest round-trip form.
-std::string float_repr(double value);
 std::string fmt(const RValue& value);
 double num(const RValue& value);
 bool is_numeric(const std::string& text);
@@ -113,13 +112,10 @@ std::string strip_comment(const std::string& line);
 std::vector<std::string> split_statements(const std::string& line);
 std::vector<std::string> split_args(const std::string& text);
 std::vector<std::string> code_words(const std::string& line);
-const std::vector<std::string>& block_openers();
 bool in_words(const std::vector<std::string>& words, std::string_view value);
 std::size_t scan_block_end(Interpreter& interpreter, std::size_t start);
-const std::regex& label_pattern();
 std::map<std::string, std::size_t> labels(Interpreter& interpreter);
 std::string statement_after_label(const std::string& text);
-bool line_starts_do(Interpreter& interpreter, std::size_t line);
 std::size_t after_statement(Interpreter& interpreter, std::size_t line);
 std::size_t after_else_clause(Interpreter& interpreter, std::size_t else_line);
 

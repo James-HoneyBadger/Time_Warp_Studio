@@ -19,6 +19,12 @@
 namespace timewarp::lang {
 namespace apl_detail {
 
+// Read by the file that defines them, in this order: `display_text` renders each row
+// through `row_text` before the rows are joined. The header no longer declares them,
+// because nothing outside this file calls them.
+std::string number_text(double value);
+std::string row_text(const Value& value);
+
 bool is_array(const Value& value) { return value.kind == Value::Kind::Array; }
 
 bool is_number(const Value& value) { return value.kind == Value::Kind::Number; }
