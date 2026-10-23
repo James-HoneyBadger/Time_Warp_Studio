@@ -27,13 +27,13 @@ reference; see §6.
 
 ```bash
 # Debian / Ubuntu
-sudo apt install build-essential cmake qt6-base-dev libqt6svg6-dev libsqlite3-dev
+sudo apt install build-essential cmake qt6-base-dev libqt6svg6-dev libsqlite3-dev zlib1g-dev
 
 # Fedora
-sudo dnf install gcc-c++ cmake qt6-qtbase-devel qt6-qtsvg-devel sqlite-devel
+sudo dnf install gcc-c++ cmake qt6-qtbase-devel qt6-qtsvg-devel sqlite-devel zlib-devel
 
 # Arch
-sudo pacman -S base-devel cmake qt6-base qt6-svg sqlite
+sudo pacman -S base-devel cmake qt6-base qt6-svg sqlite zlib
 ```
 
 On macOS, `brew install cmake qt` and pass `-DCMAKE_PREFIX_PATH=$(brew --prefix qt)`.

@@ -30,11 +30,14 @@ FROM ubuntu:24.04 AS build
 ARG VERSION=0.0.0
 
 # The package set the Linux job in `native.yml` installs, because the image should
-# be the configuration that job proved rather than a second one.
+# be the configuration that job proved rather than a second one. `zlib1g-dev` is
+# in the list because CMake asks for it with `find_package(ZLIB REQUIRED)` and a
+# bare `ubuntu` image does not carry it -- a hosted runner does, which is why the
+# job could pass without naming it and this image could not.
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
         build-essential cmake ninja-build \
-        qt6-base-dev qt6-base-dev-tools libsqlite3-dev \
+        qt6-base-dev qt6-base-dev-tools libsqlite3-dev zlib1g-dev \
         libgl1-mesa-dev libxkbcommon-dev \
     && rm -rf /var/lib/apt/lists/*
 
