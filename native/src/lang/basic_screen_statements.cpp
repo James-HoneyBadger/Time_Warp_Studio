@@ -8,18 +8,13 @@
 
 #include <algorithm>
 #include <cctype>
-#include <chrono>
-#include <cmath>
 #include <cstdio>
 #include <cstdlib>
 #include <cstddef>
 #include <filesystem>
 #include <optional>
-#include <regex>
 #include <string>
 #include <string_view>
-#include <thread>
-#include <utility>
 #include <vector>
 
 #include "timewarp/audio/music.hpp"

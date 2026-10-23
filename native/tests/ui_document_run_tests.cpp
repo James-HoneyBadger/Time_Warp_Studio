@@ -175,6 +175,7 @@ void test_running_logo_draws_on_the_canvas() {
     if (canvas == nullptr) {
         return;
     }
+    const QColor paper_before = canvas->background();
     window.runCurrentDocument();
     TW_CHECK(waitFor([&window] {
         return badgeText(window, "executionBadge") != QStringLiteral("running");
@@ -198,8 +199,13 @@ void test_running_logo_draws_on_the_canvas() {
     const QColor paper = timewarp::ui::themes::colour(
         timewarp::ui::themes::byName(window.currentThemeName()).canvas_bg);
     TW_CHECK_EQ(canvas->background(), paper);
-    const QColor white{255, 255, 255};
-    TW_CHECK(canvas->background() != white);
+    // And the run did not *choose* a paper: the surface it painted on is the one the
+    // canvas already had. The assertion this replaced was `background() != white`,
+    // which said "the theme's paper is not white" -- true of the default theme and
+    // false of Windows 2000, whose paper is exactly white, so a store left on that
+    // theme by an interrupted run failed a case that had nothing to do with it. The
+    // invariant that matters is that a run and an idle canvas agree.
+    TW_CHECK_EQ(canvas->background(), paper_before);
 }
 
 /// The text of one cell in a named table, or an empty string when the row or the
@@ -508,6 +514,26 @@ void test_stopping_when_nothing_runs_is_harmless() {
 /// exact complaint the canvas tests exist to catch. The paper decides the
 /// starting ink, so the same program draws black lines on white paper.
 
+/// Puts the theme back when it goes out of scope.
+///
+/// The theme is a persisted setting, so a case that changes it and then returns early
+/// -- an unavailable canvas, a failed assertion is not enough, but a `return` is --
+/// leaves the next case, and the next *run* of the suite, on a surface it did not
+/// choose. That is how a store ended up on Windows 2000 and failed a run case three
+/// cases earlier.
+class ThemeRestorer {
+public:
+    explicit ThemeRestorer(MainWindow& window)
+        : window_{window}, previous_{window.currentThemeName()} {}
+    ThemeRestorer(const ThemeRestorer&) = delete;
+    ThemeRestorer& operator=(const ThemeRestorer&) = delete;
+    ~ThemeRestorer() { window_.applyTheme(previous_); }
+
+private:
+    MainWindow& window_;
+    QString previous_;
+};
+
 void test_a_light_theme_draws_dark_ink() {
     announce("a light theme draws dark ink");
     QTemporaryDir dir;
@@ -516,7 +542,7 @@ void test_a_light_theme_draws_dark_ink() {
     TW_CHECK(!path.isEmpty());
 
     MainWindow window;
-    const QString previous = window.currentThemeName();
+    const ThemeRestorer restore{window};
     window.applyTheme(QStringLiteral("Windows 2000"));
     TW_CHECK(window.openFile(path));
     TurtleCanvas* canvas = window.turtleCanvas();
@@ -534,9 +560,6 @@ void test_a_light_theme_draws_dark_ink() {
     TW_CHECK(ink.isValid());
     TW_CHECK(ink.lightness() < 128);
     window.close();
-    // The theme is a persisted setting; the tests after this one expect the one
-    // the suite started with.
-    window.applyTheme(previous);
 }
 
 

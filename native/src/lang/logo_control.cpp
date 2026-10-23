@@ -9,7 +9,6 @@
 #include <cstdio>
 #include <cstdlib>
 #include <random>
-#include <utility>
 
 namespace timewarp::lang {
 namespace logo_detail {

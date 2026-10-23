@@ -3,15 +3,11 @@
 // Variables, lists, words, the drawing extras and the higher-order primitives.
 #include "logo_internal.hpp"
 
-#include <algorithm>
 #include <cmath>
 #include <cstddef>
 #include <cstdio>
 #include <cstdlib>
-#include <chrono>
 #include <random>
-#include <set>
-#include <thread>
 #include <utility>
 
 namespace timewarp::lang {
