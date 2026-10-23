@@ -37,9 +37,10 @@ the five tools. Two new gates keep each of those from growing back.
   `retro_computer_internal.hpp`. The Logo class moved from an anonymous namespace into
   a named one, because a type several translation units define methods for needs one
   definition they all agree on.
-- **The two largest suites are one file per subject.** `ui_layout_tests` (4,010 lines,
-  85 cases) is eight files under `tests/ui_layout/` and `lang_tests` (3,150, 191) is
-  eight under `tests/lang/`, each with a `support.hpp` for what they share and a
+- **The three largest suites are one file per subject.** `ui_layout_tests` (4,010
+  lines, 85 cases) is eight files under `tests/ui_layout/`, `lang_tests` (3,150, 191)
+  is eight under `tests/lang/`, and `ui_document_tests` (1,906, 44) is seven under
+  `tests/ui_document/`, each with a `support.hpp` for what they share and a
   `cases.hpp` for the order `main` runs them in -- written down rather than discovered,
   because the cases share a `QSettings` store, a snippet catalogue and a seeded
   generator.

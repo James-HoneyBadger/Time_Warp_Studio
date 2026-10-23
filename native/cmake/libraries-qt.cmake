@@ -956,7 +956,15 @@ if(TIME_WARP_QT_FOUND)
             # The document lifecycle gets its own binary: it is about what happens
             # to a user's file, not about where the widgets sit, and the two fail
             # for unrelated reasons.
-            add_executable(ui_document_tests tests/ui_document_tests.cpp)
+            add_executable(ui_document_tests
+                tests/ui_document_tests.cpp
+                tests/ui_document_debug_tests.cpp
+                tests/ui_document_edit_tests.cpp
+                tests/ui_document_language_tests.cpp
+                tests/ui_document_lifecycle_tests.cpp
+                tests/ui_document_run_tests.cpp
+                tests/ui_document_session_tests.cpp
+            )
             target_link_libraries(ui_document_tests PRIVATE timewarp::ui)
             target_include_directories(ui_document_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/tests)
             timewarp_enable_warnings(ui_document_tests)
