@@ -494,6 +494,7 @@ if(TIME_WARP_QT_FOUND)
             src/ui/main_window_chrome.cpp
             src/ui/main_window_data.cpp
             src/ui/main_window_session.cpp
+            src/ui/main_window_panels.cpp
             src/ui/main_window_run.cpp
             src/ui/outline.cpp
             src/ui/panels_status.cpp

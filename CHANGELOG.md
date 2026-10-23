@@ -63,6 +63,12 @@ the five tools. Two new gates keep each of those from growing back.
   model in `md_lines.cpp`, five rule files -- headings, code, lists, whitespace, inline
   content -- one command file, and two headers that say what the rules pass around and
   what the set of them is.
+- **The size budget came down from 2,000 to 1,500 lines.** It was set at 2,000 while
+  the tree still had 3,548-line files to work down; with every file under 1,500 it is a
+  ceiling with headroom rather than one that gets raised. `main_window_run.cpp` (1,495)
+  is now two files -- the run path, and the panels, lessons and classroom -- and
+  `scheme/machine.cpp` (1,480) is three: the driver, the sequences and application, and
+  the special forms with quasiquote.
 - **One command-line vocabulary.** `native/include/timewarp/tools/cli.hpp` gives all
   five tools `--root`, `--json PATH`, `--quiet` and `--help` in any position, a
   `cli::Command` table per tool so the usage message comes from the list that
@@ -76,7 +82,7 @@ the five tools. Two new gates keep each of those from growing back.
   and its key together -- a table row by another name. It found ten in its first run,
   all comments, so it reads code and not prose; a duplicate injected into `value.cpp`
   made it fail, as it should.
-- **`time_warp_gates structure`** fails on a source file past 2,000 lines that is not on
+- **`time_warp_gates structure`** fails on a source file past 1,500 lines that is not on
   a waiver list, on a build file past 200, and on a waiver that is no longer needed --
   the list may only shrink, which is how `main_window.cpp` and `panels.cpp` left it.
 - **`cli_tests`** pins that vocabulary: the two spellings of `--root`, an option after

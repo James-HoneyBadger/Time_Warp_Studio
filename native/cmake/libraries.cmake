@@ -82,6 +82,8 @@ add_library(timewarp_scheme
     src/scheme/reader.cpp
     src/scheme/printer.cpp
     src/scheme/machine.cpp
+    src/scheme/machine_apply.cpp
+    src/scheme/machine_forms.cpp
     src/scheme/builtins.cpp
 )
 add_library(timewarp::scheme ALIAS timewarp_scheme)

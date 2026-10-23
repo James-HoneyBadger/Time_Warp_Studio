@@ -895,7 +895,10 @@ five modules under `native/cmake/`:
 `include()` rather than `add_subdirectory()` on purpose: one directory scope keeps the
 thousands of `src/…` paths in those files relative to `native/`, which is what they
 assume. `time_warp_gates structure` fails if `CMakeLists.txt` grows past 200 lines or a
-source file past 2,000 without being named on a waiver list that may only shrink.
+source file past 1,500 without being named on a waiver list that may only shrink. The
+budget was 2,000 while the tree still had monoliths to work down -- the largest file
+was 3,548 lines then -- and came down when every file fitted: the largest is now 1,495,
+and a budget with no headroom is the one that gets raised.
 
 ### The command line
 

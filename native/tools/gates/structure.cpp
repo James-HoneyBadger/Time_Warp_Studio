@@ -31,7 +31,13 @@ namespace {
 
 /// A source file's budget. Small enough that reading one is a sitting, large enough
 /// that a language executor fits.
-constexpr int kSourceLineBudget = 2000;
+///
+/// It was 2,000 while the tree still had monoliths to work down, and the largest file
+/// was 3,548 lines. When every file fitted, the budget came down to 1,500 -- not
+/// because 1,500 is a principle, but because a budget with no headroom is the one that
+/// gets raised. The largest file now is 1,495, and the next one to grow past 1,500 has
+/// to say why on the waiver list.
+constexpr int kSourceLineBudget = 1500;
 
 /// The build file's budget: a schedule of includes and options, not the build itself.
 constexpr int kBuildLineBudget = 200;
