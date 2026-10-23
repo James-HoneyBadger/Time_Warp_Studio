@@ -32,6 +32,9 @@ the five tools. Two new gates keep each of those from growing back.
 - **`main_window.cpp` (6,245 lines) is eight files**, one per section that was already
   commented in it, over `main_window_internal.hpp` for the keys and helpers they share.
 - **`panels.cpp` (2,047 lines) is six files**, one per panel group.
+- **`rexx.cpp` (1,801 lines) is three**: the value type, the state and the helpers the
+  machine and the parser both call, the tokenizer and expression parser, and the
+  machine. `rexx_detail` is a named namespace for the reason `logo_detail` is.
 - **`turtle_canvas.cpp` (1,847 lines) is four**: the command handlers, the view
   (projection, fit, zoom, grid, events), the screen mode that writes pixels into a
   framebuffer, and the painter that draws the display list, the grid, the turtle marker

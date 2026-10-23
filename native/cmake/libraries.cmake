@@ -218,7 +218,11 @@ add_library(tw_lang_focal OBJECT src/lang/focal.cpp)
 add_library(tw_lang_pilot OBJECT src/lang/pilot.cpp)
 add_library(tw_lang_comal OBJECT src/lang/comal.cpp)
 add_library(tw_lang_apl OBJECT src/lang/apl.cpp)
-add_library(tw_lang_rexx OBJECT src/lang/rexx.cpp)
+add_library(tw_lang_rexx OBJECT
+    src/lang/rexx.cpp
+    src/lang/rexx_parser.cpp
+    src/lang/rexx_support.cpp
+)
 add_library(tw_lang_smalltalk OBJECT
     src/lang/smalltalk.cpp
     src/lang/smalltalk_library.cpp
