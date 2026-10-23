@@ -833,7 +833,13 @@ void ForthMachine::run_code(const std::vector<Instruction>& code) {
     std::vector<Frame> frames;
     frames.push_back(Frame{&code, 0, loops_.size()});
     while (!frames.empty()) {
-        Frame& frame = frames.back();
+        // The frame is read through a reference but written back through its
+        // *index*: a call pushes a frame, and a `std::vector` that reallocates moves
+        // every frame with it. A reference taken before the push and written after it
+        // is a use-after-free, and AddressSanitizer found exactly that in a lesson
+        // program.
+        const std::size_t depth = frames.size() - 1;
+        const Frame& frame = frames[depth];
         if (bye_) {
             loops_.resize(frame.loop_depth);
             frames.clear();
@@ -849,8 +855,8 @@ void ForthMachine::run_code(const std::vector<Instruction>& code) {
             continue;
         }
         const Instruction& instruction = (*frame.code)[frame.ip];
-        ++frame.ip;
-        std::size_t ip = frame.ip;
+        frames[depth].ip = frame.ip + 1;
+        std::size_t ip = frames[depth].ip;
         switch (instruction.op) {
             case Instruction::Op::Push:
                 push(instruction.value);
@@ -926,7 +932,7 @@ void ForthMachine::run_code(const std::vector<Instruction>& code) {
                 break;
         }
         // A jump replaced the ip; otherwise the ip is already the next instruction.
-        frame.ip = ip;
+        frames[depth].ip = ip;
     }
 }
 

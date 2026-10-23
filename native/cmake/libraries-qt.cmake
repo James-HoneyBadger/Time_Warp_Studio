@@ -777,7 +777,7 @@ if(TIME_WARP_QT_FOUND)
             install(TARGETS time_warp_learn RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
         endif()
         # A command, not development scaffolding: "check this program" is one of the
-        # things a person who writes programs in ten languages wants from a terminal,
+        # things a person who writes programs in eleven languages wants from a terminal,
         # and it is the same report the gates read.
         install(TARGETS time_warp_check RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
         install(TARGETS time_warp_api

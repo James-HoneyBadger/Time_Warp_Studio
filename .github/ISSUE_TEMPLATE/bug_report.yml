@@ -76,6 +76,7 @@ body:
         - APL
         - CHIP-8
         - Smalltalk
+        - Forth
         - Not language-specific (the window, the editor, the canvas, packaging)
     validations:
       required: true

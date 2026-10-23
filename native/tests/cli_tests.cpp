@@ -11,6 +11,7 @@
 #include "timewarp/tools/cli.hpp"
 
 #include <cstdio>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -109,12 +110,22 @@ void test_positionals_skip_a_commands_own_options() {
 
 void test_a_command_can_read_its_own_option_by_either_spelling() {
     const Invocation spaced = parse_line({"tool", "commands", "--language", "LOGO"});
-    TW_CHECK(spaced.value("--language").has_value());
-    TW_CHECK_EQ(*spaced.value("--language"), std::string{"LOGO"});
+    const std::optional<std::string> spaced_language = spaced.value("--language");
+    TW_CHECK(spaced_language.has_value());
+    if (spaced_language.has_value()) {
+        TW_CHECK_EQ(*spaced_language, std::string{"LOGO"});
+    }
     TW_CHECK(spaced.has("--language"));
 
     const Invocation joined = parse_line({"tool", "commands", "--language=LOGO"});
-    TW_CHECK_EQ(*joined.value("--language"), std::string{"LOGO"});
+    // Bound to a local: `value()` returns an optional by value, and comparing through
+    // `*joined.value(...)` reads a temporary that has already gone by the time the
+    // assertion runs. AddressSanitizer called it stack-use-after-scope.
+    const std::optional<std::string> language = joined.value("--language");
+    TW_CHECK(language.has_value());
+    if (language.has_value()) {
+        TW_CHECK_EQ(*language, std::string{"LOGO"});
+    }
     TW_CHECK(!joined.value("--explain").has_value());
 }
 

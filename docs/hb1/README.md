@@ -10,7 +10,7 @@ READY.
 ```
 
 This is the manual for the machine the Studio carries: a home computer from a
-1982 that never happened, where one socket accepted ten language ROMs and the
+1982 that never happened, where one socket accepted eleven language ROMs and the
 disk was measured in sectors because disks were still physical things. The
 machine is real software — everything in this book happens when you type it.
 
@@ -26,7 +26,7 @@ machine is real software — everything in this book happens when you type it.
 | | |
 | --- | --- |
 | Model | HB-1 Personal Computer System |
-| ROM socket | Ten language ROMs: BASIC, APL, Logo, PILOT, FOCAL, Scheme, CHIP-8, COMAL, REXX, Smalltalk |
+| ROM socket | Eleven language ROMs: BASIC, APL, Logo, PILOT, FOCAL, Scheme, CHIP-8, COMAL, REXX, Smalltalk, Forth |
 | Program memory | 64K, one buffer per ROM, kept when you switch away |
 | Display | One CRT, three modes: TEXT, SPLIT (the default), GRAPHICS |
 | Text side | PROGRAM (a real code editor) and SCREEN (the tube, painted from memory) |
@@ -51,7 +51,7 @@ otherwise — and prints its **self-test** and then the banner above:
 HB-1 SELF TEST
 32768 BYTES FREE
 RAM CHECK OK (128 CELLS)
-ROM CHECK OK (10 ROMS, 3078602950)
+ROM CHECK OK (11 ROMS, 3352561743)
 HB DOS 1.0  HBWARP
 *** HB-1 ***
 …

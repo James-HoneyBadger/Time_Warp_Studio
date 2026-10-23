@@ -1,7 +1,7 @@
 # Language Guide - Time Warp Studio
 
-Time Warp Studio actively implements and ships **10 programming languages**:
-BASIC, APL, Logo, PILOT, FOCAL, Scheme, CHIP-8, COMAL, REXX, and Smalltalk.
+Time Warp Studio actively implements and ships **11 programming languages**:
+BASIC, APL, Logo, PILOT, FOCAL, Scheme, CHIP-8, COMAL, REXX, Smalltalk and Forth.
 
 > **All eleven have reference sections below.** Each language also has a suite in
 > `native/tests/`, a worked example and a showcase under `Examples/`, and rows in
@@ -43,7 +43,7 @@ direct mode, [the ROM library](hb1/roms.md). The CHIP-8 section below is joined 
 
 [The REPL in each language](#the-repl-in-each-language) explains which bindings
 survive between commands, and [SQL in nine languages](#sql-in-nine-languages) is a
-Studio extension available from every language except CHIP-8.
+Studio extension available from every language except CHIP-8 and Forth.
 
 Each language also has a worked example and a tutorial:
 

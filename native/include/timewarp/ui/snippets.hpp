@@ -6,7 +6,7 @@
 // Ported from `ui/snippets.py` (641 lines) and `features/snippets.json`, with the
 // catalogue itself rewritten: the old file held BASIC, Logo, Pascal, Prolog,
 // Forth and C, and three of those languages no longer exist here. This one has
-// the ten, and every construct in it appears in a program under `Examples/` or in
+// all eleven, and every construct in it appears in a program under `Examples/` or in
 // `docs/LANGUAGE_GUIDE.md` -- a snippet that teaches syntax the engine rejects is
 // worse than an empty library.
 //

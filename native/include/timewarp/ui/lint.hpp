@@ -2,9 +2,9 @@
 //
 // Language-specific checking, on the text, as you type.
 //
-// The IDE teaches ten languages whose grammars disagree about nearly everything,
+// The IDE teaches eleven languages whose grammars disagree about nearly everything,
 // so "does this look right?" has to be answered per language rather than by one
-// generic linter. What the ten *do* share is that a beginner's mistakes are
+// generic linter. What the eleven *do* share is that a beginner's mistakes are
 // structural and local: a bracket left open, a string with no closing quote, a
 // `FOR` with no `NEXT`, a keyword typed one letter wrong. Those are what this
 // checks, and it checks them from the text alone.

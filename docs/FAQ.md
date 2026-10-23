@@ -60,8 +60,8 @@ you can watch. [The machines](MACHINES.md) explains the premise item by item.
 
 ### Which languages are supported?
 
-BASIC, APL, Logo, PILOT, FOCAL, Scheme, CHIP-8, COMAL, REXX and Smalltalk. Each
-language implements a subset of its traditional form. See the
+BASIC, APL, Logo, PILOT, FOCAL, Scheme, CHIP-8, COMAL, REXX, Smalltalk and Forth.
+Each language implements a subset of its traditional form. See the
 [Language Guide](LANGUAGE_GUIDE.md) for what each one supports.
 
 ### Is Time Warp Studio free?
@@ -143,6 +143,7 @@ See the [Installation Guide](INSTALLATION.md) for platform-specific steps.
 | COMAL | `.comal`, `.cml` |
 | REXX | `.rexx`, `.rex` |
 | Smalltalk | `.st`, `.smalltalk` |
+| Forth | `.fs`, `.fth` |
 
 Unknown extensions open as BASIC by default.
 

@@ -2,7 +2,7 @@
 //
 // Syntax highlighting, one rule table per language.
 //
-// The ten languages are not conventionally coloured text, so a single shared
+// The eleven languages are not conventionally coloured text, so a single shared
 // approximation with a keyword list bolted on gets several of them wrong:
 //
 //   * FOCAL has no comment syntax at all -- an unrecognised command is an error,
@@ -44,7 +44,7 @@ namespace timewarp::ui {
 
 /// The colours a document is painted in.
 ///
-/// Five roles, because that is how many distinctions the ten languages need
+/// Five roles, because that is how many distinctions the eleven languages need
 /// between them.
 struct SyntaxColors {
     QColor keyword;
@@ -86,8 +86,8 @@ public:
         return static_cast<int>(rules_.size());
     }
 
-    /// Whether this language matches keywords without regard to case. Six of the
-    /// ten do, and the engine uppercases before every lookup.
+    /// Whether this language matches keywords without regard to case. Seven of the
+    /// eleven do, and the engine uppercases before every lookup.
     [[nodiscard]] bool keywordsAreCaseInsensitive() const noexcept {
         return case_insensitive_;
     }

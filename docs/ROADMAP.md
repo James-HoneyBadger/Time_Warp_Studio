@@ -1,6 +1,6 @@
 # Roadmap
 
-Time Warp Studio is a C++20 / Qt6 workbench for ten old-school languages and two machines. This page is
+Time Warp Studio is a C++20 / Qt6 workbench for eleven old-school languages and two machines. This page is
 the honest state of it: what works, what is next, and what is deliberately not
 being built.
 
@@ -23,7 +23,7 @@ derived rather than remembered.
 | Shell | Documents and tabs, menus, toolbars, status bar, settings persistence, the last session's files restored at launch |
 | Editor | Line-number gutter, current-line highlight, per-language syntax colouring, find/replace, find in files, go-to-line, tab stops, fonts, error squiggles with gutter markers, completion, auto-indent, Format Code, minimap, outline |
 | Projects | `.twproject` files, named groups, files and folders added to a project, drag-and-drop grouping, missing-file reporting, recent projects and session restore |
-| REPL | A persistent session per language under the editor; Scheme keeps definitions and echoes values, the line-loop languages and Logo keep bindings, while Smalltalk and CHIP-8 run each entry as a whole program |
+| REPL | A persistent session per language under the editor; Scheme keeps definitions and echoes values, the line-loop languages and Logo keep bindings, while Smalltalk, CHIP-8 and Forth run each entry as a whole program |
 | Console | Streaming output, and interpreter errors in their own tab |
 | Canvas | Live drawing, zoom, pan, grid, auto-fit, turtle marker, scrubber playback, animated GIF recording, raster and SVG export, the pose strip and the command log, and a fixed-coordinate screen mode (`SCREEN`) with sprites, pixel read-back and a game example; in screen mode the wheel zooms the screen about the pointer and a click reads back the pixel under it |
 | Display | 35 themes, high contrast, A+ text sizes (100/125/150%), focus mode, CRT settings, four Monitor presets |

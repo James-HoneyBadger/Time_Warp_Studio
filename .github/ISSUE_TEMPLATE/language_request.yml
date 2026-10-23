@@ -13,12 +13,12 @@ body:
   - type: markdown
     attributes:
       value: |
-        Ten languages are supported today, and they were chosen to cover a spread
+        Eleven languages are supported today, and they were chosen to cover a spread
         rather than a list: BASIC and COMAL for line-oriented imperative, Logo for
         turtle graphics, PILOT for computer-aided instruction, REXX for string
         processing, Scheme for functional, APL for array, FOCAL as the other
-        teaching language of 1969, CHIP-8 for the machine underneath, and
-        Smalltalk for objects.
+        teaching language of 1969, CHIP-8 for the machine underneath, Smalltalk
+        for objects, and Forth for the stack.
 
         What this form is really asking is: **which slot would it fill that is
         empty, and what would a learner understand after it that they do not

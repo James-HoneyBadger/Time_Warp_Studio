@@ -32,7 +32,7 @@ the parity gate compares with a recorded corpus, and the harnesses drive
     languages `native/src/ui/language.cpp`, a Qt adapter over the one table in
     `native/include/timewarp/lang/registry.hpp`
   - Every language is native: Scheme (`timewarp_scheme`, an explicit-stack CEK
-    machine, dispatched in-process) and CHIP-8, Logo and Smalltalk
+    machine, dispatched in-process) and CHIP-8, Logo, Smalltalk and Forth
     (whole-program) plus BASIC, FOCAL, PILOT, COMAL, APL and REXX (line-by-line)
     on `timewarp_lang`, the shared interpreter loop plus one executor each, and
     the expression evaluator (`timewarp_expr`, linked into `timewarp_lang` and

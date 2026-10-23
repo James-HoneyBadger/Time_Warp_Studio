@@ -2,6 +2,51 @@
 
 <!-- history: all -->
 
+## [23.0.1] - 2026-10-22
+
+Two dangling references the sanitizer found once the tree was split, a tube that
+leaked a font on every text-size change, and the last of the prose that still
+counted ten languages.
+
+AddressSanitizer's report was a stack-use-after-scope in `cli_tests` and a
+use-after-free in Forth, and both were the same mistake in different clothes: a
+reference into storage that had moved or died before it was written through. The
+leak check then failed `retro_computer_tests` on the machine's own screen.
+
+### Fixed
+
+- **Forth wrote through a frame the call stack had moved.** `run_code` kept a
+  `Frame&` into `std::vector<Frame>` for the whole loop body, and a `Call` pushes a
+  frame; when that push reallocated, the `ip` written at the end of the iteration
+  went into freed memory. It surfaced as a use-after-free in a lesson program, not
+  in a Forth example, because a lesson is the first program with enough nesting to
+  cross the vector's capacity. The frame is now read through a reference and written
+  back through its index, so a reallocation is harmless.
+- **`cli_tests` compared against a dead `optional`.** `*joined.value("--language")`
+  dereferences a temporary that the assertion no longer owns; the value is bound to
+  a local first. Two assertions in the same case had it.
+- **The tube leaked a `QFont` per text size.** `HbTube::recomputeCell()` built its
+  font with `new` and kept the pointer, so every settings change and every size
+  change orphaned the one before it -- 819 allocations, 53KB, reported as the one
+  failing suite in `make asan`. The font is a value member now, which is what a
+  member that is gone when its owner is should always have been.
+
+### Changed
+
+- **The language count, everywhere it is prose.** `docs/INDEX.md`,
+  `docs/MACHINES.md`, `docs/ROADMAP.md`, `docs/FAQ.md`, `docs/LANGUAGE_GUIDE.md`
+  and the header comments in the linter, the snippet catalogue and the syntax
+  highlighter say eleven, and the enumerations that had gone on naming ten —
+  the `--help` description, the FAQ's extension table, the bug-report language
+  dropdown, the HB-1's ROM-socket row, the machines premise, the roadmap's REPL row,
+  the README's native-engines bullet and the Linux `.desktop` comment and keywords
+  — now name Forth.
+- **The HB-1's self-test transcript** reads `ROM CHECK OK (11 ROMS, 3352561743)`,
+  which is what the machine prints with the eleventh ROM in the socket.
+- `docs/LANGUAGE_GUIDE.md` says SQL is available in nine languages from every
+  language except CHIP-8 *and Forth*; Forth never had the statement, so the
+  exception list was incomplete rather than the count.
+
 ## [23.0.0] - 2026-10-22
 
 The infrastructure, made modular: one home for the language table, a build that is

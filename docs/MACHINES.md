@@ -5,7 +5,7 @@ built into it, and they are the reason it exists rather than being another edito
 with a Run button:
 
 - the **[HB-1](hb1/README.md)** — a personal computer from a 1982 that never
-  happened, shipped with ten language ROMs in one socket, a prompt, a CRT and a
+  happened, shipped with eleven language ROMs in one socket, a prompt, a CRT and a
   disk; and
 - the **[CHIP-8](chip8/README.md)** — the 1977 virtual machine: sixty-four by
   thirty-two pixels, sixteen keys, four kilobytes, and more instruction per byte
@@ -27,8 +27,8 @@ That single premise decides everything about it:
 
 - **One ROM socket, eleven languages.** The parallel 1982 did not have a format war
   over BASIC. Its machine shipped with BASIC, Logo, PILOT, FOCAL, COMAL, REXX,
-  Scheme, APL, Smalltalk and CHIP-8, each a cartridge you select from the front
-  panel, each keeping its own memory when you switch away.
+  Scheme, APL, Smalltalk, CHIP-8 and Forth, each a cartridge you select from the
+  front panel, each keeping its own memory when you switch away.
 - **A disk in the old measurements.** The volume is 512 sectors of 256 bytes,
   named files with a lock bit, a catalogue with a `*` beside the protected ones,
   and a two-step `INIT` — because that is how a 1982 learner learned that a disk
@@ -87,7 +87,7 @@ examples:
 | What it is | A complete home computer: CRT, prompt, ROM socket, editor, canvas, disk | A virtual machine: 4K of memory, sixteen registers, sixteen keys |
 | Year, in its universe | 1982 | 1977 |
 | Screen | TEXT / SPLIT / GRAPHICS sharing one CRT | 64×32 monochrome, or 128×64 in SuperChip hi-res |
-| Languages | All ten, one ROM at a time | One: CHIP-8 opcodes |
+| Languages | All eleven, one ROM at a time | One: CHIP-8 opcodes |
 | Storage | HB DOS 1.0, 512 sectors, one volume | Your own files; the ROM library browses a folder you choose |
 | Interaction | A prompt with history, BASIC direct mode, F9 to run | A keypad, 60 frames a second, Run/Step/Reset |
 | Where it lives | Tools > **HB-1 Computer…** (`Ctrl+Alt+W`), or `./run.sh --computer` | Tools > **CHIP-8 Emulator…** (`Ctrl+Shift+M`) |

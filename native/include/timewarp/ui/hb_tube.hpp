@@ -27,13 +27,12 @@
 #pragma once
 
 #include <QColor>
+#include <QFont>
 #include <QString>
 #include <QStringList>
 #include <QWidget>
 
 #include "timewarp/ui/hb_memory.hpp"
-
-class QFont;
 
 namespace timewarp::ui {
 
@@ -129,7 +128,7 @@ private:
     HbMemory* memory_ = nullptr;
     TubePalette palette_;
     int text_size_ = 11;
-    QFont* font_ = nullptr;
+    QFont font_;
     QSize cell_{8, 16};
     QStringList transcript_;
     int scroll_offset_ = 0;

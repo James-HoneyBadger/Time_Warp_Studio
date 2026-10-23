@@ -6,7 +6,7 @@ complete computers inside it.*
 [![C++20](https://img.shields.io/badge/C%2B%2B-20-blue)](https://en.cppreference.com/)
 [![Qt](https://img.shields.io/badge/Qt-6%20%7C%205.15-green)](https://www.qt.io/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/Version-23.0.0-orange)](https://github.com/James-HoneyBadger/Time_Warp_Studio)
+[![Version](https://img.shields.io/badge/Version-23.0.1-orange)](https://github.com/James-HoneyBadger/Time_Warp_Studio)
 
 Time Warp Studio is a native C++20 and Qt workbench for people who like old
 computers. It is the programming environment the 1980s promised and never quite
@@ -208,7 +208,7 @@ exercised by the command matrix.
 - **Automation** — `./api` speaks the JSON-RPC API on stdin/stdout: run a program, keep a REPL session, start and step a debug session, query SQL, edit a project including folder import, and evaluate watches. See [docs/API.md](docs/API.md)
 - **Terminal tools** — `./run.sh` builds if needed and launches the IDE; `./twc program.bas -o program` compiles a program into a standalone executable that embeds the interpreter, writes its drawing as SVG, and takes `--db FILE` when the program uses SQL
 - **Native engines** — every language runs in-process in C++ with no Python at
-  all. Scheme (`timewarp_scheme`) and CHIP-8, Logo and Smalltalk are
+  all. Scheme (`timewarp_scheme`) and CHIP-8, Logo, Smalltalk and Forth are
   whole-program; BASIC, FOCAL, PILOT, COMAL, APL and REXX are line-by-line on
   the shared `timewarp_lang` engine. The arithmetic each one evaluates goes
   through the native expression evaluator (`timewarp_expr`), and the drawing

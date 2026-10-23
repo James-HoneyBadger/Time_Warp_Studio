@@ -103,10 +103,10 @@ void HbTube::setTextSize(int points) {
 }
 
 void HbTube::recomputeCell() {
-    font_ = new QFont{QStringLiteral("monospace"), text_size_};
-    font_->setStyleHint(QFont::TypeWriter);
-    font_->setFixedPitch(true);
-    const QFontMetrics metrics{*font_};
+    font_ = QFont{QStringLiteral("monospace"), text_size_};
+    font_.setStyleHint(QFont::TypeWriter);
+    font_.setFixedPitch(true);
+    const QFontMetrics metrics{font_};
     // A cell is the widest glyph and the line height, so a column never depends on
     // which character is in it: a tube is a grid, and a grid that breathes is not one.
     cell_ = QSize{std::max(6, metrics.horizontalAdvance(QLatin1Char('M'))),
@@ -252,7 +252,7 @@ QColor HbTube::paperColour(int nibble) const {
 }
 
 void HbTube::paintRow(QPainter& painter, int row, const QString& text, bool fromMemory) {
-    painter.setFont(*font_);
+    painter.setFont(font_);
     int column = 0;
     for (const QChar character : text) {
         if (column >= HbMemory::kColumns) {
