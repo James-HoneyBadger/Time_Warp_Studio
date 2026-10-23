@@ -32,6 +32,10 @@ the five tools. Two new gates keep each of those from growing back.
 - **`main_window.cpp` (6,245 lines) is eight files**, one per section that was already
   commented in it, over `main_window_internal.hpp` for the keys and helpers they share.
 - **`panels.cpp` (2,047 lines) is six files**, one per panel group.
+- **`turtle_canvas.cpp` (1,847 lines) is four**: the command handlers, the view
+  (projection, fit, zoom, grid, events), the screen mode that writes pixels into a
+  framebuffer, and the painter that draws the display list, the grid, the turtle marker
+  and the two exports.
 - **`basic_statements.cpp` (2,066 lines) is seven**, and `logo.cpp` (3,548) is six over
   `logo_internal.hpp`, and `retro_computer.cpp` (2,472) is seven over
   `retro_computer_internal.hpp`. The Logo class moved from an anonymous namespace into

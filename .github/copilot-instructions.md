@@ -28,7 +28,7 @@ the parity gate compares with a recorded corpus, and the harnesses drive
   - Shell: `native/src/ui/main_window_*.cpp`, one file per section (construction,
     menus, appearance, actions, chrome, SQL and projects, session, execution) over
     the shared keys and helpers in `main_window_internal.hpp`; canvas
-    `native/src/ui/turtle_canvas.cpp`; editor `native/src/ui/code_editor.cpp`;
+    `native/src/ui/turtle_canvas_*.cpp`; editor `native/src/ui/code_editor.cpp`;
     languages `native/src/ui/language.cpp`, a Qt adapter over the one table in
     `native/include/timewarp/lang/registry.hpp`
   - Every language is native: Scheme (`timewarp_scheme`, an explicit-stack CEK
@@ -211,7 +211,7 @@ supplied — the same evaluator every language shares, and the one the corpus pi
 
 - Turtle state is managed by
   `TurtleCanvas` in the Qt application, which owns the display list
-- Graphics rendered with the Qt painter with zoom/pan support in `native/src/ui/turtle_canvas.cpp`
+- Graphics rendered with the Qt painter with zoom/pan support in `native/src/ui/turtle_canvas_*.cpp`
 - Canvas clearing happens in the Qt UI, not in an executor
 - The reference's conventions are unusual and asserted in `turtle_canvas_tests`:
   heading 0 is **north** and increases clockwise; `forward` is
@@ -271,7 +271,7 @@ needs an interpreter: if a guide names a `python3` command it is out of date, an
 
 - **Qt shell**: `native/src/ui/main_window_*.cpp` — documents, tabs, menus, status bar,
   a file per section, over `main_window_internal.hpp`
-- **TurtleCanvas**: `native/src/ui/turtle_canvas.cpp` — the display list and the painter
+- **TurtleCanvas**: `native/src/ui/turtle_canvas_*.cpp` — the display list and the painter
 - **CodeEditor**: `native/src/ui/code_editor.cpp` — gutter, current line, tab stops,
   syntax colouring and the search that `FindBar` drives
 - **Language table**: `native/src/ui/language.cpp` — names, settings keys, extensions
@@ -381,7 +381,7 @@ by adding its record to the table and, if it needs one, a high-contrast variant;
 - Turtle state is `TurtlePose`/`TurtleHost` in `native/include/timewarp/lang/turtle_host.hpp`;
   the reference's 16-colour palette is `reference_palette_colour()` there, the one table
   every host and BASIC use
-- Graphics rendered using Qt painter with zoom/pan support in `native/src/ui/turtle_canvas.cpp`
+- Graphics rendered using Qt painter with zoom/pan support in `native/src/ui/turtle_canvas_*.cpp`
 - Canvas clearing and setup handled automatically per execution
 - Compatible with existing turtle graphics commands
 

@@ -414,7 +414,10 @@ if(TIME_WARP_QT_FOUND)
             src/ui/sound_player.cpp
             src/ui/standalone.cpp
             src/ui/themes.cpp
-            src/ui/turtle_canvas.cpp
+            src/ui/turtle_canvas_commands.cpp
+            src/ui/turtle_canvas_painting.cpp
+            src/ui/turtle_canvas_raster.cpp
+            src/ui/turtle_canvas_view.cpp
             src/ui/ui_style.cpp
             include/timewarp/ui/language.hpp
             include/timewarp/ui/native_runner.hpp
