@@ -536,11 +536,12 @@ jobs:
         timeout-minutes: 30
         run: |
           ctest --test-dir native/build --timeout 180 --output-on-failure
-          # Located rather than spelled out, so a rename of the bundle is a green
-          # run with a different path in it instead of a broken release job.
-          bundle=$(find native/build -maxdepth 1 -name '*.app' -type d | head -1)
+          # Named, not discovered: the tree builds two bundles, the IDE and the
+          # player, so `find ... | head -1` started whichever the filesystem
+          # listed first -- and the player, given no program, exits 2.
+          bundle=$(find native/build -maxdepth 1 -name 'Time Warp Studio.app' -type d | head -1)
           test -n "$bundle"
-          app=$(find "$bundle/Contents/MacOS" -maxdepth 1 -type f | head -1)
+          app="$bundle/Contents/MacOS/Time Warp Studio"
           test -x "$app"
           "$app" --version
           "$app" --help > /dev/null
@@ -575,12 +576,12 @@ jobs:
           # The frameworks travel inside the bundle or the image is a broken
           # download for anybody without Qt.
           test -d "$installed/Contents/Frameworks"
-          # The staged application has to load Qt from inside the bundle, which
-          # is what macdeployqt exists to arrange: an unresolved rpath fails here
-          # as a dyld error. Located rather than spelled out, because the
-          # executable carries the product's name (`Time Warp Studio`), not the
-          # target's -- the same reason the test step above finds it.
-          app=$(find "$installed/Contents/MacOS" -maxdepth 1 -type f | head -1)
+          # The executable carries the product's name, not the target's
+          # (`Time Warp Studio`, from OUTPUT_NAME), so it is named here rather
+          # than found: the bundle also contains nothing else today, but a
+          # `head -1` over a directory is a guess, and this step has already
+          # been handed the wrong binary once.
+          app="$installed/Contents/MacOS/Time Warp Studio"
           test -x "$app"
           "$app" --version
 
@@ -601,8 +602,8 @@ jobs:
           rm -rf "$mount"
           mkdir -p "$mount"
           hdiutil attach -nobrowse -readonly -noautoopen -noverify -mountpoint "$mount" dist/*.dmg
-          app=$(find "$mount" -maxdepth 1 -name '*.app' -type d | head -1)
-          test -n "$app"
+          app="$mount/Time Warp Studio.app"
+          test -d "$app"
           test -f "$app/Contents/Resources/share/time-warp-studio/lessons.json"
           test -f "$app/Contents/Resources/share/doc/time-warp-studio/INDEX.md"
           test -f "$app/Contents/Resources/share/doc/time-warp-studio/LICENSE"
@@ -610,7 +611,7 @@ jobs:
           # And the copy on the image runs from where a user will put it: a
           # bundle can survive the staging directory and lose what it needs on
           # the way into the image.
-          app_binary=$(find "$app/Contents/MacOS" -maxdepth 1 -type f | head -1)
+          app_binary="$app/Contents/MacOS/Time Warp Studio"
           test -x "$app_binary"
           "$app_binary" --version
           hdiutil detach "$mount" > /dev/null

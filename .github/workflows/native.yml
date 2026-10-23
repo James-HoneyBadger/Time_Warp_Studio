@@ -304,9 +304,11 @@ jobs:
       - name: The entry point starts and exits (macOS)
         if: runner.os == 'macOS'
         run: |
-          bundle=$(find native/build -maxdepth 1 -name '*.app' -type d | head -1)
+          # Named, not discovered: the tree builds two bundles, the IDE and the
+          # player, and `find ... | head -1` started whichever came first.
+          bundle=$(find native/build -maxdepth 1 -name 'Time Warp Studio.app' -type d | head -1)
           test -n "$bundle"
-          app=$(find "$bundle/Contents/MacOS" -maxdepth 1 -type f | head -1)
+          app="$bundle/Contents/MacOS/Time Warp Studio"
           test -x "$app"
           "$app" --version
           "$app" --help > /dev/null
