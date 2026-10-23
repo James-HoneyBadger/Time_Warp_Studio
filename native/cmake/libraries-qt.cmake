@@ -1042,7 +1042,16 @@ if(TIME_WARP_QT_FOUND)
             # modes, the prompt's direct mode and the same native engines the
             # editor runs. It gets its own binary because a failure should name
             # the machine, not the IDE layout around it.
-            add_executable(retro_computer_tests tests/retro_computer_tests.cpp)
+            add_executable(retro_computer_tests
+                tests/retro_computer_tests.cpp
+                tests/retro_basic_tests.cpp
+                tests/retro_boot_tests.cpp
+                tests/retro_config_tests.cpp
+                tests/retro_dos_tests.cpp
+                tests/retro_hardware_tests.cpp
+                tests/retro_image_tests.cpp
+                tests/retro_memory_tests.cpp
+            )
             target_link_libraries(retro_computer_tests PRIVATE timewarp::ui)
             target_include_directories(retro_computer_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/tests)
             timewarp_enable_warnings(retro_computer_tests)
