@@ -17,9 +17,9 @@ output recognises the other.
 
 `md` is a different kind of port: it replaces `markdownlint-cli2`, which needed Node
 and fetched a package on every run, so `make lint-md` was the one check in the tree
-that could not run without a JavaScript toolchain. Thirty of markdownlint's rules are
-implemented in `src/docs/md.cpp`; the ones left out are listed in `md.hpp` with a
-reason each.
+that could not run without a JavaScript toolchain. Twenty-eight of markdownlint's rules
+are implemented, one file per subject under `src/docs/md_*.cpp`; the ones left out are
+listed in `md.hpp` with a reason each.
 
 ## Building it
 
@@ -80,8 +80,10 @@ for when a rule disagrees with your reading of a document.
 
 ## Layout
 
-- `src/main.cpp` -- the four subcommands and the usage text.
-- `src/docs/cli.hpp`, `src/docs/cli.cpp` -- the option parsing the three share.
+- `src/main.cpp` -- the four subcommands, as a `timewarp::cli` command table. The
+  options themselves (`--root`, `--json`, `--quiet`, `--help`) come from
+  `native/include/timewarp/tools/cli.hpp`, which every tool in `native/tools/` speaks;
+  this project has no argument parser of its own.
 - `src/docs/text.hpp`, `src/docs/text.cpp` -- reading UTF-8, splitting lines, and the
   hand-written scanners for fences, backticked tokens, inline links, headings and
   GitHub's slug. The Python speaks `re`; these are scanners because a regular
@@ -89,5 +91,10 @@ for when a rule disagrees with your reading of a document.
   does not.
 - `src/docs/pipes.hpp`, `src/docs/pipes.cpp` -- the one child process, which asks git
   which Markdown files are tracked.
-- `src/docs/links.*`, `src/docs/claims.*`, `src/docs/version.*`, `src/docs/md.*` --
-  one gate each. `md` owns the line model every rule in it reads.
+- `src/docs/links.*`, `src/docs/claims.*`, `src/docs/version.*` -- one gate each.
+- `src/docs/md.*` and `src/docs/md_*.cpp` -- the markdown gate: `md_lines.cpp` is the
+  line model (`md_internal.hpp` for what the rules pass around), `md_heading_rules.cpp`,
+  `md_code_rules.cpp`, `md_list_rules.cpp`, `md_whitespace_rules.cpp` and
+  `md_inline_rules.cpp` hold the rules one subject at a time (`md_rules.hpp` declares
+  them, so `lint` reads as the list of rules), and `md_lint.cpp` is `lint`, `describe`
+  and the command.

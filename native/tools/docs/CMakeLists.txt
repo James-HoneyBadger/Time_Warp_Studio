@@ -49,7 +49,13 @@ add_executable(time_warp_docs
     src/docs/links.cpp
     src/docs/claims.cpp
     src/docs/version.cpp
-    src/docs/md.cpp
+    src/docs/md_heading_rules.cpp
+    src/docs/md_inline_rules.cpp
+    src/docs/md_code_rules.cpp
+    src/docs/md_lines.cpp
+    src/docs/md_lint.cpp
+    src/docs/md_list_rules.cpp
+    src/docs/md_whitespace_rules.cpp
 )
 
 # `../../include` is where the tools' shared command line lives

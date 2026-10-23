@@ -32,7 +32,7 @@
 //                               case worth catching.
 //
 // It does not implement the whole of markdownlint, and it does not pretend to.
-// The rules it leaves out are listed in `md.cpp` with a reason each -- mostly
+// The rules it leaves out are listed here, with a reason each -- mostly
 // that they encode a house style (MD013 line length, disabled here) or need a
 // CommonMark parser to answer honestly (MD051 link fragments, which
 // `check_doc_links.py`'s successor answers instead, with anchors it can resolve).

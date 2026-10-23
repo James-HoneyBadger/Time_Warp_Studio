@@ -43,6 +43,10 @@ the five tools. Two new gates keep each of those from growing back.
   `cases.hpp` for the order `main` runs them in -- written down rather than discovered,
   because the cases share a `QSettings` store, a snippet catalogue and a seeded
   generator.
+- **The Markdown linter is one file per subject.** `md.cpp` (1,494 lines) is the line
+  model in `md_lines.cpp`, five rule files -- headings, code, lists, whitespace, inline
+  content -- one command file, and two headers that say what the rules pass around and
+  what the set of them is.
 - **One command-line vocabulary.** `native/include/timewarp/tools/cli.hpp` gives all
   five tools `--root`, `--json PATH`, `--quiet` and `--help` in any position, a
   `cli::Command` table per tool so the usage message comes from the list that
