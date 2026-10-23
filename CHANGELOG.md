@@ -47,6 +47,17 @@ leak check then failed `retro_computer_tests` on the machine's own screen.
   language except CHIP-8 *and Forth*; Forth never had the statement, so the
   exception list was incomplete rather than the count.
 
+### Notes
+
+- **This is the first tag since `v16.4.4`.** The 26 versions from `17.0.0` to
+  `23.0.1` were written down here as they were made, but none of them was tagged,
+  so no artifact was published for any of them. They are deliberately not
+  retro-tagged: a tag makes `release.yml` build six platforms from the tree it
+  points at and publish them, none of those 26 trees has been through that
+  re-test, and 26 releases appearing at once would bury the one that is current.
+  What changed in them is recorded below, in full; `23.0.1` is the release that
+  carries all of it.
+
 ## [23.0.0] - 2026-10-22
 
 The infrastructure, made modular: one home for the language table, a build that is
