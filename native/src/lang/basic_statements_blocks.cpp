@@ -204,9 +204,9 @@ std::string Machine::call(const std::string& args) {
     std::vector<Value> evaluated;
     for (const std::string& argument : arguments) {
         try {
-            evaluated.push_back(Value{eval(argument)});
+            evaluated.emplace_back(eval(argument));
         } catch (const std::exception&) {
-            evaluated.push_back(Value{strip_quotes(argument)});
+            evaluated.emplace_back(strip_quotes(argument));
         }
     }
 

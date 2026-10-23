@@ -8,6 +8,7 @@
 #include "timewarp/lang/watch.hpp"
 #include "timewarp/ui/native_runner.hpp"
 
+#include <QAction>
 #include <QDir>
 #include <QFileInfo>
 #include <QInputDialog>

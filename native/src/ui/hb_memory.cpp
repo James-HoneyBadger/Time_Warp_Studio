@@ -12,7 +12,6 @@ namespace {
 
 constexpr std::uint8_t kSpace = 32;
 constexpr int kAttributeBytes = HbMemory::kCellCount;
-constexpr int kIoBytes = 0x100;
 /// The power-on ink and paper, as nibbles. Light ink on black, which is what a
 /// phosphor tube shows.
 constexpr std::uint8_t kDefaultInk = 0x0F;

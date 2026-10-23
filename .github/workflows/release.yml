@@ -238,9 +238,11 @@ jobs:
           cache: true
 
       # Qt ships its own SQLite plugin but not the library the application links
-      # against, so the C library comes from vcpkg. It is one small package and
-      # the runner already has vcpkg bootstrapped.
-      - name: Install SQLite
+      # against, so the C library comes from vcpkg. zlib comes with it: the
+      # classroom's zip reader, the parity gates and the icon generator all link
+      # it, and CMake asks for it with `find_package(ZLIB REQUIRED)`. Neither is
+      # installed on the runner, and the configure fails without them.
+      - name: Install SQLite and zlib
         run: |
           $vcpkg = Join-Path $env:VCPKG_INSTALLATION_ROOT "vcpkg.exe"
           if (-not (Test-Path $vcpkg)) {
@@ -250,7 +252,7 @@ jobs:
           # The static library, with the dynamic C runtime Qt also uses: a
           # DLL would have to be deployed beside the executable and would be
           # the one file windeployqt does not know about.
-          & $vcpkg install sqlite3:x64-windows-static-md --clean-after-build
+          & $vcpkg install sqlite3:x64-windows-static-md zlib:x64-windows-static-md --clean-after-build
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       # The compiler environment rather than a generator name: `windows-latest`
@@ -378,14 +380,14 @@ jobs:
           arch: win64_msvc2019_64
           cache: true
 
-      - name: Install SQLite
+      - name: Install SQLite and zlib
         run: |
           $vcpkg = Join-Path $env:VCPKG_INSTALLATION_ROOT "vcpkg.exe"
           if (-not (Test-Path $vcpkg)) {
             Write-Host "vcpkg is not bootstrapped; doing that first"
             & (Join-Path $env:VCPKG_INSTALLATION_ROOT "bootstrap-vcpkg.bat")
           }
-          & $vcpkg install sqlite3:x64-windows-static-md --clean-after-build
+          & $vcpkg install sqlite3:x64-windows-static-md zlib:x64-windows-static-md --clean-after-build
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - name: Set up MSVC 2019
