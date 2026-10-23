@@ -1,8 +1,8 @@
 # Installing and Building Time Warp Studio
 
-Time Warp Studio is a **C++20 / Qt6** desktop application. Everything you need to
-run all eleven languages is in this repository; nothing has to be downloaded at run
-time.
+Time Warp Studio is a desktop application for Windows, macOS and Linux, built with
+**C++20 and Qt6**. Everything you need to run all eleven languages is in this
+repository; nothing has to be downloaded at run time.
 
 ---
 

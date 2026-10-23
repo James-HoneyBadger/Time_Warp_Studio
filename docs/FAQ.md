@@ -28,10 +28,9 @@ Studio. For the full listing, see the [documentation index](INDEX.md) and
 
 ### What is Time Warp Studio?
 
-Time Warp Studio is an old-school desktop programming environment. It runs ten
-interpreters from 1964–1980 in one IDE, with an integrated turtle graphics canvas
-and an output console. It is a C++20 / Qt6 application; every language runs in C++
-inside it, and the PySide6 implementation that preceded it has been removed.
+Time Warp Studio is an old-school desktop programming environment. It runs eleven
+interpreters from 1964–1980 in one IDE, with an integrated turtle graphics canvas,
+an output console and a debugger that works in every one of them.
 
 It also carries two complete machines: the **HB-1**, a 1982 home computer from a
 parallel universe, and the **CHIP-8**, the 1977 virtual machine. Both are real

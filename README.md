@@ -3,16 +3,16 @@
 *An old-school programming environment: eleven languages, a full IDE, and two
 complete computers inside it.*
 
-[![C++20](https://img.shields.io/badge/C%2B%2B-20-blue)](https://en.cppreference.com/)
-[![Qt](https://img.shields.io/badge/Qt-6%20%7C%205.15-green)](https://www.qt.io/)
+[![Languages](https://img.shields.io/badge/languages-11-blue)](#eleven-interpreters-one-per-era)
+[![Machines](https://img.shields.io/badge/machines-2-purple)](docs/MACHINES.md)
+[![Platforms](https://img.shields.io/badge/platforms-Windows%20%7C%20macOS%20%7C%20Linux-green)](docs/INSTALLATION.md)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Version](https://img.shields.io/badge/Version-23.0.1-orange)](https://github.com/James-HoneyBadger/Time_Warp_Studio)
 
-Time Warp Studio is a native C++20 and Qt workbench for people who like old
-computers. It is the programming environment the 1980s promised and never quite
-delivered: a full IDE, eleven interpreters spanning 1964 to 1980, a turtle canvas,
-and a debugger that works in every one of them. Two complete machines are built
-into it as well.
+Time Warp Studio is a desktop programming environment for people who like old
+computers. It is the one the 1980s promised and never quite delivered: a full IDE,
+eleven interpreters spanning 1964 to 1980, a turtle canvas, and a debugger that
+works in every one of them. Two complete machines are built into it as well.
 
 The **HB-1** is a bespoke 1982 home computer from a parallel universe. It has one
 CRT, a prompt, a ROM socket that accepts any of the eleven languages, and **HB DOS
@@ -87,12 +87,11 @@ you had:
   machine phosphors and CRT glass you can tune from off to heavy. Choosing amber
   recolours the header, the editor, the canvas and the glass together, because the
   palette is one table.
-- **Native, offline, inspectable.** Every interpreter is C++ running in process,
-  and so are the lesson check, the classroom, the two commands that drive them
-  (`time_warp_teach`, `time_warp_learn`) and every gate that tests the tree. There
-  is no Python anywhere — not in the product, not in its tests, not in its
-  documentation checks — no network call and no telemetry. The project is
-  MIT-licensed, and both the tests and the manuals are in the repository.
+- **Offline and self-contained.** No account, no network call, no telemetry. The
+  interpreters, the lesson checker, the classroom and the manuals are all part of
+  the one application, so it works the same in a basement as on a network. The
+  project is MIT-licensed, and the sources, the tests and the manuals are in the
+  repository.
 
 ---
 
@@ -105,7 +104,7 @@ inside it.
 | You have | Take | Then |
 | --- | --- | --- |
 | Windows 10 or 11 | `time-warp-studio-<version>-win64.exe` | Run it. Installs into Program Files with Start Menu and desktop shortcuts; the `.zip` beside it is the same application without an installer. |
-| Windows 7 | `time-warp-studio-<version>-win64-win7.exe` | The same application against Qt 5.15, the last Qt that runs on Windows 7 (Qt 6 needs Windows 10). A `.zip` sits beside it. |
+| Windows 7 | `time-warp-studio-<version>-win64-win7.exe` | The same application, built for Windows 7 SP1. A `.zip` sits beside it. |
 | macOS 14.4 or later, Intel or Apple silicon | `Time_Warp_Studio-<version>-macOS-universal.dmg` | Open it and drag **Time Warp Studio** to Applications. One image, both architectures. |
 | a Linux desktop, no wish to install anything | `Time_Warp_Studio-<version>-x86_64.AppImage` | Make it executable and double-click it. No root, no package manager, no Qt to fetch. |
 | Ubuntu, Debian, Mint or Pop!_OS | `time-warp-studio_<version>_amd64.deb`, or `_arm64.deb` | Double-click it, or `sudo apt install ./time-warp-studio_<version>_amd64.deb` |
@@ -149,7 +148,7 @@ rest of the environment, feature by feature.
 
 | Capability | What it is | Read |
 | --- | --- | --- |
-| **Eleven languages, one editor** | BASIC, APL, Logo, PILOT, FOCAL, Scheme, CHIP-8, COMAL, REXX, Smalltalk and Forth, each running on a native engine in process — no Python at run time | [LANGUAGE_GUIDE](docs/LANGUAGE_GUIDE.md), [tutorials](docs/tutorials/) |
+| **Eleven languages, one editor** | BASIC, APL, Logo, PILOT, FOCAL, Scheme, CHIP-8, COMAL, REXX, Smalltalk and Forth, each a working implementation of its own language rather than a dialect invented for the occasion | [LANGUAGE_GUIDE](docs/LANGUAGE_GUIDE.md), [tutorials](docs/tutorials/) |
 | **Editor and console** | Gutter, current line, syntax colouring, find and replace, **find in files**, **go to line**, **snippets**, **outline**, **format code**, **live lint**, **autosave**, **version history**, two panes | [USER_GUIDE](docs/USER_GUIDE.md#1-start-and-stop) |
 | **Turtle canvas** | Live drawing while a program runs, zoom, pan, grid, auto-fit, turtle marker, **scrubber playback**, **animated GIF recording**, PNG/JPEG/BMP/SVG export | [USER_GUIDE](docs/USER_GUIDE.md#1-start-and-stop) |
 | **Debugging, in all eleven** | Gutter breakpoints, Continue/Pause/Step In/Over/Out, **watch expressions**, **data breakpoints**, a Variables panel and a Telemetry HUD | [USER_GUIDE](docs/USER_GUIDE.md#5-debugging) |
@@ -207,23 +206,17 @@ exercised by the command matrix.
 - **Terminal (opt-in)** — Settings > Workspace adds a 💻 Terminal tab that runs commands through your own shell, starting in the current document's folder. It is off by default, stopped and removed in presentation and player modes, and is a command line rather than a terminal emulator: no prompts, no job control, no full-screen programs
 - **Automation** — `./api` speaks the JSON-RPC API on stdin/stdout: run a program, keep a REPL session, start and step a debug session, query SQL, edit a project including folder import, and evaluate watches. See [docs/API.md](docs/API.md)
 - **Terminal tools** — `./run.sh` builds if needed and launches the IDE; `./twc program.bas -o program` compiles a program into a standalone executable that embeds the interpreter, writes its drawing as SVG, and takes `--db FILE` when the program uses SQL
-- **Native engines** — every language runs in-process in C++ with no Python at
-  all. Scheme (`timewarp_scheme`) and CHIP-8, Logo, Smalltalk and Forth are
-  whole-program; BASIC, FOCAL, PILOT, COMAL, APL and REXX are line-by-line on
-  the shared `timewarp_lang` engine. The arithmetic each one evaluates goes
-  through the native expression evaluator (`timewarp_expr`), and the drawing
-  through the same canvas command queue the IDE drains (see
-  [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md))
+- **Everything built in** — each language runs inside the application, so a
+  program starts immediately, the debugger can stop anywhere in it, and running
+  the eleven needs nothing installed beside the download. How the engines are
+  divided up is the [architecture guide](docs/ARCHITECTURE.md)'s subject
 
 ### What is still being built
 
-The Qt IDE is the product, and the PySide6 application that preceded it has been
-removed. The port is complete: every phase of
-[PORTING_PLAN.md](docs/PORTING_PLAN.md) is implemented and has a test behind it.
-What remains unbuilt is a much shorter list — a dedicated player target, an
-automatic update check, code-signed Windows and macOS builds, and Flatpak or Snap
-packaging. It is tracked in [docs/ROADMAP.md](docs/ROADMAP.md), which is worth a
-look before a missing feature is reported as a regression.
+What remains unbuilt is a short list — a dedicated player target, an automatic
+update check, code-signed Windows and macOS builds, and Flatpak or Snap packaging.
+It is tracked in [docs/ROADMAP.md](docs/ROADMAP.md), which is worth a look before a
+missing feature is reported as a regression.
 
 ### Help from inside the Studio
 
@@ -284,12 +277,10 @@ have drifted apart.
 ### Description
 
 ```text
-Old-school programming environment: a native C++20 and Qt workbench with eleven
-interpreters from 1964-1980, a full IDE, a debugger in every language, and turtle
-graphics -- plus two complete machines inside it: the HB-1, a bespoke 1982 home
-computer from a parallel universe with an eleven-language ROM socket, a CRT, a prompt
-and its own disk operating system, and a live CHIP-8 with an assembler, keypad and
-register inspector.
+An old-school programming environment: eleven interpreters from 1964-1980, a full
+IDE, a debugger in every language and turtle graphics -- plus two complete machines,
+the HB-1 home computer of 1982 with its own disk OS, and a live CHIP-8 with an
+assembler and register inspector.
 ```
 
 ### Topics
@@ -301,8 +292,6 @@ home-computer
 virtual-machine
 chip8
 ide
-qt6
-cpp
 interpreter
 debugger
 turtle-graphics
@@ -315,6 +304,7 @@ scheme
 focal
 apl
 smalltalk
+forth
 ```
 
 ### Where to start
@@ -345,8 +335,8 @@ smalltalk
 - **[CHANGELOG.md](CHANGELOG.md)** — what changed, release by release
 
 Releases carry a Windows installer and a portable ZIP, a second Windows installer
-for Windows 7 built against Qt 5.15, a universal macOS disk image, and `.deb`,
-`.rpm`, tarball and (x86_64) AppImage packages for Linux — all of them listed in
-**Install it** above. Building from source is still the way to work on the
-application itself, and [docs/INSTALLATION.md](docs/INSTALLATION.md) is the whole
-procedure for every platform.
+for Windows 7, a universal macOS disk image, and `.deb`, `.rpm`, tarball and
+(x86_64) AppImage packages for Linux — all of them listed in **Install it** above.
+Building from source is still the way to work on the application itself, and
+[docs/INSTALLATION.md](docs/INSTALLATION.md) is the whole procedure for every
+platform.
