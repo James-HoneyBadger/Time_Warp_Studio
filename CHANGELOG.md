@@ -32,6 +32,11 @@ the five tools. Two new gates keep each of those from growing back.
 - **`main_window.cpp` (6,245 lines) is eight files**, one per section that was already
   commented in it, over `main_window_internal.hpp` for the keys and helpers they share.
 - **`panels.cpp` (2,047 lines) is six files**, one per panel group.
+- **`basic_features.cpp` (1,728 lines) is five**, by family: the tube that describes the
+  surface, drawing, sprites, files, and the machine around the program. Its own copies
+  of `join`, `starts_with`, `parse_integer`, `split_trimmed`, `evaluate_integer`,
+  `pixel`, `pack_colour` and `unpack_colour` are the shared BASIC helpers now, in one
+  place instead of two.
 - **`rexx.cpp` (1,801 lines) is three**: the value type, the state and the helpers the
   machine and the parser both call, the tokenizer and expression parser, and the
   machine. `rexx_detail` is a named namespace for the reason `logo_detail` is.

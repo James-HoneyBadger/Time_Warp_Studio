@@ -65,7 +65,7 @@ a security boundary and is not presented as one. What it *can* do:
   followed and then checked, and a path that lands outside — including a sibling
   whose name merely starts the same way — is refused with
   `Path '…' escapes sandbox directory` (`resolve_confined_path`,
-  `native/src/lang/basic_features.cpp`, asserted by `lang_tests`). That is a fence
+  `native/src/lang/basic_file_statements.cpp`, asserted by `lang_tests`). That is a fence
   around one directory, not a privilege boundary: a program can still overwrite
   anything inside it, and a program that can write files can still lose you one.
   Run programs you trust.

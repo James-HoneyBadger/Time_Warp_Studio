@@ -36,4 +36,13 @@ std::string join(const std::vector<std::string>& values, std::string_view separa
 bool starts_with(std::string_view text, std::string_view prefix);
 std::string tail(std::string_view text, std::size_t from);
 
+/// A statement argument read as a whole number, for the statements that take counts
+/// and sizes: `SCREEN 80, 25` either has two numbers or it is an error.
+std::optional<long> evaluate_integer(Machine& machine, std::string_view text);
+/// `text` split on `separator` with each field trimmed, which is how every argument
+/// list in BASIC is read.
+std::vector<std::string> split_trimmed(std::string_view text, char separator);
+/// A coordinate on the raster. The statements carry doubles; a pixel is a place.
+int pixel(double value);
+
 }  // namespace timewarp::lang::basic

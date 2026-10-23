@@ -201,7 +201,11 @@ add_library(tw_lang_basic OBJECT
     src/lang/basic_statements_flow.cpp
     src/lang/basic_statements_blocks.cpp
     src/lang/basic_statements_errors.cpp
-    src/lang/basic_features.cpp
+    src/lang/basic_draw_statements.cpp
+    src/lang/basic_file_statements.cpp
+    src/lang/basic_screen_statements.cpp
+    src/lang/basic_sprite_statements.cpp
+    src/lang/basic_system_statements.cpp
     src/lang/basic_library.cpp
     src/lang/basic_text.cpp
 )

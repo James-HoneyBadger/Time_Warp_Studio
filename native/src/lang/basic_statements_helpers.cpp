@@ -218,6 +218,40 @@ std::string substitute_undefined(std::string_view expression, std::string_view n
     return result;
 }
 
+std::optional<long> evaluate_integer(Machine& machine, std::string_view text) {
+    double value = 0.0;
+    if (!parse_float(trim(text), value)) {
+        return std::nullopt;
+    }
+    return static_cast<long>(machine.eval(trim(text)));
+}
+
+std::vector<std::string> split_trimmed(std::string_view text, char separator) {
+    std::vector<std::string> parts;
+    for (const std::string& field : split_plain(text, separator)) {
+        parts.push_back(trim(field));
+    }
+    return parts;
+}
+
+/// A coordinate on the raster. The statements carry doubles; a pixel is a place.
+int pixel(double value) {
+    return static_cast<int>(std::lround(value));
+}
+
+/// A colour as the `GET`/`PUT` arrays carry it: three channels in one number.
+int pack_colour(Rgb colour) {
+    return (std::clamp(colour.red, 0, 255) << 16) | (std::clamp(colour.green, 0, 255) << 8) |
+           std::clamp(colour.blue, 0, 255);
+}
+
+Rgb unpack_colour(long value) {
+    const long clamped = value < 0 ? 0 : (value > 0xFFFFFF ? 0xFFFFFF : value);
+    return Rgb{static_cast<int>((clamped >> 16) & 0xFF),
+               static_cast<int>((clamped >> 8) & 0xFF),
+               static_cast<int>(clamped & 0xFF)};
+}
+
 /// `int(text)`: whole-string, optional sign, no fraction.
 std::optional<long> parse_integer(std::string_view text) {
     const std::string trimmed = trim(text);
