@@ -63,6 +63,13 @@ the five tools. Two new gates keep each of those from growing back.
   model in `md_lines.cpp`, five rule files -- headings, code, lists, whitespace, inline
   content -- one command file, and two headers that say what the rules pass around and
   what the set of them is.
+- **The include blocks the splits copied are trimmed.** Each new file began with the
+  original file's whole include list, so a painter carried `<QKeyEvent>` and a status
+  bar carried `<cmath>`. Fourteen files lost 310 include lines between them, each
+  removal checked by compiling the unit with its own recorded command line -- and the
+  check that mattered was the one for *incomplete* types: `main_window_actions.cpp`
+  uses `QDockWidget` through `window->findChild<QDockWidget*>()` without ever naming
+  the class, so a scan for names removes the include that makes it complete.
 - **The shared headers now hold only what is shared.** A split leaves a header behind,
   and the first draft of each one declared everything the split moved rather than
   everything more than one part reads. An audit of each header against its own family

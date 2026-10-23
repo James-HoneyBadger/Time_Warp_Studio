@@ -4,32 +4,16 @@
 
 #include "timewarp/core/qt_compat.hpp"
 
-#include <algorithm>
 #include <cmath>
-#include <iterator>
-#include <numbers>
-#include <utility>
 
-#include <QComboBox>
-#include <QDialogButtonBox>
-#include <QEvent>
 #include <QHBoxLayout>
 #include <QHeaderView>
 #include <QLabel>
 #include <QLineEdit>
 #include <QListWidget>
-#include <QPainter>
-#include <QPainterPath>
-#include <QProgressBar>
 #include <QPushButton>
-#include <QRadialGradient>
-#include <QResizeEvent>
-#include <QSlider>
 #include <QSpinBox>
 #include <QTableWidget>
-#include <QTextBrowser>
-#include <QTimer>
-#include <QVector>
 #include <QVBoxLayout>
 
 namespace timewarp::ui {

@@ -3,8 +3,6 @@
 // The painter: what the widget draws for the display list, the grid, the turtle marker,
 // and the two exports.
 
-#include "timewarp/core/qt_gui_compat.hpp"
-#include "timewarp/core/qt_compat.hpp"
 #include "timewarp/ui/turtle_canvas.hpp"
 
 #include "turtle_canvas_internal.hpp"
@@ -12,25 +10,18 @@
 #include <algorithm>
 #include <cmath>
 #include <iterator>
-#include <numbers>
 
 #include <QFont>
 #include <QImage>
 #include <QImageWriter>
-#include <QKeyEvent>
-#include <QMouseEvent>
 #include <QPaintEvent>
 #include <QPainter>
 #include <QPainterPath>
-#include <QResizeEvent>
 #include <QSaveFile>
-#include <QWheelEvent>
 
 #ifdef TIME_WARP_HAVE_SVG
 #include <QSvgGenerator>
 #endif
-
-#include "timewarp/canvas/command.hpp"
 
 namespace timewarp::ui {
 
