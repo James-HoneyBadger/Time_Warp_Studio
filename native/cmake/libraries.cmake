@@ -221,7 +221,14 @@ add_library(tw_lang_chip8 OBJECT src/lang/chip8.cpp)
 add_library(tw_lang_focal OBJECT src/lang/focal.cpp)
 add_library(tw_lang_pilot OBJECT src/lang/pilot.cpp)
 add_library(tw_lang_comal OBJECT src/lang/comal.cpp)
-add_library(tw_lang_apl OBJECT src/lang/apl.cpp)
+add_library(tw_lang_apl OBJECT
+    src/lang/apl.cpp
+    src/lang/apl_eval.cpp
+    src/lang/apl_parse.cpp
+    src/lang/apl_structural.cpp
+    src/lang/apl_tables.cpp
+    src/lang/apl_values.cpp
+)
 add_library(tw_lang_rexx OBJECT
     src/lang/rexx.cpp
     src/lang/rexx_parser.cpp
