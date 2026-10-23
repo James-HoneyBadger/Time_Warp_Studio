@@ -23,6 +23,7 @@
 #include <QJsonObject>
 #include <QMap>
 #include <QProcess>
+#include <QStringList>
 
 #include <cstdio>
 
@@ -47,7 +48,7 @@ public:
     void start() {
         process_ = std::make_unique<QProcess>();
         process_->setProcessChannelMode(QProcess::ForwardedErrorChannel);
-        process_->start(binary_, {});
+        process_->start(binary_, QStringList{});
         (void)process_->waitForStarted(10000);
     }
 

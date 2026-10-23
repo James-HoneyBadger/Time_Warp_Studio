@@ -274,7 +274,7 @@ int runSchemeHalf(const QString& root, const QString& corpus_path) {
             continue;
         }
         QProcess process;
-        process.start(*cli, {});
+        process.start(*cli, QStringList{});
         if (!process.waitForStarted(10000)) {
             failures.append(QStringLiteral("scheme: scheme_cli would not start"));
             break;

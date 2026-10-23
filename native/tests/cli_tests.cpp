@@ -53,14 +53,18 @@ void test_the_command_is_the_first_word_and_the_rest_are_its_arguments() {
 }
 
 void test_root_takes_a_word_or_an_equals_form() {
+    // The parser makes the root absolute, and on Windows that means the same
+    // path on the current drive ("/tmp" becomes "D:\tmp"). The expectation is
+    // the same transformation rather than the literal, which is a POSIX answer.
+    const std::string expected = timewarp::cli::detail::absolute("/tmp").string();
     const Invocation spaced = parse_line({"tool", "links", "--root", "/tmp"});
     TW_CHECK(spaced.root_given);
-    TW_CHECK_EQ(spaced.root.string(), std::string{"/tmp"});
+    TW_CHECK_EQ(spaced.root.string(), expected);
     TW_CHECK(spaced.arguments.empty());
 
     const Invocation joined = parse_line({"tool", "links", "--root=/tmp"});
     TW_CHECK(joined.root_given);
-    TW_CHECK_EQ(joined.root.string(), std::string{"/tmp"});
+    TW_CHECK_EQ(joined.root.string(), expected);
     TW_CHECK(joined.arguments.empty());
 }
 
