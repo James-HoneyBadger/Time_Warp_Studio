@@ -12,16 +12,41 @@ that exist and what they gate.
 | `docs.yml` | Push and pull request to `main`, when anything under `docs/`, `README.md`, the lesson curriculum (`native/share/lessons.json`) or `time_warp_teach` changes | That every guide `docs/INDEX.md` promises exists — including the HB-1 and CHIP-8 manuals — that every relative link and `#anchor` in the guides resolves, that all eleven languages have a tutorial, and that every claim in the guides about a path, a name or a `make` target is still true. Runs `native/tools/docs`, one small C++ target with no Qt, so it answers in seconds and does not depend on the product's build. Regenerating the lesson plans needs `time_warp_teach`, so that check lives in `native.yml`. |
 | `markdown-lint.yml` | Push and pull request to `main`, when any `*.md` changes | Markdown lint by `time_warp_docs md`, built from `native/tools/docs`: the house rules in `native/tools/docs/src/docs/md_*_rules.cpp`, which replaced `markdownlint-cli2` and its `.markdownlint.json` at 22.2.0. **This step fails a pull request**, because it is the project's own tool with a verdict it stands behind. The spell check beside it stays `continue-on-error`: a dictionary is not this project's to enforce. |
 | `version.yml` | Push and pull request to `main`, when `VERSION`, the README, the changelog, `docs/` or the tool's own source changes | That every hand-written copy of the version agrees with `VERSION`. Separate from the native build because it has to run on documentation changes, which the C++ job does not watch; it compiles `native/tools/docs` (no Qt, one compiler) rather than relying on anything installed. |
+| `security.yml` | Push and pull request to `main`, weekly on a schedule, and by hand | Trivy over the tree — the Dockerfile `release.yml` packages from, every file no secret should be in, and any lockfile a dependency brings later — uploaded as SARIF so a finding lands in the repository's Security tab. Advisory rather than a gate: the SARIF is the record and the scan's exit code is 0, because a CVE in an upstream package is not a change a pull request here can make. The upload is skipped for a pull request from a fork, where the token is read-only; the scan still runs. |
 | `release.yml` | A `v*` tag, or `workflow_dispatch` with a version | Refuses a tag that disagrees with `VERSION` (running `time_warp_docs version` as the same check `version.yml` makes), then builds the release on five runners -- `ubuntu-24.04` and `ubuntu-24.04-arm` for the Linux packages, `windows-latest` for the installer and ZIP, `windows-2022` for the Windows 7 installer that Qt 5.15 makes possible, `macos-latest` for the universal disk image -- running the CTest suites and an offscreen screenshot against each tree before packaging it, and attaching every artifact with a `.sha256` to the GitHub Release. It also pushes the container image to `ghcr.io`. The release job runs in the `production` environment, which is what makes GitHub record a Deployment. |
 
-**The actions, and the Node runtime behind them.** Every action is pinned to a
-major tag, and the majors are the ones that run on Node 24 — `checkout@v5`,
-`upload-artifact@v6`, `download-artifact@v7`, `docker/login-action@v4`,
-`docker/build-push-action@v7`. GitHub runs a Node 20 action anyway, on Node 24,
-but only until it stops, so a workflow that still pins one is a workflow with a
-date on it. `ilammy/msvc-dev-cmd` is the exception: its newest release
-(`v1.13.0`) is still a Node 20 action and upstream has published nothing newer,
-so the annotation it draws is upstream's to fix.
+**The actions, and the Node runtime behind them.** Every `uses:` names a full
+commit SHA, with the release that SHA was taken from in the comment after it —
+`checkout@fbc6f39…# v5.1.0`, `upload-artifact@b7c566a…# v6.0.0`,
+`docker/build-push-action@c3c9e26…# v7.4.0`. A tag is a name upstream is free to
+move, and the artifacts built here are the ones people install, so the pin is what
+makes "the action that ran" the action that was reviewed. A SHA cannot say when it
+has gone stale, so `.github/dependabot.yml` asks for a `github-actions` update once
+a week: the workflow runs in that pull request are what decides whether the new SHA
+is one to keep.
+`jurplel/install-qt-action` is the case that says why the SHA and not the tag:
+upstream publishes `v4.x.y` tags and no `v4` tag at all — `v4` is a **branch** — so
+`@v4` was a ref that could be repointed under this tree, and the pin is the head
+that equals `v4.5.0`.
+
+Seven of the pinned actions are JavaScript, and every one of those releases is a
+Node 24 major — `checkout` `v5.1.0`, `upload-artifact` `v6.0.0`, `download-artifact`
+`v7.0.0` and the four `docker/*` actions at `v4`/`v7` — because GitHub runs a
+Node 20 action on Node 24 only until it stops, and a workflow that pins one is a
+workflow with a date on it. `ilammy/msvc-dev-cmd` is the exception worth knowing:
+its newest release (`v1.13.0`, pinned as `0b201ec…`) is still a Node 20 action and
+upstream has published nothing newer, so the annotation it draws is upstream's to
+fix. The rest carry no Node at all: `install-qt-action`, `upload-sarif` from
+`codeql-action` and `trivy-action` are composite, and the spell check is a Docker
+action.
+
+**Why there is a scan again.** The only workflow that ever uploaded SARIF here was
+the Python-era pipeline, deleted with the application it audited — so the alerts it
+raised were never closed, because nothing has uploaded an analysis since.
+`security.yml` is the replacement rather than a revival: it scans what this tree now
+contains, it states `security-events: write` for the upload instead of inheriting a
+default, and it pins its two actions like every other workflow here. What it does
+not do is gate a pull request on a database that changes daily.
 
 Two of these exist because of a failure the others cannot see. The lesson plans in
 `docs/lessons/plans/` are **generated** from the curriculum, and the failure that

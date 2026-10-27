@@ -22,7 +22,7 @@ jobs:
   lint:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
 
       - name: Build the documentation tools
         run: |
@@ -38,8 +38,8 @@ jobs:
     # Advisory on its own terms: a dictionary is not this project's to enforce.
     continue-on-error: true
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
       - name: Spellcheck Markdown
-        uses: rojopolis/spellcheck-github-actions@0.36.0
+        uses: rojopolis/spellcheck-github-actions@dbd2f1da869c05ad874fffeb6fe1ed50cd1a6e98 # 0.36.0
         with:
           config_path: .spellcheck.yml

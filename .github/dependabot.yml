@@ -1,0 +1,19 @@
+# Every action in `.github/workflows/` is pinned to a commit SHA, which is the only
+# form of `uses:` upstream cannot repoint. A SHA cannot say when it has gone stale,
+# so this is the other half of that pin: one pull request a week that moves the pins
+# to the releases they name, and the workflow runs in that pull request are what
+# decides whether the new SHA is the one to keep.
+#
+# `github-actions` is the only ecosystem here on purpose. The product has no
+# package manager to audit -- the Qt it links comes from the distribution, and the
+# frozen corpus is data -- so a second entry would be an updater for nothing.
+
+version: 2
+updates:
+  - package-ecosystem: 'github-actions'
+    directory: '/'
+    schedule:
+      interval: 'weekly'
+    commit-message:
+      prefix: 'ci'
+    open-pull-requests-limit: 5

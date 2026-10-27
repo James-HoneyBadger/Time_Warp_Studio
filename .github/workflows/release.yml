@@ -52,7 +52,7 @@ jobs:
     outputs:
       version: ${{ steps.version.outputs.version }}
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
 
       - name: Work out the version
         id: version
@@ -100,7 +100,7 @@ jobs:
             appimage: false
     runs-on: ${{ matrix.runner }}
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
 
       - name: Install Qt 6 and the build tools
         run: |
@@ -206,7 +206,7 @@ jobs:
           ( cd dist && sha256sum "$OUTPUT" > "$OUTPUT.sha256" )
           ls -l dist
 
-      - uses: actions/upload-artifact@v6
+      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
         with:
           name: linux-artifact-${{ matrix.arch }}
           path: |
@@ -228,11 +228,11 @@ jobs:
       run:
         shell: pwsh
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
 
       # Pinned: 6.8.3 is the Qt the suite is validated against on Windows.
       - name: Install Qt 6
-        uses: jurplel/install-qt-action@v4
+        uses: jurplel/install-qt-action@b344308e4483fc892e0d27b3cd1b173ebdd95f06 # v4.5.0
         with:
           version: '6.8.3'
           cache: true
@@ -260,7 +260,7 @@ jobs:
       # finds no instance of it. `vcvars` asks whatever is installed; Ninja is
       # preinstalled and takes the compiler it finds on the PATH.
       - name: Set up MSVC
-        uses: ilammy/msvc-dev-cmd@v1
+        uses: ilammy/msvc-dev-cmd@0b201ec74fa43914dc39ae48a89fd1d8cb592756 # v1.13.0
         with:
           arch: x64
 
@@ -349,7 +349,7 @@ jobs:
           }
           Get-ChildItem dist | Format-Table Name, Length
 
-      - uses: actions/upload-artifact@v6
+      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
         with:
           name: windows-artifact-x64
           path: |
@@ -368,13 +368,13 @@ jobs:
       run:
         shell: pwsh
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
 
       # Qt 6 requires Windows 10. 5.15.2 is the last Qt that runs on 7 SP1, and
       # the last with an MSVC binary package, so it is what this artifact is
       # built against.
       - name: Install Qt 5.15
-        uses: jurplel/install-qt-action@v4
+        uses: jurplel/install-qt-action@b344308e4483fc892e0d27b3cd1b173ebdd95f06 # v4.5.0
         with:
           version: '5.15.2'
           arch: win64_msvc2019_64
@@ -393,14 +393,14 @@ jobs:
       - name: Set up MSVC 2019
         id: msvc2019
         continue-on-error: true
-        uses: ilammy/msvc-dev-cmd@v1
+        uses: ilammy/msvc-dev-cmd@0b201ec74fa43914dc39ae48a89fd1d8cb592756 # v1.13.0
         with:
           arch: x64
           toolset: 14.29
 
       - name: Set up MSVC (default toolset)
         if: steps.msvc2019.outcome != 'success'
-        uses: ilammy/msvc-dev-cmd@v1
+        uses: ilammy/msvc-dev-cmd@0b201ec74fa43914dc39ae48a89fd1d8cb592756 # v1.13.0
         with:
           arch: x64
 
@@ -492,7 +492,7 @@ jobs:
           }
           Get-ChildItem dist | Format-Table Name, Length
 
-      - uses: actions/upload-artifact@v6
+      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
         with:
           name: windows7-artifact-x64
           path: |
@@ -506,12 +506,12 @@ jobs:
     needs: verify
     runs-on: macos-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
 
       # The newest Qt: 6.8 and 6.9 link `-framework AGL`, which macOS 26's SDK no
       # longer has. Qt 6.12 is universal and declares macOS 14.4 as its floor.
       - name: Install Qt 6
-        uses: jurplel/install-qt-action@v4
+        uses: jurplel/install-qt-action@b344308e4483fc892e0d27b3cd1b173ebdd95f06 # v4.5.0
         with:
           version: '6.12.*'
           cache: true
@@ -617,7 +617,7 @@ jobs:
           hdiutil detach "$mount" > /dev/null
           ls -l dist
 
-      - uses: actions/upload-artifact@v6
+      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
         with:
           name: macos-artifact-universal
           path: |
@@ -630,7 +630,7 @@ jobs:
     needs: [verify, build]
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
 
       # The image is named after the product, like every other artifact a release
       # carries, so a rename of the repository cannot move it out from under a
@@ -646,7 +646,7 @@ jobs:
           echo "ALIAS_IMAGE_NAME=ghcr.io/${owner}/time_warp_studio" >> "$GITHUB_ENV"
 
       - name: Log in to GitHub Packages
-        uses: docker/login-action@v4
+        uses: docker/login-action@81c6f93d4bc991e510b342a00b419b3bb4efc5c6 # v4.7.0
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
@@ -658,7 +658,7 @@ jobs:
       # platforms want the same base image and the same package set, which is what
       # the "linux/amd64,linux/arm64" line below is the whole reason for.
       - name: Set up QEMU
-        uses: docker/setup-qemu-action@v4
+        uses: docker/setup-qemu-action@99012661954931238ded8c8b007157a8430204e1 # v4.4.0
         with:
           platforms: arm64
 
@@ -667,10 +667,10 @@ jobs:
       # with "Multi-platform build is not supported for the docker driver" when
       # asked for two.
       - name: Set up Buildx
-        uses: docker/setup-buildx-action@v4
+        uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
 
       - name: Build and push
-        uses: docker/build-push-action@v7
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
         with:
           context: .
           file: packaging/docker/Dockerfile
@@ -701,7 +701,7 @@ jobs:
       name: production
       url: ${{ github.server_url }}/${{ github.repository }}/releases/tag/v${{ needs.verify.outputs.version }}
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
 
       # `merge-multiple` puts both architectures' files in one directory: the
       # release attaches a flat list, and every file name already says which
@@ -715,7 +715,7 @@ jobs:
           echo "IMAGE_NAME=ghcr.io/${owner}/time-warp-studio" >> "$GITHUB_ENV"
           echo "ALIAS_IMAGE_NAME=ghcr.io/${owner}/time_warp_studio" >> "$GITHUB_ENV"
 
-      - uses: actions/download-artifact@v7
+      - uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
         with:
           pattern: '*-artifact-*'
           merge-multiple: true

@@ -46,7 +46,7 @@ jobs:
       # X11 rather than wayland for the offscreen plugin's font handling.
       QT_QPA_PLATFORM_PLUGIN_PATH: ''
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
 
       - name: Install Qt 6 and the build tools
         run: |
@@ -98,7 +98,7 @@ jobs:
           ./native/build/time_warp_ide --reset --size 1400x900 \
             --screenshot native/build/layout.png Examples/basic/hello.bas
 
-      - uses: actions/upload-artifact@v6
+      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
         if: always()
         with:
           name: native-layout-render
@@ -175,7 +175,7 @@ jobs:
           fi
           echo "The plans are current."
 
-      - uses: actions/upload-artifact@v6
+      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
         if: failure()
         with:
           name: native-differential-logs
@@ -205,7 +205,7 @@ jobs:
       run:
         shell: ${{ matrix.shell }}
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
 
       # macOS takes the newest Qt: 6.8 and 6.9 link `-framework AGL`, a framework
       # macOS 26's SDK no longer ships, and 6.10 stopped. Qt 6.12 is universal
@@ -215,7 +215,7 @@ jobs:
       # Windows is pinned to 6.8.3 because that is the Qt the suite has been run
       # against there; bumping it is its own change, not a side effect of this one.
       - name: Install Qt 6
-        uses: jurplel/install-qt-action@v4
+        uses: jurplel/install-qt-action@b344308e4483fc892e0d27b3cd1b173ebdd95f06 # v4.5.0
         with:
           version: ${{ startsWith(matrix.runner, 'macos') && '6.12.*' || '6.8.3' }}
           cache: true
@@ -236,7 +236,7 @@ jobs:
       # care either.
       - name: Set up MSVC (Windows)
         if: runner.os == 'Windows'
-        uses: ilammy/msvc-dev-cmd@v1
+        uses: ilammy/msvc-dev-cmd@0b201ec74fa43914dc39ae48a89fd1d8cb592756 # v1.13.0
         with:
           arch: x64
 
@@ -331,12 +331,12 @@ jobs:
       run:
         shell: pwsh
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
 
       # 5.15.2 is the newest Qt 5.15 with an MSVC binary package, and it is built
       # for the 2019 toolset. Its DLLs declare Windows 7 as their floor.
       - name: Install Qt 5.15
-        uses: jurplel/install-qt-action@v4
+        uses: jurplel/install-qt-action@b344308e4483fc892e0d27b3cd1b173ebdd95f06 # v4.5.0
         with:
           version: '5.15.2'
           arch: win64_msvc2019_64
@@ -355,14 +355,14 @@ jobs:
       - name: Set up MSVC 2019
         id: msvc2019
         continue-on-error: true
-        uses: ilammy/msvc-dev-cmd@v1
+        uses: ilammy/msvc-dev-cmd@0b201ec74fa43914dc39ae48a89fd1d8cb592756 # v1.13.0
         with:
           arch: x64
           toolset: 14.29
 
       - name: Set up MSVC (default toolset)
         if: steps.msvc2019.outcome != 'success'
-        uses: ilammy/msvc-dev-cmd@v1
+        uses: ilammy/msvc-dev-cmd@0b201ec74fa43914dc39ae48a89fd1d8cb592756 # v1.13.0
         with:
           arch: x64
 

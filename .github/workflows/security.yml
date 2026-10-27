@@ -1,0 +1,73 @@
+name: Security
+
+# Code scanning for a tree that has no lockfile to audit. Trivy reads the files
+# this project ships -- the Dockerfile the release packages from, and the tree
+# itself for secrets -- and uploads SARIF, which is what puts a finding in the
+# repository's Security tab instead of in a job log nobody opens.
+#
+# This replaces the scanning that the Python-era pipeline did. That workflow was
+# deleted at 14.0.0 with the application it audited, and it was the uploader of
+# every code-scanning alert this repository has -- which is why those alerts have
+# sat open since: an alert is closed by a later upload under the same analysis
+# configuration, and there has been no later upload. They are dismissed by hand;
+# what this job does is make sure the next finding has a home.
+#
+# The scan does not fail the build (`exit-code: 0`). Its verdict is the SARIF:
+# a rule that fires on a base image, or a CVE published against a package this
+# repository does not own, is not something a pull request here can fix, and a
+# gate that cannot be passed is a gate that gets switched off. The lint, the
+# build and the suites are the gates; this is the record.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  schedule:
+    # Weekly, because a vulnerability appears against an unchanged tree. A scanner
+    # that only runs on a commit answers a question about last week.
+    - cron: '23 5 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: security-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  trivy:
+    name: Trivy
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      security-events: write # upload-sarif writes the analysis
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+
+      - name: Scan the tree
+        id: scan
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          scan-type: 'fs'
+          scan-ref: '.'
+          scanners: 'vuln,secret,misconfig'
+          severity: 'CRITICAL,HIGH,MEDIUM'
+          limit-severities-for-sarif: true
+          format: 'sarif'
+          output: 'trivy.sarif'
+          exit-code: '0'
+
+      # Uploaded only when the scan produced a report, so a failure that is a
+      # failure -- the database would not download, the rule went out of date --
+      # reads as itself instead of as "sarif file not found". A pull request from
+      # a fork gets a read-only token, where the upload would fail with a
+      # permission error that says nothing about the code; the scan still runs
+      # there, only the upload is skipped.
+      - name: Upload the SARIF
+        if: ${{ steps.scan.outcome == 'success' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) }}
+        uses: github/codeql-action/upload-sarif@9b3254085494b55a0f7c4c2b3d2d52cc712ce370 # v4.39.1
+        with:
+          sarif_file: 'trivy.sarif'
+          category: 'trivy'
