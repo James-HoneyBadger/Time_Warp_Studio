@@ -40,6 +40,6 @@ jobs:
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
       - name: Spellcheck Markdown
-        uses: rojopolis/spellcheck-github-actions@dbd2f1da869c05ad874fffeb6fe1ed50cd1a6e98 # 0.36.0
+        uses: rojopolis/spellcheck-github-actions@f2df388397bcb35f524b4a0a3567d6b1e8a4e595 # 0.68.0
         with:
           config_path: .spellcheck.yml
