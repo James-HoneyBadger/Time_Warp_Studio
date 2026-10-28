@@ -2,6 +2,80 @@
 
 <!-- history: all -->
 
+## [23.1.0] - 2026-10-27
+
+An AI assistant you configure yourself: a page beside the editor that can explain a
+program, find what is wrong with it, comment it, translate it or write a new one
+through a service you choose. Off on a fresh install, nothing sent until a button is
+pressed, and the key need never touch the disk.
+
+### Added
+
+- **The Assistant page.** The eighth page of the right column, beside Output,
+  Variables, Telemetry, Debug, Lessons, Classroom and Database, because the questions
+  it answers are about the document in the editor.
+  **Explain**, **Fix**, **Comment**, **Translate** and **Write** are one click each;
+  the box takes anything else and `Ctrl+Enter` sends it. **Stop** abandons a request,
+  **Clear** forgets the last six exchanges, **Insert** puts the answer's code into the
+  editor at the cursor — replacing a selection — and **Copy** takes the whole answer.
+  A selection wins over the whole document, and the last run's errors ride along with
+  **Fix**, because "find what is wrong" without the error is a guess.
+- **Tools > AI Settings…** chooses the service. A **Provider** dropdown fills the
+  protocol, endpoint and model from a preset: OpenAI, DeepSeek, Anthropic, Ollama and
+  LM Studio on this machine, OpenRouter, or a custom endpoint. **Test connection**
+  sends one short question and shows the model's own answer, which is the only quick
+  way to tell a wrong key from a wrong endpoint from a retired model name.
+- **`timewarp::ai`**, the library: `config.cpp` reads, validates and rewrites the
+  settings; `prompt.cpp` builds the system prompt and the user turn; `client.cpp` is
+  the one class that opens a socket, and it is asynchronous because the window must
+  stay live at 60 Hz whether or not a service is thinking.
+- **Two request shapes, not a vendor list**: OpenAI-compatible (`/chat/completions`,
+  bearer token) and Anthropic's Messages API (`/messages`, `x-api-key`). DeepSeek is a
+  preset holding an endpoint and a model, not a third protocol: the *protocol* is how
+  a request is built and the *provider* is who receives it, and only one of those
+  changes any code.
+- **`time_warp_ai`**, the same assistant from a shell: `ask`, `explain`, `fix`,
+  `comment`, `translate`, `write`, `check` and `config`. It reads the settings the IDE
+  writes, prints the answer on stdout alone so a pipe can have it, and `--file -`
+  reads the program from stdin.
+- **`ai_tests`**, 29 cases. The interesting half needs no network: the configuration,
+  the prompts and both wire formats are pure functions, and the client is driven by a
+  transport of the test's own — a 200 in each protocol's envelope, a 401 with an
+  error object, a body that is not JSON, a refused connection, and a cancellation
+  that arrives after the button was pressed. What a real model *says* is another
+  company's property and is not asserted.
+- **`docs/AI.md`**: the presets, every environment variable, exactly what leaves the
+  machine, and what each error means. The user guide has a section, the FAQ answers
+  "does it send my code anywhere?", and the API page lists the library.
+
+### Changed
+
+- **The right column has eight pages**, so `MainWindow::showPanel` accepts `ai` and
+  `panelKeys()` lists it. The layout suite asserts the count, the order and the title,
+  which is how the page cannot exist without being reachable.
+- **The suite count is 26, not 24.** `cli_tests` had been missing from the list in
+  `docs/README_TESTING.md` long before this release; adding `ai_tests` made the
+  arithmetic wrong by two instead of one. The list and the four documents that repeat
+  the number now say 26.
+- **`docs/USER_GUIDE.md` has a section 8 and the later sections moved down one.** The
+  anchor references in `README.md`, `docs/API.md` and `docs/FAQ.md` moved with them.
+
+### Notes
+
+- **The key is treated as a secret, not a setting.** `TIME_WARP_AI_API_KEY` wins over
+  anything stored and is never written; unticking **Keep the key on this machine**
+  removes a stored one; a stored one restricts the settings file to its owner on
+  POSIX; and every message a service can influence goes through `redact()` before it
+  is shown, because a proxy that echoes the request must not be able to put the key in
+  the status bar.
+- **It does not stream, and it does not run what it writes.** A reply arrives whole,
+  and an answer reaches the editor before anything executes it: **Insert**, read it,
+  then **Run**. A model with a keyboard is not a feature this project will ship.
+- **A build without Qt Network gets no assistant at all** rather than a page that can
+  only report that it cannot work — the same rule as the Svg and PrintSupport
+  components, applied one step earlier because a client with no transport is not a
+  smaller client.
+
 ## [23.0.1] - 2026-10-22
 
 Two dangling references the sanitizer found once the tree was split, a tube that

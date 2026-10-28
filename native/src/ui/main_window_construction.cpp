@@ -524,6 +524,9 @@ void MainWindow::buildRightColumn(QSplitter* parent) {
     classroom_panel_ = new ClassroomPanel{right_tabs_};
     right_tabs_->addTab(classroom_panel_, tr("\U0001F3EB Classroom"));
     buildSqlPanel();
+#ifdef TIME_WARP_HAVE_AI
+    buildAiPanel();
+#endif
     connect(classroom_panel_, &ClassroomPanel::refreshRequested, this,
             &MainWindow::requestClassroom);
     connect(classroom_panel_, &ClassroomPanel::bundleRequested, this,

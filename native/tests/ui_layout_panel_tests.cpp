@@ -580,4 +580,142 @@ void test_sql_panel_runs_and_shows_results() {
     TW_CHECK(panel->statusText().contains(QStringLiteral("no such table")));
 }
 
+// The assistant is the one page of the right column that depends on something
+// outside this machine, so what is asserted about it is what can be known without
+// a network: that it refuses to pretend it is ready, that it says what is missing,
+// that configuring it turns it on, and that the settings dialog's presets really
+// do fill the fields. Nothing here sends a request.
+
+void test_assistant_panel_contract() {
+    announce("assistant panel");
+    MainWindow window;
+#ifdef TIME_WARP_HAVE_AI
+    AiPanel* panel = window.aiPanel();
+    TW_CHECK(panel != nullptr);
+    if (panel == nullptr) {
+        return;
+    }
+    TW_CHECK_EQ(panel->objectName(), QStringLiteral("aiPanel"));
+    TW_CHECK(window.showPanel(QStringLiteral("ai")));
+    TW_CHECK(window.rightTabs()->widget(7) == panel);
+    TW_CHECK_EQ(window.rightTabs()->tabText(7),
+                QString::fromUtf8("\U0001F916 Assistant"));
+
+    // A fresh profile has no endpoint: the panel says what to do about it, and
+    // there is nothing to press that would send anything.
+    TW_CHECK(!panel->configured());
+    TW_CHECK(panel->emptyStateVisible());
+    auto* send = panel->findChild<QPushButton*>(QStringLiteral("aiSendButton"));
+    TW_CHECK(send != nullptr);
+    if (send != nullptr) {
+        TW_CHECK(!send->isEnabled());
+    }
+    TW_CHECK(panel->question() != nullptr);
+    if (panel->question() != nullptr) {
+        TW_CHECK(!panel->question()->isEnabled());
+    }
+
+    // Asking with no endpoint is a sentence rather than a request, and it is not
+    // remembered as a turn of a conversation that never happened.
+    panel->setConfig(timewarp::ai::Config{});
+    panel->ask(timewarp::ai::Task::Explain);
+    TW_CHECK(panel->status() != nullptr);
+    if (panel->status() != nullptr) {
+        TW_CHECK(panel->status()->text().contains(QString::fromUtf8("\u274C")));
+    }
+    TW_CHECK_EQ(panel->historySize(), 0);
+    // The refusal is readable, not just recorded: the transcript holds the sentence
+    // rather than the markup that carried it.
+    TW_CHECK(panel->transcript() != nullptr);
+    if (panel->transcript() != nullptr) {
+        TW_CHECK(panel->transcript()->toPlainText().contains(QStringLiteral("switched off")));
+        TW_CHECK(!panel->transcript()->toPlainText().contains(QStringLiteral("<p")));
+    }
+
+    // Configured: the banner goes, the controls come alive, and the privacy note
+    // says which service would receive the program.
+    timewarp::ai::Config config;
+    config.enabled = true;
+    config.base_url = QStringLiteral("https://api.deepseek.com/v1");
+    config.model = QStringLiteral("deepseek-chat");
+    panel->setConfig(config);
+    TW_CHECK(panel->configured());
+    TW_CHECK(!panel->emptyStateVisible());
+    if (send != nullptr) {
+        TW_CHECK(send->isEnabled());
+    }
+    if (panel->question() != nullptr) {
+        TW_CHECK(panel->question()->isEnabled());
+    }
+    auto* note = panel->findChild<QLabel*>(QStringLiteral("aiPrivacyNote"));
+    TW_CHECK(note != nullptr);
+    if (note != nullptr) {
+        TW_CHECK(note->text().contains(QStringLiteral("DeepSeek")));
+        TW_CHECK(note->text().contains(QStringLiteral("Nothing is sent")));
+    }
+
+    // A request against a port with nothing listening on it: the whole path from
+    // the button to the transcript, with no network and no waiting. Loopback refuses
+    // immediately, so this asserts what a unit test of the client cannot see -- that
+    // the panel composes, sends, shows the refusal and comes back to life.
+    timewarp::ai::Config unreachable = config;
+    unreachable.base_url = QStringLiteral("http://127.0.0.1:1/v1");
+    unreachable.timeout_seconds = 5;
+    panel->setConfig(unreachable);
+    panel->ask(timewarp::ai::Task::Explain);
+    TW_CHECK(spin_until([panel] { return !panel->busy(); }, 8000));
+    if (panel->status() != nullptr) {
+        TW_CHECK(panel->status()->text().contains(QString::fromUtf8("\u274C")));
+    }
+    // The question is remembered even though the answer did not arrive, so the next
+    // request still has the document in its history -- and the panel is usable
+    // again rather than stuck in "asking".
+    TW_CHECK_EQ(panel->historySize(), 1);
+    if (panel->transcript() != nullptr) {
+        TW_CHECK(panel->transcript()->toPlainText().contains(QStringLiteral("Explain")));
+    }
+    if (send != nullptr) {
+        TW_CHECK(send->isEnabled());
+    }
+    panel->setConfig(config);
+
+    // Reachable from Tools, one key away, with the two one-click questions beside
+    // it. A feature with no menu entry is a feature only its author knows about.
+    auto* assistant = window.findChild<QAction*>(QStringLiteral("aiAssistantAction"));
+    TW_CHECK(assistant != nullptr);
+    if (assistant != nullptr) {
+        TW_CHECK_EQ(assistant->shortcut(),
+                    timewarp::core::keySequence(Qt::CTRL | Qt::SHIFT, Qt::Key_A));
+    }
+    for (const char* name : {"aiExplainAction", "aiFixAction", "aiSettingsAction"}) {
+        TW_CHECK(window.findChild<QAction*>(QString::fromLatin1(name)) != nullptr);
+    }
+
+    // The presets are what makes DeepSeek -- and Ollama, and LM Studio -- an option
+    // rather than a URL a user has to know by heart. Choosing one fills the three
+    // fields, and the result is what the window would save.
+    AiSettingsDialog dialog{config};
+    TW_CHECK_EQ(dialog.presetChooser()->currentText(), QStringLiteral("DeepSeek"));
+    const int anthropic = dialog.presetChooser()->findText(QStringLiteral("Anthropic"));
+    TW_CHECK(anthropic >= 0);
+    if (anthropic >= 0) {
+        dialog.presetChooser()->setCurrentIndex(anthropic);
+        TW_CHECK_EQ(dialog.baseUrlField()->text(),
+                    QStringLiteral("https://api.anthropic.com/v1"));
+        TW_CHECK_EQ(dialog.modelField()->text(),
+                    QStringLiteral("claude-3-5-haiku-latest"));
+        TW_CHECK(dialog.config().protocol == timewarp::ai::Protocol::Anthropic);
+    }
+    // The key is a password until the user says otherwise: a shoulder is cheaper
+    // than a screenshot.
+    TW_CHECK_EQ(dialog.keyField()->echoMode(), QLineEdit::Password);
+    TW_CHECK(dialog.testStatus() != nullptr);
+#else
+    // A Qt with no Network has no assistant at all, rather than a page that can
+    // only report that it cannot work.
+    TW_CHECK(window.aiPanel() == nullptr);
+    TW_CHECK(!window.showPanel(QStringLiteral("ai")));
+#endif
+}
+
 }  // namespace tw::ui_layout

@@ -72,6 +72,10 @@
 #include "temp_dir.hpp"
 #include "timewarp/canvas/command.hpp"
 #include "timewarp/canvas/command_queue.hpp"
+#ifdef TIME_WARP_HAVE_AI
+#include "timewarp/ui/ai_panel.hpp"
+#include "timewarp/ui/ai_settings.hpp"
+#endif
 #include "timewarp/ui/autosave.hpp"
 #include "timewarp/ui/chip8_window.hpp"
 #include "timewarp/ui/code_editor.hpp"
@@ -117,6 +121,10 @@ bool spin_until(Predicate done, int timeout_ms = 10000) {
 
 namespace tw::ui_layout {
 
+#ifdef TIME_WARP_HAVE_AI
+using timewarp::ui::AiPanel;
+using timewarp::ui::AiSettingsDialog;
+#endif
 using timewarp::ui::CrtOverlay;
 using timewarp::ui::CodeEditor;
 using timewarp::ui::FunctionKeyBar;

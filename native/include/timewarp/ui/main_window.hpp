@@ -56,6 +56,8 @@
 #include "timewarp/lessons/classroom.hpp"
 #include "timewarp/lessons/progress.hpp"
 #include "timewarp/debugger/debugger_runner.hpp"
+#include "timewarp/ai/config.hpp"
+#include "timewarp/ai/prompt.hpp"
 #include "timewarp/lang/language.hpp"
 #include "timewarp/ui/autosave.hpp"
 #include "timewarp/ui/code_editor.hpp"
@@ -107,6 +109,7 @@ class TerminalWidget;
 /// mechanism, and a preset is a named point in it.
 enum class ScreenPreset { Normal, Amber, Green, White };
 
+class AiPanel;
 class ClassroomPanel;
 class CodeEditor;
 class CommandPalette;
@@ -214,6 +217,23 @@ public:
     /// The database manager page. Null only when Qt itself is unavailable, which
     /// is the case in which there is no window either.
     [[nodiscard]] SqlPanel* sqlPanel() const noexcept { return sql_panel_; }
+    /// The assistant page, so a test can drive it and a screenshot can show it.
+    /// Null when this build has no Qt Network, which is the one case in which the
+    /// assistant does not exist at all.
+    [[nodiscard]] AiPanel* aiPanel() const noexcept { return ai_panel_; }
+    /// The assistant's configuration as this window holds it -- the settings file
+    /// at start-up, and whatever the settings dialog last accepted.
+    [[nodiscard]] const timewarp::ai::Config& aiConfig() const noexcept {
+        return ai_config_;
+    }
+    /// Raises the assistant's page and puts the cursor in its question box. Opens
+    /// its settings instead when there is nothing configured to ask.
+    void showAssistant();
+    /// Opens the assistant's settings dialog: the endpoint, the model and the key.
+    void showAiSettings();
+    /// Runs one request about the document in view, for the menu entries that are
+    /// a single click rather than a typed question.
+    void askAssistant(timewarp::ai::Task task);
     /// The open project's file path, or empty when none is open.
     [[nodiscard]] QString activeProjectPath() const;
     /// Shows the find bar, with the replacement row when `withReplacement`.
@@ -809,6 +829,14 @@ private:
     /// Stops it and records the elapsed time as the last run's.
     void stopRunClock();
 
+    // -- the assistant ----------------------------------------------------
+    void buildAiPanel();
+    /// What the assistant is told about the document in view: the language, the
+    /// name, the text, the selection and what the last run printed.
+    [[nodiscard]] timewarp::ai::Context aiContext() const;
+    /// Puts an answer's code into the document in view, replacing a selection or
+    /// landing at the cursor, in one undo step.
+    void insertAssistantCode(const QString& code);
     /// Adds or removes the terminal tab to match `terminal_enabled_`, the mode
     /// that is active, and whether this window may run commands at all.
     void refreshTerminalTab();
@@ -888,6 +916,12 @@ private:
     /// pointer because the interpreter's SQL callback runs on a runner thread and
     /// must keep the connection alive even if the panel's tab is rebuilt.
     SqlPanel* sql_panel_ = nullptr;
+    /// The assistant page and the configuration it holds. The configuration is a
+    /// setting (the settings file, edited in its own dialog); the *conversation*
+    /// lives in the panel, because a conversation is a session rather than a
+    /// preference that should survive a restart.
+    AiPanel* ai_panel_ = nullptr;
+    timewarp::ai::Config ai_config_;
     std::shared_ptr<timewarp::sql::Database> sql_database_;
     QToolBar* tool_bar_ = nullptr;
     QToolBar* tool_bar_secondary_ = nullptr;

@@ -237,14 +237,16 @@ void test_right_column_tabs_and_order() {
     ResizableTabWidget* tabs = window->rightTabs();
 
     TW_CHECK_EQ(tabs->objectName(), QStringLiteral("rightTabs"));
-    TW_CHECK_EQ(tabs->count(), 7);
-    // Order is part of the interface: users reach for Output first, and the
-    // classroom page is last because only a teacher opens it.
+    TW_CHECK_EQ(tabs->count(), 8);
+    // Order is part of the interface: users reach for Output first, the classroom
+    // page is late because only a teacher opens it, and the assistant is last
+    // because it is the one page that needs something outside this machine.
     TW_CHECK_EQ(tabTitles(tabs).toStdString(),
                 std::string{"\U0001F4DD Output  \U0001F3A8 Graphics|"
                             "\U0001F50D Variables|\u26A1 Telemetry HUD|"
                             "\U0001F41B Debug|\U0001F393 Lessons|"
-                            "\U0001F3EB Classroom|\U0001F5C4 Database"});
+                            "\U0001F3EB Classroom|\U0001F5C4 Database|"
+                            "\U0001F916 Assistant"});
     TW_CHECK_EQ(tabs->widget(0), window->outputCanvasSplitter());
 
     // These are fixed panes, not documents: no close buttons, no dragging them

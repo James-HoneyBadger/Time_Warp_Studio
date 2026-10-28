@@ -78,7 +78,11 @@ first session is readable either way.
 
 ### Does it need an internet connection?
 
-No. The core features work offline.
+No. The core features work offline: the eleven interpreters, the two machines, the
+debugger, the lessons and the SQL database are all inside the application. The one
+feature that can use a connection is the optional [AI assistant](AI.md), which is
+off until you configure a service and which can point at a model running on this
+machine instead.
 
 ---
 
@@ -194,6 +198,17 @@ removed entirely in presentation and player modes, with the shell stopped.
 It is a command line, not a terminal emulator: there is no PTY, so there are no
 prompts, no job control and no full-screen programs. `echo`, a compiler or a
 script work; `vim` and `top` do not.
+
+### Does the Studio send my code anywhere?
+
+Not unless you ask it to, and only to the AI service you configured. The
+[AI assistant](AI.md) is off on a fresh install; nothing is sent until you press
+**Send**, **Explain**, **Fix**, **Comment**, **Translate** or **Write**. That
+request carries your question, the current document (or the selected lines) and its
+language and file name, and for **Fix** what the last run printed — nothing else,
+and no other file. Untick **Send the program** to send only your words, or point the
+endpoint at Ollama or LM Studio and nothing leaves the machine at all. The key is
+never written down if you say so, and it is never echoed in a message.
 
 ### Can I find and replace text?
 
@@ -405,7 +420,7 @@ can run a program, keep a REPL session, start/step/stop a debug session, run SQL
 against the open database, create and edit a project (including recursive folder
 import), and evaluate watch expressions. It also supports batches, notifications
 and standard JSON-RPC error codes. `docs/API.md` lists every method; the
-[user guide](USER_GUIDE.md#8-automation) shows a worked session. The C++ libraries
+[user guide](USER_GUIDE.md#9-automation) shows a worked session. The C++ libraries
 behind it (`timewarp::lang`, `timewarp::scheme`, `timewarp::sql`,
 `timewarp::project`) are linkable by another program.
 

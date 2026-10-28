@@ -17,7 +17,7 @@ cmake --build native/build -j
 ctest --test-dir native/build --output-on-failure
 ```
 
-There are 24 suites, one binary each, named for what they cover:
+There are 26 suites, one binary each, named for what they cover:
 
 `lexer_tests`, `evaluator_tests`, `scheme_tests`, `lang_tests` (the native
 executors and the shared interpreter loop), `canvas_queue_tests`,
@@ -26,7 +26,9 @@ executors and the shared interpreter loop), `canvas_queue_tests`,
 `syntax_highlighter_tests`, `audio_tests`, `media_tests`, `player_tests`,
 `lessons_tests`, `classroom_tests`, `editor_services_tests`,
 `help_browser_tests`, `chip8_emulator_tests` (the live machine and its window),
-`retro_computer_tests` (the HB-1), `project_tests`, `sql_tests` and `api_tests`.
+`retro_computer_tests` (the HB-1), `project_tests`, `sql_tests`, `cli_tests`,
+`api_tests` and `ai_tests` (the assistant's configuration, prompts and exchange,
+against a transport of the test's own rather than a network).
 
 Other build trees, all of which must stay green:
 

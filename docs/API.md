@@ -9,7 +9,7 @@ The Studio exposes two API surfaces:
   another program. `timewarp::lang`, `timewarp::scheme`, `timewarp::sql`,
   `timewarp::project` and `timewarp::api`.
 
-The [user guide](USER_GUIDE.md#8-automation) has a worked introduction; this page is
+The [user guide](USER_GUIDE.md#9-automation) has a worked introduction; this page is
 the method and payload reference.
 
 Both are local. The automation API has no socket, no port and no network
@@ -289,6 +289,7 @@ target_link_libraries(my_tool PRIVATE
     timewarp::scheme    # Scheme's explicit-stack machine
     timewarp::sql       # SQLite database
     timewarp::project   # .twproject model
+    timewarp::ai        # the AI assistant: configuration, prompts, the client
     timewarp::api       # the JSON-RPC server, if embedding it
 )
 ```
@@ -303,13 +304,23 @@ target_link_libraries(my_tool PRIVATE
 | `timewarp/scheme/machine.hpp` | `scheme::Machine`, run-to-completion and resumable |
 | `timewarp/sql/database.hpp` | `sql::Database`, results, tables, schema |
 | `timewarp/project/project.hpp` | `project::Project`, `.twproject` load/save, groups |
+| `timewarp/ai/config.hpp` | `ai::Config`, the presets, the settings file and the environment overrides |
+| `timewarp/ai/prompt.hpp` | `ai::build_prompt` and the system prompt that tells a model what this IDE runs |
+| `timewarp/ai/client.hpp` | `ai::Client`, one request in flight, over Qt Network |
 | `timewarp/api/server.hpp` | `api::Server`, the JSON-RPC dispatcher with no transport |
 | `timewarp/api/debug.hpp` | `debug::Session`, a breakpoint/step session for either engine |
 
 `timewarp::lang` and `timewarp::scheme` depend on nothing but the C++ standard
-library. `timewarp::sql`, `timewarp::project` and `timewarp::api` use Qt Core's
-string, JSON and file types, and `timewarp::debugger` is the Qt threading adapter
-the IDE uses around the Scheme machine.
+library. `timewarp::sql`, `timewarp::project`, `timewarp::ai` and `timewarp::api`
+use Qt Core's string, JSON and file types, `timewarp::ai` adds Qt Network for the
+transport, and `timewarp::debugger` is the Qt threading adapter the IDE uses around
+the Scheme machine. `timewarp::ai` is built only where Qt has Network: a client with
+no transport is not a smaller assistant.
+
+The assistant is also a command, for a script or a terminal: `./native/build/time_warp_ai`
+takes `ask`, `explain`, `fix`, `comment`, `translate`, `write`, `check` and
+`config`, reads the same settings the IDE writes, and prints the answer on standard
+output alone. [AI.md](AI.md) is its manual.
 
 ---
 

@@ -60,6 +60,7 @@ int main(int argc, char** argv) {
     test_a_run_writes_beside_its_document_without_a_project();
     test_watch_and_data_breakpoint_controls();
     test_sql_panel_runs_and_shows_results();
+    test_assistant_panel_contract();
     test_repl_bar_runs_and_keeps_bindings();
     test_repl_bar_scheme_errors_and_language_switch();
     test_repl_basic_direct_mode();

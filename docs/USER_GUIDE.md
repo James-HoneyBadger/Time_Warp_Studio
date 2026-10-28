@@ -1,8 +1,8 @@
 # Time Warp Studio — User Guide
 
 This is the manual for the Qt application: how to open it, organise work, meet the
-HB-1 home computer, try commands without writing a program, debug, use SQL,
-and drive the Studio from a script or a terminal. The per-language command
+HB-1 home computer, try commands without writing a program, debug, use SQL, ask an
+AI assistant about a program, and drive the Studio from a script or a terminal. The per-language command
 reference is
 [LANGUAGE_GUIDE.md](LANGUAGE_GUIDE.md), and the tutorials start at
 [tutorials/](tutorials/).
@@ -41,8 +41,8 @@ from the desktop menu, or run the `time_warp_ide` binary directly.
   its arguments, so a picture that came out wrong can be read back; a pose strip
   under the canvas shows where the turtle is, which way it faces, what the pen is
   doing and how many commands the run has sent.
-- **Right-column tabs** — Variables, Telemetry HUD, Debug, Lessons, Classroom and
-  Database.
+- **Right-column tabs** — Variables, Telemetry HUD, Debug, Lessons, Classroom,
+  Database and Assistant (see [section 8](#8-the-ai-assistant)).
 - **Projects dock** — the project tree (View → Project Panel, `Ctrl+Shift+E`).
 - **REPL bar** — one command at a time under the editor.
 - **Status bar** — language, cursor position, run state and the document name.
@@ -479,7 +479,32 @@ smaller alternative for a program that needs no window at all.
 
 ---
 
-## 8. Automation
+## 8. The AI assistant
+
+The 🤖 Assistant tab asks a service you configure about the program in front of you.
+It is off until you set it up, and nothing is sent until you press a button.
+
+- **Tools > AI Settings…** chooses the service: OpenAI, DeepSeek, Anthropic, Ollama or
+  LM Studio on this machine, OpenRouter, or any endpoint that speaks one of the two
+  request shapes. **Test connection** proves the key and the model before you ask a
+  question.
+- **Tools > 🤖 Assistant** (`Ctrl+Shift+A`) raises the page. **Explain**, **Fix**,
+  **Comment**, **Translate** and **Write** are the one-click questions; the box takes
+  anything else, and `Ctrl+Enter` sends it.
+- **Insert** puts the answer's code into the editor at the cursor, and **Run** (F9)
+  then runs it. Nothing the assistant writes runs until you have read it.
+- **Send the program** is ticked by default; untick it to send only your words. A
+  selection wins over the whole document.
+- The key may come from `TIME_WARP_AI_API_KEY` instead of the settings file, and
+  **Keep the key on this machine** unticked leaves it out of the file entirely.
+
+`./native/build/time_warp_ai` is the same assistant from a shell — `check`,
+`explain`, `fix`, `write` and the rest. [AI.md](AI.md) is the manual: what is sent,
+every environment variable, and what each error means.
+
+---
+
+## 9. Automation
 
 `./api` starts a JSON-RPC 2.0 service on stdin/stdout: one JSON object per line,
 one response per line, notifications get no response, and batches are arrays. The
@@ -510,7 +535,7 @@ an `ostream`, which is how the tests drive it without a process.
 
 ---
 
-## 9. Lessons, classroom and appearance
+## 10. Lessons, classroom and appearance
 
 - **Lessons** — the 🎓 Lessons tab lists the curriculum and checks the document in
   front against the current checkpoint. Progress lives in
@@ -532,13 +557,14 @@ whole directory, which is how tests avoid touching a real learner's files.
 
 ---
 
-## 10. Where to go next
+## 11. Where to go next
 
 | Need | Document |
 | --- | --- |
 | Commands for a language | [LANGUAGE_GUIDE.md](LANGUAGE_GUIDE.md) |
 | A worked introduction | [tutorials/](tutorials/) |
 | Lessons and teaching | [lessons/README.md](lessons/README.md) |
+| The AI assistant, and what it sends | [AI.md](AI.md) |
 | API methods and payloads | [API.md](API.md) |
 | Architecture and tests | [ARCHITECTURE.md](ARCHITECTURE.md), [README_TESTING.md](README_TESTING.md) |
 | Installation and packaging | [INSTALLATION.md](INSTALLATION.md) |
