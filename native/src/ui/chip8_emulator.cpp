@@ -91,14 +91,18 @@ void Chip8Emulator::makeMachine() {
     // The whole-program executor reads the key mask once because it cannot
     // receive a later press. This machine can, so Fx0A waits.
     machine_->set_interactive(true);
+    clearRewind();
+    remember();
 }
 
 void Chip8Emulator::start() {
     if (machine_ == nullptr || running_ || machine_->halted()) {
         return;
     }
+    forgetFuture();
     error_.clear();
     running_ = true;
+    frames_since_snapshot_ = 0;
     clock_.start();
     emit stateChanged();
 }
@@ -110,6 +114,9 @@ void Chip8Emulator::pause() {
     }
     running_ = false;
     clock_.stop();
+    // The moment the user paused is the one they want to go back to, and it is
+    // newer than the last scheduled snapshot.
+    remember();
     emit stateChanged();
 }
 
@@ -142,6 +149,70 @@ void Chip8Emulator::reset() {
     error_.clear();
     emit frameReady();
     emit stateChanged();
+}
+
+void Chip8Emulator::remember() {
+    if (machine_ == nullptr) {
+        return;
+    }
+    frames_since_snapshot_ = 0;
+    // Nothing has happened since the last moment, so it is the same moment. Two
+    // copies of one frame in the ring would make the slider's right edge a place
+    // that does nothing.
+    if (!states_.empty() && states_.back().cycles == machine_->cycles() &&
+        states_.back().pc == machine_->pc) {
+        return;
+    }
+    states_.push_back(machine_->save_state());
+    while (states_.size() > static_cast<std::size_t>(kChip8RewindSnapshots)) {
+        states_.erase(states_.begin());
+    }
+    rewind_position_ = -1;
+}
+
+void Chip8Emulator::forgetFuture() {
+    if (rewind_position_ < 0) {
+        return;
+    }
+    if (rewind_position_ + 1 < static_cast<int>(states_.size())) {
+        states_.erase(states_.begin() + rewind_position_ + 1, states_.end());
+    }
+    rewind_position_ = -1;
+}
+
+int Chip8Emulator::beginRewind() {
+    if (running_) {
+        running_ = false;
+        clock_.stop();
+    }
+    // The live state is worth keeping even if it is only a few frames newer than
+    // the last scheduled snapshot: rewinding to "now" has to be exact. `remember`
+    // drops the duplicate when the machine has not moved since.
+    if (rewind_position_ < 0) {
+        remember();
+    }
+    emit stateChanged();
+    return int(states_.size());
+}
+
+void Chip8Emulator::rewindTo(int index) {
+    if (machine_ == nullptr || states_.empty()) {
+        return;
+    }
+    const int wanted = std::clamp(index, 0, int(states_.size()) - 1);
+    running_ = false;
+    clock_.stop();
+    machine_->restore_state(states_.at(static_cast<std::size_t>(wanted)));
+    rewind_position_ = wanted;
+    frames_since_snapshot_ = 0;
+    emit frameReady();
+    emit stateChanged();
+}
+
+void Chip8Emulator::clearRewind() {
+    states_.clear();
+    rewind_position_ = -1;
+    frames_since_snapshot_ = 0;
 }
 
 void Chip8Emulator::setSpeed(int cycles_per_frame) {
@@ -202,6 +273,14 @@ void Chip8Emulator::tick() {
 void Chip8Emulator::advanceFrame() {
     if (machine_ == nullptr) {
         return;
+    }
+    // A rewind puts the machine in the past; stepping or running from there is a
+    // new timeline, and the old future must not be offered again.
+    forgetFuture();
+    ++frames_since_snapshot_;
+    if (frames_since_snapshot_ >= kChip8RewindStride) {
+        frames_since_snapshot_ = 0;
+        remember();
     }
     try {
         for (int cycle = 0; cycle < speed_ && !machine_->halted(); ++cycle) {

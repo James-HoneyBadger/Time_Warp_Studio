@@ -30,6 +30,12 @@ namespace timewarp::ui {
 inline constexpr int kChip8FramesPerSecond = 60;
 /// Ten opcodes a frame is the original pace and the whole-program executor's.
 inline constexpr int kChip8DefaultSpeed = 10;
+/// One rewind snapshot every quarter of a second: fine enough to step through the
+/// moment something went wrong, coarse enough that a minute of play costs three
+/// megabytes.
+inline constexpr int kChip8RewindStride = 15;
+/// How many are kept: thirty seconds of history, oldest dropped first.
+inline constexpr int kChip8RewindSnapshots = 120;
 /// Fast enough for a listing that computes, still bounded so the GUI thread
 /// cannot be monopolised by one frame.
 inline constexpr int kChip8MaximumSpeed = 2000;
@@ -102,6 +108,30 @@ public:
     [[nodiscard]] unsigned keys() const noexcept;
     [[nodiscard]] Chip8Snapshot snapshot() const;
 
+    // -- rewind ----------------------------------------------------------
+    //
+    // The machine's state is four kilobytes of memory and eight of pixels, so the
+    // emulator keeps a snapshot every quarter second and can put the machine back
+    // into one. This is the debugging tool a game needs: "it died just after that
+    // jump" is a thing to look at, not a thing to reproduce.
+    //
+    // It is not a replay: the random generator keeps running, so a program that
+    // draws from RND rewinds its registers and pixels but not its luck.
+
+    /// How many moments can be gone back to. 0 means "nothing to rewind yet".
+    [[nodiscard]] int rewindCount() const noexcept { return int(states_.size()); }
+    /// Pauses, and stores the state as it stands as the newest moment, so the
+    /// newest snapshot is exactly the frame the user pressed Rewind on. Returns how
+    /// many moments there now are.
+    int beginRewind();
+    /// Puts the machine into moment `index` (0 is the oldest). Pauses if it was
+    /// running. Clamps an out-of-range index.
+    void rewindTo(int index);
+    /// Forgets the history, as Reset does.
+    void clearRewind();
+    /// The moment last restored, or -1 when the machine is live.
+    [[nodiscard]] int rewindPosition() const noexcept { return rewind_position_; }
+
 signals:
     /// After one frame (or a single step), so the window repaints once per tick
     /// rather than once per instruction.
@@ -114,6 +144,15 @@ private:
     void tick();
     void makeMachine();
     void fail(const QString& message);
+    /// Appends the machine's state, dropping the oldest when the ring is full.
+    void remember();
+    /// Drops the moments newer than the one restored from: resuming from the past
+    /// makes a new timeline, and the old future is not it.
+    void forgetFuture();
+
+    std::vector<timewarp::lang::Chip8State> states_;
+    int rewind_position_ = -1;
+    int frames_since_snapshot_ = 0;
 
     std::unique_ptr<timewarp::lang::Chip8Machine> machine_;
     /// Kept after `makeMachine`, because Reset must not need the file again.
