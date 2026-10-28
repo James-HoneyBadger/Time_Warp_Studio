@@ -16,8 +16,12 @@
 
 #include "gates.hpp"
 
+#include "timewarp/lang/registry.hpp"
+
 #include <QCryptographicHash>
+#include <QDir>
 #include <QFile>
+#include <QFileInfo>
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonObject>
@@ -27,6 +31,9 @@
 
 #include <cstdio>
 #include <cstdlib>
+#include <optional>
+#include <span>
+#include <string_view>
 
 #include <zlib.h>
 
@@ -322,8 +329,104 @@ int runSchemeHalf(const QString& root, const QString& corpus_path) {
 
 }  // namespace
 
+/// Writes corpus entries for a language's example programs, from the native engine.
+///
+/// The corpus is a recording, and until now the only way to make one was to write the
+/// JSON by hand -- which is why Forth has none: the reference engine that produced the
+/// other nine could not run it. `--record <language>` makes re-recording a command, and
+/// each entry says `recorded_from` so a reader can tell an answer taken from the
+/// deleted reference from one taken from this engine.
+///
+/// The output is printed as one JSON array on stdout and merged into the corpus by
+/// hand, because the corpus is data a person reviews before it becomes a gate.
+int runRecord(const QString& root, const QStringList& languages) {
+    const QString lang_cli = root + QStringLiteral("/native/build/lang_cli");
+    if (!QFile::exists(lang_cli)) {
+        std::fprintf(stderr, "lang_cli was not built\n");
+        return 2;
+    }
+    QJsonArray entries;
+    for (const QString& key : languages) {
+        // The header table, not the engine: this tool drives the engines as
+        // processes, and a gate that linked one would be testing a link rather than
+        // the program a person runs.
+        const timewarp::lang::LanguageRow* row =
+            timewarp::lang::language_row_for_key(key.toStdString());
+        if (row == nullptr) {
+            std::fprintf(stderr, "golden: unknown language %s\n", qPrintable(key));
+            return 2;
+        }
+        QStringList suffixes;
+        for (const std::string_view extension : row->extensions) {
+            if (extension.empty()) {
+                continue;
+            }
+            suffixes.append(QStringLiteral(".") +
+                            QString::fromLatin1(extension.data(),
+                                                static_cast<int>(extension.size())));
+        }
+        QDir directory{root + QStringLiteral("/Examples/") + key};
+        if (!directory.exists()) {
+            std::fprintf(stderr, "golden: no Examples/%s to record\n", qPrintable(key));
+            return 2;
+        }
+        QStringList programs;
+        for (const QFileInfo& info : directory.entryInfoList(QDir::Files, QDir::Name)) {
+            for (const QString& suffix : suffixes) {
+                if (info.fileName().endsWith(suffix, Qt::CaseInsensitive)) {
+                    programs.append(info.absoluteFilePath());
+                    break;
+                }
+            }
+        }
+        for (const QString& path : programs) {
+            QFile file{path};
+            if (!file.open(QIODevice::ReadOnly)) {
+                std::fprintf(stderr, "golden: cannot read %s\n", qPrintable(path));
+                return 2;
+            }
+            const QString source = QString::fromUtf8(file.readAll());
+            const NativeAnswer answer = runNative(lang_cli, key, source);
+            if (!answer.ok) {
+                std::fprintf(stderr, "golden: %s did not run: %s\n", qPrintable(path),
+                             qPrintable(answer.error));
+                return 2;
+            }
+            QJsonObject variables;
+            for (auto it = answer.variables.begin(); it != answer.variables.end(); ++it) {
+                variables.insert(it.key(), QJsonArray{it.value().first, it.value().second});
+            }
+            QJsonArray output;
+            for (const QString& line : answer.output) {
+                output.append(line);
+            }
+            QJsonArray drawing;
+            for (const QString& call : answer.drawing) {
+                drawing.append(call);
+            }
+            entries.append(QJsonObject{
+                {QStringLiteral("name"), QFileInfo{path}.absoluteFilePath().mid(
+                                             root.size() + 1)},
+                {QStringLiteral("language"), key},
+                {QStringLiteral("source"), source},
+                {QStringLiteral("source_sha256"), digestOf(source)},
+                {QStringLiteral("output"), output},
+                {QStringLiteral("drawing"), drawing},
+                {QStringLiteral("variables"), variables},
+                {QStringLiteral("recorded_from"),
+                 QStringLiteral("the native engine at 23.5: no reference run exists for "
+                                "this language")},
+            });
+        }
+    }
+    std::fprintf(stdout, "%s\n",
+                 QJsonDocument{entries}.toJson(QJsonDocument::Compact).constData());
+    return 0;
+}
+
 int runGolden(const QStringList& arguments) {
     QStringList only_languages;
+    bool recording = false;
     bool verbose = false;
     bool scheme = false;
     bool all = false;
@@ -340,6 +443,12 @@ int runGolden(const QStringList& arguments) {
             only_languages.append(arguments.at(++index));
         } else if (argument.startsWith(QLatin1String("--language="))) {
             only_languages.append(argument.section(QLatin1Char('='), 1));
+        } else if (argument == QLatin1String("--record") && index + 1 < arguments.size()) {
+            recording = true;
+            only_languages.append(arguments.at(++index));
+        } else if (argument.startsWith(QLatin1String("--record="))) {
+            recording = true;
+            only_languages.append(argument.section(QLatin1Char('='), 1));
         } else if (argument == QLatin1String("--corpus") && index + 1 < arguments.size()) {
             corpus_path = arguments.at(++index);
         } else if (argument.startsWith(QLatin1String("--corpus="))) {
@@ -350,6 +459,10 @@ int runGolden(const QStringList& arguments) {
         }
     }
     const QString root = repositoryRoot();
+
+    if (recording) {
+        return runRecord(root, only_languages.isEmpty() ? QStringList{} : only_languages);
+    }
 
     if (scheme || all) {
         const QString path = corpus_path.isEmpty()

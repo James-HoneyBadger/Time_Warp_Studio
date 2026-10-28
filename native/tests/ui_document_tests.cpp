@@ -80,6 +80,7 @@ int main(int argc, char** argv) {
     test_stopping_when_nothing_runs_is_harmless();
     test_a_light_theme_draws_dark_ink();
     test_stop_interrupts_a_running_program();
+    test_the_console_can_show_only_failures();
     test_the_terminal_is_off_by_default();
     test_the_terminal_runs_commands_when_enabled();
 

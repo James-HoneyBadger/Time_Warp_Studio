@@ -31,6 +31,7 @@ void test_a_scheme_run_fills_the_variables_and_telemetry_panels();
 void test_a_native_run_fills_the_variables_and_telemetry_panels();
 void test_a_second_run_replaces_the_panels_rather_than_appending();
 void test_a_native_run_fills_the_panels();
+void test_the_console_can_show_only_failures();
 void test_the_terminal_is_off_by_default();
 void test_the_terminal_runs_commands_when_enabled();
 void test_stopping_when_nothing_runs_is_harmless();

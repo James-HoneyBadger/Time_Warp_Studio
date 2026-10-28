@@ -5,6 +5,11 @@
 
 #include "ui_document/support.hpp"
 
+#include <QMouseEvent>
+
+#include "timewarp/ui/console.hpp"
+#include <QToolButton>
+
 namespace tw::ui_document {
 
 void test_running_scheme_draws_on_the_canvas() {
@@ -436,6 +441,86 @@ void test_a_native_run_fills_the_panels() {
 }
 
 /// The terminal is opt-in: a build nobody configured has no shell tab at all.
+
+// A long run's console is mostly printing, and the lines that say what went wrong
+// are the ones a reader wants. The filter hides and restores them without the log
+// forgetting what it hid, and a line that names a place is a link to it.
+void test_the_console_can_show_only_failures() {
+    announce("console: the errors-only filter");
+    QTemporaryDir dir;
+    const QString path = writeFile(
+        dir, QStringLiteral("fails.bas"),
+        QByteArray{"10 PRINT \"one\"\n20 PRINT \"two\"\n30 GOTO 999\n"});
+    TW_CHECK(!path.isEmpty());
+
+    MainWindow window;
+    TW_CHECK(window.openFile(path));
+    auto* console = window.findChild<QPlainTextEdit*>(QStringLiteral("consoleOutput"));
+    TW_CHECK(console != nullptr);
+    if (console == nullptr) {
+        return;
+    }
+    window.runCurrentDocument();
+    TW_CHECK(waitFor([&window] {
+        return badgeText(window, "executionBadge") != QStringLiteral("running");
+    }));
+    TW_CHECK(console->toPlainText().contains(QStringLiteral("one")));
+    TW_CHECK(console->toPlainText().contains(QStringLiteral("two")));
+
+    // The toggle is in the corner of the output pane, and it is checkable: a filter
+    // nobody can turn off is a view with a bug in it.
+    auto* filter = window.findChild<QToolButton*>(QStringLiteral("consoleErrorFilter"));
+    TW_CHECK(filter != nullptr);
+    if (filter != nullptr) {
+        TW_CHECK(filter->isCheckable());
+        filter->setChecked(true);
+    }
+    TW_CHECK(window.consoleErrorsOnly());
+    // The printing is gone, and what is left is only what reports a failure.
+    TW_CHECK(!console->toPlainText().contains(QStringLiteral("one")));
+    for (const QString& line : console->toPlainText().split(QLatin1Char('\n'))) {
+        TW_CHECK(line.trimmed().isEmpty() ||
+                 line.contains(QString::fromUtf8("\u274C")) ||
+                 line.contains(QString::fromUtf8("\u26A0\uFE0F")));
+    }
+
+    // Off is every line again: the filter is a view, not a delete.
+    window.setConsoleErrorsOnly(false);
+    TW_CHECK(console->toPlainText().contains(QStringLiteral("one")));
+
+    // Saving is a menu entry, because a log is a file a reader keeps.
+    TW_CHECK(window.findChild<QAction*>(QStringLiteral("saveOutputAction")) != nullptr);
+
+    // A line that names a source line is a link to it: the failed `GOTO` was stamped
+    // `[line 30]`, so a click on that line has to put the caret there. The click is
+    // synthesised at the text's own position, which is where a reader's click lands.
+    CodeEditor* editor = window.currentEditor();
+    TW_CHECK(editor != nullptr);
+    if (editor != nullptr) {
+        int line = -1;
+        QPoint point{-1, -1};
+        for (QTextBlock block = console->document()->begin(); block.isValid();
+             block = block.next()) {
+            if (timewarp::ui::consoleLineLink(block.text()).has_value()) {
+                line = *timewarp::ui::consoleLineLink(block.text());
+                QTextCursor at{block};
+                point = console->cursorRect(at).center();
+                break;
+            }
+        }
+        TW_CHECK_EQ(line, 30);
+        if (point.x() >= 0) {
+            QMouseEvent release{QEvent::MouseButtonRelease, QPointF{point},
+                                console->viewport()->mapToGlobal(point), Qt::LeftButton,
+                                Qt::LeftButton, Qt::NoModifier};
+            QApplication::sendEvent(console->viewport(), &release);
+            // Statement 30 is the third line of text in this program: the link goes
+            // to the line the *program* numbers 30, not to the thirtieth line.
+            TW_CHECK_EQ(editor->currentLine(), 3);
+        }
+    }
+}
+
 
 void test_the_terminal_is_off_by_default() {
     announce("terminal: off unless enabled");

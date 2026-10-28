@@ -515,6 +515,96 @@ int self_test(const fs::path& root) {
     return 0;
 }
 
+/// `text` without leading or trailing spaces or tabs.
+std::string trimmed(std::string_view text) {
+    std::size_t start = 0;
+    std::size_t end = text.size();
+    const auto space = [](char character) { return character == ' ' || character == '\t'; };
+    while (start < end && space(text[start])) {
+        ++start;
+    }
+    while (end > start && space(text[end - 1])) {
+        --end;
+    }
+    return std::string{text.substr(start, end - start)};
+}
+
+/// `text` split on `separator`, keeping empty pieces: a row with a missing column is a
+/// row to report, not one to skip.
+std::vector<std::string> split_on(std::string_view text, char separator) {
+    std::vector<std::string> parts;
+    std::size_t start = 0;
+    while (true) {
+        const std::size_t at = text.find(separator, start);
+        if (at == std::string_view::npos) {
+            parts.emplace_back(text.substr(start));
+            return parts;
+        }
+        parts.emplace_back(text.substr(start, at - start));
+        start = at + 1;
+    }
+}
+
+/// The fourth rule: what the guides say is *not built* has to be true.
+///
+/// Every row of `native/share/unbuilt.txt` names a feature, the path whose existence
+/// would mean it shipped, and the pages that claim it is missing. Two ways for that to
+/// go stale, both mechanical: the evidence exists (the feature shipped, the claim is a
+/// lie), or a page no longer names the feature (the page dropped it and the row is
+/// dead weight). In October 2026 four pages claimed a feature was missing that had
+/// shipped a release earlier, and nothing was watching.
+std::size_t check_unbuilt(const fs::path& root) {
+    std::string error;
+    const std::optional<std::string> content = read_text(root / "native" / "share" /
+                                                         "unbuilt.txt");
+    if (!content) {
+        std::cout << "native/share/unbuilt.txt: missing; the guides' claims about what is "
+                     "not built cannot be checked\n";
+        return 1;
+    }
+    std::size_t failures = 0;
+    for (const std::string_view raw : split_lines(*content)) {
+        const std::string line = trimmed(raw);
+        if (line.empty() || line.front() == '#') {
+            continue;
+        }
+        const std::vector<std::string> parts = split_on(line, '|');
+        if (parts.size() != 3) {
+            std::cout << "native/share/unbuilt.txt: a row needs feature | evidence | pages: "
+                      << line << '\n';
+            ++failures;
+            continue;
+        }
+        const std::string feature = trimmed(parts.at(0));
+        const std::string evidence = trimmed(parts.at(1));
+        if (fs::exists(root / evidence)) {
+            std::cout << "native/share/unbuilt.txt: '" << feature
+                      << "' is listed as not built, but " << evidence
+                      << " exists: remove the row and the pages that repeat it\n";
+            ++failures;
+        }
+        for (const std::string& page : split_on(parts.at(2), ',')) {
+            const std::string path = trimmed(page);
+            if (path.empty()) {
+                continue;
+            }
+            const std::optional<std::string> text = read_text(root / path);
+            if (!text) {
+                std::cout << "native/share/unbuilt.txt: '" << feature << "' names " << path
+                          << ", which is not readable\n";
+                ++failures;
+                continue;
+            }
+            if (text->find(feature) == std::string::npos) {
+                std::cout << path << ": the unbuilt row for '" << feature
+                          << "' expects this page to name it, and it does not\n";
+                ++failures;
+            }
+        }
+    }
+    return failures;
+}
+
 }  // namespace
 
 int run_claims_command(const timewarp::cli::Invocation& invocation) {
@@ -555,6 +645,8 @@ int run_claims_command(const timewarp::cli::Invocation& invocation) {
                       << problem.message << '\n';
         }
     }
+
+    failures += check_unbuilt(root);
 
     if (failures != 0) {
         std::cerr << "\n"

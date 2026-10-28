@@ -901,6 +901,28 @@ void CodeEditor::keyPressEvent(QKeyEvent* event) {
 
     const bool plain = !(event->modifiers() & (Qt::ControlModifier | Qt::AltModifier));
 
+    // Several carets: the keys that write into the document act at every one of
+    // them. A key that is not one of those (an arrow, a shortcut) is left alone and
+    // only the main caret moves, which is the least surprising thing it can do.
+    if (!extra_cursors_.isEmpty()) {
+        if (event->key() == Qt::Key_Escape) {
+            clearExtraCursors();
+            return;
+        }
+        if (!event->text().isEmpty() && event->text().at(0).isPrint()) {
+            insertAtEveryCursor(event->text());
+            return;
+        }
+        if (event->key() == Qt::Key_Backspace) {
+            eraseAtEveryCursor(true);
+            return;
+        }
+        if (event->key() == Qt::Key_Delete) {
+            eraseAtEveryCursor(false);
+            return;
+        }
+    }
+
     // A suggestion on screen owns Tab and Esc: the one thing a reader can mean by
     // pressing them while a complete line is offered is "take it" or "no". Any
     // other key dismisses it and is handled as typed.
@@ -968,6 +990,113 @@ void CodeEditor::keyPressEvent(QKeyEvent* event) {
     }
 }
 
+void CodeEditor::addCursorAt(int position) {
+    const int limit = document()->characterCount() - 1;
+    const int at = std::max(0, std::min(position, limit));
+    if (at == textCursor().position() || extra_cursors_.contains(at)) {
+        return;
+    }
+    extra_cursors_.append(at);
+    std::sort(extra_cursors_.begin(), extra_cursors_.end());
+    viewport()->update();
+}
+
+void CodeEditor::clearExtraCursors() {
+    if (extra_cursors_.isEmpty()) {
+        return;
+    }
+    extra_cursors_.clear();
+    viewport()->update();
+}
+
+QList<int> CodeEditor::allCursorPositions() const {
+    QList<int> positions = extra_cursors_;
+    positions.append(textCursor().position());
+    std::sort(positions.begin(), positions.end());
+    positions.erase(std::unique(positions.begin(), positions.end()), positions.end());
+    return positions;
+}
+
+void CodeEditor::insertAtEveryCursor(const QString& text) {
+    if (text.isEmpty() || isReadOnly()) {
+        return;
+    }
+    const QList<int> positions = allCursorPositions();
+    QTextCursor edit{textCursor()};
+    edit.beginEditBlock();
+    // Backwards, so an insertion cannot move a position that is still to be edited.
+    for (int index = positions.size() - 1; index >= 0; --index) {
+        QTextCursor at{document()};
+        at.setPosition(positions.at(index));
+        at.insertText(text);
+    }
+    edit.endEditBlock();
+    // Where each caret ends up: its own insertion, plus every insertion made before
+    // it. The last one stays the main caret, so the next keystroke continues there.
+    QList<int> moved;
+    for (int index = 0; index < positions.size(); ++index) {
+        moved.append(positions.at(index) + text.size() * (index + 1));
+    }
+    const int main = moved.takeLast();
+    QTextCursor caret{document()};
+    caret.setPosition(main);
+    setTextCursor(caret);
+    extra_cursors_ = moved;
+    viewport()->update();
+}
+
+void CodeEditor::eraseAtEveryCursor(bool backwards) {
+    if (isReadOnly()) {
+        return;
+    }
+    const QList<int> positions = allCursorPositions();
+    const int characters = document()->characterCount() - 1;
+    // What each caret would remove, decided on the document as it is: the targets are
+    // distinct (each caret removes the character before it, or the one at it), so one
+    // caret's deletion cannot change another's answer. A paragraph separator is
+    // refused rather than removed -- joining two lines from a caret nobody pointed at
+    // is an edit the reader did not ask for.
+    QList<bool> removable;
+    QList<int> targets;
+    for (const int position : positions) {
+        const int target = backwards ? position - 1 : position;
+        removable.append(target >= 0 && target < characters &&
+                         document()->characterAt(target) != QChar::ParagraphSeparator);
+        targets.append(target);
+    }
+    QTextCursor edit{textCursor()};
+    edit.beginEditBlock();
+    // Backwards, so a deletion cannot move a position still to be visited.
+    for (int index = positions.size() - 1; index >= 0; --index) {
+        if (!removable.at(index)) {
+            continue;
+        }
+        QTextCursor at{document()};
+        at.setPosition(targets.at(index));
+        at.movePosition(QTextCursor::Right, QTextCursor::KeepAnchor);
+        at.removeSelectedText();
+    }
+    edit.endEditBlock();
+    // Where each caret ends up: its own deletion plus every deletion made before it.
+    // Backspace moves the caret back by one; Delete leaves it where it is.
+    QList<int> moved;
+    int removed_before = 0;
+    for (int index = 0; index < positions.size(); ++index) {
+        const int position = positions.at(index);
+        moved.append(backwards && removable.at(index) ? position - removed_before - 1
+                                                      : position - removed_before);
+        if (removable.at(index)) {
+            ++removed_before;
+        }
+    }
+    const int main = moved.takeLast();
+    QTextCursor caret{document()};
+    caret.setPosition(main);
+    setTextCursor(caret);
+    extra_cursors_ = moved;
+    viewport()->update();
+}
+
 void CodeEditor::setGhostText(const QString& text) {
     QString suggestion = text;
     // A model that answers with an explanation has answered the wrong question; a
@@ -1025,8 +1154,28 @@ QString CodeEditor::textBeforeCursor(int limit) const {
     return head;
 }
 
+void CodeEditor::mousePressEvent(QMouseEvent* event) {
+    if (event->button() == Qt::LeftButton &&
+        (event->modifiers() & Qt::ControlModifier) != 0 && !isReadOnly()) {
+        addCursorAt(cursorForPosition(event->position().toPoint()).position());
+        event->accept();
+        return;
+    }
+    QPlainTextEdit::mousePressEvent(event);
+}
+
 void CodeEditor::paintEvent(QPaintEvent* event) {
     QPlainTextEdit::paintEvent(event);
+    if (!extra_cursors_.isEmpty()) {
+        QPainter carets{viewport()};
+        carets.setPen(palette().color(QPalette::Text));
+        for (const int position : extra_cursors_) {
+            QTextCursor at{document()};
+            at.setPosition(position);
+            const QRect where = cursorRect(at);
+            carets.drawLine(where.left(), where.top(), where.left(), where.bottom());
+        }
+    }
     if (ghost_.isEmpty()) {
         return;
     }

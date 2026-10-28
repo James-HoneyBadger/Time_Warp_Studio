@@ -22,6 +22,7 @@
 #include <QSplitter>
 #include <QStatusBar>
 #include <QTabWidget>
+#include <QToolButton>
 #include <QTimer>
 #include <QUrl>
 #include <QVBoxLayout>
@@ -614,6 +615,23 @@ void MainWindow::buildOutputColumn() {
     errors_view_->setAccessibleName(tr("Error Log"));
     errors_view_->setPlaceholderText(tr("Errors and warnings appear here\u2026"));
     output_sub_tabs_->addTab(errors_view_, tr("\u274C Errors"));
+    // A click on a line that names a source line goes there, in either view.
+    console_view_->viewport()->installEventFilter(this);
+    errors_view_->viewport()->installEventFilter(this);
+
+    // The errors-only filter, in the corner of the output pane: a long run's console
+    // is mostly printing, and the four lines that say what went wrong are the ones a
+    // reader is looking for.
+    console_filter_ = new QToolButton{output_sub_tabs_};
+    console_filter_->setObjectName(QStringLiteral("consoleErrorFilter"));
+    console_filter_->setText(tr("\u26A0\uFE0F Errors only"));
+    console_filter_->setCheckable(true);
+    console_filter_->setToolTip(tr("Show only the lines that report a failure. Every "
+                                   "line comes back when this is switched off."));
+    console_filter_->setAccessibleName(tr("Show only errors"));
+    connect(console_filter_, &QToolButton::toggled, this,
+            &MainWindow::setConsoleErrorsOnly);
+    output_sub_tabs_->setCornerWidget(console_filter_, Qt::TopRightCorner);
 
     auto* turtle_log = new TurtleCommandLog{output_sub_tabs_};
     turtle_log_ = turtle_log;

@@ -1,0 +1,22 @@
+# What the guides say is *not built*, in one place a gate can read.
+#
+# The documentation gates check two things about every row below:
+#
+#   1. the evidence path must NOT exist. The day it does, the feature shipped and
+#      every page that still calls it missing is lying;
+#   2. each page listed must still name the feature. The day it does not, the page
+#      dropped the claim and this row should go with it.
+#
+# Both are reminders rather than proofs -- a feature can ship without touching the
+# path named here, which is why the path is the one it would obviously touch. In
+# October 2026 four pages claimed a feature was missing that had shipped a release
+# earlier, and nothing was watching.
+#
+# One row: feature | evidence path | pages, comma-separated. `#` starts a comment.
+Flatpak | packaging/flatpak | README.md, docs/ROADMAP.md
+Snap | packaging/snap | README.md, docs/ROADMAP.md
+arm64 AppImage | packaging/linux/appimage-arm64 | docs/ROADMAP.md
+code-signed | .github/workflows/sign.yml | README.md, docs/ROADMAP.md
+update check | native/src/ui/updater.cpp | README.md
+static build | native/cmake/static.cmake | docs/ROADMAP.md
+distro repository | .github/workflows/publish.yml | docs/ROADMAP.md

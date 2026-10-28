@@ -45,7 +45,7 @@ the parity gate compares with a recorded corpus, and the harnesses drive
   standalone executable.
 - **The frozen parity corpus** — `native/tests/golden/lang_corpus.json.gz`.
   - The Python reference engine was deleted at 18.0. The corpus is what remains of
-    it: 476 programs, each with the program text, what it printed, every drawing
+    it: 479 programs, each with the program text, what it printed, every drawing
     call and the variables it left. `make golden-check` compares the ports with
     those answers and imports no Python to do it.
   - It is a weaker gate than the live differential it replaced and says so: a
@@ -130,7 +130,7 @@ make -C native asan           # AddressSanitizer; ASAN=undefined for UBSan
 
 # The parity gate: the ports against the corpus recorded from the reference engine
 # before it was deleted. 0 differences is the verdict.
-make golden-check     # both corpora: 476 language programs and 192 Scheme ones
+make golden-check     # both corpora: 479 language programs and 192 Scheme ones
 
 # The curriculum and the documentation gates
 ./native/build/time_warp_teach validate

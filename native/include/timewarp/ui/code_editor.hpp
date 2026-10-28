@@ -181,6 +181,19 @@ public:
     void showCompletion();
     [[nodiscard]] bool completionVisible() const;
 
+    // -- several carets ----------------------------------------------------
+    //
+    // Ctrl+click adds a caret, and typing, Backspace and Delete act at every one of
+    // them. Deliberately small: an extra caret has no selection of its own (the main
+    // caret's selection is what a replaced word replaces), and the document is edited
+    // from the last position backwards so the earlier ones stay valid.
+
+    /// Adds a caret at `position` (a document index). The main caret is unchanged.
+    void addCursorAt(int position);
+    void clearExtraCursors();
+    [[nodiscard]] QList<int> extraCursors() const { return extra_cursors_; }
+    [[nodiscard]] bool multiCursorActive() const { return !extra_cursors_.isEmpty(); }
+
     // -- a suggested next line --------------------------------------------
     //
     // A ghost line painted after the caret. What produces it is the window's
@@ -308,6 +321,8 @@ signals:
 
 protected:
     void resizeEvent(QResizeEvent* event) override;
+    /// Ctrl+click adds a caret.
+    void mousePressEvent(QMouseEvent* event) override;
     /// Paints the ghost line, when there is one, after the caret.
     void paintEvent(QPaintEvent* event) override;
     /// Enter auto-indents, Tab indents a selection, and typing a word opens the
@@ -354,6 +369,13 @@ private:
     /// The typing pause before a suggestion is asked for, and the suggestion itself.
     QTimer* suggest_timer_ = nullptr;
     QString ghost_;
+    /// Extra caret positions, kept sorted and free of duplicates.
+    QList<int> extra_cursors_;
+    /// Inserts `text` at every caret, Backspace and Delete at every caret.
+    void insertAtEveryCursor(const QString& text);
+    void eraseAtEveryCursor(bool backwards);
+    /// Every caret's position with `edit` applied, in the order they were given.
+    [[nodiscard]] QList<int> allCursorPositions() const;
     QCompleter* completer_ = nullptr;
     QStringList completion_words_;
     QColor error_colour_{0xD6, 0x45, 0x45};

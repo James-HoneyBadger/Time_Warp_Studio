@@ -49,6 +49,7 @@
 #include "timewarp/ui/gif_encoder.hpp"
 #include "timewarp/ui/outline.hpp"
 #include "timewarp/ui/snippets.hpp"
+#include "timewarp/ui/console.hpp"
 #include "timewarp/ui/diff.hpp"
 #include "timewarp/ui/language.hpp"
 
@@ -1357,6 +1358,30 @@ void test_session_html_export() {
     TW_CHECK(empty.contains(QStringLiteral("no drawing")));
 }
 
+// The console's two rules. A click on a line that names a place goes there, and the
+// errors-only filter needs to know what a failure looks like -- so both are functions
+// over text, asserted here rather than through a window.
+void test_the_console_knows_a_line_link_and_a_failure() {
+    announce("console: line links and failures");
+    // A trace line is exactly `[12]`; an APL vector is not five links.
+    TW_CHECK(timewarp::ui::consoleLineLink(QStringLiteral("[12]")).value_or(-1) == 12);
+    TW_CHECK(!timewarp::ui::consoleLineLink(QStringLiteral("1 2 3 [4]")).has_value());
+    // The engine's own error wording.
+    TW_CHECK(timewarp::ui::consoleLineLink(
+                 QString::fromUtf8("\u274C Error at line 30: Expected a number"))
+                 .value_or(-1) == 30);
+    TW_CHECK(timewarp::ui::consoleLineLink(QString::fromUtf8("\u274C line 7: label not found"))
+                 .value_or(-1) == 7);
+    // Text that merely mentions a line is text: the colon is what makes it a place.
+    TW_CHECK(!timewarp::ui::consoleLineLink(QStringLiteral("see line 4 of the manual"))
+                  .has_value());
+    TW_CHECK(!timewarp::ui::consoleLineLink(QString{}).has_value());
+
+    TW_CHECK(timewarp::ui::isConsoleError(QString::fromUtf8("\u274C Error at line 1: x")));
+    TW_CHECK(timewarp::ui::isConsoleError(QString::fromUtf8("\u26A0\uFE0F Warning: x")));
+    TW_CHECK(!timewarp::ui::isConsoleError(QStringLiteral("HELLO")));
+}
+
 }  // namespace
 
 int main(int argc, char** argv) {
@@ -1379,6 +1404,7 @@ int main(int argc, char** argv) {
 
     test_basic_indents_a_loop_body();
     test_basic_else_body_is_indented();
+    test_the_console_knows_a_line_link_and_a_failure();
     test_basic_single_line_if_opens_nothing();
     test_basic_comment_does_not_open_a_block();
     test_indent_width_is_honoured();

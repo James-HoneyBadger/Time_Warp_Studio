@@ -79,15 +79,23 @@ answers, frozen before the engine was deleted. `0 differences` is the verdict, a
 documented divergences are listed in the harness output and are expected.
 
 ```bash
-make golden-check                                  # both corpora; 668 programs
+make golden-check                                  # both corpora; 671 programs
 ./native/build/time_warp_gates golden --scheme     # the Scheme machine alone
 ```
 
-The language corpus (`native/tests/golden/lang_corpus.json.gz`) holds 476 programs:
+The language corpus (`native/tests/golden/lang_corpus.json.gz`) holds 479 programs:
 every command-table row and every example for a ported language, with the output
 lines it printed, every drawing call in order, and the variables it left behind.
 The Scheme corpus (`scheme_corpus.json.gz`) holds 192 programs and compares the
 whole output text, because that is what the Scheme harness always compared.
+
+Three of the language entries were recorded from *this* engine rather than from the
+deleted reference: Forth arrived at 21.0, after the reference could no longer run it.
+Each carries `recorded_from` saying so, and `time_warp_gates golden --record forth`
+is the command that makes the recording again. That is the honest limit of the gate
+for those three programs -- a recording cannot notice a mistake in the recording --
+and the reason the section above says the corpus is weaker than the live differential
+it replaced.
 
 ### Why a recording, and what it costs
 

@@ -152,6 +152,9 @@ void MainWindow::buildMenuBar() {
     add(file, tr("Export Code as &PDF..."), QKeySequence{},
         [this] { exportCodePdfDialog(); })
         ->setObjectName(QStringLiteral("exportPdfAction"));
+    add(file, tr("Save &Output As..."), QKeySequence{},
+        [this] { saveOutputAs(); })
+        ->setObjectName(QStringLiteral("saveOutputAction"));
     add(file, tr("Export &Session as HTML..."), QKeySequence{},
         [this] { exportSessionHtmlDialog(); })
         ->setObjectName(QStringLiteral("exportSessionAction"));

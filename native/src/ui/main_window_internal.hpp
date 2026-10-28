@@ -246,6 +246,23 @@ struct BasicProgramLine {
     return lines.join(QLatin1Char('\n')) + QLatin1Char('\n');
 }
 
+/// The 1-based text line a *source* line number names.
+///
+/// A console link says what the program says -- `❌ [line 30]` in a BASIC program is
+/// statement 30, not the thirtieth line of text -- so the number is looked up among
+/// the numbered lines first. A language that does not number its lines numbers them by
+/// position, which is why the fallback is the number itself: `goToLine` clamps it.
+[[nodiscard]] inline int textLineForSourceLine(const QString& text, int number) {
+    const QStringList lines = programLines(text);
+    for (int index = 0; index < lines.size(); ++index) {
+        const std::optional<BasicProgramLine> existing = parseBasicProgramLine(lines.at(index));
+        if (existing.has_value() && existing->number == number) {
+            return index + 1;
+        }
+    }
+    return number;
+}
+
 /// The last line of `text` that holds anything, trimmed. Bounded by the reader:
 /// a console holds every run of the session and the newest line is the one a
 /// question about output means.

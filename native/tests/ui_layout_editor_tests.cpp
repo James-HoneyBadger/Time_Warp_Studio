@@ -471,4 +471,40 @@ void test_the_typing_pause_asks_for_the_text_before_the_caret() {
     TW_CHECK(asked.isEmpty());
 }
 
+// Several carets write into the document at once. The rule the test holds is the one a
+// reader expects: every caret gets the same keystroke, the earlier positions do not
+// move under the later edits, and Escape puts the document down unchanged.
+void test_typing_at_several_cursors() {
+    announce("editor: several carets");
+    CodeEditor editor;
+    editor.setPlainText(QStringLiteral("abc"));
+    QTextCursor cursor = editor.textCursor();
+    cursor.movePosition(QTextCursor::End);
+    editor.setTextCursor(cursor);
+    TW_CHECK(editor.completionVisible() == false);
+    editor.addCursorAt(1);  // after the `a`
+    TW_CHECK(editor.multiCursorActive());
+    TW_CHECK_EQ(editor.extraCursors().size(), 1);
+    // The same caret twice is still one caret.
+    editor.addCursorAt(1);
+    TW_CHECK_EQ(editor.extraCursors().size(), 1);
+
+    QKeyEvent typed{QEvent::KeyPress, Qt::Key_X, Qt::NoModifier, QStringLiteral("X")};
+    QApplication::sendEvent(&editor, &typed);
+    TW_CHECK_EQ(editor.toPlainText(), QStringLiteral("aXbcX"));
+    // The main caret is the last insertion, so the next keystroke continues there.
+    TW_CHECK_EQ(editor.textCursor().position(), 5);
+
+    QKeyEvent back{QEvent::KeyPress, Qt::Key_Backspace, Qt::NoModifier};
+    QApplication::sendEvent(&editor, &back);
+    TW_CHECK_EQ(editor.toPlainText(), QStringLiteral("abc"));
+
+    // Escape forgets the extra carets and changes nothing else.
+    editor.addCursorAt(0);
+    QKeyEvent escape{QEvent::KeyPress, Qt::Key_Escape, Qt::NoModifier};
+    QApplication::sendEvent(&editor, &escape);
+    TW_CHECK(!editor.multiCursorActive());
+    TW_CHECK_EQ(editor.toPlainText(), QStringLiteral("abc"));
+}
+
 }  // namespace tw::ui_layout

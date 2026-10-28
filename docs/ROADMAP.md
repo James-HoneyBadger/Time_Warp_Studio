@@ -24,7 +24,7 @@ derived rather than remembered.
 | Editor | Line-number gutter, current-line highlight, per-language syntax colouring, find/replace, find in files, go-to-line, tab stops, fonts, error squiggles with gutter markers, completion, auto-indent, Format Code, minimap, outline |
 | Projects | `.twproject` files, named groups, files and folders added to a project, drag-and-drop grouping, missing-file reporting, recent projects and session restore |
 | REPL | A persistent session per language under the editor; Scheme keeps definitions and echoes values, the line-loop languages and Logo keep bindings, while Smalltalk, CHIP-8 and Forth run each entry as a whole program |
-| Console | Streaming output, and interpreter errors in their own tab |
+| Console | Streaming output, interpreter errors in their own tab, clickable line links (`[12]`, `❌ [line 30]`, `at line 30:`) that go to the line the program numbers, an errors-only filter, and **File > Save Output As…** |
 | Canvas | Live drawing, zoom, pan, grid, auto-fit, turtle marker, scrubber playback, animated GIF recording, raster and SVG export, the pose strip and the command log, and a fixed-coordinate screen mode (`SCREEN`) with sprites, pixel read-back and a game example; in screen mode the wheel zooms the screen about the pointer and a click reads back the pixel under it |
 | Display | 35 themes, high contrast, A+ text sizes (100/125/150%), focus mode, CRT settings, four Monitor presets |
 | Execution | Run (F9) and Stop; one program at a time; unsaved-change prompts |
@@ -42,7 +42,7 @@ derived rather than remembered.
 | Database | A SQLite-backed Database tab, the shared `SQL` statement in nine languages, scripts, tables and schema; compiled programs link SQLite |
 | Automation | JSON-RPC over stdin/stdout (`language.run`, `repl.*`, `debug.*`, `sql.*`, `project.*`, `watch.evaluate`) and the `twc` terminal compiler |
 | Packaging | `make install`; tagged releases build a Windows installer and portable ZIP (Qt 6), a second Windows installer for Windows 7 (Qt 5.15), a universal macOS disk image, `.deb`, `.rpm`, AppImage, tarball and container artifacts |
-| Quality gates | 26 CTest suites in 4 build configurations and on four platforms (Linux, Windows, Windows with Qt 5.15, macOS); the frozen-corpus gate over 668 programs (476 language, 192 Scheme); 566 command rows run as programs and through the REPL; 69 example programs through the smoke gate; and the documentation gates (links, claims, version, Markdown lint) |
+| Quality gates | 26 CTest suites in 4 build configurations and on four platforms (Linux, Windows, Windows with Qt 5.15, macOS); the frozen-corpus gate over 671 programs (479 language, 192 Scheme); 566 command rows run as programs and through the REPL; 69 example programs through the smoke gate; and the documentation gates (links, claims, version, Markdown lint) |
 
 ---
 
@@ -400,13 +400,14 @@ staged `cmake --install` contains **no Python file at all**.
 <!-- /history -->
 
 The parity gates' remaining dependency is done too: the reference's answers to
-476 programs are frozen in
+476 programs -- and three Forth ones recorded from this engine, which had no reference
+run -- are frozen in
 `native/tests/golden/lang_corpus.json.gz`, program text included, and
 `make golden-check` compares the C++ engines with them without importing Python.
-`make golden-record` refreshes that file while the reference still exists; after
-the deletion the corpus *is* the record, and editing an example without
-re-recording is reported as a corpus problem rather than as a guess. See
-[README_TESTING.md](README_TESTING.md).
+`time_warp_gates golden --record <language>` writes entries for a language's
+example programs from the engine this build ships; after the reference's deletion the
+corpus *is* the record, and editing an example without re-recording is reported as a
+corpus problem rather than as a guess. See [README_TESTING.md](README_TESTING.md).
 
 **A program can draw a game.** All of it is in the tree now. `SCREEN 0` and the
 numbered modes 1, 2, 7, 9, 12 and 13 size a real pixel surface
@@ -457,11 +458,14 @@ measuring the wrong machine.
 | 22.0 ✓ | The harnesses are C++: `time_warp_gates` asks the four questions the Python scripts asked -- smoke, commands, repl, golden -- the command table is `native/share/command_rows.json`, and seven scripts left the tree with every make target keeping its name |
 | 22.1 ✓ | No Python: the documentation gates and the version tool are `time_warp_docs` (its own CMake project, no Qt), the icon generator is `time_warp_icon` and reproduces the packaged icons byte for byte, `./twc` is a wrapper around the IDE's compiler, and `make tree-check` fails if a `.py` comes back |
 | 22.2 ✓ | The Markdown lint is C++: `time_warp_docs md` -- twenty-eight rules, `--explain` to see how a line was read -- replacing `markdownlint-cli2` and its `.markdownlint.json`, with the CI job promoted from advisory to a gate; running it found a line-splitting bug in the shared scanner that had been cutting every `✅` bullet in two |
+| 23.5 ✓ | The debt before a claim: Forth joins the parity corpus (three programs recorded from this engine by `golden --record`, because no reference run exists) and the console gains the line links, error filter and save that this page had already been claiming; the editor gains several carets; and `time_warp_docs claims` reads `native/share/unbuilt.txt` so a page that calls a shipped feature missing fails a gate instead of standing |
 
-Smaller items belong in one of those releases rather than a release of their own: a
-Smalltalk call stack shown as frames rather than a Program Counter; Flatpak and an
-arm64 AppImage; and a machine-level beeper for the HB-1, which has sound through
-BASIC but no click, boot tone or disk rattle of its own.
+Smaller items belong in one of those releases rather than a release of their own:
+Flatpak, Snap and an arm64 AppImage, and the distribution work described under
+[Packaging](#packaging). What used to be listed here shipped: Smalltalk reports its
+call stack as frames rather than a Program Counter (23.3.0), and the HB-1 has its own
+voice — boot tone, key click, disk rattle, error buzz and tape motor — through
+`MachineVoice` (20.2).
 
 ---
 
@@ -532,7 +536,10 @@ Shift+F3 find the next and previous match with the bar closed, and go-to-line is
 Ctrl+L, because the canvas already owns Ctrl+G.
 
 **Console** — clickable `line N` links into the editor, an error-only filter, and
-save-to-file.
+save-to-file are built: `consoleLineLink` reads the three shapes the engine writes
+(`[12]`, `❌ [line 30]`, `at line 30:`) and `textLineForSourceLine` turns the number
+into the line the program itself numbers, the filter hides rather than deletes, and
+**File > Save Output As…** writes what the console shows.
 
 **Files and sessions** — recent files and restoring the last session at launch are
 built: `MainWindow::saveSession` records the documents that were open,

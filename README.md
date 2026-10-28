@@ -7,7 +7,7 @@ complete computers inside it.*
 [![Machines](https://img.shields.io/badge/machines-2-purple)](docs/MACHINES.md)
 [![Platforms](https://img.shields.io/badge/platforms-Windows%20%7C%20macOS%20%7C%20Linux-green)](docs/INSTALLATION.md)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/Version-23.4.0-orange)](https://github.com/James-HoneyBadger/Time_Warp_Studio)
+[![Version](https://img.shields.io/badge/Version-23.5.0-orange)](https://github.com/James-HoneyBadger/Time_Warp_Studio)
 
 Time Warp Studio is a desktop programming environment for people who like old
 computers. It is the one the 1980s promised and never quite delivered: a full IDE,
@@ -218,10 +218,13 @@ exercised by the command matrix.
 
 ### What is still being built
 
-What remains unbuilt is a short list — a dedicated player target, an automatic
-update check, code-signed Windows and macOS builds, and Flatpak or Snap packaging.
-It is tracked in [docs/ROADMAP.md](docs/ROADMAP.md), which is worth a look before a
-missing feature is reported as a regression.
+What remains unbuilt is a short list — an automatic update check, code-signed
+Windows and macOS builds, and Flatpak or Snap packaging. It is tracked in
+[docs/ROADMAP.md](docs/ROADMAP.md), which is worth a look before a missing feature is
+reported as a regression, and each item is registered in
+[`native/share/unbuilt.txt`](native/share/unbuilt.txt) so that shipping one without
+correcting these pages fails `make doc-claims` rather than leaving a stale sentence
+behind.
 
 ### Help from inside the Studio
 

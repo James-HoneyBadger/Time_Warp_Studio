@@ -573,6 +573,7 @@ if(TIME_WARP_QT_FOUND)
             src/ui/chip8_screen.cpp
             src/ui/chip8_window.cpp
             src/ui/code_editor.cpp
+            src/ui/console.cpp
             src/ui/command_palette.cpp
             src/ui/command_reference.cpp
             src/ui/diff.cpp

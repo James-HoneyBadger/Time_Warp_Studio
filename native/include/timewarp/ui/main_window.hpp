@@ -637,6 +637,15 @@ public:
     void stopRunningDocument();
     /// Empties the output console.
     void clearOutput();
+    /// Writes what the console shows to a file the user names. The text as it is
+    /// displayed, so a filter that hides lines hides them here too -- a saved log that
+    /// disagrees with the screen is a log nobody can check.
+    void saveOutputAs();
+    /// Shows only the lines that report a failure -- and their neighbours are gone
+    /// with everything else, because the filter is about the log rather than about a
+    /// window onto it. Off is every line.
+    void setConsoleErrorsOnly(bool errors_only);
+    [[nodiscard]] bool consoleErrorsOnly() const noexcept { return console_errors_only_; }
     /// Empties the graphics canvas.
     void clearCanvas();
     /// Refreshes the turtle strip from the canvas: the canvas owns the pose, and
@@ -683,6 +692,8 @@ signals:
     void workspaceDeckSelected(const QString& deckId);
 
 protected:
+    /// A click on a line that names a source line goes there.
+    bool eventFilter(QObject* watched, QEvent* event) override;
     void closeEvent(QCloseEvent* event) override;
 
 private:
@@ -1111,6 +1122,11 @@ private:
 
     /// `outputSubTabs_` container that holds them.
     QPlainTextEdit* console_view_ = nullptr;
+    /// Every line the console has been given, so the errors-only filter can be turned
+    /// on and off without losing what it hid.
+    QStringList console_log_;
+    bool console_errors_only_ = false;
+    QToolButton* console_filter_ = nullptr;
     QPlainTextEdit* errors_view_ = nullptr;
 
     std::unique_ptr<timewarp::canvas::CanvasCommandQueue> canvas_queue_;
@@ -1153,6 +1169,10 @@ private:
     /// Appends a line to the console, scrolling only if the user was already at
     /// the bottom.
     void appendOutput(const QString& text);
+    /// Rebuilds the console view from the log, through the filter.
+    void refreshConsole();
+    /// Follows a click on the console or the error log to the line it names.
+    bool followConsoleClick(QWidget* view, const QPoint& position);
     /// Reports a failure in the error panel and the status bar.
     void reportError(const QString& message);
     /// Stops whichever engine is running, and waits for it to be gone. One place,

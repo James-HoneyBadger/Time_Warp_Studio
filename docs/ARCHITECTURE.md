@@ -1,6 +1,6 @@
 # Architecture Guide
 
-## Time Warp Studio v23.4.0 — System Design and Implementation
+## Time Warp Studio v23.5.0 — System Design and Implementation
 
 > **This page describes the shipping product.** It was rewritten alongside the move
 > to C++20 / Qt6. Earlier revisions documented the PySide6 implementation, which has
@@ -57,7 +57,7 @@ stream of JSON messages coming back.
 | `timewarp_debugger` | `native/src/debugger/` | its own `QThread` | Runs a Scheme program and services pause / step / breakpoint requests |
 | `timewarp_expr` | `native/src/token.cpp`, `lexer.cpp`, `evaluator.cpp` | runner thread, in-process | The ported expression evaluator, linked into `timewarp_lang` — see the note below |
 | `timewarp_lessons` | `native/src/lessons/` | GUI thread, or a command | The curriculum, the verifier, the learner's progress and the classroom. See the libraries section |
-| the frozen corpus | `native/tests/golden/lang_corpus.json.gz` | read by a command, never at run time | The reference engine's answers to 476 programs: what each printed, every drawing call, the variables it left. The parity gate compares the ports with these. The engine itself is deleted |
+| the frozen corpus | `native/tests/golden/lang_corpus.json.gz` | read by a command, never at run time | The reference engine's answers to 479 programs -- the Forth ones recorded from this engine, which has no reference run -- : what each printed, every drawing call, the variables it left. The parity gate compares the ports with these. The engine itself is deleted |
 
 > **`timewarp_expr` is part of a Run now.** It builds, it has 485 checks of its
 > own, the expression cases are in the recorded parity corpus, and `timewarp_lang`
@@ -493,7 +493,7 @@ Every language's arithmetic goes through it: the executors call
 ### Parity as the acceptance test
 
 The language engines are compared with the recorded corpus by
-`time_warp_gates golden` — 476 programs, and **0 differences** is the verdict —
+`time_warp_gates golden` — 479 programs, and **0 differences** is the verdict —
 and the Scheme machine against its own corpus (`scheme_corpus.json.gz`, 192
 programs, comparing whole output text). The Scheme entries that are *documented* as
 divergent carry the reference's text and the reason beside it, and the check asserts
@@ -857,7 +857,7 @@ gates and a command matrix. All of them must stay green, in every build tree.
 | Debug tree | `make -C native test-debug` | Keeps `Q_ASSERT` and standard-library hardening live; a suite green in Release can crash here |
 | Sanitisers | `make -C native asan` | Reads and writes of memory that is no longer valid, which no assertion can see. `ASAN=undefined` for UBSan |
 | Example corpus | `make smoke` | Every `Examples/**` program, through the native engines, including the 30 that must produce ink |
-| Parity gate | `make golden-check` (`time_warp_gates golden`) | The ports against 668 recorded programs: the reference's answers, frozen before it was deleted. 0 differences |
+| Parity gate | `make golden-check` (`time_warp_gates golden`) | The ports against 671 recorded programs: the reference's answers, frozen before it was deleted, plus the Forth ones recorded from the native engine. 0 differences |
 | Lesson curriculum | `make teach-check` (`time_warp_teach validate`) | That every checkpoint's own solution passes, that no starter already passes, and that every language has a lesson |
 | Command matrix | `make command-matrix` (`time_warp_gates commands`) | One row per documented command, through `time_warp_check` and then through the REPL |
 | Version metadata | `make doc-claims` (`time_warp_docs version`) | That every hand-written copy of the version agrees with `VERSION` |
@@ -992,11 +992,13 @@ coming from the Python application starts from this build's defaults.
 - **The editor** has syntax colouring, find/replace, find-in-files, a minimap, a
   formatter, language-specific checking as you type (squiggles, gutter markers,
   hover text), optional completion, auto-indent, breakpoint markers in the gutter,
-  a document outline and a full settings dialog with a live preview. What it lacks
-  is multi-cursor editing.
-- **The console** has no clickable line links, no error-only filter and no
-  save-to-file. The **Terminal** is a real shell but no terminal emulator: without a
-  PTY there are no prompts, job control or full-screen programs, which is deliberate.
+  a document outline, a full settings dialog with a live preview, and several carets:
+  Ctrl+click adds one and typing, Backspace and Delete act at all of them.
+- **The console** offers clickable line links (`[12]`, `❌ [line 30]`, `at line 30:`
+  become jumps to the line the program numbers), an errors-only filter that hides
+  instead of deleting, and **File > Save Output As…**. The **Terminal** is a real shell
+  but no terminal emulator: without a PTY there are no prompts, job control or
+  full-screen programs, which is deliberate.
 - **Files and sessions** have autosave and version history — `AutosaveStore`
   keeps bounded snapshots under the data directory and the version-history dialog
   reopens one in a new tab — and the split editor: two panes that each hold their
@@ -1018,8 +1020,10 @@ coming from the Python application starts from this build's defaults.
   Markdown; the drawing exports as an image or, with Qt6::Svg, as vectors.
 - **Packaging** has `make install` with a desktop entry and an icon, and a tagged
   release builds `.deb`, `.rpm` and tarball artifacts for x86_64 and arm64, an
-  AppImage for x86_64, and a container image from the same install rules. Flatpak,
-  Snap, a Windows installer and a macOS bundle are not built.
+  AppImage for x86_64, a NSIS Windows installer and portable ZIP, a universal macOS
+  disk image, and a container image from the same install rules. Flatpak, Snap and an
+  arm64 AppImage are not built, and nothing is code-signed or notarised with a paid
+  certificate.
 - **No pixel framebuffer in the drawing display list.** A drawing is a list of
   strokes and shapes fitted to the content; only a program that names a `SCREEN`
   gets the fixed-coordinate framebuffer, which is where `GET`/`PUT` and `POINT`

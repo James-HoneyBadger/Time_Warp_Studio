@@ -10,13 +10,18 @@
 
 #include <QAction>
 #include <QDir>
+#include <QFileDialog>
 #include <QFileInfo>
 #include <QInputDialog>
 #include <QLineEdit>
+#include <QMouseEvent>
+#include <QScrollBar>
+#include <QToolButton>
 #ifdef TIME_WARP_HAVE_PRINT
 #endif
 
 #include <memory>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -26,6 +31,7 @@
 #include "timewarp/ui/app.hpp"
 #include "timewarp/ui/app_paths.hpp"
 #include "timewarp/ui/benchmark.hpp"
+#include "timewarp/ui/console.hpp"
 #include "timewarp/ui/breakpoints.hpp"
 #include "timewarp/ui/chip8_window.hpp"
 #include "timewarp/ui/code_editor.hpp"
@@ -95,6 +101,13 @@ void MainWindow::appendOutput(const QString& text) {
     if (text.isEmpty() || console_view_ == nullptr) {
         return;
     }
+    // The log keeps every line, so the errors-only filter can hide one and give it
+    // back: a filter that discarded what it hid would make the toggle one-way.
+    console_log_.append(text.split(QLatin1Char('\n'), Qt::KeepEmptyParts));
+    if (console_errors_only_) {
+        refreshConsole();
+        return;
+    }
     // `moveCursor` + `insertPlainText` rather than `appendPlainText`, which adds
     // its own paragraph break: the interpreter decides where its lines end, and
     // a view that second-guesses it turns "a" and "b" printed separately into
@@ -103,6 +116,118 @@ void MainWindow::appendOutput(const QString& text) {
     cursor.movePosition(QTextCursor::End);
     cursor.insertText(text);
     console_view_->setTextCursor(cursor);
+}
+
+void MainWindow::refreshConsole() {
+    if (console_view_ == nullptr) {
+        return;
+    }
+    QString shown;
+    bool first = true;
+    for (const QString& line : console_log_) {
+        if (console_errors_only_ && !isConsoleError(line)) {
+            continue;
+        }
+        if (!first) {
+            shown += QLatin1Char('\n');
+        }
+        shown += line;
+        first = false;
+    }
+    QScrollBar* bar = console_view_->verticalScrollBar();
+    const bool at_end = bar != nullptr && bar->value() >= bar->maximum();
+    console_view_->setPlainText(shown);
+    if (at_end && bar != nullptr) {
+        bar->setValue(bar->maximum());
+    }
+}
+
+void MainWindow::setConsoleErrorsOnly(bool errors_only) {
+    console_errors_only_ = errors_only;
+    refreshConsole();
+    if (console_filter_ != nullptr && console_filter_->isChecked() != errors_only) {
+        console_filter_->setChecked(errors_only);
+    }
+}
+
+bool MainWindow::followConsoleClick(QWidget* view, const QPoint& position) {
+    auto* text = qobject_cast<QPlainTextEdit*>(view);
+    CodeEditor* editor = currentEditor();
+    if (text == nullptr || editor == nullptr) {
+        return false;
+    }
+    const std::optional<int> line =
+        consoleLineLink(text->cursorForPosition(position).block().text());
+    if (!line.has_value()) {
+        return false;
+    }
+    // The number the console read is the program's own, which is only the position
+    // in a language that does not number its lines.
+    editor->goToLine(textLineForSourceLine(editor->toPlainText(), *line));
+    editor->setFocus();
+    setExecutionState(tr("ready"), tr("Line %1").arg(*line));
+    return true;
+}
+
+bool MainWindow::eventFilter(QObject* watched, QEvent* event) {
+    QPlainTextEdit* view = nullptr;
+    if (console_view_ != nullptr && watched == console_view_->viewport()) {
+        view = console_view_;
+    } else if (errors_view_ != nullptr && watched == errors_view_->viewport()) {
+        view = errors_view_;
+    }
+    if (view == nullptr) {
+        return QMainWindow::eventFilter(watched, event);
+    }
+    if (event->type() == QEvent::MouseButtonRelease) {
+        auto* mouse = static_cast<QMouseEvent*>(event);
+        if (mouse->button() == Qt::LeftButton && followConsoleClick(view, mouse->pos())) {
+            return true;
+        }
+    } else if (event->type() == QEvent::MouseMove) {
+        // A line that would take a click says so before the click.
+        auto* mouse = static_cast<QMouseEvent*>(event);
+        const bool link =
+            consoleLineLink(view->cursorForPosition(mouse->pos()).block().text()).has_value();
+        if (watched->property("consoleLinkCursor").toBool() != link) {
+            watched->setProperty("consoleLinkCursor", link);
+            if (auto* widget = qobject_cast<QWidget*>(watched); widget != nullptr) {
+                widget->setCursor(link ? Qt::PointingHandCursor : Qt::IBeamCursor);
+            }
+        }
+    }
+    return QMainWindow::eventFilter(watched, event);
+}
+
+void MainWindow::saveOutputAs() {
+    if (console_view_ == nullptr) {
+        return;
+    }
+    const QString text = console_view_->toPlainText();
+    if (text.trimmed().isEmpty()) {
+        setExecutionState(tr("ready"), tr("There is no output to save"));
+        return;
+    }
+    const QString suggested =
+        currentEditor() != nullptr
+            ? QFileInfo{nameOf(currentEditor())}.completeBaseName() + QStringLiteral(".txt")
+            : QStringLiteral("output.txt");
+    const QString path = QFileDialog::getSaveFileName(
+        this, tr("Save Output"), suggested, tr("Text files (*.txt);;All files (*)"));
+    if (path.isEmpty()) {
+        return;
+    }
+    QFile file{path};
+    if (!file.open(QIODevice::WriteOnly | QIODevice::Text)) {
+        reportError(tr("\u274C Could not write %1").arg(path));
+        return;
+    }
+    file.write(text.toUtf8());
+    if (!text.endsWith(QLatin1Char('\n'))) {
+        file.write("\n");
+    }
+    file.close();
+    setExecutionState(tr("ready"), tr("Output saved to %1").arg(path));
 }
 
 void MainWindow::reportError(const QString& message) {
@@ -127,6 +252,7 @@ void MainWindow::reportError(const QString& message) {
 }
 
 void MainWindow::clearOutput() {
+    console_log_.clear();
     if (console_view_ != nullptr) {
         console_view_->clear();
     }

@@ -2,6 +2,59 @@
 
 <!-- history: all -->
 
+## [23.5.0] - 2026-10-28
+
+The debt before the claim. A major release is a sentence this project has to be able to
+prove, and three of the things it would want to say were not yet true: one of the eleven
+languages had no recorded corpus, three console features the roadmap already called
+built did not exist, and four pages disagreed with the tree about what was missing.
+
+### Added
+
+- **Forth is in the parity corpus.** Three programs, recorded from this engine because
+  no reference run exists for a language that arrived after the reference was deleted.
+  Each entry carries `recorded_from`, the gate reports 479 language programs instead of
+  476, and the honest limit is written where a reader will meet it: a recording cannot
+  notice a mistake in the recording, so these three pin Forth's behaviour from now on
+  rather than proving it against anything older.
+- **`time_warp_gates golden --record <language>`.** Writing a corpus entry used to be a
+  hand edit, which is why the eleventh language never got one. The command runs a
+  language's example programs through `lang_cli` and prints entries in the corpus's own
+  shape, with the digest of the source they were recorded from.
+- **The console can be read.** A click on a line that names a place goes there — `[12]`
+  from a trace, `❌ [line 30]` from a statement that failed, `at line 30:` from an
+  error — and it goes to the line the *program* numbers, so a BASIC `GOTO 999` failure
+  lands on statement 30 rather than the thirtieth line of text. A filter shows only the
+  lines that report a failure, hiding rather than deleting them, and **File > Save
+  Output As…** writes what the console shows.
+- **Several carets.** Ctrl+click adds one; typing, Backspace and Delete act at all of
+  them, with the document edited from the last position backwards so earlier carets do
+  not move under later edits. A paragraph separator is refused rather than removed, and
+  an extra caret carries no selection of its own.
+
+### Changed
+
+- **What is not built is now a file a gate reads.** `native/share/unbuilt.txt` lists
+  each missing feature with the path whose existence would mean it shipped and the pages
+  that call it missing; `time_warp_docs claims` fails when the evidence appears or when
+  a listed page stops naming the feature. It is a reminder rather than a proof — a
+  feature can ship without touching the path named — and it exists because four pages
+  claimed a feature was missing that had shipped a release earlier.
+- **The figures are corrected** where they are quoted: 479 language programs, 671 with
+  Scheme, 476 agreeing and 3 written down.
+
+### Notes
+
+- **The three divergences stay, re-argued.** Each is the reference's own bug — a `STR$`
+  of an array element that it could not print, and a `SPRITE` it acknowledged without
+  drawing — so the recorded answer is kept beside the reason rather than rewritten to
+  agree. The gate fails an entry whose note has gone stale, which is what keeps the
+  three from becoming folklore.
+- **The reference's own "no recorded corpus" note is gone** from `make golden-check`:
+  every one of the eleven languages is now pinned by the frozen corpus.
+- **The notes say what shipped.** The roadmap's smaller-items list named a Smalltalk call
+  stack and an HB-1 beeper as future work; both shipped in 23.3.0 and 20.2.0.
+
 ## [23.4.0] - 2026-10-28
 
 The assistant stops being a page with four gaps around it: an answer now arrives as it
