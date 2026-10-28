@@ -81,6 +81,7 @@
 #include "timewarp/ui/code_editor.hpp"
 #include "timewarp/ui/command_palette.hpp"
 #include "timewarp/ui/find_bar.hpp"
+#include "timewarp/ui/find_in_files.hpp"
 #include "timewarp/ui/main_window.hpp"
 #include "timewarp/ui/native_runner.hpp"
 #include "timewarp/ui/panels.hpp"

@@ -90,7 +90,9 @@ int main(int argc, char** argv) {
     test_help_menu_opens_the_documentation();
     test_edit_menu_has_find_in_files();
     test_snippet_picker_filters_by_language();
+    test_find_in_files_offers_replace();
     test_version_history_lists_snapshots();
+    test_version_history_compares_with_the_open_document();
     test_editor_minimap_and_whitespace();
     test_every_right_column_page_has_a_key();
     test_file_menu_new_opens_a_document();

@@ -49,6 +49,7 @@
 #include "timewarp/ui/gif_encoder.hpp"
 #include "timewarp/ui/outline.hpp"
 #include "timewarp/ui/snippets.hpp"
+#include "timewarp/ui/diff.hpp"
 #include "timewarp/ui/language.hpp"
 
 namespace {
@@ -413,6 +414,139 @@ void test_find_in_files_stops_when_the_callback_says_so() {
 /// honest: a snippet in a language this build does not know, a body that would
 /// glue onto the next line, two entries with one id, or a second `$CURSOR$` are
 /// all failures rather than surprises at insertion time.
+
+// Replacing is the one service here that writes to a file the user did not open.
+// What makes it safe is not a confirmation dialog -- that is the window's job -- but
+// these three properties: a file is written once and only if something matched, a
+// named file is left alone, and a pattern that cannot be compiled writes nothing.
+
+void test_replace_in_files_rewrites_once_and_reports() {
+    announce("replace: what changed");
+    tw::test::TempDir dir;
+    TW_CHECK(dir.valid());
+    if (!dir.valid()) {
+        return;
+    }
+    const QString logo = dir.write(QStringLiteral("a.logo"), "FD 10\nRT 90\nFD 10\n");
+    const QString basic = dir.write(QStringLiteral("b.bas"), "10 PRINT \"FD\"\n");
+    const QString untouched = dir.write(QStringLiteral("c.txt"), "nothing here\n");
+
+    timewarp::ui::FindQuery query;
+    query.term = QStringLiteral("FD");
+    int count = 0;
+    TW_CHECK_EQ(timewarp::ui::replacedText(QStringLiteral("FD 10\nRT 90\nFD 10\n"), query,
+                                           QStringLiteral("FORWARD"), &count)
+                    .toStdString(),
+                std::string{"FORWARD 10\nRT 90\nFORWARD 10\n"});
+    TW_CHECK_EQ(count, 2);
+
+    const timewarp::ui::ReplaceResult result =
+        timewarp::ui::replaceInFiles({logo, basic, untouched}, query, QStringLiteral("FORWARD"));
+    TW_CHECK(!result.failed());
+    if (result.failed()) {
+        std::printf("     %s\n", result.error.toStdString().c_str());
+    }
+    // Two files changed, one matched twice and one once; the third has no match and
+    // is not rewritten at all.
+    TW_CHECK_EQ(result.files_changed, 2);
+    TW_CHECK_EQ(result.replacements, 3);
+    TW_CHECK_EQ(result.changed_paths.size(), 2);
+    TW_CHECK(result.skipped_paths.isEmpty());
+    TW_CHECK(!result.changed_paths.contains(untouched));
+
+    const auto read = [](const QString& path) {
+        QFile file{path};
+        if (!file.open(QIODevice::ReadOnly)) {
+            return QString{};
+        }
+        return QString::fromUtf8(file.readAll());
+    };
+    TW_CHECK_EQ(read(logo).toStdString(), std::string{"FORWARD 10\nRT 90\nFORWARD 10\n"});
+    TW_CHECK_EQ(read(basic).toStdString(), std::string{"10 PRINT \"FORWARD\"\n"});
+    TW_CHECK_EQ(read(untouched).toStdString(), std::string{"nothing here\n"});
+}
+
+void test_replace_in_files_leaves_a_named_file_alone() {
+    announce("replace: off limits");
+    tw::test::TempDir dir;
+    TW_CHECK(dir.valid());
+    if (!dir.valid()) {
+        return;
+    }
+    const QString open_with_changes = dir.write(QStringLiteral("open.bas"), "10 PRINT \"X\"\n");
+    const QString on_disk = dir.write(QStringLiteral("closed.bas"), "10 PRINT \"X\"\n");
+
+    timewarp::ui::FindQuery query;
+    query.term = QStringLiteral("X");
+    const timewarp::ui::ReplaceResult result =
+        timewarp::ui::replaceInFiles({open_with_changes, on_disk}, query, QStringLiteral("Y"),
+                                     {QFileInfo{open_with_changes}.absoluteFilePath()});
+    TW_CHECK_EQ(result.files_changed, 1);
+    TW_CHECK_EQ(result.skipped_paths.size(), 1);
+    TW_CHECK(result.skipped_paths.at(0).endsWith(QStringLiteral("open.bas")));
+
+    QFile file{open_with_changes};
+    TW_CHECK(file.open(QIODevice::ReadOnly));
+    TW_CHECK_EQ(QString::fromUtf8(file.readAll()).toStdString(), std::string{"10 PRINT \"X\"\n"});
+    QFile written{on_disk};
+    TW_CHECK(written.open(QIODevice::ReadOnly));
+    TW_CHECK_EQ(QString::fromUtf8(written.readAll()).toStdString(), std::string{"10 PRINT \"Y\"\n"});
+}
+
+void test_replace_in_files_refuses_a_broken_pattern() {
+    announce("replace: a broken pattern writes nothing");
+    tw::test::TempDir dir;
+    TW_CHECK(dir.valid());
+    if (!dir.valid()) {
+        return;
+    }
+    const QString path = dir.write(QStringLiteral("p.bas"), "10 PRINT 1\n");
+    timewarp::ui::FindQuery query;
+    query.term = QStringLiteral("(");
+    query.regex = true;
+    const timewarp::ui::ReplaceResult result =
+        timewarp::ui::replaceInFiles({path}, query, QStringLiteral("x"));
+    TW_CHECK(result.failed());
+    TW_CHECK(result.error.contains(QStringLiteral("invalid")));
+    TW_CHECK_EQ(result.files_changed, 0);
+
+    QFile file{path};
+    TW_CHECK(file.open(QIODevice::ReadOnly));
+    TW_CHECK_EQ(QString::fromUtf8(file.readAll()).toStdString(), std::string{"10 PRINT 1\n"});
+}
+
+void test_replace_keeps_captures_and_literal_backslashes() {
+    announce("replace: captures and literals");
+    timewarp::ui::FindQuery regex;
+    regex.term = QStringLiteral("PRINT \"(.*)\"");
+    regex.regex = true;
+    TW_CHECK_EQ(timewarp::ui::replacedText(QStringLiteral("10 PRINT \"HI\"\n"), regex,
+                                           QStringLiteral("PRINT \"<\\1>\""))
+                    .toStdString(),
+                std::string{"10 PRINT \"<HI>\"\n"});
+
+    // A literal search for a Windows path replaces it with the path as typed, not
+    // as a capture template.
+    timewarp::ui::FindQuery literal;
+    literal.term = QStringLiteral("C:\\temp");
+    TW_CHECK_EQ(timewarp::ui::replacedText(QStringLiteral("DIR \"C:\\temp\"\n"), literal,
+                                           QStringLiteral("D:\\work"))
+                    .toStdString(),
+                std::string{"DIR \"D:\\work\"\n"});
+
+    // A pattern that can match nothing must terminate: the classic replace-all hang
+    // is an empty match at the end of the text.
+    timewarp::ui::FindQuery empty_match;
+    empty_match.term = QStringLiteral("x*");
+    empty_match.regex = true;
+    int count = 0;
+    TW_CHECK_EQ(timewarp::ui::replacedText(QStringLiteral("abc"), empty_match,
+                                           QStringLiteral("-"), &count)
+                    .toStdString(),
+                std::string{"-a-b-c-"});
+    TW_CHECK_EQ(count, 4);
+}
+
 void test_the_shipped_snippet_catalogue_is_sound() {
     announce("snippets: the shipped catalogue");
     TW_CHECK(!timewarp::ui::snippetRoot().isEmpty());
@@ -597,6 +731,97 @@ void test_the_rom_library_scans_nested_folders() {
     timewarp::ui::storeChip8RomFolder(QString{});
     TW_CHECK(timewarp::ui::storedChip8RomFolder().isEmpty());
     timewarp::ui::storeChip8RomFolder(previous);
+}
+
+
+// The diff is what makes a list of saved copies a decision rather than a quiz.
+// Three properties matter: what changed is reported with the right sign, the
+// unchanged parts are context rather than noise, and the two documents that matter
+// most -- the same one twice, and an empty one -- are answers rather than crashes.
+
+void test_diff_reports_added_and_removed_lines() {
+    announce("diff: additions and removals");
+    const QList<timewarp::ui::DiffLine> lines =
+        timewarp::ui::compareDocuments(QStringLiteral("10 PRINT 1\n20 END\n"),
+                                       QStringLiteral("10 PRINT 2\n20 END\n"));
+    TW_CHECK_EQ(lines.size(), 3);
+    if (lines.size() == 3) {
+        TW_CHECK(lines.at(0).kind == timewarp::ui::DiffKind::Removed);
+        TW_CHECK_EQ(lines.at(0).text, QStringLiteral("10 PRINT 1"));
+        TW_CHECK(lines.at(1).kind == timewarp::ui::DiffKind::Added);
+        TW_CHECK_EQ(lines.at(1).text, QStringLiteral("10 PRINT 2"));
+        TW_CHECK(lines.at(2).kind == timewarp::ui::DiffKind::Context);
+    }
+    const timewarp::ui::DiffCounts counts = timewarp::ui::countChanges(lines);
+    TW_CHECK_EQ(counts.added, 1);
+    TW_CHECK_EQ(counts.removed, 1);
+    TW_CHECK_EQ(timewarp::ui::diffSummary(lines), QStringLiteral("+1 \u22121"));
+
+    // Nothing in common at all is still an answer: everything went, everything came.
+    const QList<timewarp::ui::DiffLine> replaced =
+        timewarp::ui::compareDocuments(QStringLiteral("A\n"), QStringLiteral("B\n"));
+    TW_CHECK_EQ(timewarp::ui::countChanges(replaced).removed, 1);
+    TW_CHECK_EQ(timewarp::ui::countChanges(replaced).added, 1);
+}
+
+void test_diff_of_the_same_document_is_empty() {
+    announce("diff: no change, no output");
+    const QString text = QStringLiteral("10 PRINT \"HI\"\n20 END\n");
+    const QList<timewarp::ui::DiffLine> lines =
+        timewarp::ui::compareDocuments(text, text);
+    TW_CHECK(timewarp::ui::countChanges(lines).empty());
+    TW_CHECK_EQ(timewarp::ui::diffSummary(lines), QStringLiteral("no changes"));
+    TW_CHECK(timewarp::ui::unifiedDiff(text, text).isEmpty());
+
+    // The trailing newline is not a line: a document saved with and without one
+    // must not read as a change nobody made.
+    TW_CHECK(timewarp::ui::unifiedDiff(QStringLiteral("A\n"), QStringLiteral("A")).isEmpty());
+    // An empty document has no lines, and comparing it is not a crash.
+    TW_CHECK(timewarp::ui::unifiedDiff(QString{}, QString{}).isEmpty());
+    TW_CHECK_EQ(timewarp::ui::diffLines(QString{}).size(), 0);
+}
+
+void test_unified_diff_keeps_context_and_counts_it() {
+    announce("diff: hunks");
+    QString before;
+    QString after;
+    for (int line = 1; line <= 20; ++line) {
+        before += QStringLiteral("line %1\n").arg(line);
+        after += line == 10 ? QStringLiteral("line ten, changed\n")
+                            : QStringLiteral("line %1\n").arg(line);
+    }
+    const QString diff = timewarp::ui::unifiedDiff(before, after, 2);
+    TW_CHECK(diff.contains(QStringLiteral("-line 10")));
+    TW_CHECK(diff.contains(QStringLiteral("+line ten, changed")));
+    // Two lines of context either side, and not the other seventeen.
+    TW_CHECK(diff.contains(QStringLiteral(" line 8")));
+    TW_CHECK(diff.contains(QStringLiteral(" line 12")));
+    TW_CHECK(!diff.contains(QStringLiteral(" line 1\n")));
+    TW_CHECK(diff.contains(QStringLiteral("@@ -8,5 +8,5 @@")));
+    // One hunk, because one change: a second header would mean the grouping is wrong.
+    TW_CHECK_EQ(diff.count(QStringLiteral("@@")), 2);
+}
+
+void test_diff_handles_a_document_that_moved() {
+    announce("diff: a moved block is a removal and an addition");
+    const QString before = QStringLiteral("A\nB\nC\nD\n");
+    const QString after = QStringLiteral("C\nD\nA\nB\n");
+    const QList<timewarp::ui::DiffLine> lines =
+        timewarp::ui::compareDocuments(before, after);
+    // Reassembling either side from the comparison must give the document back:
+    // that is the invariant a wrong sign would break.
+    QString rebuilt_before;
+    QString rebuilt_after;
+    for (const timewarp::ui::DiffLine& line : lines) {
+        if (line.kind != timewarp::ui::DiffKind::Added) {
+            rebuilt_before += line.text + QLatin1Char('\n');
+        }
+        if (line.kind != timewarp::ui::DiffKind::Removed) {
+            rebuilt_after += line.text + QLatin1Char('\n');
+        }
+    }
+    TW_CHECK_EQ(rebuilt_before.toStdString(), before.toStdString());
+    TW_CHECK_EQ(rebuilt_after.toStdString(), after.toStdString());
 }
 
 void test_breakpoint_store() {
@@ -1168,6 +1393,10 @@ int main(int argc, char** argv) {
     test_find_in_files_matches_every_file();
     test_find_in_files_options();
     test_find_in_files_stops_when_the_callback_says_so();
+    test_replace_in_files_rewrites_once_and_reports();
+    test_replace_in_files_leaves_a_named_file_alone();
+    test_replace_in_files_refuses_a_broken_pattern();
+    test_replace_keeps_captures_and_literal_backslashes();
     test_the_shipped_snippet_catalogue_is_sound();
     test_snippet_insertion_resolves_placeholders();
     test_autosave_store();
@@ -1182,5 +1411,9 @@ int main(int argc, char** argv) {
     test_lesson_session_pdf_export();
     test_breakpoint_store();
     test_the_outline_finds_named_places();
+    test_diff_reports_added_and_removed_lines();
+    test_diff_of_the_same_document_is_empty();
+    test_unified_diff_keeps_context_and_counts_it();
+    test_diff_handles_a_document_that_moved();
     return tw::test::summary("editor_services");
 }

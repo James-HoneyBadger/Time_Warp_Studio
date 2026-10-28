@@ -289,7 +289,9 @@ void MainWindow::showVersionHistory() {
     if (document.isEmpty()) {
         document = QStringLiteral("untitled:") + nameOf(editor);
     }
-    VersionHistoryDialog dialog{autosave_, document, this};
+    // The editor's text is what a copy is compared with: "restore this" is a
+    // decision about the difference between the two.
+    VersionHistoryDialog dialog{autosave_, document, editor->toPlainText(), this};
     if (dialog.exec() != QDialog::Accepted) {
         return;
     }
