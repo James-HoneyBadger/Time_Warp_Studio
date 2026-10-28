@@ -457,6 +457,61 @@ public:
     /// number, otherwise its 1-based position.
     [[nodiscard]] int source_line(std::size_t index) const;
 
+    // -- going back --------------------------------------------------------
+    //
+    // A run is a position, a set of bindings, the output it has printed and the
+    // language's own scratch state. All four are copied here, so a caller can return
+    // to a point in a program rather than only to a line a breakpoint stopped at.
+    //
+    // #### What a snapshot is not
+    //
+    // It is not a reset of the world outside the engine. Drawing already sent to the
+    // canvas stays drawn (the canvas has a scrubber for that); an open file stays
+    // open and stays where it was; a `SLEEP` that has passed is not re-waited. What
+    // is restored is what the program can see through its own variables, plus where
+    // it will execute next -- which is what makes "step back and try the other arm"
+    // work. The limits are stated in `docs/ROADMAP.md` rather than discovered.
+
+    struct Snapshot {
+        /// The index into `program_lines()` the run would execute next.
+        std::size_t line = 0;
+        std::map<std::string, Value> variables;
+        /// The output produced so far, so a transcript can be rebuilt rather than
+        /// appended to twice.
+        std::vector<std::string> output;
+        /// The language's own scratch state -- BASIC's `FOR` stack, COMAL's blocks,
+        /// REXX's frames. A copy, which is why every executor's state has to be
+        /// copy-constructible (the `executor_state` slot already requires it).
+        std::any executor;
+        std::uint64_t steps = 0;
+        /// How many drawing calls the run had made when the snapshot was taken. The
+        /// canvas is not rewound by `restore()`; this is what the UI scrubs to.
+        std::uint64_t drawing_calls = 0;
+        /// The source line as a person reads it, for a report.
+        int source_line = 0;
+    };
+
+    /// The run's state as it is now. Meaningful between statements: a snapshot taken
+    /// from inside an executor would capture its half-finished work.
+    [[nodiscard]] Snapshot snapshot() const;
+
+    /// Makes the run that snapshot again: bindings, output, scratch state and
+    /// position. The interpreter must not be running.
+    void restore(const Snapshot& state);
+
+    /// Keeps the last `depth` snapshots the run passes, one every `interval`
+    /// statements. Zero -- the default -- keeps none and costs nothing: a run with no
+    /// interest in going back must not pay a copy per statement.
+    void set_history(std::size_t depth, std::size_t interval = 1);
+    [[nodiscard]] std::size_t historyDepth() const noexcept { return history_depth_; }
+    /// The snapshots kept, oldest first.
+    [[nodiscard]] const std::vector<Snapshot>& history() const noexcept { return history_; }
+    /// Steps back `steps` snapshots and returns the one it landed on, or nullopt when
+    /// there is nothing that far back. The newest snapshot is the statement the run is
+    /// at, so `rewind(1)` goes to the previous one -- the statement before it. Does not
+    /// resume the run: the caller decides.
+    std::optional<Snapshot> rewind(std::size_t steps = 1);
+
 private:
     void reset();
     void parse_lines(std::string_view source);
@@ -478,6 +533,10 @@ private:
     std::string last_input_;
     std::vector<std::string> output_;
     std::any executor_state_;
+    /// The snapshots the run has passed, oldest first, and how often to take one.
+    std::vector<Snapshot> history_;
+    std::size_t history_depth_ = 0;
+    std::size_t history_interval_ = 1;
     /// Not owned: the runner owns the session and outlives the run.
     DebugSession* debug_ = nullptr;
     /// Bindings as of the previous statement, for data breakpoints. Only updated

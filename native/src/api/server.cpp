@@ -708,9 +708,21 @@ QJsonValue Server::State::dispatch(const QString& method, const QJsonObject& par
             }
         }
         const std::string source = utf8Bytes(params, "source", "sourceBase64");
+        // How many snapshots the run keeps, so `debug.rewind` has somewhere to go.
+        // Zero is the default and costs nothing: a client that does not ask for
+        // history pays no copy per statement.
+        std::size_t history = 0;
+        if (params.contains(QStringLiteral("history"))) {
+            const QJsonValue value = params.value(QStringLiteral("history"));
+            if (!value.isDouble() || value.toDouble() < 0 || value.toDouble() > 10000) {
+                invalid("'history' must be a number of snapshots between 0 and 10000");
+            }
+            history = static_cast<std::size_t>(value.toInt());
+        }
         auto session = debug::Session::start(
             *language, source, breakpoints, data_breakpoints,
-            [this](std::string_view sql) { return database.executeForOutput(sql); });
+            [this](std::string_view sql) { return database.executeForOutput(sql); },
+            history);
         const std::string id = std::to_string(next_debug++);
         QJsonObject result = debugSnapshotJson(id, session->snapshot());
         debug_sessions.emplace(id, std::move(session));
@@ -747,6 +759,29 @@ QJsonValue Server::State::dispatch(const QString& method, const QJsonObject& par
             invalid("'kind' must be into, over or out");
         }
         return debugSnapshotJson(id, found->second->step(mode));
+    }
+
+    if (method == QLatin1String("debug.rewind")) {
+        const std::string id = text(params, "session");
+        const auto found = debug_sessions.find(id);
+        if (found == debug_sessions.end()) {
+            failed("no such debug session: " + id);
+        }
+        const QJsonValue value = params.value(QStringLiteral("steps"));
+        const double steps = value.isUndefined() ? 1.0 : value.toDouble();
+        if (steps < 1 || steps > 10000) {
+            invalid("'steps' must be between 1 and 10000");
+        }
+        const debug::Snapshot rewound =
+            found->second->rewind(static_cast<std::size_t>(steps));
+        QJsonObject result = debugSnapshotJson(id, rewound);
+        if (!rewound.error.empty()) {
+            // The session kept no history, or the run had already finished: the state
+            // is unmoved and the answer says why rather than looking like a rewind
+            // that happened to land where the run already was.
+            result.insert(QStringLiteral("unmoved"), true);
+        }
+        return result;
     }
 
     if (method == QLatin1String("debug.stop")) {

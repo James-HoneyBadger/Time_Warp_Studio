@@ -388,6 +388,13 @@ public:
     /// first, and clears them. A headless run has none, which is why `INKEY$`'s
     /// documented answer is the empty string there.
     [[nodiscard]] virtual std::string take_keystrokes() { return {}; }
+
+    /// How many drawing calls this surface has been given, across every run of it.
+    ///
+    /// A snapshot records this so that going back can scrub the canvas to the ink
+    /// that existed at that moment. A host that keeps no count answers zero, which is
+    /// what a run with no snapshot history costs.
+    [[nodiscard]] virtual std::uint64_t drawing_calls() const { return 0; }
 };
 
 }  // namespace timewarp::lang

@@ -328,6 +328,9 @@ public:
 
     [[nodiscard]] bool drew() const noexcept { return drawing_calls_ > 0; }
     [[nodiscard]] std::size_t drawingCalls() const noexcept { return drawing_calls_; }
+    [[nodiscard]] std::uint64_t drawing_calls() const override {
+        return static_cast<std::uint64_t>(drawing_calls_);
+    }
     /// Turtle operations seen, including turns and pen changes that leave no ink.
     [[nodiscard]] std::size_t actionCount() const noexcept { return actions_; }
 

@@ -459,6 +459,7 @@ measuring the wrong machine.
 | 22.1 ✓ | No Python: the documentation gates and the version tool are `time_warp_docs` (its own CMake project, no Qt), the icon generator is `time_warp_icon` and reproduces the packaged icons byte for byte, `./twc` is a wrapper around the IDE's compiler, and `make tree-check` fails if a `.py` comes back |
 | 22.2 ✓ | The Markdown lint is C++: `time_warp_docs md` -- twenty-eight rules, `--explain` to see how a line was read -- replacing `markdownlint-cli2` and its `.markdownlint.json`, with the CI job promoted from advisory to a gate; running it found a line-splitting bug in the shared scanner that had been cutting every `✅` bullet in two |
 | 23.5 ✓ | The debt before a claim: Forth joins the parity corpus (three programs recorded from this engine by `golden --record`, because no reference run exists) and the console gains the line links, error filter and save that this page had already been claiming; the editor gains several carets; and `time_warp_docs claims` reads `native/share/unbuilt.txt` so a page that calls a shipped feature missing fails a gate instead of standing |
+| 23.6 ✓ | A run can be walked backwards: `Interpreter::snapshot()`/`restore()` copy a statement's position, bindings, output and the language's own scratch state, `set_history` keeps the last N of them and `rewind` goes back through them; `debug.start` takes `history` and `debug.rewind` returns to a statement with the bindings and output it had. The test is the property a person would check: go back, run on, and the transcript is what it was |
 
 Smaller items belong in one of those releases rather than a release of their own:
 Flatpak, Snap and an arm64 AppImage, and the distribution work described under
@@ -502,6 +503,23 @@ points they are pushed and popped, and a pause reports them outermost first unde
 lines run inside the `DO` statement rather than through the loop, so that is also
 the only place a breakpoint inside a group can be honoured — which it now is, and
 did not use to be. Logo and CHIP-8 keep no return stack, so they report no chain.
+
+**A run can be walked backwards, in the engine and over the API.** `Interpreter`
+can copy where it is — the statement, every binding, the text printed so far, the
+drawing count and the language's own scratch state — and put it back:
+`snapshot()`, `restore()`, `set_history(depth)` and `rewind(steps)`. The loop
+takes a copy each time it reaches a statement, up to the depth asked for, so a
+session started with `history` can return to one it has already passed;
+`debug.start` takes that number and `debug.rewind` goes back through the copies,
+answering the bindings and the output the run had at the statement it returns to.
+`lang_tests` asserts the property a person would check rather than the mechanism:
+rewind, run on, and the transcript is what it was. Two honest limits, both stated
+in [API.md](API.md) rather than discovered: the canvas keeps the ink it has
+already been given — the drawing half of a rewind belongs to the scrubber, which
+steps back through the display list — and Scheme cannot be rewound at all, because
+its state is an arena and a continuation chain rather than a value. **The strip
+under the canvas that offers this to a person is the next release** (23.7), then
+Logo and Forth (23.8); until then the capability is the engine's and the API's.
 
 **Variables and the Telemetry HUD** are built too, and both answer the question a
 placeholder could not: *what did that run actually do?* The **Variables** tab lists every

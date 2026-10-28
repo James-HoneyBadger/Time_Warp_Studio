@@ -81,6 +81,9 @@ bool DebugSession::wait_at(bool breakpoint, int line, const std::string* changed
     });
     paused_ = false;
     paused_for_step_ = false;
+    // Cleared here rather than at the start of the pause: `mark_rewound` is called
+    // before the pause, and the callback that reports *why* has to see the flag.
+    paused_for_rewind_ = false;
     paused_line_ = -1;
     return !stop_.load();
 }
@@ -180,6 +183,36 @@ bool DebugSession::paused() const {
 bool DebugSession::paused_for_step() const {
     const std::scoped_lock lock{mutex_};
     return paused_for_step_;
+}
+
+bool DebugSession::paused_for_rewind() const {
+    const std::scoped_lock lock{mutex_};
+    return paused_for_rewind_;
+}
+
+void DebugSession::request_rewind(std::size_t steps) {
+    {
+        const std::scoped_lock lock{mutex_};
+        pending_rewind_ = steps;
+        // The pause that follows the rewind is a step's: it stops before the next
+        // statement, which is the one the caller wants to look at.
+        step_armed_ = true;
+        engaged_.store(true, std::memory_order_release);
+        ++sequence_;
+    }
+    resumed_.notify_all();
+}
+
+std::optional<std::size_t> DebugSession::take_rewind() {
+    const std::scoped_lock lock{mutex_};
+    const std::optional<std::size_t> steps = pending_rewind_;
+    pending_rewind_.reset();
+    return steps;
+}
+
+void DebugSession::mark_rewound() noexcept {
+    const std::scoped_lock lock{mutex_};
+    paused_for_rewind_ = true;
 }
 
 }  // namespace timewarp::lang

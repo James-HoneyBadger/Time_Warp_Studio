@@ -197,12 +197,14 @@ Every project method returns the whole project (or, for `addFolder`, the project
 plus `added`), so a caller never has to merge a delta into a copy it thinks it
 has.
 
-#### `debug.start`, `debug.snapshot`, `debug.continue`, `debug.step`, `debug.stop`, `debug.close`
+#### `debug.start`, `debug.snapshot`, `debug.continue`, `debug.step`, `debug.rewind`, `debug.stop`, `debug.close`
 
 A debug session runs a program until its first pause and then answers one
 request per state. `debug.start` takes the same `language`, `source`/`sourceBase64`
 as `language.run`, plus optional `breakpoints` (1-based positions in the source
-text, as the editor gutter numbers them) and `dataBreakpoints` (variable names). It returns when the run pauses or finishes:
+text, as the editor gutter numbers them), `dataBreakpoints` (variable names) and
+`history` (how many snapshots the run keeps, 0 to 10000; 0 keeps none and costs
+nothing). It returns when the run pauses or finishes:
 
 ```json
 {
@@ -223,7 +225,7 @@ text, as the editor gutter numbers them) and `dataBreakpoints` (variable names).
 }
 ```
 
-`reason` is `breakpoint`, `step`, `data`, `pause`, `finished` or `error`.
+`reason` is `breakpoint`, `step`, `rewind`, `data`, `pause`, `finished` or `error`.
 `stack` is the paused run's call chain, outermost first, one
 `{"procedure": "…", "line": N}` per frame: the frame's own line while it is the
 one running, and its call site while it is waiting. It is empty while the run
@@ -241,7 +243,18 @@ without line labels, the two are the same number.
 `kind` (`into`, `over` or `out`, default `into`) — the line-loop languages use
 one step unit, so all three stop at the next statement; `debug.stop` ends the
 run; `debug.snapshot` reads the current state without moving it; `debug.close`
-ends and releases the session. Each request blocks until the run pauses or
+ends and releases the session.
+
+`debug.rewind` takes `steps` (default 1) and goes back that many statements,
+answering a state with `reason` `rewind`, the bindings the run had there and the
+output it had printed by then. It needs a session started with `history`: without
+one the answer carries `"unmoved": true` and an `error` saying so, rather than
+looking like a rewind that happened to land where the run already was. What is
+*not* rewound is stated rather than implied — the canvas keeps the ink it was
+given (the IDE's scrubber steps back through it), an open file stays open at its
+offset, and a scheme program cannot be rewound at all, because its state is an
+arena and a continuation chain rather than a value: `Scheme` answers with an
+error and does not move. Each request blocks until the run pauses or
 finishes, and a `state` of `timeout` means the engine was still running after
 15 seconds (the engine's own 10-second budget usually ends it first).
 

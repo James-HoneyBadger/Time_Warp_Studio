@@ -60,10 +60,12 @@ class Session {
 public:
     /// Runs `source` until the first pause or completion and returns the session.
     /// Breakpoints are 1-based source lines, the same number the editor shows.
+    /// `history` is how many snapshots the run keeps so `rewind` can walk back
+    /// through them; 0 (the default) keeps none and costs nothing.
     [[nodiscard]] static std::unique_ptr<Session> start(
         timewarp::lang::Language language, std::string source,
         const std::set<int>& breakpoints, const std::set<std::string>& data_breakpoints,
-        std::function<std::string(std::string_view)> sql);
+        std::function<std::string(std::string_view)> sql, std::size_t history = 0);
 
     virtual ~Session() = default;
 
@@ -74,6 +76,10 @@ public:
     [[nodiscard]] virtual Snapshot step(int mode) = 0;
     /// End the run and return its final state.
     [[nodiscard]] virtual Snapshot stop() = 0;
+    /// Goes back `steps` snapshots and returns the state it landed in, with
+    /// `reason` `rewind`. A session started without `history` has nothing to go back
+    /// to, and says so in `error` rather than appearing to have moved.
+    [[nodiscard]] virtual Snapshot rewind(std::size_t steps) = 0;
 };
 
 }  // namespace timewarp::api::debug

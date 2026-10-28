@@ -32,6 +32,7 @@
 #include <cstdint>
 #include <functional>
 #include <mutex>
+#include <optional>
 #include <set>
 
 namespace timewarp::lang {
@@ -96,7 +97,24 @@ public:
     /// True when the current pause was a step rather than a breakpoint or a data
     /// change. Read by an adapter that reports *why* a run stopped.
     [[nodiscard]] bool paused_for_step() const;
+    /// True when the current pause is where a rewind landed rather than where the
+    /// program got to on its own.
+    [[nodiscard]] bool paused_for_rewind() const;
     [[nodiscard]] bool stopRequested() const { return stop_.load(); }
+
+    /// Asks the run to go back `steps` snapshots and stop there.
+    ///
+    /// The run owns its own state, so this is a request rather than a call: the
+    /// interpreter's loop performs the rewind on its own thread and then pauses, and a
+    /// run that has no history yet simply carries on. Like every command here it wakes
+    /// a paused run, because a debugger that only listens when it is already running is
+    /// a debugger with a dead button.
+    void request_rewind(std::size_t steps);
+    /// The steps the run should go back, once, or nullopt. Read by the interpreter
+    /// loop on its own thread.
+    [[nodiscard]] std::optional<std::size_t> take_rewind();
+    /// Says that the pause about to happen is where a rewind landed.
+    void mark_rewound() noexcept;
 
     PauseCallback on_paused;
     DataPauseCallback on_data_changed;
@@ -118,6 +136,9 @@ private:
     /// pause and waiting for one.
     std::uint64_t sequence_ = 0;
     std::atomic<bool> stop_{false};
+    /// A rewind the loop has not taken yet, and whether the next pause is one.
+    std::optional<std::size_t> pending_rewind_;
+    bool paused_for_rewind_ = false;
     bool paused_ = false;
     bool step_armed_ = false;
     bool paused_for_step_ = false;

@@ -2,6 +2,42 @@
 
 <!-- history: all -->
 
+## [23.6.0] - 2026-11-04
+
+A run can be walked backwards. The debugger could stop a program and look at it; it could
+not go back to a statement it had already passed and show what was true there. That is
+the engine half of the version-24 claim, and it is in the engine and over the API now —
+the strip that offers it to a person is the next release.
+
+### Added
+
+- **Snapshots.** `Interpreter::snapshot()` copies where a run is: the statement, every
+  binding, the text printed so far, the drawing count and the language's own scratch
+  state. `restore()` puts one back. Nothing is shared with the live run, so a copy taken
+  at statement 10 still says what was true at statement 10 after the run has moved on.
+- **History and rewind.** `set_history(depth)` asks the loop to keep the last N
+  snapshots as it reaches each statement, and `rewind(steps)` returns to an earlier one.
+  A rewind does not replay the program: it restores the state, so what happens next is
+  the program running on from there with the bindings and output it had — the property
+  the test asserts is that the transcript is then what it was.
+- **`debug.start` takes `history`, and `debug.rewind` goes back.** A debug session
+  started with a depth can be walked backwards over JSON-RPC: `debug.rewind` answers a
+  paused state with `reason` `rewind` and the bindings at the statement it returned to.
+  A session with no history answers `"unmoved": true` and says why, rather than looking
+  like a rewind that happened to land where the run already was.
+- **`lang_tests` takes 941 checks and `api_tests` 100.** The new ones are the copy
+  semantics, the rewind-and-replay property through BASIC's loop, and a session that
+  steps to line 20, rewinds, and lands on line 10 with the variable it had there unset.
+
+### Changed
+
+- **The limits are documented where they are met, not discovered later.** The canvas
+  keeps the ink it has already been given — the drawing half of a rewind belongs to the
+  scrubber, which steps back through the display list — and Scheme cannot be rewound at
+  all, because its state is an arena and a continuation chain rather than a value. Both
+  are in [docs/API.md](docs/API.md), and the roadmap says which release offers the strip
+  and which adds Logo and Forth.
+
 ## [23.5.0] - 2026-10-28
 
 The debt before the claim. A major release is a sentence this project has to be able to

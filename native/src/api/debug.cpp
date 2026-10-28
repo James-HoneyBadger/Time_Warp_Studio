@@ -36,7 +36,7 @@ public:
     NativeSession(timewarp::lang::Language language, std::string source,
                   const std::set<int>& breakpoints,
                   const std::set<std::string>& data_breakpoints,
-                  std::function<std::string(std::string_view)> sql)
+                  std::function<std::string(std::string_view)> sql, std::size_t history)
         : interpreter_{std::make_unique<timewarp::lang::Interpreter>(language, host_)} {
         std::set<std::size_t> indices;
         for (const int line : breakpoints) {
@@ -47,7 +47,10 @@ public:
         debug_.set_breakpoints(std::move(indices));
         debug_.set_data_breakpoints(data_breakpoints);
         debug_.on_paused = [this](int line) {
-            publish(line, debug_.paused_for_step() ? "step" : "breakpoint", {});
+            const char* reason = debug_.paused_for_rewind()
+                                     ? "rewind"
+                                     : (debug_.paused_for_step() ? "step" : "breakpoint");
+            publish(line, reason, {});
         };
         debug_.on_data_changed = [this](int line, const std::string& name) {
             publish(line, "data", name);
@@ -61,6 +64,8 @@ public:
             interpreter_->set_sql_callback(std::move(sql));
         }
         interpreter_->load_program(source);
+        // After the program: `load_program` resets the run, which empties the history.
+        interpreter_->set_history(history);
         thread_ = std::thread([this] {
             interpreter_->run();
             finish();
@@ -112,6 +117,24 @@ public:
         if (thread_.joinable()) {
             thread_.join();
         }
+        return snapshot();
+    }
+
+    Snapshot rewind(std::size_t steps) override {
+        if (finished()) {
+            Snapshot done = snapshot();
+            done.error = "the run has finished; there is nothing to go back to";
+            return done;
+        }
+        if (interpreter_->history().empty()) {
+            // A session started without history says so rather than pretending.
+            Snapshot unmoved = snapshot();
+            unmoved.error = "this session keeps no history; start it with \"history\": N";
+            return unmoved;
+        }
+        const std::uint64_t seen = event();
+        debug_.request_rewind(steps);
+        (void)waitFor(seen);
         return snapshot();
     }
 
@@ -308,6 +331,15 @@ public:
         return snapshot();
     }
 
+    Snapshot rewind(std::size_t) override {
+        // A Scheme program's state is its arena and its continuation chain, neither of
+        // which is a value a snapshot can copy. Saying so is better than a button that
+        // silently does nothing.
+        Snapshot unmoved = snapshot();
+        unmoved.error = "the Scheme machine cannot be rewound: its state is not a value";
+        return unmoved;
+    }
+
     Snapshot stop() override {
         if (!isFinished()) {
             runner_.request_stop();
@@ -369,13 +401,16 @@ private:
 std::unique_ptr<Session> Session::start(
     timewarp::lang::Language language, std::string source,
     const std::set<int>& breakpoints, const std::set<std::string>& data_breakpoints,
-    std::function<std::string(std::string_view)> sql) {
+    std::function<std::string(std::string_view)> sql, std::size_t history) {
     if (language == timewarp::lang::Language::Scheme) {
+        // The Scheme machine keeps its state as an arena and a continuation chain,
+        // which is not a value to copy; `SchemeSession::rewind` says so.
+        (void)history;
         return std::make_unique<SchemeSession>(std::move(source), breakpoints,
                                                data_breakpoints, std::move(sql));
     }
     return std::make_unique<NativeSession>(language, std::move(source), breakpoints,
-                                           data_breakpoints, std::move(sql));
+                                           data_breakpoints, std::move(sql), history);
 }
 
 }  // namespace timewarp::api::debug

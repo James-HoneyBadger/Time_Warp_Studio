@@ -216,5 +216,7 @@ void test_focal_group_reports_a_frame();
 void test_pilot_unit_reports_a_frame();
 void test_comal_procedure_reports_a_frame();
 void test_rexx_call_reports_a_frame();
+void test_a_run_can_be_snapshotted_and_restored();
+void test_history_rewinds_a_finished_run();
 
 }  // namespace tw::lang_tests

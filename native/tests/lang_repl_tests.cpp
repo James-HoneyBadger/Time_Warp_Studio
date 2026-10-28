@@ -255,4 +255,86 @@ void test_logo_data_breakpoint_pauses_at_a_statement_boundary() {
     TW_CHECK_EQ(interpreter.output().front(), std::string{"2"});
 }
 
+// ---------------------------------------------------------------------------
+// Going back
+// ---------------------------------------------------------------------------
+
+// A snapshot is a position, the bindings, the output so far and the language's own
+// scratch state, and restoring it makes the run that point again. The property the
+// test holds is the one a person would check: stop halfway, go back, run to the end,
+// and the transcript is what it was the first time -- not the transcript with the
+// middle printed twice.
+void test_a_run_can_be_snapshotted_and_restored() {
+    std::printf("-- snapshot: restore and carry on\n");
+    RecordingHost host;
+    Interpreter interpreter{Language::Basic, host};
+    interpreter.load_program(
+        "10 LET A = 1\n"
+        "20 LET B = 2\n"
+        "30 PRINT A + B\n"
+        "40 LET A = 99\n"
+        "50 PRINT A\n");
+
+    timewarp::lang::DebugSession session;
+    session.set_breakpoints({2});
+    Interpreter::Snapshot half;
+    bool took_one = false;
+    session.on_paused = [&](int) {
+        half = interpreter.snapshot();
+        took_one = true;
+        session.request_continue();
+    };
+    interpreter.set_debug_session(&session);
+    interpreter.run();
+    TW_CHECK(took_one);
+    TW_CHECK_EQ(half.source_line, 30);
+    TW_CHECK_EQ(half.variables.at("A").number(), 1.0);
+    TW_CHECK_EQ(half.variables.at("B").number(), 2.0);
+    TW_CHECK(half.output.empty());
+
+    TW_CHECK_EQ(interpreter.output().size(), std::size_t{2});
+    TW_CHECK_EQ(interpreter.number("A"), 99.0);
+
+    interpreter.set_debug_session(nullptr);
+    interpreter.restore(half);
+    TW_CHECK_EQ(interpreter.number("A"), 1.0);
+    TW_CHECK(interpreter.output().empty());
+    interpreter.run();
+    TW_CHECK_EQ(interpreter.output().size(), std::size_t{2});
+    TW_CHECK_EQ(interpreter.output().at(0), std::string{"3"});
+    TW_CHECK_EQ(interpreter.output().at(1), std::string{"99"});
+}
+
+// With history on, the loop keeps the last `depth` snapshots and `rewind` walks back
+// through them, dropping the ones it passed. Off is the default and costs nothing.
+void test_history_rewinds_a_finished_run() {
+    std::printf("-- snapshot: rewind and replay\n");
+    RecordingHost host;
+    Interpreter interpreter{Language::Basic, host};
+    interpreter.load_program(
+        "10 FOR I = 1 TO 3\n"
+        "20 PRINT I\n"
+        "30 NEXT I\n");
+    interpreter.set_history(4);
+    TW_CHECK_EQ(interpreter.historyDepth(), std::size_t{4});
+    interpreter.run();
+    TW_CHECK_EQ(interpreter.output().size(), std::size_t{3});
+    TW_CHECK_EQ(interpreter.history().size(), std::size_t{4});
+
+    const std::vector<std::string> first = interpreter.output();
+    const std::optional<Interpreter::Snapshot> landed = interpreter.rewind(3);
+    TW_CHECK(landed.has_value());
+    if (!landed.has_value()) {
+        return;
+    }
+    // Three back from four kept leaves the oldest one to go back to again.
+    TW_CHECK_EQ(interpreter.history().size(), std::size_t{0});
+    interpreter.run();
+    TW_CHECK(interpreter.output() == first);
+
+    const auto before = interpreter.history().size();
+    TW_CHECK(!interpreter.rewind(99).has_value());
+    TW_CHECK_EQ(interpreter.history().size(), before);
+}
+
 }  // namespace tw::lang_tests

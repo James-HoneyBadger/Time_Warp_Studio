@@ -389,6 +389,15 @@ void Interpreter::run() {
         if (!call_frames_.empty()) {
             call_frames_.back().line = traced_line;
         }
+        // A snapshot is the state *before* this statement, taken every `interval`
+        // statements and only when a caller asked for history: a run with no interest
+        // in going back copies nothing.
+        if (history_depth_ > 0 && iterations % history_interval_ == 0) {
+            history_.push_back(snapshot());
+            if (history_.size() > history_depth_) {
+                history_.erase(history_.begin());
+            }
+        }
         if (tracing_) {
             log_output("[" + std::to_string(traced_line) + "]");
         }
@@ -397,6 +406,18 @@ void Interpreter::run() {
             if (!debug_->note_line(current_line, source_line)) {
                 running = false;
                 break;
+            }
+            // A rewind asked for while the run was stopped happened here, on this
+            // thread, and moved the position: this statement is not the one to run.
+            if (const std::optional<std::size_t> back = debug_->take_rewind();
+                back.has_value()) {
+                if (rewind(*back).has_value()) {
+                    debug_->mark_rewound();
+                }
+                // The pause that follows lands on the statement the rewind chose,
+                // which is what the caller asking for one wants to see.
+                debug_->request_step();
+                continue;
             }
         }
         // The clock starts after the pause: time spent waiting for the user to
@@ -804,6 +825,57 @@ int Interpreter::source_line(std::size_t index) const {
 
 int Interpreter::display_line() const {
     return source_line(current_line);
+}
+
+// ---------------------------------------------------------------------------
+// Going back
+// ---------------------------------------------------------------------------
+
+Interpreter::Snapshot Interpreter::snapshot() const {
+    Snapshot state;
+    state.line = current_line;
+    state.variables = variables_;
+    state.output = output_;
+    // A copy, not a move: the run keeps running from the state it is in. Every
+    // executor's state is copy-constructible because the `executor_state` slot
+    // already required it, which is what makes this line possible at all.
+    state.executor = executor_state_;
+    state.steps = steps_used_;
+    state.drawing_calls = turtle_.drawing_calls();
+    state.source_line = display_line();
+    return state;
+}
+
+void Interpreter::restore(const Snapshot& state) {
+    current_line = state.line;
+    variables_ = state.variables;
+    output_ = state.output;
+    executor_state_ = state.executor;
+    steps_used_ = state.steps;
+    // The data-breakpoint baseline comes from the restored bindings: a comparison
+    // against the state the run has just left would report every variable as changed.
+    data_snapshot_ = variables_;
+    jumped_ = false;
+}
+
+void Interpreter::set_history(std::size_t depth, std::size_t interval) {
+    history_depth_ = depth;
+    history_interval_ = interval == 0 ? 1 : interval;
+    history_.clear();
+    history_.reserve(std::min<std::size_t>(depth, 256));
+}
+
+std::optional<Interpreter::Snapshot> Interpreter::rewind(std::size_t steps) {
+    // The newest snapshot is the statement the run is *at*, so going back one means
+    // the one before it: `steps + 1` from the end.
+    if (steps == 0 || history_.size() < steps + 1) {
+        return std::nullopt;
+    }
+    const auto at = history_.end() - static_cast<std::ptrdiff_t>(steps + 1);
+    const Snapshot landed = *at;
+    history_.erase(at, history_.end());
+    restore(landed);
+    return landed;
 }
 
 }  // namespace timewarp::lang

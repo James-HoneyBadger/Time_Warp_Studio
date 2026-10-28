@@ -568,6 +568,50 @@ void test_debug_sessions() {
     TW_CHECK_EQ(talk_end.value(QStringLiteral("state")).toString(),
                 QStringLiteral("finished"));
 
+    // Going back: a session started with history can return to a statement it has
+    // already run, and the state it lands in is the one it was in then -- which is what
+    // "step back and try the other arm" needs.
+    QJsonObject rewindable;
+    rewindable.insert(QStringLiteral("language"), QStringLiteral("basic"));
+    rewindable.insert(QStringLiteral("source"),
+                      QStringLiteral("10 LET A = 1\n"
+                                     "20 LET A = 2\n"
+                                     "30 PRINT A\n"));
+    rewindable.insert(QStringLiteral("breakpoints"), QJsonArray{3});
+    rewindable.insert(QStringLiteral("history"), 8);
+    const QJsonObject at_third =
+        resultOf(server, QStringLiteral("debug.start"), rewindable).toObject();
+    TW_CHECK_EQ(at_third.value(QStringLiteral("line")).toInt(), 30);
+    TW_CHECK_EQ(at_third.value(QStringLiteral("reason")).toString(),
+                QStringLiteral("breakpoint"));
+    QJsonObject backward;
+    backward.insert(QStringLiteral("session"),
+                    at_third.value(QStringLiteral("session")).toString());
+    backward.insert(QStringLiteral("steps"), 2);
+    const QJsonObject gone_back =
+        resultOf(server, QStringLiteral("debug.rewind"), backward).toObject();
+    TW_CHECK_EQ(gone_back.value(QStringLiteral("reason")).toString(),
+                QStringLiteral("rewind"));
+    TW_CHECK_EQ(gone_back.value(QStringLiteral("line")).toInt(), 10);
+    // The bindings are the ones that statement had not yet changed.
+    bool saw_a = false;
+    double a = 0.0;
+    for (const QJsonValue& value : gone_back.value(QStringLiteral("variables")).toArray()) {
+        const QJsonObject variable = value.toObject();
+        if (variable.value(QStringLiteral("name")).toString() == QLatin1String("A")) {
+            saw_a = true;
+            a = variable.value(QStringLiteral("value")).toString().toDouble();
+        }
+    }
+    TW_CHECK(!saw_a || a == 0.0);
+
+    // A session asked for none keeps none, and says so rather than looking unchanged.
+    QJsonObject no_history;
+    no_history.insert(QStringLiteral("session"), session);
+    const QJsonObject refused =
+        resultOf(server, QStringLiteral("debug.rewind"), no_history).toObject();
+    TW_CHECK(refused.value(QStringLiteral("unmoved")).toBool());
+
     // A line-by-line language fills the same field from the frames its statements
     // push, so a client reads one chain shape whatever the engine.
     QJsonObject gosub;
