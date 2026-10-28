@@ -186,6 +186,13 @@ The roll-up counts the files that passed rather than the run up to the first gap
 The exercises are independent, so a learner who did 1 and 3 has done two of three,
 and hiding the third would send you to re-teach something already learnt.
 
+A learner does not need a shell to hand work in. **Hand In** in the 🎓 Lessons tab
+writes the document that is open into their folder under the checkpoint's handout
+name — the same file `collect` reads — and asks whose work it is when the roster
+holds more than one learner. It will not overwrite an earlier hand-in until the
+learner confirms, because that copy may be the version they meant to keep; with no
+roster on the machine it says so and writes nothing.
+
 ### Where each learner has got to
 
 ```text

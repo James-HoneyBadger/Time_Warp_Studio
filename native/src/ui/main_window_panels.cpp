@@ -17,6 +17,7 @@
 #include <QDir>
 #include <QFileDialog>
 #include <QFileInfo>
+#include <QInputDialog>
 #include <QMessageBox>
 #ifdef TIME_WARP_HAVE_PRINT
 #endif
@@ -271,6 +272,68 @@ void MainWindow::requestLessonCheck(const QString& lesson, int checkpoint) {
                                   QString::fromStdString(result.message), completed,
                                   finished, total);
     }
+}
+
+void MainWindow::handInLesson(const QString& lesson, int checkpoint) {
+    CodeEditor* editor = currentEditor();
+    if (lesson_panel_ == nullptr) {
+        return;
+    }
+    if (editor == nullptr) {
+        lesson_panel_->setFailure(tr("the hand-in"),
+                                  tr("open a document with your program in it first"));
+        return;
+    }
+    if (!ensureClassroom() || classroom_ == nullptr) {
+        lesson_panel_->setFailure(tr("the hand-in"),
+                                  tr("this machine has no class folder to hand work in to"));
+        return;
+    }
+    const std::vector<timewarp::lessons::Student>& students = classroom_->students();
+    if (students.empty()) {
+        lesson_panel_->setFailure(tr("the hand-in"),
+                                  tr("no class list is set up here yet"));
+        return;
+    }
+    // Which learner is this? The window cannot know, so it asks -- with one name in
+    // the list when there is only one, which is the common case on a learner's own
+    // machine.
+    QString student = students.front().id;
+    if (students.size() > 1) {
+        QStringList names;
+        for (const timewarp::lessons::Student& entry : students) {
+            names << QStringLiteral("%1 (%2)").arg(entry.name, entry.id);
+        }
+        bool ok = false;
+        const QString chosen = QInputDialog::getItem(
+            this, tr("Hand in"), tr("Whose work is this?"), names, 0, false, &ok);
+        const int index = names.indexOf(chosen);
+        if (!ok || index < 0) {
+            return;
+        }
+        student = students.at(static_cast<std::size_t>(index)).id;
+    }
+
+    timewarp::lessons::HandIn result = classroom_->handIn(
+        student, lesson, checkpoint, editor->toPlainText(), false);
+    if (result.exists) {
+        const QMessageBox::StandardButton answer = QMessageBox::question(
+            this, tr("Hand in"),
+            tr("%1 is already handed in. Replace it with what is open now?")
+                .arg(QFileInfo{result.path}.fileName()));
+        if (answer == QMessageBox::Yes) {
+            result = classroom_->handIn(student, lesson, checkpoint,
+                                        editor->toPlainText(), true);
+        } else {
+            return;
+        }
+    }
+    if (!result.ok) {
+        lesson_panel_->setFailure(tr("the hand-in"), result.error);
+        return;
+    }
+    setExecutionState(tr("ready"), tr("Handed in %1").arg(QFileInfo{result.path}.fileName()));
+    requestLessonProgress();
 }
 
 void MainWindow::requestLessonHint(const QString& lesson, int checkpoint) {

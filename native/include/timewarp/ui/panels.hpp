@@ -436,6 +436,9 @@ signals:
     /// Check the current checkpoint. The window supplies the source, because it
     /// owns the editor and the panel does not.
     void checkRequested(const QString& lesson, int checkpoint);
+    /// Hand the current checkpoint in to the class. The window has the source and
+    /// the roster; the panel has the lesson and the checkpoint.
+    void handInRequested(const QString& lesson, int checkpoint);
     /// Ask for the next hint.
     void hintRequested(const QString& lesson, int checkpoint);
     /// Ask for the worked answer, on purpose.
@@ -455,6 +458,7 @@ private:
     QTextBrowser* detail_ = nullptr;
     QPushButton* open_ = nullptr;
     QPushButton* check_ = nullptr;
+    QPushButton* hand_in_ = nullptr;
     QPushButton* hint_ = nullptr;
     QPushButton* solution_ = nullptr;
     QPushButton* reset_ = nullptr;

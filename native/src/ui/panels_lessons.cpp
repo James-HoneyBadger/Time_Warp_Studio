@@ -64,6 +64,9 @@ LessonPanel::LessonPanel(QWidget* parent) : QFrame(parent) {
     check_ = new QPushButton{tr("Check"), this};
     check_->setObjectName(QStringLiteral("lessonCheckButton"));
     check_->setToolTip(tr("Run your program and see whether it does what was asked"));
+    hand_in_ = new QPushButton{tr("Hand In"), this};
+    hand_in_->setObjectName(QStringLiteral("lessonHandInButton"));
+    hand_in_->setToolTip(tr("Save your program into your class folder, where the marking reads it"));
     hint_ = new QPushButton{tr("Hint"), this};
     hint_->setObjectName(QStringLiteral("lessonHintButton"));
     solution_ = new QPushButton{tr("Answer"), this};
@@ -71,7 +74,7 @@ LessonPanel::LessonPanel(QWidget* parent) : QFrame(parent) {
     solution_->setToolTip(tr("Show the worked answer. Try a hint first."));
     reset_ = new QPushButton{tr("Restart"), this};
     reset_->setObjectName(QStringLiteral("lessonResetButton"));
-    for (QPushButton* button : {open_, check_, hint_, solution_, reset_}) {
+    for (QPushButton* button : {open_, check_, hand_in_, hint_, solution_, reset_}) {
         actions->addWidget(button);
     }
     layout->addLayout(actions);
@@ -105,6 +108,11 @@ LessonPanel::LessonPanel(QWidget* parent) : QFrame(parent) {
     connect(check_, &QPushButton::clicked, this, [this] {
         if (!currentLesson().isEmpty() && currentCheckpoint() >= 0) {
             emit checkRequested(currentLesson(), currentCheckpoint());
+        }
+    });
+    connect(hand_in_, &QPushButton::clicked, this, [this] {
+        if (!currentLesson().isEmpty() && currentCheckpoint() >= 0) {
+            emit handInRequested(currentLesson(), currentCheckpoint());
         }
     });
     connect(hint_, &QPushButton::clicked, this, &LessonPanel::showNextHint);

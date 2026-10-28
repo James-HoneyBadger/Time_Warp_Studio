@@ -67,6 +67,19 @@ struct Submission {
     QString message;
 };
 
+/// What a learner's hand-in produced: where the file went, whether an earlier one
+/// was replaced, and whether one was in the way.
+struct HandIn {
+    bool ok = false;
+    QString path;
+    bool replaced = false;
+    /// The path already held a hand-in and `replace` was not given, so nothing was
+    /// written. Whoever asked can say so and offer to replace it.
+    bool exists = false;
+    /// A sentence to show when `ok` is false.
+    QString error;
+};
+
 /// One line per learner per lesson: how much was handed in, how much passed.
 struct MarkRow {
     QString student;
@@ -168,6 +181,17 @@ public:
     /// `collect` is `markAll(markingJobs(...))`; the two halves exist separately
     /// so the expensive half can run on a worker thread with data it owns.
     [[nodiscard]] QList<Submission> collect(const QStringList& lessonIds = {});
+
+    /// The learner's half: writes what they produced where `collect()` will find it.
+    ///
+    /// The name is the handout name, because that is the contract the marking side
+    /// reads -- a learner who saved their work as `mine.bas` has not handed in a
+    /// checkpoint, they have saved a file. `replace` is the learner's decision: an
+    /// earlier hand-in is never overwritten by accident, because it may be the
+    /// version they meant to keep.
+    [[nodiscard]] HandIn handIn(const QString& studentId, const QString& lessonId,
+                                int checkpoint, const QString& source,
+                                bool replace = false);
     [[nodiscard]] QList<MarkJob> markingJobs(const QStringList& lessonIds = {}) const;
     [[nodiscard]] static QList<Submission> markAll(const QList<MarkJob>& jobs);
     [[nodiscard]] static QList<MarkRow> marksFor(const QList<MarkJob>& jobs,

@@ -235,6 +235,10 @@ counter being cumulative is how the leak was noticed.
 - Names are sanitised into directory names, so a student called `../../etc/passwd`
   cannot point the classroom outside itself.
 - `distribute` writes starter code and **never overwrites an existing file**.
+- `handIn` is the learner's half of the same contract: it writes the program under
+  the handout name, in the folder `mark` reads, so a file handed in from the IDE and
+  a file a teacher collects are the same file. It never overwrites an existing
+  hand-in unless the caller asks for it, and says which of the two happened.
 - `mark` reads the file once and the mark is taken from those bytes. It calls the
   verifier **directly rather than through a `LessonManager`**, so marking writes no
   progress at all — a teacher collecting a class cannot move a learner's place in

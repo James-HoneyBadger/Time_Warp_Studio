@@ -1066,6 +1066,8 @@ private:
     void requestLessonCurriculum();
     void requestLessonProgress();
     void requestLessonCheck(const QString& lesson, int checkpoint);
+    /// Writes the learner's program into their class folder under the handout name.
+    void handInLesson(const QString& lesson, int checkpoint);
     void requestLessonHint(const QString& lesson, int checkpoint);
     void requestLessonSolution(const QString& lesson, int checkpoint);
     void requestLessonReset(const QString& lesson);

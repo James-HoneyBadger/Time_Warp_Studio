@@ -599,8 +599,10 @@ an `ostream`, which is how the tests drive it without a process.
 ## 10. Lessons, classroom and appearance
 
 - **Lessons** — the 🎓 Lessons tab lists the curriculum and checks the document in
-  front against the current checkpoint. Progress lives in
-  `~/.time_warp/progress.json`; `native/tools/learn.cpp` reads the same file.
+  front against the current checkpoint, and **Hand In** writes it into the class
+  folder under the checkpoint's handout name, which is where marking reads it.
+  Progress lives in `~/.time_warp/progress.json`; `native/tools/learn.cpp` reads the
+  same file.
 - **Classroom** — the 🏫 Classroom tab shows a roster, assignments and marks, and
   moves a whole class as a ZIP bundle. `native/tools/teach.cpp` is the teacher's CLI
   over the same files; see [lessons/teacher-guide.md](lessons/teacher-guide.md).

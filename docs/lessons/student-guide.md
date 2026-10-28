@@ -141,6 +141,9 @@ Open the **🎓 Lessons** tab in the right-hand column. You get the same lessons
 - the **checkpoint list**, with `✓` against the ones you have done
 - **Open** — puts the current checkpoint's starting program in a document
 - **Check** — runs the program in that document and tells you how it went
+- **Hand In** — saves the document into your class folder under the name the
+  marking reads, so the copy your teacher collects is the one you meant to hand in.
+  A second press will not overwrite the first without asking.
 - **Hint** and **Answer** — the same as `h` and `s`
 - **Restart** — the same as `reset`
 

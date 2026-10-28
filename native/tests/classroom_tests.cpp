@@ -95,6 +95,72 @@ void test_handing_out_writes_starters_and_never_overwrites() {
     TW_CHECK_EQ(QString::fromUtf8(read_back.readAll()), QStringLiteral("10 REM my own work\n"));
 }
 
+void test_hand_in_writes_where_collect_looks_and_never_overwrites() {
+    announce("hand in");
+    tw::test::TempDir directory;
+    if (!directory.valid()) {
+        return;
+    }
+    Classroom room{directory.path()};
+    QString error;
+    TW_CHECK(room.load(&error));
+    TW_CHECK(room.addStudent("Ada", {}, {}, &error));
+    TW_CHECK(room.assign({QStringLiteral("basic_first_steps")}, {}, &error));
+
+    const timewarp::lessons::Lesson* lesson = lesson_of(room, "basic_first_steps");
+    TW_CHECK(lesson != nullptr);
+    if (lesson == nullptr) {
+        return;
+    }
+
+    // A learner's own bytes, handed in under the name the marking side reads.
+    const auto first = room.handIn(QStringLiteral("ada"), QStringLiteral("basic_first_steps"), 0,
+                                   QStringLiteral("10 REM handed in\n"));
+    TW_CHECK(first.ok);
+    TW_CHECK(first.path.endsWith(room.handoutName(*lesson, 0)));
+    TW_CHECK(!first.replaced);
+
+    // It is what `collect` sees, which is the promise that makes it a hand-in
+    // rather than a save.
+    const QList<timewarp::lessons::Submission> collected = room.collect({});
+    bool found = false;
+    for (const timewarp::lessons::Submission& submission : collected) {
+        if (submission.path == first.path) {
+            found = true;
+        }
+    }
+    TW_CHECK(found);
+
+    // A second hand-in is refused, because it may be the version they meant to keep.
+    const auto second = room.handIn(QStringLiteral("ada"), QStringLiteral("basic_first_steps"),
+                                    0, QStringLiteral("10 REM second try\n"));
+    TW_CHECK(!second.ok);
+    TW_CHECK(second.exists);
+    TW_CHECK(second.path == first.path);
+    TW_CHECK(second.error.contains(QStringLiteral("already handed in")));
+    QFile unchanged{first.path};
+    TW_CHECK(unchanged.open(QIODevice::ReadOnly));
+    TW_CHECK_EQ(QString::fromUtf8(unchanged.readAll()), QStringLiteral("10 REM handed in\n"));
+    unchanged.close();
+
+    // And replacing is the learner's decision, said out loud.
+    const auto replaced = room.handIn(QStringLiteral("ada"), QStringLiteral("basic_first_steps"),
+                                      0, QStringLiteral("10 REM second try\n"), true);
+    TW_CHECK(replaced.ok);
+    TW_CHECK(replaced.replaced);
+    QFile again{first.path};
+    TW_CHECK(again.open(QIODevice::ReadOnly));
+    TW_CHECK_EQ(QString::fromUtf8(again.readAll()), QStringLiteral("10 REM second try\n"));
+    again.close();
+
+    // Somebody not in the class has nowhere to hand work in, and is told so.
+    const auto stranger = room.handIn(QStringLiteral("nobody"),
+                                      QStringLiteral("basic_first_steps"), 0,
+                                      QStringLiteral("10 REM\n"));
+    TW_CHECK(!stranger.ok);
+    TW_CHECK(!stranger.exists);
+}
+
 void test_collect_marks_handed_in_work_and_not_the_absence_of_it() {
     announce("collect and mark");
     tw::test::TempDir directory;
@@ -285,6 +351,7 @@ int main(int argc, char** argv) {
     QCoreApplication app{argc, argv};
     test_a_class_starts_empty_and_assigns_a_real_lesson();
     test_handing_out_writes_starters_and_never_overwrites();
+    test_hand_in_writes_where_collect_looks_and_never_overwrites();
     test_collect_marks_handed_in_work_and_not_the_absence_of_it();
     test_a_bundle_carries_the_class_to_another_machine();
     test_marking_jobs_and_marks_agree_with_collect();

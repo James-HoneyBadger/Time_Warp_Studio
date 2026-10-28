@@ -501,6 +501,8 @@ void MainWindow::buildRightColumn(QSplitter* parent) {
             &MainWindow::openLessonCode);
     connect(lesson_panel_, &LessonPanel::checkRequested, this,
             &MainWindow::requestLessonCheck);
+    connect(lesson_panel_, &LessonPanel::handInRequested, this,
+            &MainWindow::handInLesson);
     connect(lesson_panel_, &LessonPanel::hintRequested, this,
             &MainWindow::requestLessonHint);
     connect(lesson_panel_, &LessonPanel::solutionRequested, this,

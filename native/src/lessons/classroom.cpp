@@ -556,6 +556,73 @@ QStringList Classroom::handoutNames(const Lesson& lesson) const {
     return names;
 }
 
+HandIn Classroom::handIn(const QString& studentId, const QString& lessonId, int checkpoint,
+                         const QString& source, bool replace) {
+    HandIn result;
+    if (checkpoint < 0) {
+        result.error = QStringLiteral("that checkpoint does not exist");
+        return result;
+    }
+    // The roster is the only thing that says where a learner's work lives; a
+    // hand-in from somebody not in the class has nowhere to go.
+    bool enrolled = false;
+    for (const Student& student : students_) {
+        if (student.id == studentId) {
+            enrolled = true;
+            break;
+        }
+    }
+    if (!enrolled) {
+        result.error = QStringLiteral("'%1' is not in this class").arg(studentId);
+        return result;
+    }
+    const Lesson* lesson = find(lessonId);
+    if (lesson == nullptr) {
+        result.error = QStringLiteral("no lesson called '%1'").arg(lessonId);
+        return result;
+    }
+    if (checkpoint >= static_cast<int>(lesson->checkpoints.size())) {
+        result.error = QStringLiteral("that checkpoint does not exist");
+        return result;
+    }
+    const QString directory = studentDirectory(studentId);
+    if (directory.isEmpty()) {
+        result.error = QStringLiteral("'%1' has no directory").arg(studentId);
+        return result;
+    }
+    if (!QDir{}.mkpath(directory)) {
+        result.error = QStringLiteral("could not create %1").arg(directory);
+        return result;
+    }
+
+    const QString path = QDir{directory}.filePath(handoutName(*lesson, checkpoint));
+    if (QFileInfo::exists(path)) {
+        if (!replace) {
+            result.exists = true;
+            result.path = path;
+            result.error = QStringLiteral("'%1' is already handed in")
+                               .arg(QFileInfo{path}.fileName());
+            return result;
+        }
+        result.replaced = true;
+    }
+    // Written through a temporary file so a failed write leaves the earlier
+    // hand-in intact; replacing is exactly the case where that matters.
+    QSaveFile file{path};
+    if (!file.open(QIODevice::WriteOnly)) {
+        result.error = file.errorString();
+        return result;
+    }
+    const QByteArray bytes = source.toUtf8();
+    if (file.write(bytes) != bytes.size() || !file.commit()) {
+        result.error = file.errorString();
+        return result;
+    }
+    result.ok = true;
+    result.path = path;
+    return result;
+}
+
 QStringList Classroom::distribute(const QStringList& lessonIds, QString* error) {
     const QStringList ids = lessonIds.isEmpty() ? assignment_.lessonIds : lessonIds;
     if (ids.isEmpty()) {

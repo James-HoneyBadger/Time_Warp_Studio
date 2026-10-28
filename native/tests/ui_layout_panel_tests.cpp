@@ -25,8 +25,8 @@ void test_lesson_panel_contract() {
     TW_CHECK(panel->findChild<QLabel*>(QStringLiteral("lessonVerdict")) != nullptr);
     TW_CHECK(panel->findChild<QProgressBar*>(QStringLiteral("lessonProgress")) != nullptr);
     TW_CHECK(panel->findChild<QTextBrowser*>(QStringLiteral("lessonDetail")) != nullptr);
-    for (const char* name : {"lessonOpenButton", "lessonCheckButton", "lessonHintButton",
-                             "lessonSolutionButton", "lessonResetButton"}) {
+    for (const char* name : {"lessonOpenButton", "lessonCheckButton", "lessonHandInButton",
+                             "lessonHintButton", "lessonSolutionButton", "lessonResetButton"}) {
         TW_CHECK(panel->findChild<QPushButton*>(QString::fromLatin1(name)) != nullptr);
     }
 
