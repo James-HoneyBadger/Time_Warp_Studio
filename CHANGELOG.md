@@ -57,6 +57,12 @@ test can drive without a window, and the reasoning written down where the code i
 
 ### Changed
 
+- **FOCAL has `RETURN`.** A `DO` group used to run to the end of the program because
+  DEC's ten commands had no way back; `RETURN` (`R`) now leaves the innermost group
+  and hands control back to the line after the `DO`, including from the middle of a
+  `;`-separated line. A `RETURN` with no group around it is reported rather than
+  quietly stopping the program. `focal/showcase.foc` demonstrates it instead of
+  working around it, and the roadmap's "still open" list is down to one entry.
 - **The share-directory search is one header** (`timewarp/core/share_files.hpp`):
   installed, beside a build tree, inside a macOS bundle, then the checkout. The
   snippet catalogue and the curriculum had reached their second and third copies;

@@ -59,6 +59,9 @@ struct FocalState {
     std::map<std::pair<int, int>, std::size_t> labels;
     int format = 2;
     int do_depth = 0;
+    /// Set by a RETURN and cleared by the group that honours it: one flag, because
+    /// only the innermost running group can be the one being returned from.
+    bool group_return = false;
     long steps = 0;
     MersenneRandom random;
 };
@@ -623,6 +626,11 @@ public:
                     if (piece.target.has_value()) {
                         combined.target = piece.target;
                     }
+                    // A RETURN ends the line as well as the group: `T "X";RETURN;T
+                    // "NO"` must not print NO.
+                    if (state_.group_return) {
+                        break;
+                    }
                 }
                 return combined;
             }
@@ -678,6 +686,16 @@ public:
             interpreter_.running = false;
             return {};
         }
+        if (command == "RETURN") {
+            // The group's caller is the DO that started it. Outside a group there is
+            // no caller, and saying so is better than quietly quitting the program:
+            // a learner who wrote RETURN in the wrong place needs to see why.
+            if (state_.do_depth == 0) {
+                throw FocalError("RETURN without a DO group");
+            }
+            state_.group_return = true;
+            return {};
+        }
         throw FocalError("unhandled command " + quoted_text(command));
     }
 
@@ -689,6 +707,7 @@ private:
             {"F", "FOR"},      {"FOR", "FOR"},     {"D", "DO"},     {"DO", "DO"},
             {"G", "GOTO"},     {"GOTO", "GOTO"},   {"C", "COMMENT"}, {"COMMENT", "COMMENT"},
             {"E", "ERASE"},    {"ERASE", "ERASE"}, {"Q", "QUIT"},   {"QUIT", "QUIT"},
+            {"R", "RETURN"},   {"RETURN", "RETURN"},
         };
         const auto found = kAliases.find(std::string{word});
         return found == kAliases.end() ? std::string{} : found->second;
@@ -937,6 +956,7 @@ private:
             throw FocalError("DO nested more than " + std::to_string(kMaxDoDepth) + " deep");
         }
         const std::size_t start = resolve(label_of(arguments));
+        state_.group_return = false;
         ++state_.do_depth;
         try {
             const std::string output = run_group(start);
@@ -962,6 +982,13 @@ private:
             const StatementResult result =
                 statement(interpreter_.program_lines()[index].text);
             output += result.output;
+            if (state_.group_return) {
+                // This group is the one being returned from, so the flag is spent
+                // here. A group that called another group's RETURN has already had
+                // it cleared by that inner run.
+                state_.group_return = false;
+                break;
+            }
             index = result.target.has_value() ? *result.target : index + 1;
         }
         return output;

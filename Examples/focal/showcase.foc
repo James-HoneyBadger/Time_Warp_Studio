@@ -59,4 +59,6 @@
 09.00 Q
 
 09.10 T "  Inside the group: FABS(-9) = ",FABS(-9)
-09.20 T "  The group ends at the end of the program."
+09.20 T "  RETURN hands control back to the line after the DO."
+09.30 RETURN
+09.40 T "  This line is never reached -- RETURN already left the group."

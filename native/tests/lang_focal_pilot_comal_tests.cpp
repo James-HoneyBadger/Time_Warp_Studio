@@ -124,6 +124,53 @@ void test_focal_for_keeps_the_last_value_the_body_saw() {
     TW_CHECK(!contains(run.output, "5.00"));
 }
 
+
+// RETURN is this implementation's one addition to DEC's ten commands: a group that
+// can hand control back before the end of the program. Without it a DO group is a
+// one-way jump, and every group has to be written as if it were the last thing the
+// program does.
+
+void test_focal_return_ends_the_group_early() {
+    const FocalRun run = run_focal(
+        "01.10 T \"START\"\n"
+        "01.20 DO 2.10\n"
+        "01.30 T \"AFTER\"\n"
+        "01.40 Q\n"
+        "02.10 T \"GROUP\"\n"
+        "02.20 RETURN\n"
+        "02.30 T \"NEVER\"");
+    TW_CHECK(contains(run.output, "START"));
+    TW_CHECK(contains(run.output, "GROUP"));
+    TW_CHECK(contains(run.output, "AFTER"));
+    TW_CHECK(!contains(run.output, "NEVER"));
+    TW_CHECK(!any_error(run.output));
+}
+
+void test_focal_return_nests_and_ends_the_line() {
+    const FocalRun run = run_focal(
+        "01.10 DO 2.10\n"
+        "01.20 T \"DONE\"\n"
+        "01.30 Q\n"
+        "02.10 T \"OUTER\";DO 3.10;T \"BACK\"\n"
+        "02.20 RETURN\n"
+        "02.30 T \"NEVER-OUTER\"\n"
+        "03.10 T \"INNER\";RETURN;T \"NEVER-LINE\"\n"
+        "03.20 T \"NEVER-INNER\"");
+    // The inner RETURN ends the inner group only; the outer group carries on after
+    // its DO, and its own RETURN ends the outer one.
+    TW_CHECK(contains(run.output, "OUTER"));
+    TW_CHECK(contains(run.output, "INNER"));
+    TW_CHECK(contains(run.output, "BACK"));
+    TW_CHECK(contains(run.output, "DONE"));
+    TW_CHECK(!contains(run.output, "NEVER"));
+}
+
+void test_focal_return_without_a_group_is_reported() {
+    const FocalRun run = run_focal("01.10 RETURN");
+    TW_CHECK(any_error(run.output));
+    TW_CHECK(contains(run.output, "RETURN without a DO group"));
+}
+
 void test_focal_do_runs_a_group_and_returns() {
     const FocalRun run = run_focal(
         "01.10 T \"START\"\n01.20 DO 2.10\n01.30 T \"END\"\n01.40 Q\n02.10 T \"GROUP\"");

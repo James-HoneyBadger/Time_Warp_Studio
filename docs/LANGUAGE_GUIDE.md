@@ -1280,7 +1280,8 @@ single-letter form and a full name; both work.
 | `SET` | `S` | Assign |
 | `IF` | `I` | Three-way branch on the sign of an expression |
 | `FOR` | `F` | Loop over the rest of the line |
-| `DO` | `D` | Run a group, returning when the program runs off the end |
+| `DO` | `D` | Run a group; `RETURN` hands control back to the line after the `DO` |
+| `RETURN` | `R` | Leave the innermost `DO` group (an extension, not DEC's) |
 | `GOTO` | `G` | Jump to a group |
 | `COMMENT` | `C` | The rest of the line is text |
 | `ERASE` | `E` | Forget variables: `ERASE ALL`, or `ERASE X,Y` |
