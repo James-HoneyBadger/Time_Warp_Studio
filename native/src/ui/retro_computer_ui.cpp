@@ -452,7 +452,12 @@ void RetroComputerWindow::appendBootBanner() {
 void RetroComputerWindow::updatePrompt() {
     const RomInfo rom = romFor(language_);
     if (prompt_label_ != nullptr) {
-        prompt_label_->setText(QString::fromUtf8(rom.prompt));
+        // On the line the prompt is the board's, not the ROM's: a machine that says
+        // BASIC> while it is on a bulletin board is telling the caller something
+        // untrue about where they are.
+        prompt_label_->setText(online_ == OnlineState::Off
+                                   ? QString::fromUtf8(rom.prompt)
+                                   : QStringLiteral("BBS>"));
     }
     if (input_ != nullptr) {
         input_->setPlaceholderText(

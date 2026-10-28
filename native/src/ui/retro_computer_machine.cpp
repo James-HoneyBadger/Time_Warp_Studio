@@ -192,6 +192,10 @@ bool RetroComputerWindow::handleMachineCommand(const QString& command) {
         typeFromDisk(firstArgument(command));
         return true;
     }
+    if (word == QStringLiteral("DIAL") || word == QStringLiteral("BBS")) {
+        dialBoard();
+        return true;
+    }
     if (word == QStringLiteral("LLIST") || word == QStringLiteral("LPRINT")) {
         // The 1982 machine printed to a line printer; this one appends to a page in
         // the data directory, which is the same artefact a printer produced and a
@@ -237,6 +241,7 @@ bool RetroComputerWindow::handleMachineCommand(const QString& command) {
         appendConsole(QStringLiteral("LOCK / UNLOCK \"N\"  protect a file"));
         appendConsole(QStringLiteral("LLIST        print the program to the paper tray"));
         appendConsole(QStringLiteral("LPRINT \"TEXT\"  print a line to the paper tray"));
+        appendConsole(QStringLiteral("DIAL         call the bulletin board"));
         appendConsole(QStringLiteral("VERIFY \"N\"   compare memory with the disk"));
         appendConsole(QStringLiteral("TYPE \"N\"     print a file"));
         appendConsole(QStringLiteral("INIT         erase the whole disk (asks twice)"));

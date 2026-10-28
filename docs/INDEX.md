@@ -21,6 +21,7 @@ This page is the map.
 | [hb1/roms.md](hb1/roms.md) | The ROM library: all eleven languages as cartridges, with prompts, direct mode and examples |
 | [hb1/hb-dos.md](hb1/hb-dos.md) | **HB DOS 1.0** — every word, the catalogue, the errors, the image format |
 | [hb1/config.md](hb1/config.md) | CONFIG: every setting, the phosphors, the glass, where it is stored |
+| [hb1/bbs.md](hb1/bbs.md) | **WARP BOARD** — the machine's modem, the bulletins, posting, and where the board is kept |
 | [hb1/inside.md](hb1/inside.md) | Inside the HB-1: how a keystroke becomes ink |
 | [chip8/README.md](chip8/README.md) | **CHIP-8 Machine Manual** — the two ways to run, the window, keys, debugging, sound, limits |
 | [chip8/assembly.md](chip8/assembly.md) | The assembler: listings, labels, directives, errors, worked programs |

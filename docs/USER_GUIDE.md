@@ -289,9 +289,18 @@ when it has to outlive the afternoon; the PROGRAM page itself is only memory.
 | `VERIFY "NAME"` | Compare a file with the program in memory |
 | `TYPE "NAME"` | Print a file to OUTPUT |
 | `STATUS` | Volume, sectors used and free, the image's path |
+| `DIAL` (`BBS`) | Call WARP BOARD, the bulletin board on the other end of the line |
 | `LLIST` | Print the program to the paper tray |
 | `LPRINT "TEXT"` | Print a line to the paper tray |
 | `INIT` | Erase the whole disk; it asks a second time |
+
+**The telephone.** `DIAL` picks up the line and connects to **WARP BOARD**, a
+bulletin board kept in `~/.time_warp/bbs/board.json`. Enter a handle (remembered for
+next time), then `B` lists the messages, `R N` reads one, `P SUBJECT` posts -- type
+the body and a line with a single `.` to end it -- and `BYE` hangs up. The board is on
+the machine rather than on a network, so a class can show what a board *was* without
+a single packet leaving the room. [The board's manual](hb1/bbs.md) has the words and
+the file format.
 
 The **paper tray** is `paper.txt` in `~/.time_warp/print`, appended by `LLIST` and
 `LPRINT` with a headed page each time and named on the console with the line count.

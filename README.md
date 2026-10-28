@@ -41,8 +41,9 @@ people teaching with it, though nothing in the application assumes a classroom.
 | When it belongs | 1982, where one machine shipped eleven language ROMs | 1977, where the machine was written in software and ran everywhere |
 | Storage | **HB DOS 1.0** — 512 sectors of 256 bytes, a catalogue, lock bits, a two-step `INIT`, and a printer (`LLIST`/`LPRINT`) that leaves a page | Your own folder of listings and ROMs, browsed by a library dialog |
 | Debugging on the machine | `LIST`, `VERIFY`, and one `UNDO` after `NEW` | **Rewind**: thirty seconds of state, a quarter second at a time |
+| Telephone | A modem: `DIAL` into **WARP BOARD**, read the bulletins, post one, hang up | — |
 | Run it | Tools > **HB-1 Computer…** (`Ctrl+Alt+W`) or `./run.sh --computer` | Tools > **CHIP-8 Emulator…** (`Ctrl+Shift+M`) |
-| Read it | [Owner's Manual](docs/hb1/README.md) · [ROMs](docs/hb1/roms.md) · [HB DOS](docs/hb1/hb-dos.md) · [CONFIG](docs/hb1/config.md) · [Inside](docs/hb1/inside.md) | [Machine Manual](docs/chip8/README.md) · [Assembler](docs/chip8/assembly.md) · [Instruction set](docs/chip8/instruction-set.md) |
+| Read it | [Owner's Manual](docs/hb1/README.md) · [ROMs](docs/hb1/roms.md) · [HB DOS](docs/hb1/hb-dos.md) · [WARP BOARD](docs/hb1/bbs.md) · [CONFIG](docs/hb1/config.md) · [Inside](docs/hb1/inside.md) | [Machine Manual](docs/chip8/README.md) · [Assembler](docs/chip8/assembly.md) · [Instruction set](docs/chip8/instruction-set.md) |
 
 What you can do with them:
 

@@ -84,6 +84,11 @@ int main(int argc, char** argv) {
     test_hb_dos_refuses_bad_names_and_a_full_disk();
     test_llist_prints_the_program_to_the_paper_tray();
     test_lprint_prints_a_line_and_needs_one();
+    test_dial_connects_and_asks_for_a_handle();
+    test_bulletins_list_and_read();
+    test_posting_takes_more_than_one_line();
+    test_an_empty_message_is_refused_and_bye_comes_home();
+    test_the_board_survives_a_corrupt_file();
     test_a_machine_survives_a_round_trip_through_a_file();
     test_a_machine_image_refuses_what_it_cannot_read();
     test_the_machine_words_save_and_load_an_image();

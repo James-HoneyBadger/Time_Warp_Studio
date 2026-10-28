@@ -548,6 +548,7 @@ if(TIME_WARP_QT_FOUND)
             src/ui/find_in_files.cpp
             src/ui/formatter.cpp
             src/ui/gif_encoder.cpp
+            src/ui/hb_bbs.cpp
             src/ui/hb_dos.cpp
             src/ui/hb_clock.cpp
             src/ui/hb_memory.cpp
@@ -578,6 +579,7 @@ if(TIME_WARP_QT_FOUND)
             src/ui/repl_runner.cpp
             src/ui/resizable_tab_widget.cpp
             src/ui/retro_computer_basic.cpp
+            src/ui/retro_computer_bbs.cpp
             src/ui/retro_computer_boot.cpp
             src/ui/retro_computer_dos.cpp
             src/ui/retro_computer_machine.cpp
@@ -609,6 +611,7 @@ if(TIME_WARP_QT_FOUND)
             include/timewarp/ui/export.hpp
             include/timewarp/ui/find_bar.hpp
             include/timewarp/ui/find_in_files.hpp
+            include/timewarp/ui/hb_bbs.hpp
             include/timewarp/ui/hb_dos.hpp
             include/timewarp/ui/hb_clock.hpp
             include/timewarp/ui/hb_memory.hpp
@@ -1141,6 +1144,7 @@ if(TIME_WARP_QT_FOUND)
                 tests/retro_computer_tests.cpp
                 tests/retro_basic_tests.cpp
                 tests/retro/paper_tests.cpp
+                tests/retro/bbs_tests.cpp
                 tests/retro_boot_tests.cpp
                 tests/retro_config_tests.cpp
                 tests/retro_dos_tests.cpp

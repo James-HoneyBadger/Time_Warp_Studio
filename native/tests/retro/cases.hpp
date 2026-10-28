@@ -68,4 +68,10 @@ void test_hb_dos_refuses_bad_names_and_a_full_disk();
 void test_llist_prints_the_program_to_the_paper_tray();
 void test_lprint_prints_a_line_and_needs_one();
 
+void test_dial_connects_and_asks_for_a_handle();
+void test_bulletins_list_and_read();
+void test_posting_takes_more_than_one_line();
+void test_an_empty_message_is_refused_and_bye_comes_home();
+void test_the_board_survives_a_corrupt_file();
+
 }  // namespace tw::retro

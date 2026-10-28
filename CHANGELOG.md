@@ -38,6 +38,13 @@ test can drive without a window, and the reasoning written down where the code i
   installed with the application. **Try it** opens a row's program in a new document.
   The reference and the gate are one fact rather than two documents that agree until
   somebody edits one.
+- **The HB-1 has a telephone.** `DIAL` connects to **WARP BOARD**, a bulletin board kept
+  in `~/.time_warp/bbs/board.json`: a handle, a menu, the bulletins, a read, a post
+  that takes more than the one line the prompt holds (`P SUBJECT`, the body, a line
+  with a full stop), and a log-off that leaves the machine at its prompt. It is on the
+  machine rather than on a network -- a class can show what a board *was* without a
+  packet leaving the room -- and a board that cannot be read is refused rather than
+  overwritten.
 - **The HB-1 has a printer.** `LLIST` prints the program and `LPRINT "TEXT"` prints a
   line, both appending a headed page to `~/.time_warp/print/paper.txt` and answering
   with the line count and the file. The machine has no printer port and never did: a

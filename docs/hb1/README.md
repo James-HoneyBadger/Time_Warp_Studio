@@ -16,7 +16,7 @@ machine is real software — everything in this book happens when you type it.
 
 - **Open it:** Tools > **HB-1 Computer…** (`Ctrl+Alt+W`), or `./run.sh --computer`.
 - **The surrounding story:** [the machines](../MACHINES.md).
-- **The rest of this book:** [ROMs](roms.md) · [HB DOS](hb-dos.md) ·
+- **The rest of this book:** [ROMs](roms.md) · [HB DOS](hb-dos.md) · [WARP BOARD](bbs.md) ·
   [CONFIG](config.md) · [Inside](inside.md).
 
 ---
@@ -232,7 +232,8 @@ a keyword is a program line, not a command — see [direct mode](roms.md#basic).
 | `ROMS` | List the language ROMs, marking the one in the socket |
 | `CONFIG`/`SETUP` | Open the settings screen |
 | `HELP`, or a bare `?` | Print the machine's vocabulary |
-| `CATALOG`, `SAVE`, `LOAD`, `DELETE`, `RENAME`, `LOCK`, `UNLOCK`, `VERIFY`, `TYPE`, `STATUS`, `INIT` | [HB DOS](hb-dos.md) |
+| `CATALOG`, `SAVE`, `LOAD`, `DELETE`, `RENAME`, `LOCK`, `UNLOCK`, `VERIFY`, `TYPE`, `STATUS`, `LLIST`, `LPRINT`, `INIT` | [HB DOS](hb-dos.md) |
+| `DIAL` | [WARP BOARD](bbs.md) |
 
 In the BASIC ROM, the prompt also has the machine's **line editor**, which is the
 part of a 1982 BASIC people actually spent their evenings in:
@@ -394,6 +395,7 @@ period features; they are the parallel-universe part.
 
 - Learn the eleven ROMs: [the ROM library](roms.md).
 - Keep a program: [HB DOS 1.0](hb-dos.md).
+- Call somebody: [WARP BOARD](bbs.md), the board on the other end of the line.
 - Make it yours: [CONFIG](config.md).
 - Change the machine's mind: [Inside the HB-1](inside.md).
 - Meet its sibling: [the CHIP-8](../chip8/README.md).
