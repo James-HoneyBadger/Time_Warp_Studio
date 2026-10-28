@@ -233,7 +233,7 @@ DebugPanel::DebugPanel(QWidget* parent) : QFrame(parent) {
 
     connect(back_, &QPushButton::clicked, this, &DebugPanel::requestRewind);
     connect(back_ten_, &QPushButton::clicked, this, &DebugPanel::requestRewindTen);
-    connect(history_, &QComboBox::currentIndexChanged, this, [this] {
+    connect(history_, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [this] {
         emit historyChanged(historyDepth());
         // The choice applies to the next run, so a button that cannot move right
         // now must not stay enabled because the menu was just set.
