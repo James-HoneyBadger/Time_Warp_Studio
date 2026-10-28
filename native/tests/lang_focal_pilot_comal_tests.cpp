@@ -435,6 +435,43 @@ void test_comal_arrays_and_data() {
     TW_CHECK(contains(data.output, "9"));
 }
 
+// A FUNC could do nothing with a variable of its own: every name it touched was the
+// caller's. LOCAL gives it one, and gives the caller theirs back on the way out --
+// including when the body throws.
+
+void test_comal_function_local_keeps_the_callers_variable() {
+    const ComalRun run = run_comal(
+        "10 T = 99\n"
+        "20 PRINT DOUBLE(21)\n"
+        "30 PRINT T\n"
+        "40 END\n"
+        "100 FUNC DOUBLE(N)\n"
+        "110 LOCAL T\n"
+        "120 T = N * 2\n"
+        "130 RETURN T\n"
+        "140 ENDFUNC");
+    TW_CHECK(contains(run.output, "42"));
+    // The caller's T is 99 again: the function's T was its own.
+    TW_CHECK(contains(run.output, "99"));
+    TW_CHECK(!any_error(run.output));
+}
+
+void test_comal_function_local_is_not_leaked_to_the_caller() {
+    // With no T of the caller's, the local one is gone after the call rather than
+    // left behind at its last value.
+    const ComalRun run = run_comal(
+        "10 PRINT DOUBLE(4)\n"
+        "20 PRINT T\n"
+        "30 END\n"
+        "100 FUNC DOUBLE(N)\n"
+        "110 LOCAL T\n"
+        "120 T = N * 2\n"
+        "130 RETURN T\n"
+        "140 ENDFUNC");
+    TW_CHECK(contains(run.output, "8"));
+    TW_CHECK(contains(run.output, "0"));
+}
+
 void test_comal_turtle() {
     const ComalRun run = run_comal("10 MOVE 50\n20 TURN 90\n30 PLOT");
     TW_CHECK_EQ(run.host.ops.size(), std::size_t{3});

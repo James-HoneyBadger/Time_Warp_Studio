@@ -114,6 +114,8 @@ void test_comal_if_blocks();
 void test_comal_loops();
 void test_comal_procedures();
 void test_comal_arrays_and_data();
+void test_comal_function_local_keeps_the_callers_variable();
+void test_comal_function_local_is_not_leaked_to_the_caller();
 void test_comal_turtle();
 void test_logo_definition_does_not_run_until_it_is_called();
 void test_logo_repeat_counts_for_repcount();

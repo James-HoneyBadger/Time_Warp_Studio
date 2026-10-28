@@ -59,10 +59,13 @@ written down in `WAIVERS`.
 
 One, about a structured block that cannot do what its name suggests:
 
-- **A COMAL `FUNC` body must be a single expression**, and `LOCAL` is not
-  implemented, so a function cannot hold a working variable of its own. A four-way
-  choice has to be a `PROC` that leaves its answer in a global, which is what
-  `comal/results_table.comal` does and comments on.
+- **A COMAL `FUNC` body is a sequence of `LOCAL` declarations, assignments and one
+  `RETURN`** -- `IF` and loops inside it are not evaluated, because an expression
+  cannot hand control back to the statement loop. A four-way choice therefore still
+  has to be a `PROC` that leaves its answer in a global, which is what
+  `comal/results_table.comal` does and comments on. `LOCAL` itself works since
+  23.2.0: a function can hold a working variable of its own again, and the caller's
+  value goes back on every exit path.
 
 A FOCAL `DO` group used to run to the end of the program because there was no
 `RETURN`. At 23.2.0 there is one: `RETURN` leaves the innermost group and hands

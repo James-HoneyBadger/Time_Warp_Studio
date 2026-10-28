@@ -57,6 +57,11 @@ test can drive without a window, and the reasoning written down where the code i
 
 ### Changed
 
+- **COMAL `FUNC` bodies can declare `LOCAL`.** A function could not hold a variable of
+  its own: every name it touched was the caller's. `LOCAL T` now gives it one, and the
+  caller's value -- if there was one -- goes back on every exit path, including a
+  throw. A `FUNC` body is still read as declarations, assignments and one `RETURN`; a
+  body that needs an `IF` or a loop still has to be a `PROC`.
 - **FOCAL has `RETURN`.** A `DO` group used to run to the end of the program because
   DEC's ten commands had no way back; `RETURN` (`R`) now leaves the innermost group
   and hands control back to the line after the `DO`, including from the middle of a
