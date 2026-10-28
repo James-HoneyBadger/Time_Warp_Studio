@@ -60,6 +60,8 @@ A comma separates arguments outside quotes, so `RENAME "OLD","NEW"` and
 | `VERIFY` | `VER` | `"NAME"` | Compare a file with the PROGRAM page |
 | `TYPE` | — | `"NAME"` | Print a file to OUTPUT |
 | `STATUS` | — | — | Volume, sectors, file count, image path |
+| `LLIST` | — | — | Print the PROGRAM page to the paper tray |
+| `LPRINT` | — | `"TEXT"` | Print a line to the paper tray |
 | `INIT` | — | — | Erase the volume — twice |
 
 `RUN` with no argument at all is the machine's own word for "run the program",
@@ -357,6 +359,25 @@ class itself ([`hb_dos.cpp`](../../native/src/ui/hb_dos.cpp)) has no widgets, so
 the same code serves the prompt and the tests.
 
 ---
+
+## The printer, which is a file
+
+The HB-1 has no printer port. `LLIST` and `LPRINT` append a headed page to
+`paper.txt` in `~/.time_warp/print`, and the console answers with the line count and
+the file name:
+
+```text
+LLIST
+PRINTED 3 LINE(S) TO paper.txt
+```
+
+Appending rather than replacing is deliberate: a printer that overwrote its own last
+page would lose a listing somebody had already taken off the machine. `LPRINT` with
+nothing after it is `?LPRINT WHAT` rather than a blank page.
+
+The paper is a file because that is what the output of a printer is -- something to
+keep, read, back up, or hand to a real printer -- and because it is the one output of
+this machine that survives being switched off.
 
 ## What it will not do
 

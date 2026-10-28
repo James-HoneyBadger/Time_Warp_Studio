@@ -34,7 +34,15 @@ from the desktop menu, or run the `time_warp_ide` binary directly.
 ### The window
 
 - **Editor** — tabs, line numbers, current-line highlight, syntax colouring,
-  find/replace, find in files, go-to-line, formatting, a minimap and an outline dock.
+  find/replace, **find and replace in files**, go-to-line, formatting, a minimap and
+  an outline dock. Find in Files (`Ctrl+Shift+F`) can rewrite what it found: the
+  confirmation names the count and the number of files, a document with unsaved
+  changes is left alone and reported, and every open document it did change is
+  reloaded so the editor cannot save the old text back over it. **File > Version
+  History…** (`Ctrl+Alt+V`) lists the autosaved copies of a document, and **Compare
+  with what is open** shows the chosen copy as a unified diff against the text in the
+  editor -- `-` for what restoring takes away, `+` for what it brings back -- because
+  "restore this" is a decision about the difference, not about one version.
 - **Output and Graphics** — the console, the error list, the turtle log and the
   canvas. A program that prints and draws keeps both in view. The 🐢 Turtle Log
   tab lists every drawing command the canvas received, numbered and spelled with
@@ -42,7 +50,11 @@ from the desktop menu, or run the `time_warp_ide` binary directly.
   under the canvas shows where the turtle is, which way it faces, what the pen is
   doing and how many commands the run has sent.
 - **Right-column tabs** — Variables, Telemetry HUD, Debug, Lessons, Classroom,
-  Database and Assistant (see [section 8](#8-the-ai-assistant)).
+  Database, 📖 Reference and Assistant (see [section 8](#8-the-ai-assistant)).
+  **Reference** lists every command for the selected language with the smallest
+  program that runs it and what it does, read from the same table the command gate
+  drives; **Try it** puts a row's program in a new document. It follows the language
+  of the document in front every time you raise it.
 - **Projects dock** — the project tree (View → Project Panel, `Ctrl+Shift+E`).
 - **REPL bar** — one command at a time under the editor.
 - **Status bar** — language, cursor position, run state and the document name.
@@ -277,7 +289,15 @@ when it has to outlive the afternoon; the PROGRAM page itself is only memory.
 | `VERIFY "NAME"` | Compare a file with the program in memory |
 | `TYPE "NAME"` | Print a file to OUTPUT |
 | `STATUS` | Volume, sectors used and free, the image's path |
+| `LLIST` | Print the program to the paper tray |
+| `LPRINT "TEXT"` | Print a line to the paper tray |
 | `INIT` | Erase the whole disk; it asks a second time |
+
+The **paper tray** is `paper.txt` in `~/.time_warp/print`, appended by `LLIST` and
+`LPRINT` with a headed page each time and named on the console with the line count.
+The machine has no printer port and never did: a file is the same artefact a printer
+produced -- something to keep, read or print elsewhere -- and it is the one output of
+the machine that survives being switched off.
 
 Names are upper-cased and last 30 characters; `SAVE HELLO` and `SAVE "HELLO"` are
 the same request. A program is measured in the 256-byte sectors the catalogue
@@ -340,7 +360,13 @@ virtual machine, and the program format the editor's CHIP-8 language runs. Tools
   per frame;
 - an inspector with **Registers**, **Memory** and the **Listing**, plus a
   **ROM Library** that browses a folder you own;
-- sound while the sound timer is non-zero, and a mute.
+- sound while the sound timer is non-zero, and a mute;
+- **Rewind**: a strip under the screen that goes back through the last thirty seconds
+  of the machine, a quarter second at a time. Touching it pauses and captures the
+  frame you were looking at, so the right-hand end is exactly where you were;
+  **Run** resumes from where you rewound to and drops the future it would have had.
+  It replays the drawing, not the luck: a program drawing from `RND` gets its
+  registers and pixels back, not its dice roll.
 
 It assembles listings as well as loading binary ROMs, and drag-and-drop works for
 `.ch8` and `.c8` files. The editor's Run still handles CHIP-8 as a whole program

@@ -2,6 +2,75 @@
 
 <!-- history: all -->
 
+## [23.2.0] - 2026-10-27
+
+Six gaps in features that were otherwise finished -- and one in a machine -- closed
+in the same shape: the behaviour a person can see, a free function behind it that a
+test can drive without a window, and the reasoning written down where the code is.
+
+### Added
+
+- **Version History shows what changed.** It could list copies and preview one of
+  them, which answers "what did it look like" and never "what did I change since".
+  **Compare with what is open** puts the chosen copy against the editor's text as a
+  unified diff with the changed lines coloured, `-` for what restoring takes away and
+  `+` for what it brings back. The comparison is `native/src/ui/diff.cpp`: an LCS
+  over lines with the common head and tail stripped first, bounded so two unrelated
+  large files get a plain answer rather than a slow one.
+- **Replace in Files.** Find in Files could search a folder and change nothing in it.
+  The dialog now has a replacement field and **Replace All**, and the writing half
+  (`replaceInFiles`) has three rules: a file is rewritten once through `QSaveFile` and
+  only when something matched; a file the caller names as off limits is skipped and
+  reported, which is how the window keeps a bulk edit away from a document with
+  unsaved changes; and a pattern that cannot be compiled writes nothing. A literal
+  replacement is inserted as typed, a regular expression's expands `\1`, and the
+  window reloads the open documents a replacement changed so a buffer cannot save the
+  old text back over it.
+- **The CHIP-8 can be rewound.** A snapshot of the whole machine every quarter second,
+  thirty seconds deep, and a strip under the screen to go back through it. Touching
+  the strip captures the live frame first, so the right-hand end is exactly what the
+  user was looking at; Run resumes from there and forgets the future. It replays the
+  drawing, not the luck: the random generator is not in the snapshot, and the header
+  says so.
+- **A Reference page.** The 📖 **Reference** tab lists every command for the selected
+  language with the smallest program that runs it and what it does, read from
+  `native/share/command_rows.json` -- the table `time_warp_gates commands` drives, now
+  installed with the application. **Try it** opens a row's program in a new document.
+  The reference and the gate are one fact rather than two documents that agree until
+  somebody edits one.
+- **The HB-1 has a printer.** `LLIST` prints the program and `LPRINT "TEXT"` prints a
+  line, both appending a headed page to `~/.time_warp/print/paper.txt` and answering
+  with the line count and the file. The machine has no printer port and never did: a
+  file is the same artefact a printer produced and the one output that survives being
+  switched off.
+- **The assistant can ask an endpoint what it runs.** `GET {base}/models` is the
+  discovery call both request shapes share: **Find models…** in the settings dialog, an
+  automatic probe when the endpoint is on this machine, and `time_warp_ai models` from
+  a shell.
+
+### Changed
+
+- **The share-directory search is one header** (`timewarp/core/share_files.hpp`):
+  installed, beside a build tree, inside a macOS bundle, then the checkout. The
+  snippet catalogue and the curriculum had reached their second and third copies;
+  `TIME_WARP_COMMANDS` joins `TIME_WARP_SNIPPETS` and `TIME_WARP_LESSONS` as the
+  override, and the next data file needs no new list.
+- **The right column has nine pages** where the build has Qt Network and eight where
+  it does not: Reference sits before the assistant, which stays last because it is the
+  one page that needs something outside this machine.
+- **`ready()` is now `reachable()` plus a model name.** Asking what the models are
+  cannot require knowing one, so the client and the dialog check the first and a
+  question checks the second.
+
+### Notes
+
+- **Two bulk operations now write to a person's files** -- Replace All and the HB-1's
+  paper -- and both are testable without a window: the rules are free functions, and
+  the confirmation dialogs are the only part that needs a person. Where a write cannot
+  be undone, the count and the number of files are in the question.
+- **The rewind keeps no random state, and says so** rather than letting a user
+  discover that a replayed RND program draws something else.
+
 ## [23.1.0] - 2026-10-27
 
 An AI assistant you configure yourself: a page beside the editor that can explain a

@@ -76,12 +76,19 @@ service, including a server on your own machine, uses one of them.
 | --- | --- |
 | **Protocol** | `OpenAI-compatible` posts to `/chat/completions` with a bearer token; `Anthropic` posts to `/messages` with `x-api-key` |
 | **Endpoint** | The whole prefix, version path included. The protocol's own path is appended, and an endpoint that already names it is used as written |
-| **Model** | The name the service knows it by. Retired model names are the most common cause of a 404 |
+| **Model** | The name the service knows it by. **Find models…** fills the list from the endpoint; retired model names are the most common cause of a 404 |
 | **API key** | See below. A server on this machine usually needs none |
 | **Reply ceiling** | The longest reply, in tokens. 1024 is a page of explanation |
 | **Temperature** | 0 is repeatable, 2 is inventive |
 | **Give up after** | The request timeout, in seconds |
 | **Send the current program by default** | What the panel's tick starts from |
+
+**Find models…** asks the endpoint what it can run -- `GET {base}/models`, the one
+discovery call both request shapes share -- and offers the answer in a dropdown. A
+server on this machine is asked automatically when the dialog opens, because the
+names a local model server has are whatever was pulled last week. A service that
+does not implement the call answers with nothing, and the dialog says to type the
+name instead.
 
 **Test connection** sends one short question and reports what came back, with the
 model's own answer. It is the fastest way to tell a wrong key from a wrong endpoint
@@ -149,6 +156,7 @@ IDE wrote, and it is the quickest way to answer "does this key work?":
 | --- | --- |
 | `check` | Whether the assistant is configured, and what is missing when it is not |
 | `config` | The provider, protocol, endpoint and model — never the key |
+| `models` | The models the endpoint can run, one per line (or `--json`) |
 | `ask` | Answer a question about a program |
 | `explain` | Explain a program |
 | `fix` | Find and correct faults |
