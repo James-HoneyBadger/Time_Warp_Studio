@@ -44,6 +44,7 @@ void test_focus_mode_hides_and_restores_the_chrome();
 void test_presentation_mode_is_focus_mode_for_a_room();
 void test_gif_recording_toggles_and_samples_the_canvas();
 void test_export_audio_records_a_runs_notes();
+void test_examples_gallery_renders_a_program();
 void test_command_palette();
 void test_standalone_player_layout();
 void test_standalone_payload();

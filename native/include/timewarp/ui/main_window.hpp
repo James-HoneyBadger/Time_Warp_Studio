@@ -329,6 +329,8 @@ public:
     void exportDrawingDialog();
     /// Asks for a path and writes what the last run sounded as a WAV file.
     void exportAudioDialog();
+    /// Opens the examples gallery: every shipped program with its own drawing.
+    void showExamplesGallery();
     /// Asks for a path and writes the current program as a PDF.
     void exportCodePdfDialog();
     /// Asks for a path and writes the program, its output and its drawing as one

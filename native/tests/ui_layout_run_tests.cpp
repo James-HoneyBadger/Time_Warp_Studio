@@ -4,6 +4,9 @@
 
 #include "ui_layout/support.hpp"
 
+#include "timewarp/ui/app_paths.hpp"
+#include "timewarp/ui/gallery.hpp"
+
 namespace tw::ui_layout {
 
 // Read by this file only: it arrived here with the cases that need it.
@@ -47,6 +50,51 @@ void test_export_audio_records_a_runs_notes() {
     // since the window opened.
     player.beginRecording();
     TW_CHECK(player.recorded().empty());
+}
+
+void test_examples_gallery_renders_a_program() {
+    announce("examples gallery: a thumbnail is the program's drawing");
+    const QString root = timewarp::ui::examplesDir();
+    TW_CHECK(!root.isEmpty());
+    if (root.isEmpty()) {
+        return;
+    }
+    const QString mandala = QDir{root}.filePath(QStringLiteral("logo/mandala.logo"));
+    TW_CHECK(QFileInfo::exists(mandala));
+    const QImage image =
+        timewarp::ui::GalleryDialog::renderThumbnail(mandala, QSize{168, 112});
+    TW_CHECK(!image.isNull());
+    TW_CHECK_EQ(image.width(), 168);
+
+    // Ink: the mandala is a drawing, so a blank square would be the bug this test
+    // exists for.
+    const QRgb background = QApplication::palette().color(QPalette::Base).rgb();
+    int inked = 0;
+    for (int y = 0; y < image.height(); ++y) {
+        for (int x = 0; x < image.width(); ++x) {
+            if (image.pixel(x, y) != background) {
+                ++inked;
+            }
+        }
+    }
+    TW_CHECK(inked > 100);
+
+    // A program that prints and never draws still gets a face rather than an empty
+    // square: the card names its language.
+    const QString hello = QDir{root}.filePath(QStringLiteral("basic/hello.bas"));
+    if (QFileInfo::exists(hello)) {
+        const QImage card =
+            timewarp::ui::GalleryDialog::renderThumbnail(hello, QSize{168, 112});
+        int marks = 0;
+        for (int y = 0; y < card.height(); ++y) {
+            for (int x = 0; x < card.width(); ++x) {
+                if (card.pixel(x, y) != background) {
+                    ++marks;
+                }
+            }
+        }
+        TW_CHECK(marks > 20);
+    }
 }
 
 void test_gif_recording_toggles_and_samples_the_canvas() {

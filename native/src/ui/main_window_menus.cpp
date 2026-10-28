@@ -138,6 +138,9 @@ void MainWindow::buildMenuBar() {
     add(file, tr("Export &Audio as WAV..."), QKeySequence{},
         [this] { exportAudioDialog(); })
         ->setObjectName(QStringLiteral("exportAudioAction"));
+    add(file, tr("Examples &Gallery..."), QKeySequence{},
+        [this] { showExamplesGallery(); })
+        ->setObjectName(QStringLiteral("examplesGalleryAction"));
     // Qt Gui carries QPdfWriter, so the PDF needs no component beyond the ones
     // this application already requires.
     add(file, tr("Export Code as &PDF..."), QKeySequence{},

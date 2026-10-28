@@ -89,6 +89,17 @@ drawing exports at the screen's own size. `SCREEN 0` gives the fitted canvas bac
 `Examples/basic/star_patrol.bas` is a program built on it. The mode table is in
 [the language guide](LANGUAGE_GUIDE.md#graphics).
 
+### Browsing the examples
+
+**File > Examples Gallery…** lists every program that ships with the Studio with the
+drawing it makes as its face. Each thumbnail is the program run headlessly: the same
+engine a Run uses, under the same step budget, with input answering nothing — so a
+program that loops is stopped rather than hung, and one that prints but never draws
+shows a card naming its language. They render a few at a time after the window opens,
+so the gallery is usable immediately. Double-click a program (or select it and press
+**Open**) to open it in a tab; **File > Examples** is still the menu that lists them
+by language.
+
 ---
 
 ## 2. Projects and groups

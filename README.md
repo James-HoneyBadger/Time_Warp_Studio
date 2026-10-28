@@ -264,6 +264,10 @@ See [docs/lessons/](docs/lessons/README.md) for the student and teacher guides.
   [`star_patrol.bas`](Examples/basic/star_patrol.bas) — a small game on a
   fixed-coordinate screen. They are worth reading as reference material as much as
   running as examples, and every one of them runs in the test gates.
+  **File > Examples Gallery…** shows every one of them with the drawing it makes as
+  its face: each thumbnail is the program run headlessly under the engine's own step
+  budget, so the gallery is a picture of the shipped programs rather than a list of
+  names. A program that only prints gets a card naming its language.
 - **Error hints**, which offer a syntax suggestion beside an interpreter's error
   message.
 - **Eleven language tutorials**, one per language, under `docs/tutorials/`.

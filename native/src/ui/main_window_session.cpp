@@ -48,6 +48,7 @@
 #include "timewarp/ui/export.hpp"
 #include "timewarp/ui/find_bar.hpp"
 #include "timewarp/ui/find_in_files.hpp"
+#include "timewarp/ui/gallery.hpp"
 #include "timewarp/ui/formatter.hpp"
 #include "timewarp/ui/help_browser.hpp"
 #include "timewarp/ui/panels.hpp"
@@ -369,6 +370,13 @@ namespace {
 /// File > Open Example does.
 
 }  // namespace
+
+void MainWindow::showExamplesGallery() {
+    GalleryDialog gallery{this};
+    connect(&gallery, &GalleryDialog::programChosen, this,
+            [this](const QString& path) { openFile(path); });
+    gallery.exec();
+}
 
 void MainWindow::rebuildExamplesMenu() {
     if (examples_menu_ == nullptr) {
