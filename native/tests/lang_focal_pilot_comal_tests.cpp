@@ -165,6 +165,22 @@ void test_focal_return_nests_and_ends_the_line() {
     TW_CHECK(!contains(run.output, "NEVER"));
 }
 
+void test_focal_return_ends_a_for_body() {
+    const FocalRun run = run_focal(
+        "01.10 DO 2.10\n"
+        "01.20 T \"AFTER\"\n"
+        "01.30 Q\n"
+        "02.10 FOR I=1,5;T I;RETURN\n"
+        "02.20 T \"NEVER\"");
+    // The loop stops on its first pass as well as the group: printing 1 then 2..5
+    // would mean the RETURN only ended the group after the body had run to its end.
+    TW_CHECK(contains(run.output, "1"));
+    TW_CHECK(!contains(run.output, "2"));
+    TW_CHECK(contains(run.output, "AFTER"));
+    TW_CHECK(!contains(run.output, "NEVER"));
+    TW_CHECK(!any_error(run.output));
+}
+
 void test_focal_return_without_a_group_is_reported() {
     const FocalRun run = run_focal("01.10 RETURN");
     TW_CHECK(any_error(run.output));

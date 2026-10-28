@@ -91,6 +91,7 @@ int main() {
     test_focal_for_keeps_the_last_value_the_body_saw();
     test_focal_return_ends_the_group_early();
     test_focal_return_nests_and_ends_the_line();
+    test_focal_return_ends_a_for_body();
     test_focal_return_without_a_group_is_reported();
     test_focal_do_runs_a_group_and_returns();
     test_focal_do_nesting_is_bounded();

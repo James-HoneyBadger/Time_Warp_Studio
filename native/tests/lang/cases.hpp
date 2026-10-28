@@ -85,6 +85,7 @@ void test_focal_for_runs_turtle_statements();
 void test_focal_for_keeps_the_last_value_the_body_saw();
 void test_focal_return_ends_the_group_early();
 void test_focal_return_nests_and_ends_the_line();
+void test_focal_return_ends_a_for_body();
 void test_focal_return_without_a_group_is_reported();
 void test_focal_do_runs_a_group_and_returns();
 void test_focal_do_nesting_is_bounded();

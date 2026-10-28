@@ -930,11 +930,15 @@ private:
                 if (result.target.has_value()) {
                     throw FocalError("GOTO inside a FOR body is not supported");
                 }
-                if (!interpreter_.running) {
+                // A RETURN in a body ends the loop, not just the pass: `FOR
+                // I=1,10;T I;RETURN` inside a group must print one line and leave.
+                // The flag stays set for the group to spend, which is why this
+                // breaks rather than clearing it.
+                if (state_.group_return || !interpreter_.running) {
                     break;
                 }
             }
-            if (!interpreter_.running) {
+            if (state_.group_return || !interpreter_.running) {
                 break;
             }
             if (!limit.has_value()) {
