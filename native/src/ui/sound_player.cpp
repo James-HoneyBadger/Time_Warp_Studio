@@ -84,6 +84,8 @@ QByteArray SoundPlayer::wavFor(const std::vector<timewarp::audio::Tone>& tones) 
     return wavBytes(timewarp::audio::render(tones));
 }
 
+QByteArray SoundPlayer::recordedWav() const { return wavFor(recorded_); }
+
 QByteArray SoundPlayer::wavBytes(const std::vector<std::int16_t>& pcm) {
     const std::string bytes = timewarp::audio::wav(pcm, timewarp::audio::kDefaultSampleRate);
     return QByteArray{bytes.data(), timewarp::core::intLength(bytes.size())};
@@ -91,6 +93,12 @@ QByteArray SoundPlayer::wavBytes(const std::vector<std::int16_t>& pcm) {
 
 void SoundPlayer::note(double frequency, int milliseconds,
                        timewarp::audio::Waveform waveform) {
+    // Recorded before the player check: the tick a program asked for is part of the
+    // run whether or not this machine can hear it, and the export says so.
+    if (frequency > 0.0) {
+        recorded_.push_back(timewarp::audio::Tone{
+            waveform, frequency, milliseconds > 0 ? milliseconds : 1});
+    }
     if (!available() || frequency <= 0.0) {
         return;
     }
@@ -102,6 +110,7 @@ void SoundPlayer::note(double frequency, int milliseconds,
 }
 
 void SoundPlayer::play(const std::vector<timewarp::audio::Tone>& tones) {
+    recorded_.insert(recorded_.end(), tones.begin(), tones.end());
     stop();
     if (!available() || tones.empty()) {
         return;

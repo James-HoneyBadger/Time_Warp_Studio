@@ -73,6 +73,18 @@ public:
     /// Silence. Safe when nothing is playing.
     void stop();
 
+    /// What the current run has sounded, in the order it asked for it. Recorded
+    /// whether or not a player was found, because the export is a file rather than a
+    /// speaker: a machine with no audio can still keep what its program played.
+    [[nodiscard]] const std::vector<timewarp::audio::Tone>& recorded() const noexcept {
+        return recorded_;
+    }
+    /// Forgets what has sounded so far, which is what the window does when a run
+    /// starts: an export is this run's audio, not every note since launch.
+    void beginRecording() noexcept { recorded_.clear(); }
+    /// Everything recorded so far as one WAV file, for File > Export Audio.
+    [[nodiscard]] QByteArray recordedWav() const;
+
     /// The WAV bytes for `tones`, exposed so a test can check the file without a
     /// speaker.
     [[nodiscard]] static QByteArray wavFor(const std::vector<timewarp::audio::Tone>& tones);
@@ -93,6 +105,8 @@ private:
     /// What is sounding, which is more than the file being played: a new note
     /// is summed with the voices already in it.
     timewarp::audio::Mixer mixer_;
+    /// Every tone this run asked for, so it can be written out as a WAV.
+    std::vector<timewarp::audio::Tone> recorded_;
     /// The file the current process is playing. Kept alive until the process
     /// exits: `aplay` reads it lazily, so deleting it on return plays silence.
     QString current_file_;

@@ -135,6 +135,9 @@ void MainWindow::buildMenuBar() {
     file->addSeparator();
     add(file, tr("&Export Drawing..."), timewarp::core::keySequence(Qt::CTRL, Qt::Key_E),
         [this] { exportDrawingDialog(); });
+    add(file, tr("Export &Audio as WAV..."), QKeySequence{},
+        [this] { exportAudioDialog(); })
+        ->setObjectName(QStringLiteral("exportAudioAction"));
     // Qt Gui carries QPdfWriter, so the PDF needs no component beyond the ones
     // this application already requires.
     add(file, tr("Export Code as &PDF..."), QKeySequence{},

@@ -327,6 +327,8 @@ public:
     void goToLine(int line);
     /// Asks for a path and writes the drawing to it.
     void exportDrawingDialog();
+    /// Asks for a path and writes what the last run sounded as a WAV file.
+    void exportAudioDialog();
     /// Asks for a path and writes the current program as a PDF.
     void exportCodePdfDialog();
     /// Asks for a path and writes the program, its output and its drawing as one

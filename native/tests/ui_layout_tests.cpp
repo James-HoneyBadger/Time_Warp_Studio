@@ -88,6 +88,7 @@ int main(int argc, char** argv) {
     test_focus_mode_hides_and_restores_the_chrome();
     test_presentation_mode_is_focus_mode_for_a_room();
     test_gif_recording_toggles_and_samples_the_canvas();
+    test_export_audio_records_a_runs_notes();
     test_command_palette();
     test_standalone_payload();
     test_standalone_player_layout();

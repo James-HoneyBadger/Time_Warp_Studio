@@ -48,7 +48,9 @@ from the desktop menu, or run the `time_warp_ide` binary directly.
   tab lists every drawing command the canvas received, numbered and spelled with
   its arguments, so a picture that came out wrong can be read back; a pose strip
   under the canvas shows where the turtle is, which way it faces, what the pen is
-  doing and how many commands the run has sent.
+  doing and how many commands the run has sent. A program that makes a sound keeps
+  it too: **File > Export Audio as WAV…** writes the run's `SOUND` and `PLAY` notes
+  to one file, and it records even on a machine with no player installed.
 - **Right-column tabs** — Variables, Telemetry HUD, Debug, Lessons, Classroom,
   Database, 📖 Reference and Assistant (see [section 8](#8-the-ai-assistant)).
   **Reference** lists every command for the selected language with the smallest

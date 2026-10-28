@@ -455,6 +455,12 @@ void MainWindow::runSource(CodeEditor* editor, const QString& source) {
     clearRunState();
     startRunClock();
 
+    // This run's audio replaces the last one's: File > Export Audio writes what the
+    // program being run has sounded, not every note since the window opened.
+    if (sound_ != nullptr) {
+        sound_->beginRecording();
+    }
+
     // A ported language runs in this process. The bridge is only for the ones
     // that have not been ported, and `executor_for` is the question that decides
     // it -- so adding an executor is all it takes for the IDE to use it.

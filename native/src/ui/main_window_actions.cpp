@@ -878,6 +878,37 @@ void MainWindow::exportDrawingDialog() {
     setExecutionState(tr("ready"), tr("Exported %1").arg(QFileInfo{path}.fileName()));
 }
 
+void MainWindow::exportAudioDialog() {
+    const std::vector<timewarp::audio::Tone> tones =
+        sound_ != nullptr ? sound_->recorded() : std::vector<timewarp::audio::Tone>{};
+    if (tones.empty()) {
+        // Headless-capable and honest: a machine with no player still records, so an
+        // empty list means the program really made no sound.
+        setExecutionState(tr("ready"),
+                          tr("Nothing to export yet \u2014 run a program that uses SOUND or "
+                             "PLAY"));
+        return;
+    }
+    const QString path =
+        QFileDialog::getSaveFileName(this, tr("Export audio"),
+                                     suggestedExportPath(tr("run"), QStringLiteral("wav")),
+                                     tr("WAVE audio (*.wav)"));
+    if (path.isEmpty()) {
+        return;
+    }
+    QFile file{path};
+    if (!file.open(QIODevice::WriteOnly)) {
+        QMessageBox::warning(this, tr("Export failed"),
+                             tr("Could not write %1.\n\n%2")
+                                 .arg(QDir::toNativeSeparators(path), file.errorString()));
+        return;
+    }
+    const QByteArray wav = SoundPlayer::wavFor(tones);
+    file.write(wav);
+    file.close();
+    setExecutionState(tr("ready"), tr("Exported %1").arg(QFileInfo{path}.fileName()));
+}
+
 void MainWindow::exportCodePdfDialog() {
     CodeEditor* editor = currentEditor();
     if (editor == nullptr) {

@@ -26,6 +26,29 @@ namespace tw::ui_layout {
     return window;
 }
 
+void test_export_audio_records_a_runs_notes() {
+    announce("export audio records a run's notes");
+    // The run hands its sound to this object, and the recording happens whether or
+    // not a player was found -- which is what makes a file possible on a machine
+    // with no speaker, and what the assertion below relies on.
+    timewarp::ui::SoundPlayer player;
+    player.beginRecording();
+    player.note(440.0, 100);
+    player.play({timewarp::audio::Tone{timewarp::audio::Waveform::Triangle, 880.0, 50}});
+
+    TW_CHECK_EQ(player.recorded().size(), std::size_t{2});
+    TW_CHECK_EQ(player.recorded().at(0).frequency, 440.0);
+    TW_CHECK(player.recorded().at(1).waveform == timewarp::audio::Waveform::Triangle);
+
+    const QByteArray wav = player.recordedWav();
+    TW_CHECK(wav.startsWith("RIFF"));
+    TW_CHECK(wav.mid(8, 4) == "WAVE");
+    // A run that starts clears it: the export is this run's audio, not every note
+    // since the window opened.
+    player.beginRecording();
+    TW_CHECK(player.recorded().empty());
+}
+
 void test_gif_recording_toggles_and_samples_the_canvas() {
     announce("record canvas as GIF");
     const std::unique_ptr<MainWindow> window = shownWindow();
