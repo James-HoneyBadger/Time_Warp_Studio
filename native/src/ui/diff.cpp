@@ -133,14 +133,15 @@ QString unifiedDiff(const QString& before, const QString& after, int context) {
     // Which lines of the result are within `around` of a change: those are the ones
     // a hunk shows, and the rest are the gaps a `@@` header stands for.
     const int total = lines.size();
-    QList<bool> shown(total, false);
+    // std::vector, not QList: Qt 5.15 has no QList(size, value) constructor.
+    std::vector<char> shown(static_cast<std::size_t>(total), 0);
     for (int index = 0; index < total; ++index) {
         if (lines.at(index).kind == DiffKind::Context) {
             continue;
         }
         for (int other = std::max(0, index - around);
              other <= std::min(total - 1, index + around); ++other) {
-            shown[other] = true;
+            shown[static_cast<std::size_t>(other)] = 1;
         }
     }
 
