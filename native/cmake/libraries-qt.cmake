@@ -381,6 +381,12 @@ if(TIME_WARP_QT_FOUND AND TARGET timewarp::sql)
     target_link_libraries(timewarp_api PUBLIC
         ${TIME_WARP_QT}::Core timewarp::lang timewarp::scheme timewarp::sql timewarp::project
     )
+    # `ai.ask` exists in every build; a build without the assistant answers with a
+    # sentence saying so rather than "unknown method".
+    if(TARGET timewarp::ai)
+        target_link_libraries(timewarp_api PUBLIC timewarp::ai)
+        target_compile_definitions(timewarp_api PRIVATE TIME_WARP_HAVE_AI=1)
+    endif()
     # The debugger API drives the same Scheme runner the IDE's Debug panel does.
     if(TARGET timewarp::debugger)
         target_link_libraries(timewarp_api PRIVATE timewarp::debugger)

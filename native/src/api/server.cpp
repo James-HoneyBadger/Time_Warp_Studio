@@ -36,6 +36,16 @@
 #include "timewarp/scheme/printer.hpp"
 #include "timewarp/sql/database.hpp"
 
+#if TIME_WARP_HAVE_AI
+#include "timewarp/ai/client.hpp"
+#include "timewarp/ai/config.hpp"
+#include "timewarp/ai/prompt.hpp"
+
+#include <QCoreApplication>
+#include <QEventLoop>
+#include <QTimer>
+#endif
+
 #ifndef TIME_WARP_VERSION
 #define TIME_WARP_VERSION "0.0.0"
 #endif
@@ -298,6 +308,104 @@ QJsonObject languageInfo(lang::Language language) {
     return object;
 }
 
+#if TIME_WARP_HAVE_AI
+/// The API process has no event loop of its own -- `main` is stdio only -- so the one
+/// method that speaks a network protocol makes what it needs.
+///
+/// Deliberately leaked rather than a static object: Qt's application object destroys
+/// the network stack's process-wide state on the way out, and a `time_warp_api` that
+/// then ran its own static destructors after it crashed at exit with a correct answer
+/// already written. One allocation for the life of the process is the smaller cost.
+QCoreApplication* coreApplication() {
+    if (QCoreApplication::instance() != nullptr) {
+        return QCoreApplication::instance();
+    }
+    static int argc = 1;
+    static char program[] = "time_warp_api";
+    static char* argv[] = {program, nullptr};
+    static QCoreApplication* application = new QCoreApplication{argc, argv};
+    return application;
+}
+
+/// `ai.ask`: one question to the configured assistant, answered before the response
+/// line is written.
+///
+/// Synchronous because the protocol is: one request line in, one response line out.
+/// The client is a Qt object that reports through signals, so this runs a local event
+/// loop and takes the first of `answered` and `failed` -- the same two outcomes the
+/// Assistant page's transcript is built from.
+QJsonValue askAssistant(const QJsonObject& params) {
+    const QString prompt = qstring(params, "prompt");
+    if (prompt.trimmed().isEmpty()) {
+        invalid("'prompt' must not be empty");
+    }
+    // The parameters are read before the configuration is: a caller that mistyped a
+    // parameter learns that, rather than "the assistant is switched off", which
+    // would send them looking at the wrong thing.
+    ai::Conversation conversation;
+    conversation.system = params.contains(QStringLiteral("system"))
+                              ? qstring(params, "system")
+                              : ai::system_prompt();
+    const QJsonValue history_value = params.value(QStringLiteral("history"));
+    if (!history_value.isUndefined() && !history_value.isNull() &&
+        !history_value.isArray()) {
+        invalid("'history' must be an array of {role, content} objects");
+    }
+    for (const QJsonValue& value : history_value.toArray()) {
+        if (!value.isObject()) {
+            invalid("'history' must be an array of {role, content} objects");
+        }
+        const QJsonObject turn = value.toObject();
+        const QString role = qstring(turn, "role");
+        if (role != QLatin1String("user") && role != QLatin1String("assistant")) {
+            invalid("a history turn's role must be 'user' or 'assistant'");
+        }
+        conversation.messages.append(ai::Message{role, qstring(turn, "content")});
+    }
+    conversation.messages.append(ai::Message{QStringLiteral("user"), prompt});
+
+    const ai::Config config = ai::load();
+    QString why;
+    if (!ai::ready(config, &why)) {
+        failed(why.toStdString());
+    }
+
+    coreApplication();
+    const QString key = ai::effective_key(config);
+    ai::Client client;
+    ai::Reply answer;
+    QEventLoop loop;
+    QObject::connect(&client, &ai::Client::answered, &loop,
+                     [&answer, &loop](const ai::Reply& reply) {
+                         answer = reply;
+                         loop.quit();
+                     });
+    QObject::connect(&client, &ai::Client::failed, &loop,
+                     [&answer, &loop](const QString& message) {
+                         answer.error = message;
+                         loop.quit();
+                     });
+    // The request carries its own transfer timeout; this is the second net, for a
+    // transport that accepts the request and then reports nothing at all.
+    QTimer::singleShot((config.timeout_seconds + 5) * 1000, &loop, [&loop] { loop.quit(); });
+    client.send(config, conversation);
+    loop.exec();
+
+    if (!answer.ok) {
+        const QString message = answer.error.isEmpty()
+                                    ? QStringLiteral("the assistant did not answer")
+                                    : answer.error;
+        failed(ai::redact(message, key).toStdString());
+    }
+    QJsonObject result;
+    result.insert(QStringLiteral("text"), answer.text);
+    result.insert(QStringLiteral("model"), answer.model);
+    result.insert(QStringLiteral("promptTokens"), answer.prompt_tokens);
+    result.insert(QStringLiteral("completionTokens"), answer.completion_tokens);
+    return result;
+}
+#endif
+
 }  // namespace
 
 QJsonValue Server::State::dispatch(const QString& method, const QJsonObject& params) {
@@ -318,6 +426,11 @@ QJsonValue Server::State::dispatch(const QString& method, const QJsonObject& par
         features.insert(QStringLiteral("dataBreakpoints"), true);
         features.insert(QStringLiteral("debugger"), true);
         features.insert(QStringLiteral("compiledPrograms"), true);
+#if TIME_WARP_HAVE_AI
+        features.insert(QStringLiteral("assistant"), true);
+#else
+        features.insert(QStringLiteral("assistant"), false);
+#endif
         info.insert(QStringLiteral("features"), features);
         return info;
     }
@@ -327,6 +440,16 @@ QJsonValue Server::State::dispatch(const QString& method, const QJsonObject& par
     if (method == QLatin1String("studio.shutdown")) {
         shutdown = true;
         return true;
+    }
+
+    if (method == QLatin1String("ai.ask")) {
+#if TIME_WARP_HAVE_AI
+        return askAssistant(params);
+#else
+        // Present in every build so a client can tell "no assistant here" from
+        // "unknown method": a script that asks should learn why it cannot.
+        failed("this build has no AI assistant (Qt Network was not found)");
+#endif
     }
 
     if (method == QLatin1String("language.run")) {

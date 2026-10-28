@@ -259,6 +259,36 @@ visible by name and as `NAME$`; arithmetic is the same evaluator a program uses.
 ]
 ```
 
+#### `ai.ask`
+
+Asks the configured assistant one question and returns its answer. The
+configuration is the one Settings > Assistant holds — endpoint, model and key —
+or the `TIME_WARP_AI_*` environment variables that override it, so a script
+sets those rather than passing a key in a request line. Nothing here echoes the
+key: every failure sentence goes through the same `redact()` the panel uses.
+
+| Parameter | Type | |
+| --- | --- | --- |
+| `prompt` | string | the question; required, and not blank |
+| `system` | string | replaces the Studio's own system prompt for this one call |
+| `history` | array | earlier turns, each `{"role":"user"\|"assistant","content":"..."}`, oldest first |
+
+```json
+{"prompt":"why does this draw nothing?",
+ "history":[{"role":"user","content":"PRINT 1"}]}
+```
+
+```json
+{"text":"...","model":"deepseek-chat","promptTokens":412,"completionTokens":96}
+```
+
+The call blocks until the service answers, because the protocol is one request
+line in and one response line out. An assistant that is off, has no model, or
+cannot be reached is `-32000` with a sentence saying which of those it is, so a
+script can print the reason rather than guess. `studio.info` reports
+`features.assistant`, which is `false` in a build without Qt Network — the
+method still exists there and answers with that build's reason.
+
 ### Errors
 
 Standard JSON-RPC codes:

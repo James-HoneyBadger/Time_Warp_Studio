@@ -544,6 +544,50 @@ void test_debug_sessions() {
 
 }  // namespace
 
+void test_assistant_ask_validates_before_it_connects() {
+    announce("ai.ask validates and reports an unconfigured assistant");
+    std::istringstream in;
+    std::ostringstream out;
+    Server server{in, out};
+
+    // `studio.info` says whether this build has an assistant at all, so the test
+    // asserts the right sentence in either build.
+    const QJsonObject features =
+        resultOf(server, QStringLiteral("studio.info")).toObject()
+            .value(QStringLiteral("features"))
+            .toObject();
+    TW_CHECK(features.contains(QStringLiteral("assistant")));
+
+    const auto codeOf = [&server](const QJsonObject& params) {
+        const QJsonObject response = call(server, QStringLiteral("ai.ask"), params);
+        return response.value(QStringLiteral("error"))
+            .toObject()
+            .value(QStringLiteral("code"))
+            .toInt();
+    };
+
+    // A missing or empty question is a parameter error, and a history turn that is
+    // not a turn is too: the caller learns what to fix rather than being told the
+    // assistant is off.
+    TW_CHECK_EQ(codeOf(QJsonObject{}), -32602);
+    QJsonObject empty;
+    empty.insert(QStringLiteral("prompt"), QStringLiteral("   "));
+    TW_CHECK_EQ(codeOf(empty), -32602);
+
+    QJsonObject bad_role;
+    bad_role.insert(QStringLiteral("prompt"), QStringLiteral("hi"));
+    bad_role.insert(QStringLiteral("history"),
+                    QJsonArray{QJsonObject{{QStringLiteral("role"), QStringLiteral("system")},
+                                           {QStringLiteral("content"), QStringLiteral("x")}}});
+    TW_CHECK_EQ(codeOf(bad_role), -32602);
+
+    // With valid parameters and no configuration the assistant reports why it cannot
+    // answer -- never "unknown method", so a script can tell the two apart.
+    QJsonObject question;
+    question.insert(QStringLiteral("prompt"), QStringLiteral("what is a turtle?"));
+    TW_CHECK_EQ(codeOf(question), -32000);
+}
+
 int main() {
     test_info();
     test_run_and_repl();
@@ -552,5 +596,6 @@ int main() {
     test_project();
     test_watch_and_errors();
     test_debug_sessions();
+    test_assistant_ask_validates_before_it_connects();
     return tw::test::summary("api_tests");
 }
