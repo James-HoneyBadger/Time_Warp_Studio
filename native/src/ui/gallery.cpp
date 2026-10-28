@@ -11,6 +11,7 @@
 #include <QIcon>
 #include <QLabel>
 #include <QListWidget>
+#include <QColor>
 #include <QPainter>
 #include <QPalette>
 #include <QPushButton>
@@ -207,11 +208,29 @@ QImage GalleryDialog::renderThumbnail(const QString& path, const QSize& size) {
     if (!host.drew()) {
         // A program with no ink gets a card rather than a blank square: the gallery
         // is a list of what is there, and "this one prints" is a true answer.
-        painter.setPen(QApplication::palette().color(QPalette::Mid));
+        //
+        // The card is tinted rather than only lettered, because a word is the one
+        // thing a painter cannot be relied on to put down: the offscreen platform
+        // plugin under Qt 5.15 on Windows has no font engine, so text alone draws
+        // nothing and the card is a blank square after all. A tint and a spine are
+        // ink with no font involved.
+        const QPalette palette = QApplication::palette();
+        const QColor base = palette.color(QPalette::Base);
+        const QColor accent = palette.color(QPalette::Highlight);
+        const auto mix = [](const QColor& from, const QColor& to, double share) {
+            return QColor{static_cast<int>(from.red() + (to.red() - from.red()) * share),
+                          static_cast<int>(from.green() + (to.green() - from.green()) * share),
+                          static_cast<int>(from.blue() + (to.blue() - from.blue()) * share)};
+        };
+        painter.fillRect(image.rect().adjusted(1, 1, -1, -1), mix(base, accent, 0.14));
+        painter.fillRect(QRect{image.rect().left() + 1, image.rect().top() + 1, 3,
+                               image.height() - 2},
+                         accent);
+        painter.setPen(palette.color(QPalette::Text));
         QFont font = painter.font();
         font.setPixelSize(13);
         painter.setFont(font);
-        painter.drawText(image.rect().adjusted(8, 8, -8, -8),
+        painter.drawText(image.rect().adjusted(10, 8, -8, -8),
                          Qt::AlignCenter | Qt::TextWordWrap,
                          QString::fromStdString(std::string{lang::display_name(*language)}));
     }

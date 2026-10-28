@@ -95,6 +95,10 @@ void test_examples_gallery_renders_a_program() {
             }
         }
         TW_CHECK(marks > 20);
+        // The spine is the ink that does not need a font: the offscreen plugin under
+        // Qt 5.15 on Windows has no font engine, and a card that is only lettered is
+        // a blank square there.
+        TW_CHECK(card.pixel(2, card.height() / 2) != background);
     }
 }
 
