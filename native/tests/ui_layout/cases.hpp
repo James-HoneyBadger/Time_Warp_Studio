@@ -94,6 +94,7 @@ void test_run_project_runs_the_entry_point_in_the_project_folder();
 void test_a_run_writes_beside_its_document_without_a_project();
 void test_watch_and_data_breakpoint_controls();
 void test_sql_panel_runs_and_shows_results();
+void test_the_command_reference_lists_the_table();
 void test_assistant_panel_contract();
 void test_repl_bar_runs_and_keeps_bindings();
 void test_repl_basic_direct_mode();

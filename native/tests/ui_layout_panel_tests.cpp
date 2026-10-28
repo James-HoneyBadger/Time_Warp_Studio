@@ -586,6 +586,61 @@ void test_sql_panel_runs_and_shows_results() {
 // that configuring it turns it on, and that the settings dialog's presets really
 // do fill the fields. Nothing here sends a request.
 
+
+// The Reference page is a view over `native/share/command_rows.json`, the same table
+// `time_warp_gates commands` drives. Two things follow, and both are the point: the
+// page can only show commands the gate has run, and a command the gate loses fails
+// the build rather than quietly leaving the reference.
+
+void test_the_command_reference_lists_the_table() {
+    announce("command reference page");
+    MainWindow window;
+    CommandReferencePanel* panel = window.commandReferencePanel();
+    TW_CHECK(panel != nullptr);
+    if (panel == nullptr) {
+        return;
+    }
+    TW_CHECK(window.showPanel(QStringLiteral("reference")));
+    TW_CHECK(window.rightTabs()->widget(7) == panel);
+
+    panel->ensureLoaded();
+    // The table is the shipped one, and it has rows for every language.
+    TW_CHECK(panel->statusText().contains(QStringLiteral("command(s) for")) ||
+             panel->statusText().isEmpty());
+    panel->setLanguage(timewarp::ui::Language::Logo);
+    TW_CHECK(panel->language() == timewarp::ui::Language::Logo);
+    const int logo_rows = panel->rowCount();
+    TW_CHECK(logo_rows > 10);
+    TW_CHECK_EQ(panel->visibleRowCount(), logo_rows);
+
+    // A filter narrows what is shown and says so when it matches nothing.
+    panel->setFilter(QStringLiteral("FORWARD"));
+    TW_CHECK(panel->visibleRowCount() > 0);
+    TW_CHECK(panel->visibleRowCount() < logo_rows);
+    TW_CHECK(!panel->selectedSource().isEmpty());
+    panel->setFilter(QStringLiteral("zzz-no-such-command"));
+    TW_CHECK_EQ(panel->visibleRowCount(), 0);
+    TW_CHECK(panel->selectedSource().isEmpty());
+
+    // Try it hands the row's program to the window, which opens it in a document.
+    panel->setFilter(QString{});
+    panel->setLanguage(timewarp::ui::Language::Basic);
+    TW_CHECK(panel->visibleRowCount() > 10);
+    TW_CHECK(!panel->selectedSource().isEmpty());
+    const int before = window.editorTabs()->count();
+    auto* try_button = panel->findChild<QPushButton*>(QStringLiteral("commandReferenceTry"));
+    TW_CHECK(try_button != nullptr);
+    if (try_button != nullptr) {
+        try_button->click();
+        TW_CHECK_EQ(window.editorTabs()->count(), before + 1);
+        const CodeEditor* opened = window.currentEditor();
+        TW_CHECK(opened != nullptr);
+        if (opened != nullptr) {
+            TW_CHECK(!opened->toPlainText().isEmpty());
+        }
+    }
+}
+
 void test_assistant_panel_contract() {
     announce("assistant panel");
     MainWindow window;
@@ -597,8 +652,10 @@ void test_assistant_panel_contract() {
     }
     TW_CHECK_EQ(panel->objectName(), QStringLiteral("aiPanel"));
     TW_CHECK(window.showPanel(QStringLiteral("ai")));
-    TW_CHECK(window.rightTabs()->widget(7) == panel);
-    TW_CHECK_EQ(window.rightTabs()->tabText(7),
+    // The reference page sits between Database and the assistant, so the assistant
+    // is the ninth page and the reference is the eighth.
+    TW_CHECK(window.rightTabs()->widget(8) == panel);
+    TW_CHECK_EQ(window.rightTabs()->tabText(8),
                 QString::fromUtf8("\U0001F916 Assistant"));
 
     // A fresh profile has no endpoint: the panel says what to do about it, and

@@ -541,6 +541,7 @@ if(TIME_WARP_QT_FOUND)
             src/ui/chip8_window.cpp
             src/ui/code_editor.cpp
             src/ui/command_palette.cpp
+            src/ui/command_reference.cpp
             src/ui/diff.cpp
             src/ui/export.cpp
             src/ui/find_bar.cpp
@@ -603,6 +604,7 @@ if(TIME_WARP_QT_FOUND)
             include/timewarp/ui/chip8_screen.hpp
             include/timewarp/ui/chip8_window.hpp
             include/timewarp/ui/command_palette.hpp
+            include/timewarp/ui/command_reference.hpp
             include/timewarp/ui/diff.hpp
             include/timewarp/ui/export.hpp
             include/timewarp/ui/find_bar.hpp
@@ -893,6 +895,13 @@ if(TIME_WARP_QT_FOUND)
             FILES ${CMAKE_CURRENT_SOURCE_DIR}/share/lessons.json
             DESTINATION ${TIME_WARP_SHARE_DIR}/time-warp-studio
         )
+        # The command table: the Reference page reads it, and it is the same file
+        # `time_warp_gates commands` drives, so a package's reference shows what the
+        # gate proved. It was development data until the page existed.
+        install(
+            FILES ${CMAKE_CURRENT_SOURCE_DIR}/share/command_rows.json
+            DESTINATION ${TIME_WARP_SHARE_DIR}/time-warp-studio
+        )
         # The documentation browser reads these. `docsRoot()` looks in
         # `share/doc/time-warp-studio` first, so a package and a checkout show the
         # same pages; without this rule an installed help window would explain
@@ -1035,7 +1044,8 @@ if(TIME_WARP_QT_FOUND)
             # is recorded here -- the arrangement chip8_emulator_tests uses for
             # its Examples. An installed tree still finds its own copy first.
             target_compile_definitions(ui_layout_tests PRIVATE
-                TIME_WARP_TEST_SNIPPETS="${CMAKE_CURRENT_SOURCE_DIR}/share/snippets.json")
+                TIME_WARP_TEST_SNIPPETS="${CMAKE_CURRENT_SOURCE_DIR}/share/snippets.json"
+                TIME_WARP_TEST_COMMANDS="${CMAKE_CURRENT_SOURCE_DIR}/share/command_rows.json")
             timewarp_enable_warnings(ui_layout_tests)
             # The test sets QT_QPA_PLATFORM=offscreen itself, so it runs with no
             # display and belongs in the default CTest set.

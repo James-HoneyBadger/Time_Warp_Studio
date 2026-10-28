@@ -111,6 +111,7 @@ enum class ScreenPreset { Normal, Amber, Green, White };
 
 class AiPanel;
 class ClassroomPanel;
+class CommandReferencePanel;
 class CodeEditor;
 class CommandPalette;
 class Chip8Window;
@@ -217,6 +218,10 @@ public:
     /// The database manager page. Null only when Qt itself is unavailable, which
     /// is the case in which there is no window either.
     [[nodiscard]] SqlPanel* sqlPanel() const noexcept { return sql_panel_; }
+    /// The command reference page, so a test can drive it.
+    [[nodiscard]] CommandReferencePanel* commandReferencePanel() const noexcept {
+        return reference_panel_;
+    }
     /// The assistant page, so a test can drive it and a screenshot can show it.
     /// Null when this build has no Qt Network, which is the one case in which the
     /// assistant does not exist at all.
@@ -829,7 +834,8 @@ private:
     /// Stops it and records the elapsed time as the last run's.
     void stopRunClock();
 
-    // -- the assistant ----------------------------------------------------
+    // -- the command reference and the assistant ---------------------------
+    void buildCommandReference();
     void buildAiPanel();
     /// What the assistant is told about the document in view: the language, the
     /// name, the text, the selection and what the last run printed.
@@ -922,6 +928,8 @@ private:
     /// preference that should survive a restart.
     AiPanel* ai_panel_ = nullptr;
     timewarp::ai::Config ai_config_;
+    /// The command reference: a view over the table the command gate drives.
+    CommandReferencePanel* reference_panel_ = nullptr;
     std::shared_ptr<timewarp::sql::Database> sql_database_;
     QToolBar* tool_bar_ = nullptr;
     QToolBar* tool_bar_secondary_ = nullptr;

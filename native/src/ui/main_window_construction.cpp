@@ -2,6 +2,7 @@
 
 #include "main_window_internal.hpp"
 
+#include "timewarp/ui/command_reference.hpp"
 #include "timewarp/ui/main_window.hpp"
 
 #include "timewarp/lang/executor.hpp"
@@ -526,9 +527,24 @@ void MainWindow::buildRightColumn(QSplitter* parent) {
     classroom_panel_ = new ClassroomPanel{right_tabs_};
     right_tabs_->addTab(classroom_panel_, tr("\U0001F3EB Classroom"));
     buildSqlPanel();
+    buildCommandReference();
 #ifdef TIME_WARP_HAVE_AI
     buildAiPanel();
 #endif
+    // The reference opens on the document's language, every time it is raised: a
+    // page that remembered the language somebody browsed last week would be a page
+    // that answers a question they are not asking.
+    connect(right_tabs_, &QTabWidget::currentChanged, this, [this](int index) {
+        if (reference_panel_ == nullptr ||
+            right_tabs_->widget(index) != static_cast<QWidget*>(reference_panel_)) {
+            return;
+        }
+        if (const CodeEditor* editor = currentEditor()) {
+            reference_panel_->setLanguage(languageOf(editor));
+        } else {
+            reference_panel_->ensureLoaded();
+        }
+    });
     connect(classroom_panel_, &ClassroomPanel::refreshRequested, this,
             &MainWindow::requestClassroom);
     connect(classroom_panel_, &ClassroomPanel::bundleRequested, this,

@@ -80,6 +80,7 @@
 #include "timewarp/ui/chip8_window.hpp"
 #include "timewarp/ui/code_editor.hpp"
 #include "timewarp/ui/command_palette.hpp"
+#include "timewarp/ui/command_reference.hpp"
 #include "timewarp/ui/find_bar.hpp"
 #include "timewarp/ui/find_in_files.hpp"
 #include "timewarp/ui/main_window.hpp"
@@ -126,6 +127,7 @@ namespace tw::ui_layout {
 using timewarp::ui::AiPanel;
 using timewarp::ui::AiSettingsDialog;
 #endif
+using timewarp::ui::CommandReferencePanel;
 using timewarp::ui::CrtOverlay;
 using timewarp::ui::CodeEditor;
 using timewarp::ui::FunctionKeyBar;

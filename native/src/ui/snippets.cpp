@@ -2,6 +2,8 @@
 
 #include "timewarp/ui/snippets.hpp"
 
+#include "timewarp/core/share_files.hpp"
+
 #include <QCoreApplication>
 #include <QDir>
 #include <QFile>
@@ -27,26 +29,7 @@ QString Snippet::id() const {
 }
 
 QString snippetRoot() {
-    const QString override = qEnvironmentVariable("TIME_WARP_SNIPPETS").trimmed();
-    if (!override.isEmpty() && QFileInfo{override}.isFile()) {
-        return QFileInfo{override}.absoluteFilePath();
-    }
-    const QString app_dir = QCoreApplication::applicationDirPath();
-    // Installed (`share/time-warp-studio/`), then a build tree
-    // (`native/build/time_warp_ide` beside `native/share/`), then the source tree
-    // when the binary sits deeper.
-    for (const QString& candidate :
-         {app_dir + QStringLiteral("/../share/time-warp-studio/snippets.json"),
-          app_dir + QStringLiteral("/../share/snippets.json"),
-          // A macOS bundle: Contents/MacOS/Time Warp Studio beside
-          // Contents/Resources/share/time-warp-studio.
-          app_dir + QStringLiteral("/../Resources/share/time-warp-studio/snippets.json"),
-          app_dir + QStringLiteral("/../../native/share/snippets.json")}) {
-        if (QFileInfo{candidate}.isFile()) {
-            return QFileInfo{candidate}.absoluteFilePath();
-        }
-    }
-    return {};
+    return timewarp::core::shareFile("TIME_WARP_SNIPPETS", QStringLiteral("snippets.json"));
 }
 
 QList<Snippet> loadSnippets(QString* error) {

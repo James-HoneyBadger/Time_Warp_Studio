@@ -43,6 +43,7 @@
 #include "timewarp/ui/chip8_window.hpp"
 #include "timewarp/ui/code_editor.hpp"
 #include "timewarp/ui/classroom_marker.hpp"
+#include "timewarp/ui/command_reference.hpp"
 #include "timewarp/ui/command_palette.hpp"
 #include "timewarp/ui/export.hpp"
 #include "timewarp/ui/find_bar.hpp"
@@ -96,12 +97,12 @@ struct PanelEntry {
 constexpr PanelEntry kPanelTable[] = {
     {"output", 0},   {"variables", 1}, {"telemetry", 2},
     {"debug", 3},    {"lessons", 4},   {"classroom", 5},
-    {"sql", 6},
+    {"sql", 6},      {"reference", 7},
 #ifdef TIME_WARP_HAVE_AI
     // Last because it is the one page that needs something outside this machine,
     // and a build without Qt Network does not have it at all rather than offering
     // a page that can only report that it cannot work.
-    {"ai", 7},
+    {"ai", 8},
 #endif
 };
 
@@ -687,6 +688,23 @@ void MainWindow::finishRun(const QString& error, bool completed) {
                       completed ? tr("Finished") : tr("Stopped"));
 }
 
+
+
+void MainWindow::buildCommandReference() {
+    reference_panel_ = new CommandReferencePanel{right_tabs_};
+    right_tabs_->addTab(reference_panel_, tr("\U0001F4D6 Reference"));
+    // **Try it** opens the row's program in a new document, through the same path a
+    // lesson's starting program takes: a language override and an untitled label,
+    // so the editor highlights and runs it without a file extension to guess from.
+    connect(reference_panel_, &CommandReferencePanel::tryRequested, this,
+            [this](const QString& languageKey, const QString& source, const QString& name) {
+                openLessonCode(languageKey, source, name);
+            });
+    connect(reference_panel_, &CommandReferencePanel::statusMessage, this,
+            [this](const QString& message) {
+                statusBar()->showMessage(message, kStatusMessageMilliseconds);
+            });
+}
 
 #ifdef TIME_WARP_HAVE_AI
 
