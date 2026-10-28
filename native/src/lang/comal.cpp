@@ -53,9 +53,30 @@ struct ComalFrame {
     std::string condition;
 };
 
+/// A `FUNC` body being run as statements rather than read as an expression.
+///
+/// `call_function` drives the body's lines itself, because the caller is in the
+/// middle of one; `RETURN` records the answer here instead of jumping back, since
+/// there is no line to jump to.
+struct ComalFunctionFrame {
+    bool done = false;
+    double value = 0.0;
+    /// The loop/IF stack depth on entry: a body that leaves a `FOR` open must not
+    /// leave it open for its caller.
+    std::size_t stack_depth = 0;
+};
+
+/// A caller's variable that a `FUNC` body borrowed, and what it held, so it can go
+/// back on every exit path.
+struct SavedValue {
+    std::string name;
+    std::optional<Value> value;
+};
+
 struct ComalState {
     std::vector<ComalFrame> stack;
     std::vector<std::size_t> call_stack;
+    std::vector<ComalFunctionFrame> function_frames;
     std::vector<std::string> data;
     std::size_t data_ptr = 0;
 };
@@ -216,6 +237,10 @@ public:
             return {};
         }
         std::vector<std::string> output;
+        // Where a statement's output goes. A `FUNC` body run from inside an
+        // expression is statements too, and a `PRINT` in one belongs on the console
+        // beside the line that made the call.
+        output_ = &output;
         try {
             statement(trim(raw), output);
         } catch (const ComalError& error) {
@@ -223,6 +248,7 @@ public:
         } catch (const std::exception& error) {
             output.push_back("❌ COMAL error: " + std::string{error.what()});
         }
+        output_ = nullptr;
         if (output.empty()) {
             return {};
         }
@@ -868,10 +894,6 @@ private:
             [](std::string_view text) { return text.rfind("FUNC", 0) == 0; },
             [](std::string_view text) { return text == "ENDFUNC"; });
 
-        struct SavedValue {
-            std::string name;
-            std::optional<Value> value;
-        };
         std::vector<SavedValue> saved;
         for (std::size_t index = 0; index < parameters.size(); ++index) {
             const std::string& parameter = parameters[index];
@@ -894,63 +916,89 @@ private:
             }
         };
 
-        try {
-            for (std::size_t index = *body + 1; index < end; ++index) {
-                const std::string code =
-                    code_text(interpreter_.program_lines()[index].text);
-                if (code.empty()) {
-                    continue;
-                }
-                if (upper(code).rfind("RETURN", 0) == 0) {
-                    const std::string expression =
-                        trim(std::string_view{code}.substr(6));
-                    const double value =
-                        expression.empty() ? 0.0 : eval_num(expression);
-                    restore();
-                    return value;
-                }
-                // LOCAL: a working variable of the function's own. The previous
-                // value -- if the caller had one under the same name -- is in
-                // `saved` and goes back on every exit path, including an exception,
-                // so a function cannot leave a caller's variable altered.
-                if (upper(code).rfind("LOCAL", 0) == 0) {
-                    for (const std::string& part :
-                         split_top(std::string_view{code}.substr(5))) {
-                        const std::string local = upper(trim(part));
-                        if (local.empty()) {
-                            continue;
-                        }
-                        const bool already = std::any_of(
-                            saved.begin(), saved.end(),
-                            [&local](const SavedValue& entry) { return entry.name == local; });
-                        if (already) {
-                            continue;
-                        }
-                        SavedValue entry{local, std::nullopt};
-                        const auto existing = interpreter_.variables().find(local);
-                        if (existing != interpreter_.variables().end()) {
-                            entry.value = existing->second;
-                        }
-                        saved.push_back(std::move(entry));
-                        set_variable(local, Value{0.0});
-                    }
-                    continue;
-                }
-                static const std::regex assignment{
-                    R"(^([A-Za-z_]\w*)\s*=\s*(.+)$)", std::regex::ECMAScript};
-                std::smatch match;
-                if (std::regex_match(code, match, assignment)) {
-                    set_variable(match[1].str(), Value{eval_num(match[2].str())});
-                    continue;
-                }
-                throw ComalError("FUNC " + name + ": '" + code +
-                                 "' cannot be evaluated inside an expression");
+        // The body is statements, not an expression: `IF` and the loops are
+        // statements, and an expression cannot hand control back to the run loop --
+        // the caller is in the middle of one. So the body's lines are driven here,
+        // the way BASIC's `FUNCTION` bodies are: a statement that jumps moves the
+        // counter and one that does not leaves it where it was, so the next line is
+        // this loop's business.
+        const std::size_t caller_line = interpreter_.current_line;
+        const std::size_t stack_depth = state_.stack.size();
+        ComalFunctionFrame frame;
+        frame.stack_depth = stack_depth;
+        state_.function_frames.push_back(frame);
+
+        const auto leave = [this, stack_depth, caller_line]() {
+            if (state_.stack.size() > stack_depth) {
+                state_.stack.resize(stack_depth);
             }
-            restore();
-            return 0.0;
+            interpreter_.resume_line(caller_line);
+        };
+
+        double answer = 0.0;
+        try {
+            std::size_t line = *body + 1;
+            // A body that loops without a bound has to end somewhere; the program's
+            // own length times a thousand is the same budget BASIC's functions use.
+            std::size_t guard = 0;
+            const std::size_t limit = interpreter_.program_lines().size() * 1000 + 1000;
+            std::vector<std::string> discard;
+            while (!state_.function_frames.back().done && interpreter_.running &&
+                   line < end && guard++ < limit) {
+                interpreter_.resume_line(line);
+                const std::string code =
+                    code_text(interpreter_.program_lines()[line].text);
+                if (!code.empty()) {
+                    if (upper(code).rfind("LOCAL", 0) == 0) {
+                        declare_locals(code, saved);
+                    } else if (output_ != nullptr) {
+                        statement(code, *output_);
+                    } else {
+                        statement(code, discard);
+                    }
+                }
+                if (state_.function_frames.back().done) {
+                    break;
+                }
+                const std::size_t next = interpreter_.current_line;
+                line = next == line ? line + 1 : next;
+            }
+            answer = state_.function_frames.back().value;
         } catch (...) {
+            state_.function_frames.pop_back();
+            leave();
             restore();
             throw;
+        }
+        state_.function_frames.pop_back();
+        leave();
+        restore();
+        return answer;
+    }
+
+    /// `LOCAL A[,B...]`: the caller's value of each name is saved so it can go back,
+    /// and the name starts at zero. A name already declared by this body is left
+    /// alone, so a second `LOCAL T` cannot save the function's own value over the
+    /// caller's.
+    void declare_locals(const std::string& code, std::vector<SavedValue>& saved) {
+        for (const std::string& part : split_top(std::string_view{code}.substr(5))) {
+            const std::string local = upper(trim(part));
+            if (local.empty()) {
+                continue;
+            }
+            const bool already = std::any_of(
+                saved.begin(), saved.end(),
+                [&local](const SavedValue& entry) { return entry.name == local; });
+            if (already) {
+                continue;
+            }
+            SavedValue entry{local, std::nullopt};
+            const auto existing = interpreter_.variables().find(local);
+            if (existing != interpreter_.variables().end()) {
+                entry.value = existing->second;
+            }
+            saved.push_back(std::move(entry));
+            set_variable(local, Value{0.0});
         }
     }
 
@@ -990,6 +1038,19 @@ public:
 
 private:
     void handle_return(const std::string& expression) {
+        // A body driven by `call_function` has nowhere to jump back to: the caller is
+        // inside an expression, not at a line. The answer goes to the frame and the
+        // loop that is running the body ends.
+        if (!state_.function_frames.empty()) {
+            // The expression is read first: a nested `FUNC` call pushes a frame, and a
+            // push can move the vector, so a reference taken before the call would be
+            // dangling by the time the answer is stored.
+            const double value = expression.empty() ? 0.0 : eval_num(expression);
+            ComalFunctionFrame& frame = state_.function_frames.back();
+            frame.value = value;
+            frame.done = true;
+            return;
+        }
         if (!expression.empty()) {
             set_variable("RESULT", eval_value(expression));
         }
@@ -1201,6 +1262,9 @@ private:
     Interpreter& interpreter_;
     TurtleHost& turtle_;
     ComalState& state_;
+    /// The statement output of the line being executed, so a `FUNC` body run from
+    /// inside an expression prints beside the line that called it.
+    std::vector<std::string>* output_ = nullptr;
 };
 
 }  // namespace

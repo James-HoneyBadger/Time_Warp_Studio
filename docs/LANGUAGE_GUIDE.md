@@ -951,9 +951,22 @@ its effect. A function body may declare its own variables with `LOCAL`:
 ```
 
 `T` is the function's while it runs and the caller's afterwards whether or not the
-caller had one. A `FUNC` body is read as declarations, assignments and one `RETURN`:
-a body that needs an `IF` or a loop has to be a `PROC` that leaves its answer in a
-global.
+caller had one. A `FUNC` body is statements: it may branch, loop and call another
+function, and its `RETURN` leaves the body and answers the expression that called
+it:
+
+```comal
+100 FUNC TOTAL(N)
+110 LOCAL SUM
+120 SUM = 0
+130 FOR I := 1 TO N
+140 SUM = SUM + I
+150 NEXT I
+160 RETURN SUM
+170 ENDFUNC
+```
+
+A `PROC` is still the right shape for work whose point is what it prints or draws:
 
 ```comal
 10 PROC GREET(NAME$)

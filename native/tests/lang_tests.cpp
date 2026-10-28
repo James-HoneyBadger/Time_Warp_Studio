@@ -121,6 +121,9 @@ int main() {
     test_comal_procedures();
     test_comal_arrays_and_data();
     test_comal_function_local_keeps_the_callers_variable();
+    test_comal_function_body_branches();
+    test_comal_function_body_loops();
+    test_comal_function_body_calls_another_function();
     test_comal_function_local_is_not_leaked_to_the_caller();
     test_comal_turtle();
     test_logo_definition_does_not_run_until_it_is_called();

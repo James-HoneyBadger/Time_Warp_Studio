@@ -472,6 +472,54 @@ void test_comal_function_local_is_not_leaked_to_the_caller() {
     TW_CHECK(contains(run.output, "0"));
 }
 
+// A FUNC body is statements, so a body that chooses or repeats has to run as one:
+// the caller is inside an expression, and an expression cannot hand control back to
+// the run loop. These three are what that means -- a branch, a loop and a call to
+// another function from inside a body.
+
+void test_comal_function_body_branches() {
+    const ComalRun run = run_comal(
+        "10 PRINT KIND(2)\n"
+        "20 END\n"
+        "100 FUNC KIND(N)\n"
+        "110 IF N = 1 THEN RETURN 10\n"
+        "120 IF N = 2 THEN RETURN 20\n"
+        "130 RETURN 0\n"
+        "140 ENDFUNC");
+    TW_CHECK(contains(run.output, "20"));
+    TW_CHECK(!any_error(run.output));
+}
+
+void test_comal_function_body_loops() {
+    const ComalRun run = run_comal(
+        "10 PRINT TOTAL(4)\n"
+        "20 END\n"
+        "100 FUNC TOTAL(N)\n"
+        "110 LOCAL SUM\n"
+        "120 SUM = 0\n"
+        "130 FOR I := 1 TO N\n"
+        "140 SUM = SUM + I\n"
+        "150 NEXT I\n"
+        "160 RETURN SUM\n"
+        "170 ENDFUNC");
+    TW_CHECK(contains(run.output, "10"));
+    TW_CHECK(!any_error(run.output));
+}
+
+void test_comal_function_body_calls_another_function() {
+    const ComalRun run = run_comal(
+        "10 PRINT OUTER(3)\n"
+        "20 END\n"
+        "100 FUNC OUTER(N)\n"
+        "110 RETURN INNER(N) + 1\n"
+        "120 ENDFUNC\n"
+        "130 FUNC INNER(N)\n"
+        "140 RETURN N * 10\n"
+        "150 ENDFUNC");
+    TW_CHECK(contains(run.output, "31"));
+    TW_CHECK(!any_error(run.output));
+}
+
 void test_comal_turtle() {
     const ComalRun run = run_comal("10 MOVE 50\n20 TURN 90\n30 PLOT");
     TW_CHECK_EQ(run.host.ops.size(), std::size_t{3});

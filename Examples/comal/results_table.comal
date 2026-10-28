@@ -18,8 +18,8 @@
 170   RETURN total / count
 180 ENDFUNC
 
-190 REM A COMAL FUNC is one expression, so a four-way choice is a
-200 REM procedure that leaves its answer where the caller can read it.
+190 REM A COMAL FUNC body is statements and may branch -- but it answers
+200 REM with a number, so a letter is a PROC that leaves it where the caller reads it.
 210 PROC grade(score)
 220   IF score >= 85 THEN
 230     letter$ := "A"

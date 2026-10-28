@@ -1963,6 +1963,17 @@
   },
   {
    "language": "COMAL",
+   "command": "FUNC body branches",
+   "source": "10 PRINT KIND(2)\n20 END\n100 FUNC KIND(N)\n110 IF N = 1 THEN RETURN 10\n120 IF N = 2 THEN RETURN 20\n130 RETURN 0\n140 ENDFUNC",
+   "expect": "prints:20",
+   "also": [
+    "FUNC / ENDFUNC",
+    "IF / ENDIF",
+    "RETURN"
+   ]
+  },
+  {
+   "language": "COMAL",
    "command": "LOCAL",
    "source": "10 T = 99\n20 PRINT DOUBLE(21)\n30 PRINT T\n40 END\n100 FUNC DOUBLE(N)\n110 LOCAL T\n120 T = N * 2\n130 RETURN T\n140 ENDFUNC",
    "expect": "prints:99",
@@ -1983,7 +1994,7 @@
   {
    "language": "COMAL",
    "command": "LOCAL restored when the body throws",
-   "source": "10 T = 99\n20 PRINT DOUBLE(1)\n30 PRINT T\n40 END\n100 FUNC DOUBLE(N)\n110 LOCAL T\n120 IF N > 0 THEN T = 5\n130 RETURN T\n140 ENDFUNC",
+   "source": "10 T = 99\n20 PRINT DOUBLE(1)\n30 PRINT T\n40 END\n100 FUNC DOUBLE(N)\n110 LOCAL T\n120 NOSUCH\n130 RETURN T\n140 ENDFUNC",
    "expect": "error",
    "also": [
     "LOCAL"
