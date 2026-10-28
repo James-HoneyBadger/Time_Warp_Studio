@@ -430,7 +430,7 @@ The port is checked against the reference's own answers, not against a descripti
 of them:
 
 ```bash
-make golden-check     # 470 language programs and 192 Scheme ones, 0 differences
+make golden-check     # 475 language programs and 192 Scheme ones, 0 differences
 ```
 
 That gate runs every command-table row and every example through the native engines

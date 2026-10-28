@@ -3,7 +3,7 @@
 // The command reference: every command, the smallest program that runs it, and what
 // it does -- read from the same table the gates drive.
 //
-// `native/share/command_rows.json` is the command examination's data: 560 rows, one
+// `native/share/command_rows.json` is the command examination's data: 565 rows, one
 // per command, each a program and what should happen. `time_warp_gates commands` runs
 // everything in it, so a row that is wrong fails the build. This page shows the same
 // rows to a person, which makes the reference and the gate one fact rather than two
