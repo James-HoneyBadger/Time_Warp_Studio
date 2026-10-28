@@ -57,7 +57,7 @@ stream of JSON messages coming back.
 | `timewarp_debugger` | `native/src/debugger/` | its own `QThread` | Runs a Scheme program and services pause / step / breakpoint requests |
 | `timewarp_expr` | `native/src/token.cpp`, `lexer.cpp`, `evaluator.cpp` | runner thread, in-process | The ported expression evaluator, linked into `timewarp_lang` — see the note below |
 | `timewarp_lessons` | `native/src/lessons/` | GUI thread, or a command | The curriculum, the verifier, the learner's progress and the classroom. See the libraries section |
-| the frozen corpus | `native/tests/golden/lang_corpus.json.gz` | read by a command, never at run time | The reference engine's answers to 470 programs: what each printed, every drawing call, the variables it left. The parity gate compares the ports with these. The engine itself is deleted |
+| the frozen corpus | `native/tests/golden/lang_corpus.json.gz` | read by a command, never at run time | The reference engine's answers to 475 programs: what each printed, every drawing call, the variables it left. The parity gate compares the ports with these. The engine itself is deleted |
 
 > **`timewarp_expr` is part of a Run now.** It builds, it has 485 checks of its
 > own, the expression cases are in the recorded parity corpus, and `timewarp_lang`
@@ -493,7 +493,7 @@ Every language's arithmetic goes through it: the executors call
 ### Parity as the acceptance test
 
 The language engines are compared with the recorded corpus by
-`time_warp_gates golden` — 470 programs, and **0 differences** is the verdict —
+`time_warp_gates golden` — 475 programs, and **0 differences** is the verdict —
 and the Scheme machine against its own corpus (`scheme_corpus.json.gz`, 192
 programs, comparing whole output text). The Scheme entries that are *documented* as
 divergent carry the reference's text and the reason beside it, and the check asserts
@@ -854,7 +854,7 @@ gates and a command matrix. All of them must stay green, in every build tree.
 | Debug tree | `make -C native test-debug` | Keeps `Q_ASSERT` and standard-library hardening live; a suite green in Release can crash here |
 | Sanitisers | `make -C native asan` | Reads and writes of memory that is no longer valid, which no assertion can see. `ASAN=undefined` for UBSan |
 | Example corpus | `make smoke` | Every `Examples/**` program, through the native engines, including the 30 that must produce ink |
-| Parity gate | `make golden-check` (`time_warp_gates golden`) | The ports against 662 recorded programs: the reference's answers, frozen before it was deleted. 0 differences |
+| Parity gate | `make golden-check` (`time_warp_gates golden`) | The ports against 667 recorded programs: the reference's answers, frozen before it was deleted. 0 differences |
 | Lesson curriculum | `make teach-check` (`time_warp_teach validate`) | That every checkpoint's own solution passes, that no starter already passes, and that every language has a lesson |
 | Command matrix | `make command-matrix` (`time_warp_gates commands`) | One row per documented command, through `time_warp_check` and then through the REPL |
 | Version metadata | `make doc-claims` (`time_warp_docs version`) | That every hand-written copy of the version agrees with `VERSION` |

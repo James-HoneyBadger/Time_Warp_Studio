@@ -45,7 +45,7 @@ This page is the map.
 | [PORTING_PLAN.md](PORTING_PLAN.md) | The completed porting plan: what the removed PySide6 application had, how each feature was ported, and the test that proves it |
 | [FAQ.md](FAQ.md) | Short answers to common questions |
 | [`native/README.md`](../native/README.md) | The application itself: design notes, decisions, tests |
-| [`native/tests/golden/`](../native/tests/golden/) | The frozen corpus: the reference engine's answers to 470 programs, which `make golden-check` compares the ports with |
+| [`native/tests/golden/`](../native/tests/golden/) | The frozen corpus: the reference engine's answers to 475 programs, which `make golden-check` compares the ports with |
 
 ---
 

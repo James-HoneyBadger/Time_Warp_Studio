@@ -1963,6 +1963,34 @@
   },
   {
    "language": "COMAL",
+   "command": "LOCAL",
+   "source": "10 T = 99\n20 PRINT DOUBLE(21)\n30 PRINT T\n40 END\n100 FUNC DOUBLE(N)\n110 LOCAL T\n120 T = N * 2\n130 RETURN T\n140 ENDFUNC",
+   "expect": "prints:99",
+   "also": [
+    "FUNC / ENDFUNC",
+    "RETURN"
+   ]
+  },
+  {
+   "language": "COMAL",
+   "command": "LOCAL with nothing to restore",
+   "source": "10 PRINT DOUBLE(4)\n20 PRINT T\n30 END\n100 FUNC DOUBLE(N)\n110 LOCAL T\n120 T = N * 2\n130 RETURN T\n140 ENDFUNC",
+   "expect": "prints:0",
+   "also": [
+    "LOCAL"
+   ]
+  },
+  {
+   "language": "COMAL",
+   "command": "LOCAL restored when the body throws",
+   "source": "10 T = 99\n20 PRINT DOUBLE(1)\n30 PRINT T\n40 END\n100 FUNC DOUBLE(N)\n110 LOCAL T\n120 IF N > 0 THEN T = 5\n130 RETURN T\n140 ENDFUNC",
+   "expect": "error",
+   "also": [
+    "LOCAL"
+   ]
+  },
+  {
+   "language": "COMAL",
    "command": "error: unknown statement",
    "source": "NOSUCH",
    "expect": "error"
@@ -2315,6 +2343,25 @@
    "command": "DO a group",
    "source": "01.10 DO 2.10\n01.20 T \"AFTER\"\n01.30 Q\n02.10 T \"GROUP\"",
    "expect": "prints:GROUP"
+  },
+  {
+   "language": "FOCAL",
+   "command": "RETURN",
+   "source": "01.10 T \"START\"\n01.15 DO 2.10\n01.20 T \"AFTER\"\n01.30 Q\n02.10 T \"GROUP\"\n02.20 RETURN\n02.30 T \"NEVER\"",
+   "expect": "prints:AFTER",
+   "also": [
+    "DO a group"
+   ]
+  },
+  {
+   "language": "FOCAL",
+   "command": "RETURN in a FOR body",
+   "source": "01.10 DO 2.10\n01.20 T \"AFTER\"\n01.30 Q\n02.10 FOR I=1,5;T I;RETURN\n02.20 T \"NEVER\"",
+   "expect": "prints:AFTER",
+   "also": [
+    "RETURN",
+    "FOR"
+   ]
   },
   {
    "language": "FOCAL",

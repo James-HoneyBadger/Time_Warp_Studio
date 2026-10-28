@@ -95,6 +95,12 @@ test can drive without a window, and the reasoning written down where the code i
   be undone, the count and the number of files are in the question.
 - **The rewind keeps no random state, and says so** rather than letting a user
   discover that a replayed RND program draws something else.
+- **FOCAL `RETURN` and COMAL `LOCAL` now have rows and recorded answers.** Both
+  shipped with tests and no entry in the examination table, which is the gap that
+  leaves a command looking untested: five rows run them as programs and through the
+  REPL, and the corpus records what they print and the variables they leave -- the
+  caller's variable coming back when a `FUNC` body throws included. The language
+  corpus goes from 470 programs to 475 and the table from 560 rows to 565.
 
 ## [23.1.0] - 2026-10-27
 

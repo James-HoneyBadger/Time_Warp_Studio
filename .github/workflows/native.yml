@@ -28,7 +28,7 @@ on:
 #    are only live without -DNDEBUG. A use-after-free in a queued Qt connection
 #    reproduced 6 times out of 6 there and never in Release.
 #  * ASan, which is what actually named that defect: `stack-use-after-return`.
-#  * The parity gate: 662 recorded programs, compared with the ports byte for byte.
+#  * The parity gate: 667 recorded programs, compared with the ports byte for byte.
 #    It is weaker than a live differential and says so -- the engine the answers came
 #    from is deleted, so a wrong recording cannot be detected here.
 #  * `--version` and `--help`, so the shipped entry point is known to start and
@@ -133,7 +133,7 @@ jobs:
             ASAN_FLAGS='-fsanitize=undefined -fno-omit-frame-pointer -g'
 
       # The parity gate, against the corpora recorded from the reference engine
-      # before it was deleted: 470 language programs (output, every drawing call,
+      # before it was deleted: 475 language programs (output, every drawing call,
       # the variables each left behind) and 192 Scheme programs (whole output text,
       # with the 24 documented divergences listed rather than compared). The gate is
       # `time_warp_gates`, built from this repository, which is why the corpora carry
