@@ -217,5 +217,10 @@ int main() {
     test_data_breakpoint_pauses_on_a_variable_change();
     test_data_breakpoint_absent_when_not_watched();
     test_logo_data_breakpoint_pauses_at_a_statement_boundary();
+    test_basic_call_chain_names_the_subroutines();
+    test_focal_group_reports_a_frame();
+    test_pilot_unit_reports_a_frame();
+    test_comal_procedure_reports_a_frame();
+    test_rexx_call_reports_a_frame();
     return tw::test::summary("lang_tests");
 }

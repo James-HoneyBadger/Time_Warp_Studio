@@ -873,6 +873,7 @@ private:
                          index < arguments.size() ? arguments[index] : Value{0.0});
         }
         state_.call_stack.push_back(interpreter_.current_line);
+        interpreter_.push_call_frame(name, interpreter_.display_line());
         jump(*body + 1);
     }
 
@@ -927,11 +928,15 @@ private:
         ComalFunctionFrame frame;
         frame.stack_depth = stack_depth;
         state_.function_frames.push_back(frame);
+        // The body is driven here, so this frame covers it until the caller's line
+        // goes back; `leave` is the one place both exits pass through.
+        interpreter_.push_call_frame(name, interpreter_.display_line());
 
         const auto leave = [this, stack_depth, caller_line]() {
             if (state_.stack.size() > stack_depth) {
                 state_.stack.resize(stack_depth);
             }
+            interpreter_.pop_call_frame();
             interpreter_.resume_line(caller_line);
         };
 
@@ -946,6 +951,7 @@ private:
             while (!state_.function_frames.back().done && interpreter_.running &&
                    line < end && guard++ < limit) {
                 interpreter_.resume_line(line);
+                interpreter_.set_call_frame_line(interpreter_.source_line(line));
                 const std::string code =
                     code_text(interpreter_.program_lines()[line].text);
                 if (!code.empty()) {
@@ -1057,6 +1063,7 @@ private:
         if (!state_.call_stack.empty()) {
             const std::size_t return_line = state_.call_stack.back();
             state_.call_stack.pop_back();
+            interpreter_.pop_call_frame();
             jump(return_line + 1);
             return;
         }
@@ -1067,6 +1074,7 @@ private:
         if (!state_.call_stack.empty()) {
             const std::size_t return_line = state_.call_stack.back();
             state_.call_stack.pop_back();
+            interpreter_.pop_call_frame();
             jump(return_line + 1);
         }
     }
@@ -1087,6 +1095,7 @@ private:
             throw ComalError("no such line " + std::to_string(number));
         }
         state_.call_stack.push_back(interpreter_.current_line);
+        interpreter_.push_call_frame("GOSUB", interpreter_.display_line());
         jump(found->second);
     }
 

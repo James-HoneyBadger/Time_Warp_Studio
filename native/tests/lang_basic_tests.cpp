@@ -732,4 +732,57 @@ void test_file_access_is_confined_to_the_directory() {
     TW_CHECK(wrote_inside);
 }
 
+// The Debug panel's stack list is what says *where* a stopped BASIC program is,
+// and a BASIC return stack is a list of line indices that nothing published: a
+// learner inside a GOSUB saw the paused line and no idea who called it. Each
+// statement now mirrors its frame on the interpreter, so a pause reports the
+// chain -- outermost first, a waiting frame at its call site and the innermost at
+// the line it is standing on.
+void test_basic_call_chain_names_the_subroutines() {
+    std::printf("-- debug: basic call chain\n");
+    RecordingHost host;
+    Interpreter interpreter{Language::Basic, host};
+    timewarp::lang::DebugSession session;
+    session.set_breakpoints({6});  // line 200, inside the inner GOSUB
+    std::vector<timewarp::lang::CallFrame> frames;
+    int pauses = 0;
+    int paused_at = 0;
+    session.on_paused = [&](int line) {
+        ++pauses;
+        paused_at = line;
+        frames = interpreter.call_stack();
+        session.request_continue();
+    };
+    interpreter.set_debug_session(&session);
+    interpreter.load_program(
+        "10 GOSUB 100\n"
+        "20 PRINT \"END\"\n"
+        "30 END\n"
+        "100 LET A = 1\n"
+        "110 GOSUB 200\n"
+        "120 RETURN\n"
+        "200 LET B = 2\n"
+        "210 RETURN\n");
+    interpreter.run();
+
+    TW_CHECK_EQ(pauses, 1);
+    TW_CHECK_EQ(paused_at, 200);
+    TW_CHECK_EQ(frames.size(), std::size_t{3});
+    if (frames.size() == 3) {
+        // The program's own frame waits at the call it is inside, not at the line
+        // it started at.
+        TW_CHECK_EQ(frames.at(0).procedure, std::string{"PROGRAM"});
+        TW_CHECK_EQ(frames.at(0).line, 10);
+        TW_CHECK_EQ(frames.at(1).procedure, std::string{"GOSUB"});
+        TW_CHECK_EQ(frames.at(1).line, 110);
+        // The innermost frame is where the run is.
+        TW_CHECK_EQ(frames.at(2).procedure, std::string{"GOSUB"});
+        TW_CHECK_EQ(frames.at(2).line, 200);
+    }
+    // Each RETURN took its frame back, so a finished run has no chain left to
+    // report -- and neither does the next pause, which would otherwise name a
+    // return stack that has already unwound.
+    TW_CHECK(interpreter.call_stack().empty());
+}
+
 }  // namespace tw::lang_tests

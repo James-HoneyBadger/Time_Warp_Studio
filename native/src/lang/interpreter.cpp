@@ -144,6 +144,7 @@ void Interpreter::reset() {
     variables_.clear();
     last_input_.clear();
     subroutine_stack.clear();
+    call_frames_.clear();
     last_match_succeeded = false;
     line_number_map.clear();
     arrays.clear();
@@ -175,6 +176,7 @@ std::string Interpreter::run_snippet(std::string_view source) {
     labels_.clear();
     line_number_map.clear();
     subroutine_stack.clear();
+    call_frames_.clear();
     last_match_succeeded = false;
     current_line = 0;
     output_.clear();
@@ -381,6 +383,12 @@ void Interpreter::run() {
         // reader has in front of them.
         const int traced_line = program_lines_[current_line].number.value_or(
             static_cast<int>(current_line) + 1);
+        // The innermost frame is the routine this statement runs in, so it is where
+        // the chain says the run is. Set before the pause: a debugger reading the
+        // chain is asking about the statement it is stopped at.
+        if (!call_frames_.empty()) {
+            call_frames_.back().line = traced_line;
+        }
         if (tracing_) {
             log_output("[" + std::to_string(traced_line) + "]");
         }
@@ -432,6 +440,9 @@ void Interpreter::run() {
         iteration_capped_ = true;
         log_output("⚠️ Warning: Maximum iterations reached\n");
     }
+    // The chain describes a run, not a program: the frames an abandoned or
+    // finished run left behind name stacks that no longer exist.
+    call_frames_.clear();
     running = false;
     elapsed_ms_ =
         std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - started_)

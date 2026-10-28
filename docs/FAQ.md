@@ -409,7 +409,7 @@ directly. Check each language's tutorial for its graphics commands.
 
 Yes, for every language. The 🐞 Debug tab, the toolbar's Debug/Continue/Trace actions and gutter breakpoints stop the run at the language's natural boundary: a statement for BASIC, FOCAL, PILOT, COMAL, APL and REXX; a top-level statement for Logo; a message send for Smalltalk; an instruction before CHIP-8 executes it (the tab shows the listing line, or "the next instruction" for a binary ROM). **Continue** runs to the next breakpoint and **Trace** stops at the next boundary.
 
-Scheme additionally reports the call stack and the paused frame's bindings. For the other languages the 🔍 Variables tab shows the bindings the run is stopped in.
+Scheme additionally reports the call stack and the paused frame's bindings. Smalltalk reports the message sends it is inside, and the line-loop languages report the calls they are inside — a `GOSUB`, `CALL`, `PROC`, `DO` group or PILOT unit, under the program's own frame. Logo and CHIP-8 keep no return stack, so they report no chain. For every language the 🔍 Variables tab shows the bindings the run is stopped in.
 
 The Debug tab also has **watch expressions** — `X * 2` is evaluated over the paused bindings, with a typo reported as `?` rather than silently read as zero — and **data breakpoints**: type a variable name, or double-click it in the Variables table, and the run stops when its value changes. The pause says which variable changed.
 

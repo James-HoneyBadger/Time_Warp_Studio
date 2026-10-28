@@ -289,6 +289,7 @@ void Machine::service_timer() {
     // paused in `INPUT` should not be hit by a burst of catch-up interrupts.
     state_.timer_next_due = now + state_.timer_interval;
     state_.gosubs.push_back(interpreter_.current_line);
+    interpreter_.push_call_frame("ON TIMER GOSUB", interpreter_.display_line());
     timer_depth = state_.gosubs.size();
     timer_running = true;
     interpreter_.jump_to(found->second);
@@ -454,6 +455,9 @@ std::string Machine::reset_program(std::string_view message) {
     interpreter_.variables().clear();
     interpreter_.arrays.clear();
     interpreter_.function_hook = nullptr;
+    // A restart abandons whatever the program was inside, so the debugger's chain
+    // goes with the return stacks it mirrored.
+    interpreter_.clear_call_frames();
     state_.defaults.clear();
     state_.fors.clear();
     state_.gosubs.clear();

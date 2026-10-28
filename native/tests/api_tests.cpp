@@ -568,6 +568,39 @@ void test_debug_sessions() {
     TW_CHECK_EQ(talk_end.value(QStringLiteral("state")).toString(),
                 QStringLiteral("finished"));
 
+    // A line-by-line language fills the same field from the frames its statements
+    // push, so a client reads one chain shape whatever the engine.
+    QJsonObject gosub;
+    gosub.insert(QStringLiteral("language"), QStringLiteral("basic"));
+    gosub.insert(QStringLiteral("source"),
+                 QStringLiteral("10 GOSUB 100\n"
+                                "20 PRINT \"END\"\n"
+                                "30 END\n"
+                                "100 LET X = 1\n"
+                                "110 RETURN\n"));
+    gosub.insert(QStringLiteral("breakpoints"), QJsonArray{4});
+    const QJsonObject gosub_pause =
+        resultOf(server, QStringLiteral("debug.start"), gosub).toObject();
+    TW_CHECK_EQ(gosub_pause.value(QStringLiteral("line")).toInt(), 100);
+    const QJsonArray gosub_stack = gosub_pause.value(QStringLiteral("stack")).toArray();
+    TW_CHECK_EQ(gosub_stack.size(), 2);
+    if (gosub_stack.size() == 2) {
+        TW_CHECK_EQ(gosub_stack.at(0).toObject().value(QStringLiteral("procedure")).toString(),
+                    QStringLiteral("PROGRAM"));
+        TW_CHECK_EQ(gosub_stack.at(0).toObject().value(QStringLiteral("line")).toInt(), 10);
+        TW_CHECK_EQ(gosub_stack.at(1).toObject().value(QStringLiteral("procedure")).toString(),
+                    QStringLiteral("GOSUB"));
+        TW_CHECK_EQ(gosub_stack.at(1).toObject().value(QStringLiteral("line")).toInt(), 100);
+    }
+    QJsonObject gosub_id;
+    gosub_id.insert(QStringLiteral("session"),
+                    gosub_pause.value(QStringLiteral("session")).toString());
+    TW_CHECK_EQ(resultOf(server, QStringLiteral("debug.continue"), gosub_id)
+                    .toObject()
+                    .value(QStringLiteral("state"))
+                    .toString(),
+                QStringLiteral("finished"));
+
     QJsonObject missing;
     missing.insert(QStringLiteral("session"), QStringLiteral("no-such"));
     TW_CHECK_EQ(call(server, QStringLiteral("debug.continue"), missing)

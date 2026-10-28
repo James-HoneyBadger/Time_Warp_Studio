@@ -171,9 +171,58 @@ public:
     /// The running program's call chain, outermost first; empty when the
     /// language keeps none. Meaningful only while the run is paused, because that
     /// is the only time the executor is between frames rather than inside one.
+    ///
+    /// A line-by-line language answers from the frames its statements pushed
+    /// (below) rather than through a probe: its executor is a function called once
+    /// per statement, so a closure over the executor would not outlive the
+    /// statement that made it, while the return stack it mirrors does.
     [[nodiscard]] std::vector<CallFrame> call_stack() const {
-        return call_stack_probe_ ? call_stack_probe_() : std::vector<CallFrame>{};
+        if (call_stack_probe_) {
+            return call_stack_probe_();
+        }
+        std::vector<CallFrame> frames;
+        if (call_frames_.empty()) {
+            return frames;
+        }
+        // The program's own frame is the one the executor never pushes: it waits at
+        // the line its first call was made from. Each frame below it is the callee's
+        // own position -- its call site while it waits, the statement it is on while
+        // it runs -- which is the convention the Smalltalk chain reports.
+        frames.reserve(call_frames_.size() + 1);
+        frames.push_back(CallFrame{"PROGRAM", call_frames_.front().call_site});
+        for (const LineCall& call : call_frames_) {
+            frames.push_back(CallFrame{call.procedure, call.line});
+        }
+        return frames;
     }
+
+    /// Pushes a frame a line-by-line executor has entered, outermost first.
+    ///
+    /// `procedure` is what the language calls the callee and `call_site` is the
+    /// line it was called from -- a waiting frame's line is its call site, so a
+    /// `GOSUB 1000` on line 100 reads as one frame at 100 until the run arrives at
+    /// the subroutine's own statements. The executor pops at exactly the points it
+    /// pops its own return stack, which is what keeps the two from disagreeing.
+    void push_call_frame(std::string procedure, int call_site) {
+        call_frames_.push_back(LineCall{std::move(procedure), call_site, call_site});
+    }
+    /// Moves the innermost frame to `line`, for an executor that runs statements
+    /// itself: `FOCAL`'s `DO` group and the `FUNCTION` bodies of BASIC and COMAL
+    /// never pass through the run loop, so the loop cannot advance their frame.
+    void set_call_frame_line(int line) noexcept {
+        if (!call_frames_.empty()) {
+            call_frames_.back().line = line;
+        }
+    }
+    /// Pops the innermost frame. A no-op on an empty chain, so a language whose
+    /// return stack has already been unwound cannot pop the program's frame.
+    void pop_call_frame() noexcept {
+        if (!call_frames_.empty()) {
+            call_frames_.pop_back();
+        }
+    }
+    /// Forgets every frame, for a statement that restarts or ends the program.
+    void clear_call_frames() noexcept { call_frames_.clear(); }
 
     // -- the surface executors use ---------------------------------------
 
@@ -454,6 +503,18 @@ private:
     bool jumped_ = false;
     /// The executor's call chain, asked only when a pause is published.
     std::function<std::vector<CallFrame>()> call_stack_probe_;
+    /// One frame a line-by-line language is inside.
+    struct LineCall {
+        std::string procedure;
+        /// The caller's line when the call was made: where that caller waits.
+        int call_site = 0;
+        /// Where this frame is now, which the run loop and a self-driving executor
+        /// keep current.
+        int line = 0;
+    };
+    /// The chain a line-by-line language's statements maintain themselves, through
+    /// `push_call_frame` and `pop_call_frame`.
+    std::vector<LineCall> call_frames_;
     std::string error_;
 };
 

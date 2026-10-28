@@ -438,8 +438,14 @@ The paused location is shown as a line, with the procedure name and call depth
 where the language has them. Scheme reports its call stack and the paused frame's
 bindings; a whole-program language reports the chain its engine keeps — Smalltalk
 lists its message sends, outermost first, each as `Counter>>bump` with the line it
-is at — while the six line-loop languages report an empty chain and publish their
-visible bindings to the Variables tab instead.
+is at — and the line-loop languages name the calls they are inside: a `PROGRAM` row
+waiting at the line that called, then one row per `GOSUB`, `CALL`, `PROC`, `DO`
+group or PILOT unit, the innermost at the statement the run stopped on. A run
+standing in the program's own body reports no chain, because nothing is waiting.
+A FOCAL `DO` group's lines run inside the `DO` statement rather than through the
+run loop, so a breakpoint set on one of them used to never fire; it now stops there
+like any other line. Every language publishes its visible bindings to the Variables
+tab.
 
 ### Watch expressions
 

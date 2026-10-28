@@ -159,6 +159,15 @@ std::optional<Value> Machine::run_function(const std::string& name,
         }
     }
     state_.calls.push_back(std::move(frame));
+    // The body is driven here rather than by the run loop, so this frame is the
+    // function's own: a pause inside it names the function and the line that called
+    // it, and the guard takes it back on every exit -- a body that fails throws past
+    // the pops below.
+    interpreter_.push_call_frame(name, interpreter_.display_line());
+    struct FramePop {
+        Interpreter& engine;
+        ~FramePop() { engine.pop_call_frame(); }
+    } frame_pop{interpreter_};
     const std::size_t depth = state_.calls.size();
     ++state_.function_depth;
 
@@ -176,6 +185,7 @@ std::optional<Value> Machine::run_function(const std::string& name,
             break;
         }
         interpreter_.resume_line(line);
+        interpreter_.set_call_frame_line(interpreter_.source_line(line));
         state_.function_output += execute(lines[line].text);
         const std::size_t next = interpreter_.current_line;
         line = next == line ? line + 1 : next;

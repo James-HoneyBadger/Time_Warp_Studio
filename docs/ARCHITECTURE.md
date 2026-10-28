@@ -982,8 +982,10 @@ coming from the Python application starts from this build's defaults.
   for Logo, a message send for Smalltalk and an instruction for CHIP-8. Watch
   expressions are evaluated over the paused bindings by `timewarp::lang`'s watch
   evaluator; data breakpoints compare the bindings after each statement (or at a
-  whole-program pause point) and stop when a watched name changes. What is missing
-  is a call stack for languages that do not keep one.
+  whole-program pause point) and stop when a watched name changes. Every language
+  that keeps a return stack now publishes it as a call chain: Smalltalk's message
+  sends through a probe, and the line-loop languages' `GOSUB`/`CALL`/`PROC`/`DO`
+  frames by mirroring the stack they already keep. Logo and CHIP-8 keep none.
 - **The editor** has syntax colouring, find/replace, find-in-files, a minimap, a
   formatter, language-specific checking as you type (squiggles, gutter markers,
   hover text), optional completion, auto-indent, breakpoint markers in the gutter,

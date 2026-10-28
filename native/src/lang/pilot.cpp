@@ -851,6 +851,7 @@ std::string execute_unit(Interpreter& interpreter, TurtleHost& turtle, PilotStat
         const std::string label = trim(std::string_view{command}.substr(3));
         if (!label.empty()) {
             interpreter.subroutine_stack.push_back(interpreter.current_line + 1);
+            interpreter.push_call_frame(label, interpreter.display_line());
             interpreter.jump_to_label(label);
         }
         return {};
@@ -1003,6 +1004,7 @@ std::string execute_unit(Interpreter& interpreter, TurtleHost& turtle, PilotStat
             return "❌ " + type + ": Maximum subroutine depth (128) exceeded\n";
         }
         interpreter.subroutine_stack.push_back(interpreter.current_line + 1);
+        interpreter.push_call_frame(label, interpreter.display_line());
         interpreter.jump_to_label(label);
         return {};
     }
@@ -1074,6 +1076,7 @@ std::string execute_unit(Interpreter& interpreter, TurtleHost& turtle, PilotStat
         if (!interpreter.subroutine_stack.empty()) {
             interpreter.jump_to(interpreter.subroutine_stack.back());
             interpreter.subroutine_stack.pop_back();
+            interpreter.pop_call_frame();
             return {};
         }
         interpreter.running = false;

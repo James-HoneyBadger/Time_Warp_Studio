@@ -61,6 +61,7 @@ std::string Machine::gosub(const std::string& args) {
                              " not found");
     }
     state_.gosubs.push_back(interpreter_.current_line);
+    interpreter_.push_call_frame("GOSUB", interpreter_.display_line());
     interpreter_.jump_to(found->second);
     return {};
 }
@@ -71,6 +72,7 @@ std::string Machine::return_from_sub() {
     }
     interpreter_.jump_to(state_.gosubs.back() + 1);
     state_.gosubs.pop_back();
+    interpreter_.pop_call_frame();
     return {};
 }
 

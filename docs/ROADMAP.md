@@ -486,12 +486,18 @@ first, each as `Class>>selector` with the line it is at — to the Debug panel a
 `debug.*` over the API. The same pass fixed the lines they are reported with: a
 chunk is parsed on its own, and its sends used to be numbered from 1 inside the
 chunk, so a breakpoint set by clicking the gutter could never match inside a
-method. The chain mechanism is `Interpreter::set_call_stack_probe`, so the next
-machine that has a stack to show joins by answering the probe rather than by
-growing the debugger. The six line-loop languages report an empty chain for now:
-their engines jump between statements, and the frames they do keep — BASIC's
-`GOSUB` and user `FUNCTION` stacks, COMAL's procedure calls, PILOT's `U:` groups —
-are internal stacks of line indices that no pause publishes yet.
+method. The chain mechanism is `Interpreter::set_call_stack_probe`, so a machine
+that runs its own loop and has a stack to show joins by answering the probe rather
+than by growing the debugger. **The line-loop languages publish theirs too.** Their
+executors are called once per statement, so a probe over the executor would not
+outlive the statement that made it; the return stacks they already keep — BASIC's
+`GOSUB` and `CALL`, COMAL's `PROCEDURE` and `GOSUB`, PILOT's `U:` units, FOCAL's
+`DO` groups and REXX's `CALL` — are mirrored on the interpreter at exactly the
+points they are pushed and popped, and a pause reports them outermost first under a
+`PROGRAM` frame that waits at the line its first call was made from. A `DO` group's
+lines run inside the `DO` statement rather than through the loop, so that is also
+the only place a breakpoint inside a group can be honoured — which it now is, and
+did not use to be. Logo and CHIP-8 keep no return stack, so they report no chain.
 
 **Variables and the Telemetry HUD** are built too, and both answer the question a
 placeholder could not: *what did that run actually do?* The **Variables** tab lists every

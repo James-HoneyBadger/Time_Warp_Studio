@@ -268,4 +268,45 @@ void test_smalltalk_pause_names_the_frames_it_is_inside() {
     TW_CHECK(interpreter.call_stack().empty());
 }
 
+// A REXX `CALL` pushes a return line and pops it at `RETURN`, and until now that
+// stack was invisible: a learner stopped inside an internal routine saw the line
+// and nothing about who called it. The statement mirrors the frame on the
+// interpreter, so a pause reports the chain -- the program's own frame waiting at
+// the `CALL`, then the routine at the line it is standing on.
+void test_rexx_call_reports_a_frame() {
+    std::printf("-- debug: rexx call chain\n");
+    RecordingHost host;
+    Interpreter interpreter{Language::Rexx, host};
+    timewarp::lang::DebugSession session;
+    session.set_breakpoints({5});  // `say 'hi'`, inside GREET
+    std::vector<timewarp::lang::CallFrame> frames;
+    int paused_at = 0;
+    session.on_paused = [&](int line) {
+        paused_at = line;
+        frames = interpreter.call_stack();
+        session.request_continue();
+    };
+    interpreter.set_debug_session(&session);
+    interpreter.load_program(
+        "say 'start'\n"
+        "call greet\n"
+        "say 'done'\n"
+        "exit\n"
+        "greet:\n"
+        "  say 'hi'\n"
+        "  return\n");
+    interpreter.run();
+
+    TW_CHECK_EQ(paused_at, 6);
+    TW_CHECK_EQ(frames.size(), std::size_t{2});
+    if (frames.size() == 2) {
+        TW_CHECK_EQ(frames.at(0).procedure, std::string{"PROGRAM"});
+        TW_CHECK_EQ(frames.at(0).line, 2);
+        // The label is the routine's name, spelled the way the program spells it.
+        TW_CHECK_EQ(frames.at(1).procedure, std::string{"GREET"});
+        TW_CHECK_EQ(frames.at(1).line, 6);
+    }
+    TW_CHECK(interpreter.call_stack().empty());
+}
+
 }  // namespace tw::lang_tests

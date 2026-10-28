@@ -528,4 +528,96 @@ void test_comal_turtle() {
     TW_CHECK(run.host.ops.at(2).rfind("point 0 0 #", 0) == 0);
 }
 
+// ---------------------------------------------------------------------------
+// The debugger's call chain
+// ---------------------------------------------------------------------------
+
+// A pause in a line-by-line language used to name the line and nothing else: the
+// return stack each of these languages keeps is a list of line indices, and
+// nothing published it. The statements mirror their frames on the interpreter at
+// the same points they push and pop, so the chain reaches the Debug panel and
+// `debug.*` -- outermost first, waiting frames at their call sites and the
+// innermost at the line it is standing on.
+std::vector<timewarp::lang::CallFrame> frames_at(Language language,
+                                                 std::string_view source,
+                                                 std::size_t index) {
+    RecordingHost host;
+    Interpreter interpreter{language, host};
+    timewarp::lang::DebugSession session;
+    session.set_breakpoints({index});
+    std::vector<timewarp::lang::CallFrame> frames;
+    session.on_paused = [&](int) {
+        frames = interpreter.call_stack();
+        session.request_continue();
+    };
+    interpreter.set_debug_session(&session);
+    interpreter.load_program(source);
+    interpreter.run();
+    // The chain describes a run, so nothing is left to answer with afterwards.
+    TW_CHECK(interpreter.call_stack().empty());
+    return frames;
+}
+
+void test_focal_group_reports_a_frame() {
+    std::printf("-- debug: focal call chain\n");
+    const std::vector<timewarp::lang::CallFrame> frames = frames_at(
+        Language::Focal,
+        "1.1 T \"START\"\n"
+        "1.2 D 2.1\n"
+        "1.3 Q\n"
+        "2.1 T \"IN\"\n"
+        "2.2 R\n",
+        3);  // `T "IN"`, which only runs inside the group the line above calls
+    TW_CHECK_EQ(frames.size(), std::size_t{2});
+    if (frames.size() == 2) {
+        TW_CHECK_EQ(frames.at(0).procedure, std::string{"PROGRAM"});
+        TW_CHECK_EQ(frames.at(0).line, 2);
+        // A FOCAL group has no name of its own, so the frame is the group it ran,
+        // and its line is the statement inside it rather than the DO that called it.
+        TW_CHECK_EQ(frames.at(1).procedure, std::string{"DO 2.1"});
+        TW_CHECK_EQ(frames.at(1).line, 4);
+    }
+}
+
+void test_pilot_unit_reports_a_frame() {
+    std::printf("-- debug: pilot call chain\n");
+    const std::vector<timewarp::lang::CallFrame> frames = frames_at(
+        Language::Pilot,
+        "T:Start\n"
+        "U:*SUB\n"
+        "T:After\n"
+        "E:\n"
+        "*SUB\n"
+        "T:Inside\n"
+        "E:\n",
+        5);  // `T:Inside`, reached through the `U:` above it
+    TW_CHECK_EQ(frames.size(), std::size_t{2});
+    if (frames.size() == 2) {
+        TW_CHECK_EQ(frames.at(0).procedure, std::string{"PROGRAM"});
+        TW_CHECK_EQ(frames.at(0).line, 2);
+        // A unit is named by its label, which is what the program calls it.
+        TW_CHECK_EQ(frames.at(1).procedure, std::string{"*SUB"});
+        TW_CHECK_EQ(frames.at(1).line, 6);
+    }
+}
+
+void test_comal_procedure_reports_a_frame() {
+    std::printf("-- debug: comal call chain\n");
+    const std::vector<timewarp::lang::CallFrame> frames = frames_at(
+        Language::Comal,
+        "10 CALL SHOUT\n"
+        "20 END\n"
+        "30 PROC SHOUT\n"
+        "40 PRINT \"IN\"\n"
+        "50 ENDPROC\n",
+        3);  // the PRINT inside SHOUT
+    TW_CHECK_EQ(frames.size(), std::size_t{2});
+    if (frames.size() == 2) {
+        TW_CHECK_EQ(frames.at(0).procedure, std::string{"PROGRAM"});
+        TW_CHECK_EQ(frames.at(0).line, 10);
+        TW_CHECK_EQ(frames.at(1).procedure, std::string{"SHOUT"});
+        TW_CHECK_EQ(frames.at(1).line, 40);
+    }
+}
+
 }  // namespace tw::lang_tests

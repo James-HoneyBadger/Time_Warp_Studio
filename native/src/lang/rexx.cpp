@@ -589,6 +589,7 @@ Flow RexxMachine::handle_call(const std::string& name) {
         throw RexxError("unknown subroutine '" + label + "'");
     }
     state.call_stack.emplace_back(interpreter.current_line, state.args);
+    interpreter.push_call_frame(label, interpreter.display_line());
     state.args = arguments;
     interpreter.jump_to(target->second + 1);
     return Flow::Jump;
@@ -604,6 +605,7 @@ Flow RexxMachine::handle_return(const std::string& text) {
     if (!state.call_stack.empty()) {
         const auto [return_line, previous_args] = state.call_stack.back();
         state.call_stack.pop_back();
+        interpreter.pop_call_frame();
         state.args = previous_args;
         interpreter.jump_to(return_line + 1);
         return Flow::Jump;

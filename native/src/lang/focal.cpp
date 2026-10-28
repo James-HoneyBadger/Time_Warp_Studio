@@ -18,6 +18,7 @@
 
 #include "timewarp/core/charconv.hpp"
 
+#include "timewarp/lang/debug.hpp"
 #include "timewarp/lang/interpreter.hpp"
 #include "timewarp/lang/mersenne_random.hpp"
 #include "timewarp/lang/turtle_host.hpp"
@@ -959,9 +960,17 @@ private:
         if (state_.do_depth >= kMaxDoDepth) {
             throw FocalError("DO nested more than " + std::to_string(kMaxDoDepth) + " deep");
         }
-        const std::size_t start = resolve(label_of(arguments));
+        const std::string group = label_of(arguments);
+        const std::size_t start = resolve(group);
         state_.group_return = false;
         ++state_.do_depth;
+        // A group runs inline, so its frame covers the whole `run_group` call and the
+        // guard takes it back on the throwing path as well.
+        interpreter_.push_call_frame("DO " + group, interpreter_.display_line());
+        struct FramePop {
+            Interpreter& engine;
+            ~FramePop() { engine.pop_call_frame(); }
+        } frame_pop{interpreter_};
         try {
             const std::string output = run_group(start);
             --state_.do_depth;
@@ -982,6 +991,15 @@ private:
             ++state_.steps;
             if (state_.steps > kMaxSteps) {
                 throw FocalError("execution exceeded the step limit");
+            }
+            // A group's lines are run here rather than by the loop, so this is the
+            // only place a breakpoint inside one can be honoured -- until now a
+            // breakpoint clicked in the gutter of a DO group never fired.
+            const int line = static_cast<int>(index) + 1;
+            interpreter_.set_call_frame_line(line);
+            if (DebugSession* session = interpreter_.debug_session();
+                session != nullptr && !session->note_line(index, line)) {
+                break;
             }
             const StatementResult result =
                 statement(interpreter_.program_lines()[index].text);

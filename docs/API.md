@@ -226,10 +226,13 @@ text, as the editor gutter numbers them) and `dataBreakpoints` (variable names).
 `reason` is `breakpoint`, `step`, `data`, `pause`, `finished` or `error`.
 `stack` is the paused run's call chain, outermost first, one
 `{"procedure": "…", "line": N}` per frame: the frame's own line while it is the
-one running, and its call site while it is waiting. It is empty for a language
-whose engine keeps no chain — the six line-loop languages have a statement loop
-rather than a stack — and Smalltalk fills it with its message sends
-(`Counter>>bump`, or `DoIt` for a top-level block).
+one running, and its call site while it is waiting. It is empty while the run
+stands in the program's own body, because nothing is waiting then. Smalltalk fills
+it with its message sends (`Counter>>bump`, or `DoIt` for a top-level block),
+Scheme with its procedure activations, and a line-loop language with the calls it
+is inside: a `PROGRAM` frame at the line that called, then one per `GOSUB`, `CALL`,
+`PROC`, `DO` group or PILOT unit. Logo and CHIP-8 keep no return stack, so they
+report none.
 `line` is the program's own source line where it has one — a BASIC program with
 `20 LET Y = 2` on the second line reports 20 — so a client that echoes it back as a
 breakpoint should convert it to the source-text position first. For languages

@@ -56,6 +56,7 @@ std::string Machine::end_sub() {
     }
     CallFrame frame = std::move(state_.calls.back());
     state_.calls.pop_back();
+    interpreter_.pop_call_frame();
     for (const auto& [name, value] : frame.saved) {
         if (value.has_value()) {
             interpreter_.variables()[name] = *value;
@@ -144,6 +145,7 @@ std::string Machine::end_function() {
     }
     CallFrame frame = std::move(state_.calls.back());
     state_.calls.pop_back();
+    interpreter_.pop_call_frame();
     // The answer is whatever the variable named after the function holds -- text for
     // `FUNCTION GRADE$`, a number otherwise. Coercing it to a number here is what made
     // a `$` function answer 0: the text was read as a double and written back as one.
@@ -226,6 +228,7 @@ std::string Machine::call(const std::string& args) {
         }
     }
     state_.calls.push_back(std::move(frame));
+    interpreter_.push_call_frame(name, interpreter_.display_line());
     interpreter_.jump_to(definition->second.start);
     return {};
 }
