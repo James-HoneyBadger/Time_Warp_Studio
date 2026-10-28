@@ -246,6 +246,20 @@ struct BasicProgramLine {
     return lines.join(QLatin1Char('\n')) + QLatin1Char('\n');
 }
 
+/// The last line of `text` that holds anything, trimmed. Bounded by the reader:
+/// a console holds every run of the session and the newest line is the one a
+/// question about output means.
+[[nodiscard]] inline QString lastNonEmptyLine(const QString& text) {
+    const QStringList lines = text.split(QLatin1Char('\n'));
+    for (auto line = lines.crbegin(); line != lines.crend(); ++line) {
+        const QString trimmed = line->trimmed();
+        if (!trimmed.isEmpty()) {
+            return trimmed;
+        }
+    }
+    return QString{};
+}
+
 /// The document text with `number` removed. No change when the line is absent.
 [[nodiscard]] inline QString withoutBasicProgramLine(const QString& text, int number) {
     QStringList lines = programLines(text);

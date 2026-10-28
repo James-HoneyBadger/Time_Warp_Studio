@@ -32,17 +32,18 @@ constexpr int kErrorDetailCharacters = 300;
     root.insert(QStringLiteral("temperature"), config.temperature);
 
     QJsonArray turns;
-    // A local server streams; a hosted one is asked for the whole answer in one.
-    // `is_local_endpoint` is the question both protocols need answered, so it is
-    // asked once here rather than in each branch.
-    const bool stream = is_local_endpoint(config);
+    // Every request streams. A local server did from the beginning; a hosted one
+    // used to be asked for the whole answer so that its token counts and its single
+    // finished string arrived together, and both protocols now send those *inside*
+    // the stream -- OpenAI in a final `usage` chunk, Anthropic in `message_start`
+    // and `message_delta` -- so there is nothing left to trade away for them, and
+    // Stop can end an answer that is half written.
+    constexpr bool stream = true;
     if (config.protocol == Protocol::Anthropic) {
         root.insert(QStringLiteral("system"), conversation.system);
-        if (stream) {
-            // Anthropic defaults to a whole answer, so the field is only sent when
-            // it is true -- the shape of a hosted request is unchanged.
-            root.insert(QStringLiteral("stream"), true);
-        }
+        // Anthropic defaults to a whole answer, so the field is only sent when it is
+        // true.
+        root.insert(QStringLiteral("stream"), stream);
         // Anthropic's API requires the turns to alternate and to begin with a
         // user turn. A conversation with two questions in a row (the first one
         // failed) is legal to us and a 400 to it, so adjacent turns with the same
@@ -358,7 +359,7 @@ void Client::post(const Config& config, const QNetworkRequest& request, const QB
     const Protocol protocol = config.protocol;
     const int generation = generation_;
     kind_ = kind;
-    streaming_ = kind == Kind::Chat && is_local_endpoint(config);
+    streaming_ = kind == Kind::Chat;
     stream_raw_.clear();
     stream_buffer_.clear();
     stream_text_.clear();
@@ -399,6 +400,12 @@ void Client::post(const Config& config, const QNetworkRequest& request, const QB
             return;
         }
         if (kind == Kind::Chat && streaming_) {
+            // Whatever was never announced with `readyRead` is read here: a
+            // transport that hands over the whole body at once never emits it, and
+            // a service that ignored `stream` answered with one JSON document
+            // instead of events. `finishStream` falls back to the ordinary reader
+            // for exactly that case.
+            consumeStream(reply, protocol);
             // Anything still buffered when the connection closes is a line without
             // its newline; it is parsed rather than dropped.
             if (!stream_buffer_.isEmpty()) {

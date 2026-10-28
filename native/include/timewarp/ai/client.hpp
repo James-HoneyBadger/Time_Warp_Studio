@@ -10,10 +10,10 @@
 //
 // #### What it does not do
 //
-// It does not stream, retry, cache, remember a conversation or decide what to send.
-// Those are the panel's, because they are decisions about a session rather than
-// about a protocol. A request either finishes with an answer or finishes with a
-// sentence, and the caller shows that sentence.
+// It does not retry, cache, remember a conversation or decide what to send. Those
+// are the panel's, because they are decisions about a session rather than about a
+// protocol. A request either finishes with an answer or finishes with a sentence,
+// and the caller shows that sentence.
 //
 // #### The key
 //
@@ -114,9 +114,9 @@ public:
 
 signals:
     void started();
-    /// A piece of the answer as it arrives, for a local endpoint that streams. The
-    /// finished text still arrives through `answered`: this is what a panel shows
-    /// while it waits, not a second way to receive an answer.
+    /// A piece of the answer as it arrives. The finished text still arrives through
+    /// `answered`: this is what a panel shows while it waits, not a second way to
+    /// receive an answer.
     void delta(const QString& text);
     void answered(const timewarp::ai::Reply& reply);
     /// The identifiers a `listModels` call found, in the order the service gave

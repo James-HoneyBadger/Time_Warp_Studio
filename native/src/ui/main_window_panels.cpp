@@ -33,6 +33,7 @@
 #include "timewarp/canvas/host_adapter.hpp"
 #include "timewarp/canvas/qt_bridge.hpp"
 #ifdef TIME_WARP_HAVE_AI
+#include "timewarp/ai/client.hpp"
 #include "timewarp/ai/config.hpp"
 #include "timewarp/ui/ai_panel.hpp"
 #include "timewarp/ui/ai_settings.hpp"
@@ -599,6 +600,18 @@ QList<timewarp::ui::TelemetryRow> MainWindow::ideTelemetryRows() const {
         rows.append({tr("Ink length"),
                      tr("%1 units").arg(turtle_canvas_->totalStrokeLength(), 0, 'f', 1)});
     }
+#ifdef TIME_WARP_HAVE_AI
+    if (ai_panel_ != nullptr && ai_panel_->sessionUsage().requests > 0) {
+        // The assistant's own cost, beside the run's: what an answer spent is a
+        // property of this session, and the HUD is where this window's counters
+        // already live.
+        const AiPanel::Usage usage = ai_panel_->sessionUsage();
+        rows.append({tr("Assistant asks"), QString::number(usage.requests)});
+        rows.append({tr("Assistant tokens"), tr("%1 in, %2 out")
+                                                 .arg(usage.prompt_tokens)
+                                                 .arg(usage.completion_tokens)});
+    }
+#endif
     return rows;
 }
 
@@ -801,6 +814,43 @@ void MainWindow::buildAiPanel() {
     connect(ai_panel_, &AiPanel::statusMessage, this, [this](const QString& message) {
         statusBar()->showMessage(message, kStatusMessageMilliseconds * 2);
     });
+    // The suggested line. Its own client, so a pause in typing cannot cancel an
+    // answer the reader is in the middle of.
+    inline_client_ = new timewarp::ai::Client{this};
+    connect(inline_client_, &timewarp::ai::Client::answered, this,
+            [this](const timewarp::ai::Reply& reply) {
+                CodeEditor* editor = inline_target_;
+                inline_target_ = nullptr;
+                if (editor == nullptr || !reply.ok) {
+                    return;
+                }
+                // The caret may have moved while the request was out: the answer is
+                // about the text it was asked for, so it is dropped when that text
+                // is no longer what precedes the caret.
+                if (editor->textBeforeCursor(4000) != inline_prefix_) {
+                    inline_prefix_.clear();
+                    return;
+                }
+                inline_prefix_.clear();
+                editor->setGhostText(reply.text);
+            });
+    connect(inline_client_, &timewarp::ai::Client::failed, this,
+            [this](const QString&) {
+                // Silent on purpose: a suggestion that does not arrive is not an
+                // event, and a red sentence under a caret is a worse interruption
+                // than no suggestion.
+                inline_target_ = nullptr;
+                inline_prefix_.clear();
+            });
+    applyInlineSuggestionSetting();
+
+    connect(ai_panel_, &AiPanel::usageChanged, this, [this] {
+        // The HUD's rows are rebuilt from the window's own counters, so a new
+        // number only has to ask for that rebuild.
+        if (telemetry_panel_ != nullptr) {
+            telemetry_panel_->setRows(ideTelemetryRows());
+        }
+    });
 }
 
 timewarp::ai::Context MainWindow::aiContext() const {
@@ -875,6 +925,7 @@ void MainWindow::showAiSettings() {
                 if (ai_panel_ != nullptr) {
                     ai_panel_->setConfig(config);
                 }
+                applyInlineSuggestionSetting();
                 setExecutionState(tr("ready"),
                                   tr("Assistant settings saved — %1")
                                       .arg(timewarp::ai::summary(config)));
@@ -910,6 +961,89 @@ void MainWindow::askAssistant(timewarp::ai::Task task) {
         return;
     }
     ai_panel_->ask(task);
+    ai_panel_->focusInput();
+}
+
+void MainWindow::applyInlineSuggestionSetting() {
+    if (inline_client_ != nullptr && !ai_config_.inline_suggestions) {
+        // Turning it off has to take back a request already on its way, or a line
+        // would appear after the switch that asked for none.
+        inline_client_->cancel();
+        inline_target_ = nullptr;
+    }
+    editor_settings_.inline_suggestions = ai_config_.inline_suggestions;
+    for (QTabWidget* tabs : {editor_tabs_, editor_tabs_secondary_}) {
+        if (tabs == nullptr) {
+            continue;
+        }
+        for (int index = 0; index < tabs->count(); ++index) {
+            if (auto* editor = qobject_cast<CodeEditor*>(tabs->widget(index));
+                editor != nullptr) {
+                editor->applySettings(editor_settings_);
+            }
+        }
+    }
+}
+
+void MainWindow::requestInlineSuggestion(CodeEditor* editor, const QString& prefix) {
+    if (editor == nullptr || inline_client_ == nullptr ||
+        !ai_config_.inline_suggestions || prefix.trimmed().isEmpty()) {
+        return;
+    }
+    if (!timewarp::ai::ready(ai_config_, nullptr)) {
+        return;
+    }
+    if (inline_client_->busy()) {
+        // The next pause asks again; superseding an answer already on its way would
+        // spend a request to arrive at the same place.
+        return;
+    }
+    timewarp::ai::Context context;
+    context.language = displayName(languageOf(editor));
+    context.file_name = nameOf(editor);
+    // The program *up to the caret*: what comes next is the question.
+    context.source = prefix;
+    inline_target_ = editor;
+    inline_prefix_ = prefix;
+    inline_client_->send(ai_config_,
+                         timewarp::ai::build_prompt(timewarp::ai::Task::Continue, context,
+                                                    QString{}));
+}
+
+void MainWindow::askAssistantAboutOutput() {
+    static_cast<void>(showPanel(QStringLiteral("ai")));
+    if (ai_panel_ == nullptr) {
+        return;
+    }
+    // What "this error" means, in the order a reader means it: the lines they
+    // selected, then what the run reported as an error, then the last thing the
+    // program printed. The Console keeps every run of the session, so the newest is
+    // the one worth asking about.
+    QString reported;
+    if (console_view_ != nullptr) {
+        reported = console_view_->textCursor().selectedText().trimmed();
+        // QTextCursor separates paragraphs with U+2029, which a model reads as a
+        // character rather than a line break.
+        reported.replace(QChar::ParagraphSeparator, QLatin1Char('\n'));
+    }
+    if (reported.isEmpty() && errors_view_ != nullptr) {
+        reported = lastNonEmptyLine(errors_view_->toPlainText());
+    }
+    if (reported.isEmpty() && console_view_ != nullptr) {
+        reported = lastNonEmptyLine(console_view_->toPlainText());
+    }
+    if (reported.isEmpty()) {
+        setExecutionState(tr("ready"),
+                          tr("Run the program first: there is no output to ask about"));
+        return;
+    }
+    if (!ai_panel_->configured()) {
+        showAiSettings();
+        setExecutionState(tr("ready"),
+                          tr("Choose a service and a model, then ask again"));
+        return;
+    }
+    ai_panel_->ask(timewarp::ai::Task::Diagnose, reported);
     ai_panel_->focusInput();
 }
 

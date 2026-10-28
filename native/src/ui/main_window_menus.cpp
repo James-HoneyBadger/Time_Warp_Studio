@@ -413,6 +413,11 @@ void MainWindow::buildMenuBar() {
     add(tools, tr("Fix This &Program"), QKeySequence{},
         [this] { askAssistant(timewarp::ai::Task::Fix); })
         ->setObjectName(QStringLiteral("aiFixAction"));
+    // The one question that starts from what the run said rather than from the
+    // program: the Console already holds the error, so the action names it.
+    add(tools, tr("Ask About the Last &Error"), QKeySequence{},
+        [this] { askAssistantAboutOutput(); })
+        ->setObjectName(QStringLiteral("aiDiagnoseAction"));
     add(tools, tr("AI &Settings..."), QKeySequence{}, [this] { showAiSettings(); })
         ->setObjectName(QStringLiteral("aiSettingsAction"));
 #endif

@@ -43,6 +43,7 @@ int main(int argc, char** argv) {
     test_rom_and_program_survive_a_restart();
     test_main_window_owns_the_machine_action();
     test_config_button_opens_the_settings_screen();
+    test_the_machine_offers_the_assistant();
     test_config_prompt_command_opens_the_settings_screen();
     test_settings_preview_apply_and_persist();
     test_boot_settings_decide_the_next_power_on();

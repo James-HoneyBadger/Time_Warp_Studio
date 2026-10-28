@@ -96,6 +96,10 @@ namespace timewarp::ui {
 class ClassroomMarker;
 }  // namespace timewarp::ui
 
+namespace timewarp::ai {
+class Client;
+}  // namespace timewarp::ai
+
 namespace timewarp::sql {
 class Database;
 }
@@ -239,6 +243,9 @@ public:
     /// Runs one request about the document in view, for the menu entries that are
     /// a single click rather than a typed question.
     void askAssistant(timewarp::ai::Task task);
+    /// Asks about one error the run reported: the selection in the Console, else the
+    /// last error the Errors view holds, else the last line the program printed.
+    void askAssistantAboutOutput();
     /// The open project's file path, or empty when none is open.
     [[nodiscard]] QString activeProjectPath() const;
     /// Shows the find bar, with the replacement row when `withReplacement`.
@@ -847,6 +854,13 @@ private:
     // -- the command reference and the assistant ---------------------------
     void buildCommandReference();
     void buildAiPanel();
+    /// A pause in typing in `editor`, for the assistant's suggested next line. Silent
+    /// about everything that goes wrong: text appearing under a caret is not a place
+    /// to report a network failure.
+    void requestInlineSuggestion(CodeEditor* editor, const QString& prefix);
+    /// Passes `inline_suggestions` from the configuration to every editor open and to
+    /// every one opened later.
+    void applyInlineSuggestionSetting();
     /// What the assistant is told about the document in view: the language, the
     /// name, the text, the selection and what the last run printed.
     [[nodiscard]] timewarp::ai::Context aiContext() const;
@@ -938,6 +952,15 @@ private:
     /// preference that should survive a restart.
     AiPanel* ai_panel_ = nullptr;
     timewarp::ai::Config ai_config_;
+    /// The suggested line's own client, and the editor waiting for one. A second
+    /// client rather than the panel's: a suggestion asked for while you type must
+    /// not cancel the answer you are reading, and the panel keeps one request in
+    /// flight by design.
+    timewarp::ai::Client* inline_client_ = nullptr;
+    CodeEditor* inline_target_ = nullptr;
+    /// The text the suggestion was asked for, so an answer that arrives after the
+    /// caret moved is dropped rather than pasted after the wrong line.
+    QString inline_prefix_;
     /// The command reference: a view over the table the command gate drives.
     CommandReferencePanel* reference_panel_ = nullptr;
     std::shared_ptr<timewarp::sql::Database> sql_database_;

@@ -16,10 +16,11 @@
 //
 // #### What it will not do
 //
-// It will not send anything until the user presses a button. There is no suggestion
-// that appears after a pause, no automatic explanation of a program the user has
-// not asked about, and no request built at start-up: the program on screen is the
-// user's, and sending it anywhere is an act they take.
+// It will not send anything until the user presses a button. The program on screen
+// is the user's, and sending it anywhere is an act they take: nothing here is built
+// at start-up and nothing is sent on a timer. The one request that is not a button
+// press is the editor's suggested line, and that is a separate switch the user
+// turns on deliberately (`Config::inline_suggestions`).
 
 #pragma once
 
@@ -81,10 +82,27 @@ public:
     [[nodiscard]] QString lastAnswer() const { return last_answer_; }
     [[nodiscard]] bool emptyStateVisible() const;
     [[nodiscard]] int historySize() const { return history_.size(); }
+    /// Where a remembered conversation is kept, when the configuration says to keep
+    /// one. Defaults to the data directory's `assistant` leaf; a test points it at a
+    /// temporary one.
+    void setConversationDirectory(const QString& directory);
+
+    /// What this session has spent: questions asked and the tokens the service
+    /// reported for them. Counted per session because a total across sessions is a
+    /// bill nobody can reconcile with a provider's, and no price table lives here --
+    /// the counts are what the service said, which is the part this program knows.
+    struct Usage {
+        int requests = 0;
+        int prompt_tokens = 0;
+        int completion_tokens = 0;
+    };
+    [[nodiscard]] const Usage& sessionUsage() const noexcept { return usage_; }
 
 signals:
     /// The user asked to configure the assistant; the window owns the dialog.
     void configureRequested();
+    /// One more answer arrived; the window's Telemetry HUD shows the tally.
+    void usageChanged();
     /// The user asked to put the last answer's code into the editor.
     void insertRequested(const QString& code);
     void statusMessage(const QString& message);
@@ -109,6 +127,15 @@ private:
     void setBusy(bool busy);
     void updateEnabledState();
     void scrollToEnd();
+    /// Puts a remembered conversation back into the transcript, shortened: the turn
+    /// that was stored is the whole prompt, program included, and a page of it per
+    /// question is not what a reader wants on opening the application.
+    void restoreConversation();
+    void storeConversation() const;
+    /// Where a remembered conversation lives: the directory a test named, else the
+    /// data directory's `assistant` leaf.
+    [[nodiscard]] QString conversationDirectory() const;
+    void updateUsageLabel();
     /// The description of what was sent, for the line above the answer.
     [[nodiscard]] QString contextLabel(const timewarp::ai::Context& context) const;
 
@@ -124,6 +151,7 @@ private:
     QLabel* context_hint_ = nullptr;
     QLabel* privacy_ = nullptr;
     QLabel* status_ = nullptr;
+    QLabel* usage_label_ = nullptr;
     QPushButton* send_ = nullptr;
     QPushButton* stop_ = nullptr;
     QPushButton* clear_ = nullptr;
@@ -135,6 +163,8 @@ private:
     /// whole session costs more with every question and forgets the start of it
     /// anyway.
     QList<timewarp::ai::Message> history_;
+    Usage usage_;
+    QString conversation_directory_;
     QString last_answer_;
     bool busy_ = false;
     /// A streaming answer: whether one is being written, where it starts, and what

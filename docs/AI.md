@@ -44,12 +44,34 @@ out. A selection wins over the whole document, so selecting six lines and pressi
 **Explain** is a question about six lines.
 
 The panel keeps the last six exchanges so "and the same in Forth?" works. **Clear**
-forgets them, and closing the application forgets them too: a conversation is a
-session, not a setting.
+forgets them. Closing the application forgets them too unless **Keep the conversation
+between sessions** is ticked in AI Settings: the turns are then written to
+`assistant/conversation.json` under the application's data directory (`~/.time_warp`
+unless `TIME_WARP_DATA_DIR` says otherwise), readable only by its owner, capped at the
+same twelve turns the panel sends, and deleted the moment the tick is removed. A file
+that has been damaged is forgotten silently rather than reported: a JSON file a learner
+never opened is not something to put an error message in front of.
 
-The same three one-click questions are in **Tools** as **Explain This Program** and
+The same one-click questions are in **Tools** as **Explain This Program** and
 **Fix This Program**, with no shortcut, because a key pressed by accident spends a
 request. The command palette finds all of them.
+
+**Tools > Ask About the Last Error** starts from the run rather than the program: the
+lines selected in the Console, else the last error the Errors tab holds, else the last
+line the program printed. What the run said becomes the question, and the program and
+the run's output ride along as evidence, so the answer is about the failure that
+happened rather than about a program in the abstract.
+
+**The suggested next line** is the one thing here that is not a button. With
+**Suggest the next line in the editor** ticked in AI Settings, a pause in typing
+(about three quarters of a second) asks the endpoint for the next few lines of the
+document up to the caret, and shows the first of them as dimmed text after the cursor.
+**Tab** takes it, **Esc** refuses it, and any other key dismisses it and is typed as
+usual. It is off unless you turn it on, it never competes with the local word list
+(the suggestion is not shown while that popup is open), and an answer that arrives
+after the caret moved is dropped rather than pasted after the wrong line. Unlike the
+panel, it has a client of its own: a suggestion must not cancel an answer you are
+reading.
 
 ## Configuring it
 
@@ -82,6 +104,8 @@ service, including a server on your own machine, uses one of them.
 | **Temperature** | 0 is repeatable, 2 is inventive |
 | **Give up after** | The request timeout, in seconds |
 | **Send the current program by default** | What the panel's tick starts from |
+| **Keep the conversation between sessions** | Off, a conversation dies with the window. On, it is kept in the data directory and deleted when this is unticked |
+| **Suggest the next line in the editor** | Off, nothing is sent while you type. On, a pause in typing asks for the next line and shows it as ghost text |
 
 **Find models…** asks the endpoint what it can run -- `GET {base}/models`, the one
 discovery call both request shapes share -- and offers the answer in a dropdown. A
@@ -105,8 +129,13 @@ A key is a secret. Three things follow, and all three are deliberate.
 - **Keeping the key is your choice.** With **Keep the key on this machine** unticked
   the key is used for that session and *removed* from the settings file, so a saved
   configuration can be handed to another machine without the secret in it.
-- **A stored key is protected as far as the platform allows.** After a key is
-  written the settings file is restricted to its owner on Linux and macOS.
+- **A stored key goes in the operating system's own store where there is one.** On
+  Windows that is the Credential Manager, on macOS the Keychain, and on Linux the
+  freedesktop secret service when the build found `libsecret`. A build or a machine
+  without one keeps the key in the settings file, restricted to its owner, exactly as
+  before -- and the settings dialog names the store it would use. The choice is
+  `TIME_WARP_AI_KEYRING`: `file` refuses the system store, `system` asks for it, and a
+  build that has none answers `file` either way rather than pretending.
 
 The key is never logged, never shown in a message, and stripped from anything a
 service sends back — a proxy that echoes the request in an error still cannot put
@@ -121,6 +150,7 @@ The environment variables that override the stored configuration:
 | `TIME_WARP_AI_MODEL` | The model |
 | `TIME_WARP_AI_PROTOCOL` | `openai` or `anthropic` |
 | `TIME_WARP_AI_ENABLED` | `1`/`0`: whether the assistant is on |
+| `TIME_WARP_AI_KEYRING` | `file` or `system`: where a stored key lives |
 
 ### What exactly leaves the machine
 
@@ -130,7 +160,8 @@ One request contains:
 - the current document, or the selected lines, when **Send the program** is ticked;
 - the document's file name and its language;
 - for **Fix**, what the last run printed and any errors it reported;
-- the last six exchanges of the conversation.
+- the last six exchanges of the conversation;
+- with inline suggestions on, the document up to the caret, when typing pauses.
 
 Nothing else. No other tab, no other file, no path, no list of what you have open,
 no telemetry, no version of this application beyond the request itself.
@@ -186,8 +217,9 @@ The same question is available over the automation API, for a script that alread
 speaks JSON-RPC to the Studio: `ai.ask` takes `prompt`, an optional `system` and an
 optional `history`, and returns the answer with its model and token counts.
 `docs/API.md` has the request and response shapes. It reads the same configuration,
-so `TIME_WARP_AI_API_KEY` and the `TIME_WARP_AI_*` overrides apply there too, and a
-local endpoint streams into the client the panel shares.
+so `TIME_WARP_AI_API_KEY` and the `TIME_WARP_AI_*` overrides apply there too, and the
+request streams through the same client the panel uses -- the handler waits for the
+finished answer, which is what a one-line-in, one-line-out protocol can deliver.
 
 ## When it does not work
 
@@ -215,8 +247,11 @@ Ollama or LM Studio, then press **Test connection** again.
 | Part | Where |
 | --- | --- |
 | Configuration, prompts and the client | `native/include/timewarp/ai/config.hpp`, `native/src/ai/config.cpp`, `native/include/timewarp/ai/prompt.hpp`, `native/src/ai/prompt.cpp`, `native/include/timewarp/ai/client.hpp`, `native/src/ai/client.cpp` |
+| The stored conversation | `native/include/timewarp/ai/history.hpp`, `native/src/ai/history.cpp` |
+| Where the key lives | `native/include/timewarp/ai/keyring.hpp`, `native/src/ai/keyring.cpp` -- the Credential Manager, the Keychain, `libsecret`, or the settings file |
 | The page | `native/include/timewarp/ui/ai_panel.hpp`, `native/src/ui/ai_panel.cpp` |
 | The settings dialog | `native/include/timewarp/ui/ai_settings.hpp`, `native/src/ui/ai_settings.cpp` |
+| The dialog the two machines open | `native/include/timewarp/ui/assistant_dialog.hpp`, `native/src/ui/assistant_dialog.cpp` |
 | The command | `native/tools/ai_cli.cpp` |
 | The suite | `native/tests/ai_tests.cpp` |
 
@@ -244,20 +279,37 @@ and the rule that code comes back in one fenced block labelled with the language
 
 ### What it deliberately does not do
 
-- **It streams from a local endpoint, and only from a local one.** A server on this
-  machine -- Ollama, LM Studio, llama.cpp -- sends the answer token by token, so the
-  Assistant page shows it being written, replacing the partial text as each piece
-  arrives rather than logging fragments. A hosted endpoint is asked for the whole
-  answer: the token counts and the single finished string are what the panel reports,
-  and a cancel button in the middle of a stream is not something this panel offers.
-  `ai::is_local_endpoint` is the test -- the host is `localhost`, `127.0.0.1`, `::1`
-  or a `*.localhost` name -- and `timewarp::ai::Client::delta` is what a caller
-  receives while it waits.
+- **It streams, and every request streams.** Both shapes send the answer token by
+  token, so the page shows it being written, replacing the partial text as each piece
+  arrives rather than logging fragments, and **Stop** ends an answer that is half
+  written instead of waiting for it. The token counts survive streaming because both
+  protocols carry them inside it -- OpenAI in a final `usage` chunk, Anthropic in
+  `message_start` and `message_delta`. A service that ignores the request to stream
+  and answers with one JSON document is read by the ordinary reader on the bytes it
+  kept, so nothing is lost either way. `timewarp::ai::Client::delta` is what a caller
+  receives while it waits; `ai::is_local_endpoint` is no longer about streaming at all
+  -- it is the privacy question, and the note beside the question box answers it.
 - **It does not run what it writes.** Press **Insert**, then **Run** (F9): the
   program reaches the editor first, where you can read it. An answer that executed
   itself would be a language model with a keyboard.
 - **It does not talk to the machine.** No files, no shell, no debugger: it is asked
   about text and answers in text.
+- **It does not see the drawing, the variables or the debugger.** Two machines can ask
+  it about their own program (below), and none of the three sends anything else.
 - **It is not in the standalone player.** `time_warp_player` opens a compiled
   program, and a program that opens a socket to an AI service is not what a
   compiled program is for.
+
+### The two machines
+
+The HB-1 and the CHIP-8 each open the same page in a dialog, because those windows are
+machines of their own rather than the IDE: the HB-1's 🤖 button in its header and
+**🤖 Assistant...** on the CHIP-8's toolbar. What they send is the program the machine
+is holding -- the current ROM's listing, or the text in the CHIP-8's Listing tab -- and
+nothing else: not the screen, not the memory, not the disk. A CHIP-8 binary ROM has no
+text to send, so it sends none.
+
+The dialog is the same widget the IDE shows, so the settings, the conversation limits
+and the privacy note are one implementation and cannot drift. It keeps no conversation
+of its own: closing it forgets what was asked, and the tick that remembers a
+conversation applies here too.

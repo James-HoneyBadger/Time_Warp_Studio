@@ -106,6 +106,10 @@ QString task_key(Task task) {
             return QStringLiteral("translate");
         case Task::Write:
             return QStringLiteral("write");
+        case Task::Diagnose:
+            return QStringLiteral("diagnose");
+        case Task::Continue:
+            return QStringLiteral("continue");
     }
     return QStringLiteral("question");
 }
@@ -124,6 +128,10 @@ QString task_label(Task task) {
             return QStringLiteral("Translate");
         case Task::Write:
             return QStringLiteral("Write");
+        case Task::Diagnose:
+            return QStringLiteral("Diagnose");
+        case Task::Continue:
+            return QStringLiteral("Continue");
     }
     return QStringLiteral("Ask");
 }
@@ -210,6 +218,29 @@ Conversation build_prompt(Task task, const Context& context, const QString& inpu
                                      "or two say how to run it and what to look for.")
                           .arg(language, words);
             break;
+        case Task::Continue:
+            // This one's answer is pasted into the editor by one Tab press, so the
+            // instruction is about the *shape* of the reply as much as its content.
+            instruction =
+                QStringLiteral("Continue the %1 program below from where it stops. "
+                               "Answer with only the lines that come next: no "
+                               "explanation, no code fence, no repetition of what is "
+                               "already there. At most three lines.")
+                    .arg(language);
+            break;
+        case Task::Diagnose:
+            instruction =
+                QStringLiteral("This %1 program was run and reported the message below. "
+                               "Say in plain language what the message means, which "
+                               "statement in the program produced it, and the smallest "
+                               "change that fixes it. Give the changed lines in one "
+                               "fenced block rather than the whole program, and say "
+                               "nothing about faults the run did not report.")
+                    .arg(language);
+            if (!words.isEmpty()) {
+                instruction += QStringLiteral("\n\nWhat the run reported:\n\n%1").arg(words);
+            }
+            break;
     }
 
     // The document rides along only when the task is about it. "Write me a
@@ -217,8 +248,10 @@ Conversation build_prompt(Task task, const Context& context, const QString& inpu
     // the document unticked sends nothing but the question.
     const bool about_the_document = task != Task::Write;
     const QString program = about_the_document ? program_section(context) : QString{};
-    const QString output = about_the_document && task == Task::Fix ? output_section(context)
-                                                                  : QString{};
+    const QString output =
+        about_the_document && (task == Task::Fix || task == Task::Diagnose)
+            ? output_section(context)
+            : QString{};
 
     conversation.messages.append(
         Message{QStringLiteral("user"), joined({instruction, program, output})});

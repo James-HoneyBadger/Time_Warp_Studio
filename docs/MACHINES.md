@@ -67,6 +67,7 @@ would recognise; the right is what is actually running.
 | A settings screen you reach with `CONFIG` | A live-preview dialog that persists under `retroComputer/config` | The ritual is period; the preview and Cancel are courtesy |
 | A 64×32 CHIP-8 screen | A 60 Hz machine with timers, a keypad, a register inspector and a memory view | The chip is small; the tools around it are not |
 | A prompt | A persistent REPL with bindings in eight of the eleven ROMs | You can learn interactively, as the 1980s promised, and keep what you defined |
+| A machine that answers questions about itself | The Studio's assistant, in a dialog opened from the HB-1's header or the CHIP-8's toolbar | The 1982 face stays; the explanation is one button away, and what it is sent is the program the machine is holding -- see [AI.md](AI.md) |
 
 The machines also disagree with history where history was simply wrong. Two
 examples:

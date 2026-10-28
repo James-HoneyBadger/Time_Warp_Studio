@@ -3,6 +3,8 @@
 #include "timewarp/ui/ai_panel.hpp"
 
 #include "timewarp/ai/client.hpp"
+#include "timewarp/ai/history.hpp"
+#include "timewarp/ui/app_paths.hpp"
 
 #include <QCheckBox>
 #include <QClipboard>
@@ -194,6 +196,16 @@ void AiPanel::buildUi() {
     privacy_->setTextInteractionFlags(Qt::TextSelectableByMouse);
     layout->addWidget(privacy_);
 
+    // What this session has spent. Beside the status rather than in it: the status
+    // is about the request in front of you, and this is about the ones behind it.
+    usage_label_ = new QLabel{this};
+    usage_label_->setObjectName(QStringLiteral("aiUsage"));
+    usage_label_->setAccessibleName(tr("Assistant usage this session"));
+    usage_label_->setWordWrap(true);
+    usage_label_->setTextInteractionFlags(Qt::TextSelectableByMouse);
+    usage_label_->hide();
+    layout->addWidget(usage_label_);
+
     status_ = new QLabel{this};
     status_->setAccessibleName(tr("Assistant status"));
     status_->setObjectName(QStringLiteral("aiStatus"));
@@ -225,7 +237,16 @@ void AiPanel::connectClient() {
                     renderTurn(tr("Assistant"), reply.text);
                 }
                 history_.append(Message{QStringLiteral("assistant"), reply.text});
+                while (history_.size() > kHistoryTurns) {
+                    history_.removeFirst();
+                }
+                storeConversation();
                 QString detail = reply.model.isEmpty() ? config_.model : reply.model;
+                ++usage_.requests;
+                usage_.prompt_tokens += reply.prompt_tokens;
+                usage_.completion_tokens += reply.completion_tokens;
+                updateUsageLabel();
+                emit usageChanged();
                 if (reply.prompt_tokens > 0 || reply.completion_tokens > 0) {
                     detail += tr(" · %1 in, %2 out")
                                   .arg(reply.prompt_tokens)
@@ -245,7 +266,16 @@ void AiPanel::connectClient() {
 
 void AiPanel::setConfig(const timewarp::ai::Config& config) {
     const bool was_busy = busy_;
+    const bool was_remembering = config_.remember_conversation;
     config_ = config;
+    if (was_remembering && !config_.remember_conversation) {
+        // Turning the switch off has to mean *delete what is there*, or the file the
+        // user asked not to keep would outlive the setting that asked for it.
+        timewarp::ai::ConversationStore{conversationDirectory()}.clear();
+    }
+    if (config_.remember_conversation && history_.isEmpty()) {
+        restoreConversation();
+    }
     if (was_busy && !configured()) {
         // A request in flight against an endpoint the user has just replaced would
         // answer into a panel describing something else.
@@ -256,15 +286,67 @@ void AiPanel::setConfig(const timewarp::ai::Config& config) {
     context_hint_->setText(config_.send_document
                                ? tr("the current program is sent with each question")
                                : tr("only your words are sent"));
-    privacy_->setText(tr("Questions and the text above go to %1. Nothing is sent "
-                         "until you press a button.")
-                          .arg(configured() ? timewarp::ai::provider_name(config_)
-                                            : tr("the configured service")));
+    if (configured() && timewarp::ai::is_local_endpoint(config_)) {
+        // A server on this machine is the configuration to recommend to a classroom,
+        // so the note says so rather than naming a provider and leaving the reader to
+        // work out where it is.
+        privacy_->setText(tr("Questions and the text above go to %1 on this machine: "
+                             "nothing leaves the computer. Nothing is sent until you "
+                             "press a button.")
+                              .arg(timewarp::ai::provider_name(config_)));
+    } else {
+        privacy_->setText(tr("Questions and the text above go to %1. Nothing is sent "
+                             "until you press a button.")
+                              .arg(configured() ? timewarp::ai::provider_name(config_)
+                                                : tr("the configured service")));
+    }
     updateEnabledState();
 }
 
 void AiPanel::setContextProvider(std::function<timewarp::ai::Context()> provider) {
     context_provider_ = std::move(provider);
+}
+
+void AiPanel::setConversationDirectory(const QString& directory) {
+    conversation_directory_ = directory;
+}
+
+QString AiPanel::conversationDirectory() const {
+    if (!conversation_directory_.isEmpty()) {
+        return conversation_directory_;
+    }
+    return timewarp::ui::dataDirFor(QStringLiteral("assistant"));
+}
+
+void AiPanel::restoreConversation() {
+    const QList<Message> stored = timewarp::ai::ConversationStore{conversationDirectory()}.load();
+    if (stored.isEmpty()) {
+        return;
+    }
+    history_ = stored;
+    for (const Message& turn : stored) {
+        const bool mine = turn.role == QLatin1String("user");
+        QString shown = mine ? turn.content.trimmed() : turn.content.trimmed();
+        const int line_end = shown.indexOf(QLatin1Char('\n'));
+        if (line_end > 0) {
+            shown = shown.left(line_end).trimmed();
+        }
+        if (shown.size() > 200) {
+            shown = shown.left(200) + QStringLiteral("\u2026");
+        }
+        renderTurn(mine ? tr("You") : tr("Assistant"), shown);
+    }
+    status_->setText(tr("\U0001F4BE %1 earlier turn(s) restored").arg(stored.size()));
+}
+
+void AiPanel::storeConversation() const {
+    if (!config_.remember_conversation) {
+        return;
+    }
+    // A failure to write is not worth a message of its own: the conversation still
+    // works for this session, which is the default behaviour anyway.
+    static_cast<void>(
+        timewarp::ai::ConversationStore{conversationDirectory()}.save(history_));
 }
 
 bool AiPanel::configured() const { return timewarp::ai::ready(config_, nullptr); }
@@ -328,6 +410,7 @@ void AiPanel::ask(Task task, const QString& input) {
     while (history_.size() > kHistoryTurns) {
         history_.removeFirst();
     }
+    storeConversation();
 
     question_->clear();
     last_answer_.clear();
@@ -433,6 +516,28 @@ void AiPanel::scrollToEnd() {
 void AiPanel::setBusy(bool busy) {
     busy_ = busy;
     updateEnabledState();
+}
+
+void AiPanel::updateUsageLabel() {
+    if (usage_label_ == nullptr) {
+        return;
+    }
+    if (usage_.requests == 0) {
+        usage_label_->hide();
+        return;
+    }
+    QString text = tr("This session: %1 question(s), %2 tokens in, %3 out")
+                       .arg(usage_.requests)
+                       .arg(usage_.prompt_tokens)
+                       .arg(usage_.completion_tokens);
+    if (usage_.prompt_tokens == 0 && usage_.completion_tokens == 0) {
+        // A service that sends no usage events leaves the counts at zero rather than
+        // guessing, and saying so is better than three zeros.
+        text = tr("This session: %1 question(s), token counts not reported")
+                   .arg(usage_.requests);
+    }
+    usage_label_->setText(text);
+    usage_label_->show();
 }
 
 void AiPanel::updateEnabledState() {

@@ -1,6 +1,6 @@
 # Architecture Guide
 
-## Time Warp Studio v23.3.0 — System Design and Implementation
+## Time Warp Studio v23.4.0 — System Design and Implementation
 
 > **This page describes the shipping product.** It was rewritten alongside the move
 > to C++20 / Qt6. Earlier revisions documented the PySide6 implementation, which has
@@ -545,11 +545,14 @@ Five libraries sit beside the engines, each with one job and a test suite:
   (`/chat/completions`, bearer token) and Anthropic's Messages API (`/messages`,
   `x-api-key`) — which is why "DeepSeek" is a preset holding an endpoint and a model
   rather than a third protocol. The configuration never holds the key it sends:
-  `effective_key()` prefers `TIME_WARP_AI_API_KEY`, a stored key is restricted to its
-  owner on disk, and every message goes through `redact()` before it is shown, so a
-  proxy echoing the request cannot put the key in the status bar. The client is
-  asynchronous and the panel is its only listener; the `time_warp_ai` command waits
-  on an event loop rather than the library growing a second, blocking path.
+  `effective_key()` prefers `TIME_WARP_AI_API_KEY`, a stored key goes to the platform's
+  own store through `keyring.cpp` (Credential Manager, Keychain, `libsecret`) and falls
+  back to the settings file restricted to its owner, and every message goes through
+  `redact()` before it is shown, so a proxy echoing the request cannot put the key in
+  the status bar. `history.cpp` is the opt-in conversation file, and `assistant_dialog`
+  is the same page in a dialog for the two machine windows. The client is asynchronous
+  and every request streams; the `time_warp_ai` command waits on an event loop rather
+  than the library growing a second, blocking path.
 - **`timewarp_api`** is JSON-RPC 2.0 over newline-delimited JSON, with no transport
   of its own. `api::Server` takes an `istream` and an `ostream`, which is how it can
   be driven by a process (`time_warp_api`), a test (string streams) or an embedding

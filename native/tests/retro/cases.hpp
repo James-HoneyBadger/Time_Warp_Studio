@@ -24,6 +24,7 @@ void test_prompt_history_recalls_the_last_line();
 void test_rom_and_program_survive_a_restart();
 void test_main_window_owns_the_machine_action();
 void test_config_button_opens_the_settings_screen();
+void test_the_machine_offers_the_assistant();
 void test_config_prompt_command_opens_the_settings_screen();
 void test_settings_preview_apply_and_persist();
 void test_boot_settings_decide_the_next_power_on();

@@ -230,11 +230,15 @@ if(TIME_WARP_QT_FOUND)
         add_library(timewarp_ai
             src/ai/client.cpp
             src/ai/config.cpp
+            src/ai/history.cpp
+            src/ai/keyring.cpp
             src/ai/prompt.cpp
             # Listed so AUTOMOC scans them: the Q_OBJECT class lives in the header,
             # which is outside this target's source directory.
             include/timewarp/ai/client.hpp
             include/timewarp/ai/config.hpp
+            include/timewarp/ai/history.hpp
+            include/timewarp/ai/keyring.hpp
             include/timewarp/ai/prompt.hpp
         )
         add_library(timewarp::ai ALIAS timewarp_ai)
@@ -246,6 +250,29 @@ if(TIME_WARP_QT_FOUND)
         target_link_libraries(timewarp_ai PUBLIC
             ${TIME_WARP_QT}::Core ${TIME_WARP_QT}::Network)
         set_target_properties(timewarp_ai PROPERTIES AUTOMOC ON)
+
+        # The key's home on this platform, when it has one. Each is optional: a
+        # build with none of them keeps the key in the settings file as it always
+        # did, and `TIME_WARP_AI_KEYRING=file` refuses the system store on any
+        # platform.
+        if(WIN32)
+            target_link_libraries(timewarp_ai PRIVATE advapi32)
+        elseif(APPLE)
+            target_link_libraries(timewarp_ai PRIVATE "-framework Security"
+                "-framework CoreFoundation")
+        else()
+            find_package(PkgConfig QUIET)
+            if(PkgConfig_FOUND)
+                pkg_check_modules(LIBSECRET IMPORTED_TARGET libsecret-1)
+            endif()
+            if(LIBSECRET_FOUND)
+                target_link_libraries(timewarp_ai PRIVATE PkgConfig::LIBSECRET)
+                target_compile_definitions(timewarp_ai PRIVATE TIME_WARP_HAVE_LIBSECRET=1)
+                message(STATUS "libsecret found: the assistant key goes in the system keyring")
+            else()
+                message(STATUS "libsecret not found: the assistant key stays in the settings file")
+            endif()
+        endif()
 
         if(MSVC)
             target_compile_options(timewarp_ai PRIVATE /W4 /permissive-)
@@ -713,8 +740,10 @@ if(TIME_WARP_QT_FOUND)
             target_sources(timewarp_ui PRIVATE
                 src/ui/ai_panel.cpp
                 src/ui/ai_settings.cpp
+                src/ui/assistant_dialog.cpp
                 include/timewarp/ui/ai_panel.hpp
                 include/timewarp/ui/ai_settings.hpp
+                include/timewarp/ui/assistant_dialog.hpp
             )
             target_link_libraries(timewarp_ui PRIVATE timewarp::ai)
             target_compile_definitions(timewarp_ui PUBLIC TIME_WARP_HAVE_AI=1)
@@ -1052,6 +1081,12 @@ if(TIME_WARP_QT_FOUND)
                 tests/ui_layout_turtle_tests.cpp
             )
             target_link_libraries(ui_layout_tests PRIVATE timewarp::ui)
+            # The assistant's page is exercised end to end against a stub endpoint on
+            # loopback, which needs Qt Network in this binary as well as in the
+            # library -- `timewarp::ai` links it privately.
+            if(TARGET timewarp::ai)
+                target_link_libraries(ui_layout_tests PRIVATE ${TIME_WARP_QT}::Network)
+            endif()
             target_include_directories(ui_layout_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/tests)
             # The snippet picker's suite reads the checkout's catalogue. The
             # resolver walks up from the executable, which reaches the checkout

@@ -25,6 +25,37 @@ void acceptSettings(RetroComputerSettingsDialog* dialog) {
     }
 }
 
+#ifdef TIME_WARP_HAVE_AI
+// The machine keeps its own face, so the assistant is a dialog opened from the header
+// rather than a panel column beside a 1982 tube. What it is told is the ROM's own
+// program, which is the question a person looking at the listing has.
+void test_the_machine_offers_the_assistant() {
+    clearMachineSettings();
+    RetroComputerWindow machine;
+    auto* button = machine.findChild<QPushButton*>(QStringLiteral("retroAssistantButton"));
+    TW_CHECK(button != nullptr);
+    if (button == nullptr) {
+        return;
+    }
+    TW_CHECK(machine.assistantDialog() == nullptr);
+    button->click();
+    timewarp::ui::AssistantDialog* dialog = machine.assistantDialog();
+    TW_CHECK(dialog != nullptr);
+    if (dialog == nullptr) {
+        return;
+    }
+    TW_CHECK(dialog->panel() != nullptr);
+    // One dialog, raised rather than a second one: pressing the button twice must
+    // not build a second conversation.
+    button->click();
+    TW_CHECK(machine.assistantDialog() == dialog);
+    // The program it would send is the one in the ROM's editor.
+    machine.loadProgram(QStringLiteral("10 PRINT \"HB-1\"\n"));
+    TW_CHECK_EQ(machine.program(), QStringLiteral("10 PRINT \"HB-1\"\n"));
+    dialog->close();
+}
+#endif
+
 void test_config_button_opens_the_settings_screen() {
     clearMachineSettings();
     RetroComputerWindow machine;

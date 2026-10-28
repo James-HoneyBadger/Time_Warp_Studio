@@ -2,6 +2,75 @@
 
 <!-- history: all -->
 
+## [23.4.0] - 2026-10-28
+
+The assistant stops being a page with four gaps around it: an answer now arrives as it
+is written and can be stopped, a failure in the Console can be asked about, a suggested
+line can appear while typing, a conversation can survive a restart, the key can live
+where the operating system keeps secrets, and the two machines can ask about their own
+programs. Each one is the same page, so the settings, the limits and the privacy note
+did not grow a second copy.
+
+### Added
+
+- **Every endpoint streams, and Stop ends a half-written answer.** Hosted services were
+  asked for the whole answer because the panel reports token counts and one finished
+  string, and neither used to arrive inside a stream. Both do now -- OpenAI in a final
+  `usage` chunk, Anthropic in `message_start` and `message_delta` -- so there is
+  nothing left to trade for them. A service that ignores `stream` and answers with one
+  JSON document is read by the ordinary reader on the bytes it kept, and a reply that
+  was never announced with `readyRead` is drained at the end instead of being lost.
+- **Ask About the Last Error.** `timewarp::ai::Task::Diagnose` asks what a message
+  means, which statement produced it and the smallest change that fixes it. The
+  question is the lines selected in the Console, else the last error the Errors tab
+  holds, else the last line the program printed; the program and the run's output ride
+  along as evidence. **Tools > Ask About the Last Error**, and the command palette.
+- **A suggested next line while typing.** With **Suggest the next line in the editor**
+  ticked, a pause in typing asks for the lines that come next and shows the first one as
+  ghost text after the caret: Tab takes it as one undo step, Esc refuses it, any other
+  key dismisses it. `CodeEditor::setGhostText`/`acceptGhostText` is the testable half;
+  the request belongs to the window, which gives it a client of its own so a suggestion
+  cannot cancel an answer being read. An answer whose text no longer precedes the caret
+  is dropped rather than pasted after the wrong line.
+- **A conversation that can be kept, and a tally of what it cost.** **Keep the
+  conversation between sessions** writes the last twelve turns to
+  `assistant/conversation.json` under the data directory, readable only by its owner,
+  and unticking it deletes the file. A damaged file is forgotten rather than reported.
+  The panel counts the questions and the tokens the service reported for them, shows the
+  tally under the conversation, and the Telemetry HUD carries the same two rows beside
+  the run's own counters.
+- **The key goes where the operating system keeps secrets.** `timewarp::ai::KeyRing`
+  files it in the Windows Credential Manager, the macOS Keychain or the freedesktop
+  secret service when the build found `libsecret`, and falls back to the settings file
+  -- restricted to its owner, as before -- when a store is absent or refuses. Writing
+  is believed only when it succeeded, `TIME_WARP_AI_KEYRING=file|system` pins the
+  choice in both directions, and the settings dialog names the store it would use.
+- **The two machines can ask about their own programs.** The HB-1's 🤖 header button
+  and the CHIP-8's **🤖 Assistant...** open the same page in a dialog
+  (`AssistantDialog`), sending the ROM's listing or the Listing tab's text and nothing
+  else -- not the screen, the memory or the disk. One dialog per window, raised rather
+  than duplicated.
+
+### Changed
+
+- **`is_local_endpoint` is now the privacy question rather than the streaming one.**
+  The note beside the question box says "nothing leaves the computer" for a server on
+  this machine, which is the configuration to recommend to a classroom.
+
+### Notes
+
+- **The tests pin the key store to the settings file.** `TIME_WARP_AI_KEYRING=file` is
+  set by `ai_tests`, so no case can write to the keychain of the person running it, and
+  a case asserts the variable is honoured in both directions.
+- **The assistant's whole path is exercised against a stub endpoint.** `ui_layout_tests`
+  listens on loopback, answers one OpenAI-compatible stream, and asserts what a unit
+  test of the client cannot see: the panel sends, the pieces arrive, the tally is what
+  the service reported, the HUD row appears, and a second panel started on the same
+  directory finds the conversation -- and a third finds nothing once the switch is off.
+- **The editor's two completion paths do not compete.** The local word list is asked
+  first and a suggestion is not shown while its popup is open, so the assistant never
+  interrupts a learner typing `PRINT`.
+
 ## [23.3.0] - 2026-10-28
 
 The tranche that finished the list: the assistant gains a wire method and a stream,

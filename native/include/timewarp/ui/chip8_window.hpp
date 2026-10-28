@@ -14,6 +14,11 @@
 #include "timewarp/ui/chip8_emulator.hpp"
 
 #include <QMainWindow>
+#include <QPointer>
+
+#ifdef TIME_WARP_HAVE_AI
+#include "timewarp/ui/assistant_dialog.hpp"
+#endif
 
 class QAction;
 class QCheckBox;
@@ -54,6 +59,14 @@ public:
 
 public slots:
     void openRomDialog();
+#ifdef TIME_WARP_HAVE_AI
+    /// The assistant, about the listing in this window. A dialog for the same reason
+    /// the HB-1 has one: this window is a machine's own, not the IDE's.
+    void openAssistant();
+    [[nodiscard]] AssistantDialog* assistantDialog() const noexcept {
+        return assistant_.data();
+    }
+#endif
     /// Browses the folder the user pointed the ROM library at, and remembers the
     /// folder after a successful open.
     void openRomLibraryDialog();
@@ -92,6 +105,9 @@ private:
     QTableWidget* registers_ = nullptr;
     QPlainTextEdit* memory_ = nullptr;
     QPlainTextEdit* listing_ = nullptr;
+#ifdef TIME_WARP_HAVE_AI
+    QPointer<AssistantDialog> assistant_;
+#endif
     QLabel* listing_status_ = nullptr;
     QTabWidget* inspector_tabs_ = nullptr;
     QWidget* listing_page_ = nullptr;

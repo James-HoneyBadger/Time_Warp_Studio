@@ -30,4 +30,19 @@ namespace timewarp::core {
     return QString::fromUtf8(text.data(), intLength(text.size()));
 }
 
+/// A run of UTF-16 as a QString, for a platform API that hands one back -- the
+/// Windows Credential Manager's blob, for instance.
+///
+/// Qt 6 spells the element type `char16_t` and Qt 5 spells it `ushort`, and neither
+/// converts to the other, so the cast is here once rather than at each caller.
+[[nodiscard]] inline QString fromUtf16(const void* data, int length) {
+    // The one place the two Qt versions are allowed to differ: this header is the
+    // seam, so the `#if` lives here and not at a call site.
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+    return QString::fromUtf16(static_cast<const char16_t*>(data), length);
+#else
+    return QString::fromUtf16(static_cast<const ushort*>(data), length);
+#endif
+}
+
 }  // namespace timewarp::core

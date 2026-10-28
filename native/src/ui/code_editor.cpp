@@ -171,7 +171,29 @@ CodeEditor::CodeEditor(QWidget* parent) : QPlainTextEdit(parent) {
         highlightCurrentLine();
         emit cursorMoved(currentLine(), currentColumn());
     });
-    connect(this, &QPlainTextEdit::textChanged, this, [this] { scheduleLint(); });
+    connect(this, &QPlainTextEdit::textChanged, this, [this] {
+        scheduleLint();
+        // A suggestion is about the text as it was when it was asked for.
+        clearGhostText();
+    });
+    // A caret that moved by click or arrow key invalidates the suggestion for the
+    // same reason a keystroke does.
+    connect(this, &QPlainTextEdit::cursorPositionChanged, this, [this] {
+        if (!ghost_.isEmpty()) {
+            clearGhostText();
+        }
+    });
+
+    // The pause before asking. Long enough that typing a word does not produce a
+    // request per letter, short enough to arrive while the thought is unfinished.
+    suggest_timer_ = new QTimer{this};
+    suggest_timer_->setSingleShot(true);
+    suggest_timer_->setInterval(700);
+    connect(suggest_timer_, &QTimer::timeout, this, [this] {
+        if (settings_.inline_suggestions && !isReadOnly()) {
+            emit inlineSuggestionWanted(textBeforeCursor());
+        }
+    });
 
     updateGutterWidth(blockCount());
     highlightCurrentLine();
@@ -209,6 +231,12 @@ void CodeEditor::applySettings(const EditorSettings& settings) {
     }
     if (!settings_.completion && completer_ != nullptr) {
         completer_->popup()->hide();
+    }
+    if (!settings_.inline_suggestions) {
+        clearGhostText();
+        if (suggest_timer_ != nullptr) {
+            suggest_timer_->stop();
+        }
     }
 }
 
@@ -873,6 +901,21 @@ void CodeEditor::keyPressEvent(QKeyEvent* event) {
 
     const bool plain = !(event->modifiers() & (Qt::ControlModifier | Qt::AltModifier));
 
+    // A suggestion on screen owns Tab and Esc: the one thing a reader can mean by
+    // pressing them while a complete line is offered is "take it" or "no". Any
+    // other key dismisses it and is handled as typed.
+    if (!ghost_.isEmpty()) {
+        if (event->key() == Qt::Key_Tab && event->modifiers() == Qt::NoModifier &&
+            acceptGhostText()) {
+            return;
+        }
+        if (event->key() == Qt::Key_Escape) {
+            clearGhostText();
+            return;
+        }
+        clearGhostText();
+    }
+
     if (plain && (event->key() == Qt::Key_Return || event->key() == Qt::Key_Enter) &&
         settings_.auto_indent) {
         // Handled here rather than in a `textChanged` hook so the indent lands in
@@ -917,6 +960,86 @@ void CodeEditor::keyPressEvent(QKeyEvent* event) {
         isWordCharacter(event->text().at(0))) {
         showCompletion();
     }
+    // ... and a pause in typing is when a suggested line is worth asking for. The
+    // local word list and the assistant never compete: a suggestion is not shown
+    // while the popup is open.
+    if (settings_.inline_suggestions && !event->text().isEmpty()) {
+        suggest_timer_->start();
+    }
+}
+
+void CodeEditor::setGhostText(const QString& text) {
+    QString suggestion = text;
+    // A model that answers with an explanation has answered the wrong question; a
+    // suggestion is the rest of the line, so that is what is taken.
+    const int newline = suggestion.indexOf(QLatin1Char('\n'));
+    if (newline >= 0) {
+        suggestion = suggestion.left(newline);
+    }
+    suggestion = suggestion.trimmed();
+    if (suggestion.isEmpty() || isReadOnly()) {
+        clearGhostText();
+        return;
+    }
+    // A suggestion for a caret that is not at the end of its line would have to be
+    // inserted in the middle of what is already written, so it is not shown there.
+    if (completionVisible()) {
+        return;
+    }
+    ghost_ = suggestion;
+    viewport()->update();
+}
+
+bool CodeEditor::acceptGhostText() {
+    if (ghost_.isEmpty() || isReadOnly()) {
+        return false;
+    }
+    const QString suggestion = ghost_;
+    ghost_.clear();
+    QTextCursor cursor = textCursor();
+    cursor.beginEditBlock();
+    cursor.insertText(suggestion);
+    cursor.endEditBlock();
+    setTextCursor(cursor);
+    viewport()->update();
+    return true;
+}
+
+void CodeEditor::clearGhostText() {
+    if (ghost_.isEmpty()) {
+        return;
+    }
+    ghost_.clear();
+    viewport()->update();
+}
+
+QString CodeEditor::textBeforeCursor(int limit) const {
+    const QString text = toPlainText();
+    // A document position and an index into `toPlainText` agree: a block separator
+    // is one position and one newline.
+    const int caret = std::min(textCursor().position(), static_cast<int>(text.size()));
+    const QString head = text.left(std::max(0, caret));
+    if (limit > 0 && head.size() > limit) {
+        return head.right(limit);
+    }
+    return head;
+}
+
+void CodeEditor::paintEvent(QPaintEvent* event) {
+    QPlainTextEdit::paintEvent(event);
+    if (ghost_.isEmpty()) {
+        return;
+    }
+    QPainter painter{viewport()};
+    // Dimmed text rather than a second colour role: a suggestion is not the
+    // document, and a theme with a green-on-black palette has no "suggestion"
+    // colour to consult.
+    QColor colour = palette().color(QPalette::Text);
+    colour.setAlpha(120);
+    painter.setPen(colour);
+    painter.setFont(font());
+    const QRect caret = cursorRect();
+    painter.drawText(QPoint{caret.right() + 2, caret.bottom()}, ghost_);
 }
 
 void CodeEditor::indentSelection(bool outdent) {

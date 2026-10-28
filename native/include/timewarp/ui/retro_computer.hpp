@@ -24,6 +24,7 @@
 #include <QHash>
 #include <QList>
 #include <QMainWindow>
+#include <QPointer>
 #include <QStringList>
 
 #include <memory>
@@ -38,6 +39,9 @@
 #include "timewarp/ui/language.hpp"
 #include "timewarp/ui/machine_image.hpp"
 #include "timewarp/ui/machine_voice.hpp"
+#ifdef TIME_WARP_HAVE_AI
+#include "timewarp/ui/assistant_dialog.hpp"
+#endif
 #include "timewarp/ui/retro_settings.hpp"
 
 class QComboBox;
@@ -195,6 +199,16 @@ public:
     bool loadMachine(const QString& path, QString* error = nullptr);
 
     [[nodiscard]] bool isRunning() const noexcept { return runner_ != nullptr; }
+
+#ifdef TIME_WARP_HAVE_AI
+    /// The assistant, about the program in this machine's editor. A dialog rather
+    /// than a page: the machine's window is its own, and a column of panels beside a
+    /// 1982 screen would be a different machine.
+    void openAssistant();
+    [[nodiscard]] AssistantDialog* assistantDialog() const noexcept {
+        return assistant_.data();
+    }
+#endif
 
 signals:
     /// One prompt line finished. Immediate commands finish synchronously; `RUN`
@@ -408,6 +422,12 @@ private:
     /// Graphics that arrive while the screen is in text mode switch it to Split
     /// once. A program that draws should not draw where the user cannot see it.
     bool auto_shown_graphics_ = false;
+#ifdef TIME_WARP_HAVE_AI
+    /// The assistant's dialog, while one is open. A pointer rather than a widget: the
+    /// dialog is opened on demand and deleted when it closes, and the machine keeps no
+    /// conversation of its own.
+    QPointer<AssistantDialog> assistant_;
+#endif
 };
 
 }  // namespace timewarp::ui

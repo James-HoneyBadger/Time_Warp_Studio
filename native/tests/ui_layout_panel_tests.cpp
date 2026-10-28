@@ -4,6 +4,10 @@
 
 #include "ui_layout/support.hpp"
 
+#include <QHostAddress>
+#include <QTcpServer>
+#include <QTcpSocket>
+
 namespace tw::ui_layout {
 
 void test_lesson_panel_contract() {
@@ -732,6 +736,56 @@ void test_the_command_reference_lists_the_table() {
     }
 }
 
+// A one-answer endpoint on loopback. It speaks just enough HTTP to be a real
+// endpoint to Qt's network stack -- headers, then an OpenAI-compatible stream -- so
+// the assistant's whole path (compose, send, read the pieces, tally the tokens) runs
+// with no network and no key. A test that stopped at the button would not notice a
+// panel that sends and then discards what comes back.
+class StubEndpoint final : public QObject {
+public:
+    StubEndpoint() {
+        QObject::connect(&server_, &QTcpServer::newConnection, this, [this] {
+            QTcpSocket* socket = server_.nextPendingConnection();
+            QObject::connect(socket, &QTcpSocket::readyRead, this, [this, socket] {
+                request_ += socket->readAll();
+                const int header_end = request_.indexOf("\r\n\r\n");
+                if (header_end < 0) {
+                    return;
+                }
+                int body = 0;
+                for (const QByteArray& line : request_.left(header_end).split('\n')) {
+                    const QByteArray trimmed = line.trimmed();
+                    if (trimmed.toLower().startsWith("content-length:")) {
+                        body = trimmed.mid(15).trimmed().toInt();
+                    }
+                }
+                if (request_.size() - (header_end + 4) < body) {
+                    return;  // the request is not all here yet
+                }
+                socket->write(
+                    "HTTP/1.1 200 OK\r\nContent-Type: text/event-stream\r\n"
+                    "Cache-Control: no-cache\r\nConnection: close\r\n\r\n"
+                    "data: {\"model\":\"stub-1\",\"choices\":[{\"delta\":{\"content\":\"It \"}}]}\n\n"
+                    "data: {\"choices\":[{\"delta\":{\"content\":\"prints.\"}}]}\n\n"
+                    "data: {\"choices\":[],\"usage\":{\"prompt_tokens\":5,"
+                    "\"completion_tokens\":2}}\n\n"
+                    "data: [DONE]\n\n");
+                socket->flush();
+                socket->disconnectFromHost();
+            });
+        });
+    }
+
+    [[nodiscard]] bool listen() { return server_.listen(QHostAddress::LocalHost, 0); }
+    [[nodiscard]] QString baseUrl() const {
+        return QStringLiteral("http://127.0.0.1:%1/v1").arg(server_.serverPort());
+    }
+
+private:
+    QTcpServer server_;
+    QByteArray request_;
+};
+
 void test_assistant_panel_contract() {
     announce("assistant panel");
     MainWindow window;
@@ -835,8 +889,99 @@ void test_assistant_panel_contract() {
         TW_CHECK_EQ(assistant->shortcut(),
                     timewarp::core::keySequence(Qt::CTRL | Qt::SHIFT, Qt::Key_A));
     }
-    for (const char* name : {"aiExplainAction", "aiFixAction", "aiSettingsAction"}) {
+    for (const char* name :
+         {"aiExplainAction", "aiFixAction", "aiDiagnoseAction", "aiSettingsAction"}) {
         TW_CHECK(window.findChild<QAction*>(QString::fromLatin1(name)) != nullptr);
+    }
+
+    // A server on this machine is the configuration to recommend to a classroom, so
+    // the note beside the question box says that nothing leaves the computer rather
+    // than naming a provider and leaving the reader to work out where it is.
+    timewarp::ai::Config on_this_machine = config;
+    on_this_machine.base_url = QStringLiteral("http://127.0.0.1:11434/v1");
+    panel->setConfig(on_this_machine);
+    if (note != nullptr) {
+        TW_CHECK(note->text().contains(QStringLiteral("nothing leaves the computer")));
+    }
+    panel->setConfig(config);
+
+    // "Ask about the last error" starts from the run rather than the program: the
+    // newest line the Console holds becomes the question.
+    auto* console = window.findChild<QPlainTextEdit*>(QStringLiteral("consoleOutput"));
+    TW_CHECK(console != nullptr);
+    auto* diagnose = window.findChild<QAction*>(QStringLiteral("aiDiagnoseAction"));
+    TW_CHECK(diagnose != nullptr);
+    if (console != nullptr && diagnose != nullptr) {
+        console->setPlainText(QStringLiteral(
+            "some output\n\u274C Error at line 20: expected a number"));
+        panel->setConfig(unreachable);
+        const int before = panel->historySize();
+        diagnose->trigger();
+        TW_CHECK_EQ(panel->historySize(), before + 1);
+        TW_CHECK(spin_until([panel] { return !panel->busy(); }, 8000));
+        if (panel->transcript() != nullptr) {
+            TW_CHECK(panel->transcript()->toPlainText().contains(QStringLiteral("Diagnose")));
+            TW_CHECK(panel->transcript()
+                         ->toPlainText()
+                         .contains(QStringLiteral("expected a number")));
+        }
+        console->clear();
+        panel->setConfig(config);
+    }
+
+    // A conversation that survives a restart, and the tokens it cost: one endpoint
+    // on loopback answers both questions with no network and no key.
+    StubEndpoint endpoint;
+    const bool listening = endpoint.listen();
+    TW_CHECK(listening);
+    QTemporaryDir conversation_dir;
+    TW_CHECK(conversation_dir.isValid());
+    if (listening && conversation_dir.isValid()) {
+        timewarp::ai::Config live = config;
+        live.base_url = endpoint.baseUrl();
+        live.timeout_seconds = 10;
+        live.remember_conversation = true;
+        panel->setConversationDirectory(conversation_dir.path());
+        panel->clearConversation();
+        panel->setConfig(live);
+        panel->ask(timewarp::ai::Task::Explain);
+        TW_CHECK(spin_until([panel] { return !panel->busy(); }, 10000));
+
+        // The answer came through the stream, and the counts it carried are the
+        // session's tally rather than a number the panel invented.
+        TW_CHECK_EQ(panel->sessionUsage().requests, 1);
+        TW_CHECK_EQ(panel->sessionUsage().prompt_tokens, 5);
+        TW_CHECK_EQ(panel->sessionUsage().completion_tokens, 2);
+        auto* usage = panel->findChild<QLabel*>(QStringLiteral("aiUsage"));
+        TW_CHECK(usage != nullptr);
+        if (usage != nullptr) {
+            TW_CHECK(!usage->isHidden());
+            TW_CHECK(usage->text().contains(QStringLiteral("5")));
+        }
+        // The HUD shows the same tally beside the run's own counters.
+        TW_CHECK(window.telemetryPanel() != nullptr);
+        if (window.telemetryPanel() != nullptr) {
+            static_cast<void>(window.showPanel(QStringLiteral("telemetry")));
+            TW_CHECK_EQ(window.telemetryPanel()->valueOf(QStringLiteral("Assistant asks")),
+                        QStringLiteral("1"));
+        }
+
+        // Two turns were kept, and a window opened later starts with them: the
+        // question was worth asking again after a restart.
+        AiPanel later;
+        later.setConversationDirectory(conversation_dir.path());
+        timewarp::ai::Config remembering = live;
+        later.setConfig(remembering);
+        TW_CHECK_EQ(later.historySize(), 2);
+
+        // Turning the switch off deletes what was kept. A setting that says "do not
+        // keep this" and leaves the file behind is worse than not having it.
+        remembering.remember_conversation = false;
+        later.setConfig(remembering);
+        AiPanel third;
+        third.setConversationDirectory(conversation_dir.path());
+        third.setConfig(live);
+        TW_CHECK_EQ(third.historySize(), 0);
     }
 
     // The presets are what makes DeepSeek -- and Ollama, and LM Studio -- an option
@@ -857,6 +1002,24 @@ void test_assistant_panel_contract() {
     // The key is a password until the user says otherwise: a shoulder is cheaper
     // than a screenshot.
     TW_CHECK_EQ(dialog.keyField()->echoMode(), QLineEdit::Password);
+    // The two switches that change what the assistant does without being asked: one
+    // writes the conversation to a file, the other sends while you type. Both are in
+    // the dialog and both are off unless ticked.
+    auto* remember = dialog.findChild<QCheckBox*>(QStringLiteral("aiRememberBox"));
+    auto* inline_box = dialog.findChild<QCheckBox*>(QStringLiteral("aiInlineBox"));
+    TW_CHECK(remember != nullptr);
+    TW_CHECK(inline_box != nullptr);
+    if (remember != nullptr && inline_box != nullptr) {
+        TW_CHECK(!timewarp::ai::Config{}.remember_conversation);
+        TW_CHECK(!dialog.config().remember_conversation);
+        TW_CHECK(!dialog.config().inline_suggestions);
+        remember->setChecked(true);
+        inline_box->setChecked(true);
+        TW_CHECK(dialog.config().remember_conversation);
+        TW_CHECK(dialog.config().inline_suggestions);
+    }
+    // Where a stored key would go is named rather than implied.
+    TW_CHECK(!dialog.keyField()->placeholderText().isEmpty());
     TW_CHECK(dialog.testStatus() != nullptr);
 #else
     // A Qt with no Network has no assistant at all, rather than a page that can

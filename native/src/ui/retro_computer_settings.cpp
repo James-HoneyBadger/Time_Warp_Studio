@@ -34,6 +34,10 @@
 #include "timewarp/canvas/command_queue.hpp"
 #include "timewarp/canvas/qt_bridge.hpp"
 #include "timewarp/core/qt_gui_compat.hpp"
+#ifdef TIME_WARP_HAVE_AI
+#include "timewarp/ai/prompt.hpp"
+#include "timewarp/ui/assistant_dialog.hpp"
+#endif
 #include "timewarp/ui/code_editor.hpp"
 #include "timewarp/ui/native_runner.hpp"
 #include "timewarp/ui/panels.hpp"
@@ -173,6 +177,31 @@ void RetroComputerWindow::applyHistoryDepth() {
     }
     history_index_ = std::min(history_index_, static_cast<int>(history_.size()));
 }
+
+#ifdef TIME_WARP_HAVE_AI
+void RetroComputerWindow::openAssistant() {
+    if (!assistant_.isNull()) {
+        assistant_->raise();
+        assistant_->activateWindow();
+        return;
+    }
+    // What the assistant is told: the program this ROM is holding, and which ROM
+    // that is. The machine's own output is on its tube and is not sent -- a question
+    // about the machine's program is not a question about its screen.
+    auto* dialog = new AssistantDialog{
+        [this] {
+            timewarp::ai::Context context;
+            context.language = displayName(language_);
+            context.file_name = tr("HB-1 %1 program").arg(displayName(language_));
+            context.source = program();
+            return context;
+        },
+        this};
+    assistant_ = dialog;
+    dialog->setAttribute(Qt::WA_DeleteOnClose);
+    dialog->show();
+}
+#endif
 
 RetroComputerSettingsDialog* RetroComputerWindow::openSettings() {
     settings_before_dialog_ = settings_;

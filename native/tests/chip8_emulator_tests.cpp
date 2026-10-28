@@ -266,6 +266,31 @@ void test_resuming_from_the_past_forgets_the_future() {
     TW_CHECK_EQ(emulator.rewindPosition(), -1);
 }
 
+#ifdef TIME_WARP_HAVE_AI
+// The CHIP-8 window is a machine's own, so the assistant is a toolbar action opening
+// a dialog: the listing it explains is the one beside it.
+void test_the_window_offers_the_assistant() {
+    announce("window: the assistant");
+    Chip8Window window;
+    auto* action = window.findChild<QAction*>(QStringLiteral("chip8AssistantAction"));
+    TW_CHECK(action != nullptr);
+    if (action == nullptr) {
+        return;
+    }
+    TW_CHECK(window.assistantDialog() == nullptr);
+    action->trigger();
+    timewarp::ui::AssistantDialog* dialog = window.assistantDialog();
+    TW_CHECK(dialog != nullptr);
+    if (dialog == nullptr) {
+        return;
+    }
+    TW_CHECK(dialog->panel() != nullptr);
+    action->trigger();
+    TW_CHECK(window.assistantDialog() == dialog);
+    dialog->close();
+}
+#endif
+
 void test_the_window_offers_the_rewind_strip() {
     announce("window: the rewind strip");
     Chip8Window window;
@@ -488,6 +513,7 @@ int main(int argc, char** argv) {
     test_ld_key_waits_for_a_press();
     test_rewind_keeps_history_and_goes_back();
     test_resuming_from_the_past_forgets_the_future();
+    test_the_window_offers_the_assistant();
     test_the_window_offers_the_rewind_strip();
     test_the_window_offers_the_rom_library();
     test_a_hires_program_reaches_the_screen();

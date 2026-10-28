@@ -39,6 +39,12 @@ enum class Task {
     Translate,
     /// Write a new program from a description.
     Write,
+    /// Explain one error the program reported, in the user's words carrying the
+    /// error. Reached from the Console, where the failure is in front of the reader.
+    Diagnose,
+    /// The next lines of a program being typed. Never a button: the editor asks when
+    /// a pause in typing says a suggestion would be useful.
+    Continue,
 };
 
 /// One turn of a conversation, in the form every provider takes.

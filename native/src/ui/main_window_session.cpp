@@ -694,6 +694,12 @@ void MainWindow::adoptEditor(CodeEditor* editor) {
         QSettings breakpoint_settings;
         breakpoints::save(breakpoint_settings, pathOf(editor), editor->breakpoints());
     });
+#ifdef TIME_WARP_HAVE_AI
+    // The assistant's suggested line: the editor says a pause happened, the window
+    // owns the endpoint.
+    connect(editor, &CodeEditor::inlineSuggestionWanted, this,
+            [this, editor](const QString& prefix) { requestInlineSuggestion(editor, prefix); });
+#endif
     // The outline follows the text, on the same debounce as the checker.
     connect(editor->document(), &QTextDocument::contentsChanged, this, [this, editor] {
         if (editor == currentEditor() && outline_timer_ != nullptr) {

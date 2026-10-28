@@ -2,6 +2,8 @@
 
 #include "timewarp/ai/config.hpp"
 
+#include "timewarp/ai/keyring.hpp"
+
 #include <QFile>
 #include <QFileDevice>
 #include <QSettings>
@@ -225,6 +227,15 @@ Config load() {
     config.base_url = settings.value(QLatin1String{kSettingBaseUrl}).toString().trimmed();
     config.model = settings.value(QLatin1String{kSettingModel}).toString().trimmed();
     config.api_key = settings.value(QLatin1String{kSettingApiKey}).toString().trimmed();
+    if (available_keyring() == KeyRing::System) {
+        // The system store is where a key saved on a platform that has one actually
+        // lives; the file is the fallback for a machine that has none, or for one
+        // whose store refused it.
+        const QString kept = keyring_read(QString::fromLatin1(kKeyRingAccount));
+        if (!kept.isEmpty()) {
+            config.api_key = kept;
+        }
+    }
     config.store_key = settings.value(QLatin1String{kSettingStoreKey}, true).toBool();
     config.max_tokens = clamped_tokens(settings.value(QLatin1String{kSettingMaxTokens}, 1024).toInt());
     config.timeout_seconds =
@@ -232,6 +243,10 @@ Config load() {
     config.temperature = clamped_temperature(
         settings.value(QLatin1String{kSettingTemperature}, 0.7).toDouble());
     config.send_document = settings.value(QLatin1String{kSettingSendDocument}, true).toBool();
+    config.remember_conversation =
+        settings.value(QLatin1String{kSettingRememberConversation}, false).toBool();
+    config.inline_suggestions =
+        settings.value(QLatin1String{kSettingInlineSuggestions}, false).toBool();
 
     // The environment's word is final. It is how a session supplies a key it does
     // not want written down, and how a test configures an endpoint without
@@ -266,21 +281,38 @@ void save(const Config& config) {
     settings.setValue(QLatin1String{kSettingTemperature},
                       clamped_temperature(config.temperature));
     settings.setValue(QLatin1String{kSettingSendDocument}, config.send_document);
-    if (config.store_key && !config.api_key.trimmed().isEmpty()) {
-        settings.setValue(QLatin1String{kSettingApiKey}, config.api_key.trimmed());
+    settings.setValue(QLatin1String{kSettingRememberConversation},
+                      config.remember_conversation);
+    settings.setValue(QLatin1String{kSettingInlineSuggestions}, config.inline_suggestions);
+    const QString key = config.api_key.trimmed();
+    const bool keeping = config.store_key && !key.isEmpty();
+    bool in_the_system_store = false;
+    if (available_keyring() == KeyRing::System) {
+        if (keeping) {
+            in_the_system_store =
+                keyring_write(QString::fromLatin1(kKeyRingAccount), key);
+        } else {
+            // "Do not keep the key" has to mean *remove the one that is there*, or
+            // unticking the box would leave the secret where the dialogue says it
+            // is not.
+            keyring_erase(QString::fromLatin1(kKeyRingAccount));
+        }
+    }
+    if (keeping && !in_the_system_store) {
+        settings.setValue(QLatin1String{kSettingApiKey}, key);
     } else {
-        // "Do not keep the key" has to mean *remove the one that is there*, or
-        // unticking the box would leave the secret on disk and the dialogue
-        // would be lying about it.
+        // Either the platform store has it, or it is not being kept: a copy in the
+        // settings file would be the secret this dialog promised to take away.
         settings.remove(QLatin1String{kSettingApiKey});
     }
     settings.sync();
-    if (config.store_key && !config.api_key.trimmed().isEmpty()) {
+    if (keeping && !in_the_system_store) {
         tighten_settings_file();
     }
 }
 
 void clear_stored_key() {
+    keyring_erase(QString::fromLatin1(kKeyRingAccount));
     QSettings settings;
     settings.remove(QLatin1String{kSettingApiKey});
     settings.sync();

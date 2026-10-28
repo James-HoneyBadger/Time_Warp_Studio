@@ -168,6 +168,30 @@ void Chip8Window::buildUi() {
     statusBar()->addPermanentWidget(detail_label_);
 }
 
+#ifdef TIME_WARP_HAVE_AI
+void Chip8Window::openAssistant() {
+    if (!assistant_.isNull()) {
+        assistant_->raise();
+        assistant_->activateWindow();
+        return;
+    }
+    // What it is told: the listing, which is the program a reader can ask about. A
+    // binary ROM has no text to send, so it sends none rather than a page of hex.
+    auto* dialog = new AssistantDialog{
+        [this] {
+            timewarp::ai::Context context;
+            context.language = QStringLiteral("CHIP-8");
+            context.file_name = tr("CHIP-8 listing");
+            context.source = listing_ != nullptr ? listing_->toPlainText() : QString{};
+            return context;
+        },
+        this};
+    assistant_ = dialog;
+    dialog->setAttribute(Qt::WA_DeleteOnClose);
+    dialog->show();
+}
+#endif
+
 void Chip8Window::buildToolbar() {
     auto* toolbar = addToolBar(tr("CHIP-8"));
     toolbar->setObjectName(QStringLiteral("chip8Toolbar"));
@@ -198,6 +222,14 @@ void Chip8Window::buildToolbar() {
     assemble_action_->setShortcut(timewarp::core::keySequence(Qt::CTRL, Qt::Key_Return));
 
     toolbar->addSeparator();
+#ifdef TIME_WARP_HAVE_AI
+    // Beside the assembler's own actions: it explains the listing that is about to be
+    // assembled, which is the question a learner has at the moment it fails.
+    QAction* assistant = toolbar->addAction(tr("\U0001F916 Assistant..."), this,
+                                            &Chip8Window::openAssistant);
+    assistant->setObjectName(QStringLiteral("chip8AssistantAction"));
+    toolbar->addSeparator();
+#endif
     toolbar->addAction(tr("&Open ROM..."), this, &Chip8Window::openRomDialog);
     QAction* library = toolbar->addAction(tr("ROM &Library..."), this,
                                           &Chip8Window::openRomLibraryDialog);

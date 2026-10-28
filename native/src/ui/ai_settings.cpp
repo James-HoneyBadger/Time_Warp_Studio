@@ -3,6 +3,7 @@
 #include "timewarp/ui/ai_settings.hpp"
 
 #include "timewarp/ai/client.hpp"
+#include "timewarp/ai/keyring.hpp"
 
 #include <QCheckBox>
 #include <QComboBox>
@@ -162,6 +163,20 @@ void AiSettingsDialog::buildUi() {
     send_document_ = new QCheckBox{tr("Send the current program by default"), limits};
     send_document_->setObjectName(QStringLiteral("aiSendDocumentDefaultBox"));
     limits_form->addRow(QString{}, send_document_);
+
+    remember_ = new QCheckBox{tr("Keep the conversation between sessions"), limits};
+    remember_->setObjectName(QStringLiteral("aiRememberBox"));
+    remember_->setToolTip(tr("Off, the conversation is forgotten when the application "
+                             "closes. On, it is kept in the data directory as a file "
+                             "only you can read, and unticking this deletes it."));
+    limits_form->addRow(QString{}, remember_);
+
+    inline_ = new QCheckBox{tr("Suggest the next line in the editor"), limits};
+    inline_->setObjectName(QStringLiteral("aiInlineBox"));
+    inline_->setToolTip(tr("Off, nothing is sent while you type. On, a pause in typing "
+                           "asks the endpoint for the next few lines and shows them as "
+                           "ghost text: Tab accepts, Esc dismisses."));
+    limits_form->addRow(QString{}, inline_);
     layout->addWidget(limits);
 
     auto* environment = new QLabel{
@@ -295,12 +310,19 @@ void AiSettingsDialog::fillFrom(const Config& config) {
     model_->setText(config.model);
     key_->setText(config.api_key);
     store_key_->setChecked(config.store_key);
-    key_->setPlaceholderText(config.store_key ? tr("stored in your settings file")
-                                              : tr("used for this session, not saved"));
+    // Where the key would go, named: a person deciding whether to paste a secret wants
+    // to know which store it lands in, and the answer differs by platform.
+    key_->setPlaceholderText(
+        config.store_key
+            ? tr("stored in %1").arg(
+                  timewarp::ai::keyring_name(timewarp::ai::available_keyring()))
+            : tr("used for this session, not saved"));
     max_tokens_->setValue(config.max_tokens);
     temperature_->setValue(config.temperature);
     timeout_->setValue(config.timeout_seconds);
     send_document_->setChecked(config.send_document);
+    remember_->setChecked(config.remember_conversation);
+    inline_->setChecked(config.inline_suggestions);
 
     const QString name = timewarp::ai::provider_name(config);
     int index = preset_->findData(name);
@@ -341,6 +363,8 @@ Config AiSettingsDialog::collected() const {
     config.temperature = temperature_->value();
     config.timeout_seconds = timeout_->value();
     config.send_document = send_document_->isChecked();
+    config.remember_conversation = remember_->isChecked();
+    config.inline_suggestions = inline_->isChecked();
     return config;
 }
 

@@ -565,8 +565,20 @@ It is off until you set it up, and nothing is sent until you press a button.
   then runs it. Nothing the assistant writes runs until you have read it.
 - **Send the program** is ticked by default; untick it to send only your words. A
   selection wins over the whole document.
-- The key may come from `TIME_WARP_AI_API_KEY` instead of the settings file, and
-  **Keep the key on this machine** unticked leaves it out of the file entirely.
+- **Tools > Ask About the Last Error** asks about what the run said — the lines
+  selected in the Console, else the last error the Errors tab holds — with the program
+  and the output as evidence.
+- **Suggest the next line** (AI Settings) shows a suggested line while you type: Tab
+  takes it, Esc refuses it. Off unless you tick it, because it sends while you type.
+- **Keep the conversation between sessions** (AI Settings) keeps the last twelve turns
+  in the data directory and deletes them when unticked; off, a conversation dies with
+  the window.
+- The key may come from `TIME_WARP_AI_API_KEY` instead of a store, and **Keep the key
+  on this machine** unticked leaves it nowhere at all. A stored key goes in the
+  Windows Credential Manager, the macOS Keychain or the system keyring where the
+  build found one, and in the settings file otherwise.
+- Both machines have the same assistant in a dialog: the HB-1's 🤖 button and the
+  CHIP-8's **🤖 Assistant…** ask about the program that machine is holding.
 
 `./native/build/time_warp_ai` is the same assistant from a shell — `check`,
 `explain`, `fix`, `write` and the rest. [AI.md](AI.md) is the manual: what is sent,

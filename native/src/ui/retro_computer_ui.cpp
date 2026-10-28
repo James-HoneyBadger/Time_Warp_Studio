@@ -196,6 +196,16 @@ void RetroComputerWindow::buildHeader(QVBoxLayout* column) {
                                   "looks (Ctrl+,)"));
     connect(config_button_, &QPushButton::clicked, this, [this] { openSettings(); });
     row->addWidget(config_button_);
+#ifdef TIME_WARP_HAVE_AI
+    // The machine keeps its 1982 face: the assistant is a dialog opened from a
+    // button, not a column of panels beside the tube.
+    auto* assistant = new QPushButton{QStringLiteral("\U0001F916"), header};
+    assistant->setObjectName(QStringLiteral("retroAssistantButton"));
+    assistant->setToolTip(tr("Ask the assistant about the program in this machine"));
+    assistant->setAccessibleName(tr("Assistant"));
+    connect(assistant, &QPushButton::clicked, this, [this] { openAssistant(); });
+    row->addWidget(assistant);
+#endif
     row->addWidget(lamp_label_);
 
     column->addWidget(header);

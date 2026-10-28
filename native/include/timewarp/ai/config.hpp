@@ -60,6 +60,8 @@ inline constexpr const char* kSettingMaxTokens = "ai/maxTokens";
 inline constexpr const char* kSettingTimeoutSeconds = "ai/timeoutSeconds";
 inline constexpr const char* kSettingTemperature = "ai/temperature";
 inline constexpr const char* kSettingSendDocument = "ai/sendDocument";
+inline constexpr const char* kSettingRememberConversation = "ai/rememberConversation";
+inline constexpr const char* kSettingInlineSuggestions = "ai/inlineSuggestions";
 
 /// The environment variables that override the stored configuration, documented in
 /// `docs/AI.md`. The key's is the one that matters: an exported key is never
@@ -95,6 +97,14 @@ struct Config {
     /// The panel has its own tick for a single request; this is the default that
     /// tick starts from.
     bool send_document = true;
+    /// Whether the conversation survives a restart. Off by default: what the
+    /// assistant was asked contains the program, and a file nobody asked for is a
+    /// file nobody looked for. Turning it off deletes the stored conversation.
+    bool remember_conversation = false;
+    /// Whether the editor shows a suggested next line from the configured endpoint.
+    /// Off by default, and deliberately not the same switch as `enabled`: a chat
+    /// panel is asked things, a ghost line arrives while you type.
+    bool inline_suggestions = false;
 };
 
 /// `openai` / `anthropic`: the settings value, which is also what
@@ -146,10 +156,10 @@ struct Preset {
 /// The key in `TIME_WARP_AI_API_KEY`, or empty.
 [[nodiscard]] QString environment_key();
 
-/// Whether the endpoint is on this machine. A local server -- Ollama, LM Studio,
-/// llama.cpp, vLLM on a laptop -- streams its answer token by token, and doing so
-/// costs nothing to reach; a hosted service is asked for whole answers, because the
-/// panel's token counts and a single finished string are what it reports.
+/// Whether the endpoint is on this machine. Both shapes stream, so this is no
+/// longer the streaming question: it is the privacy one, and the panel says which
+/// answer applies beside the question box. A local server -- Ollama, LM Studio,
+/// llama.cpp, vLLM on a laptop -- means nothing leaves the computer.
 [[nodiscard]] bool is_local_endpoint(const Config& config);
 
 /// The key a request should use: the environment's when it is set, else the stored

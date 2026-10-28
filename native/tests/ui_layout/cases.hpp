@@ -56,6 +56,8 @@ void test_menu_structure();
 void test_print_entries_follow_the_component();
 void test_help_menu_opens_the_documentation();
 void test_editor_minimap_and_whitespace();
+void test_a_suggested_line_can_be_taken_or_refused();
+void test_the_typing_pause_asks_for_the_text_before_the_caret();
 void test_find_in_files_offers_replace();
 void test_version_history_lists_snapshots();
 void test_version_history_compares_with_the_open_document();

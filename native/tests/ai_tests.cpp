@@ -18,7 +18,9 @@
 
 #include <QByteArray>
 #include <QCoreApplication>
+#include <QDir>
 #include <QEventLoop>
+#include <QFile>
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonObject>
@@ -38,6 +40,8 @@
 #include "check.hpp"
 #include "timewarp/ai/client.hpp"
 #include "timewarp/ai/config.hpp"
+#include "timewarp/ai/history.hpp"
+#include "timewarp/ai/keyring.hpp"
 #include "timewarp/ai/prompt.hpp"
 #include "timewarp/lang/registry.hpp"
 
@@ -331,6 +335,8 @@ void test_saved_configuration_round_trip() {
     config.timeout_seconds = 30;
     config.temperature = 0.2;
     config.send_document = false;
+    config.remember_conversation = true;
+    config.inline_suggestions = true;
     timewarp::ai::save(config);
 
     const Config loaded = timewarp::ai::load();
@@ -342,6 +348,12 @@ void test_saved_configuration_round_trip() {
     TW_CHECK_EQ(loaded.timeout_seconds, 30);
     TW_CHECK(loaded.temperature > 0.19 && loaded.temperature < 0.21);
     TW_CHECK(!loaded.send_document);
+    // Both are off unless asked for: one writes the program to a file, the other
+    // sends while you type.
+    TW_CHECK(loaded.remember_conversation);
+    TW_CHECK(loaded.inline_suggestions);
+    TW_CHECK(!Config{}.remember_conversation);
+    TW_CHECK(!Config{}.inline_suggestions);
 
     // "Do not keep the key" means remove the one that is there: unticking the box
     // must not leave the secret on disk with the dialogue saying otherwise.
@@ -369,6 +381,110 @@ void test_saved_configuration_round_trip() {
     TW_CHECK(clamped.temperature <= 2.0);
     QSettings{}.clear();
     QSettings{}.sync();
+}
+
+// The conversation is a session unless the user says otherwise. When they do say
+// otherwise it is one file, capped, restricted to its owner, and forgetfulness
+// rather than an error when it is damaged -- a learner does not need a message about
+// a JSON file they never opened.
+void test_the_conversation_store() {
+    announce("history: the stored conversation");
+    QTemporaryDir directory;
+    TW_CHECK(directory.isValid());
+    const timewarp::ai::ConversationStore store{directory.path()};
+    TW_CHECK_EQ(store.path(),
+                QDir{directory.path()}.filePath(QStringLiteral("conversation.json")));
+    TW_CHECK(store.load().isEmpty());
+
+    QList<Message> turns;
+    turns.append(Message{QStringLiteral("user"), QStringLiteral("10 PRINT \"HI\"")});
+    turns.append(Message{QStringLiteral("assistant"), QStringLiteral("It prints HI.")});
+    TW_CHECK(store.save(turns));
+    const QList<Message> loaded = store.load();
+    TW_CHECK_EQ(loaded.size(), 2);
+    if (loaded.size() == 2) {
+        TW_CHECK_EQ(loaded.at(0).role, QStringLiteral("user"));
+        TW_CHECK_EQ(loaded.at(0).content, QStringLiteral("10 PRINT \"HI\""));
+        TW_CHECK_EQ(loaded.at(1).role, QStringLiteral("assistant"));
+    }
+    // The program text is the user's: nobody else on the machine reads it.
+    const QFile::Permissions permissions = QFile::permissions(store.path());
+    TW_CHECK(permissions.testFlag(QFile::ReadOwner));
+    TW_CHECK(!permissions.testFlag(QFile::ReadGroup));
+    TW_CHECK(!permissions.testFlag(QFile::ReadOther));
+
+    // A long session keeps its newest turns and no more: twelve, the same number the
+    // panel sends, so the file never holds a program nothing would use.
+    QList<Message> many;
+    for (int index = 0; index < 40; ++index) {
+        many.append(Message{index % 2 == 0 ? QStringLiteral("user")
+                                           : QStringLiteral("assistant"),
+                            QStringLiteral("turn %1").arg(index)});
+    }
+    TW_CHECK(store.save(many));
+    const QList<Message> capped = store.load();
+    TW_CHECK_EQ(capped.size(), timewarp::ai::kStoredTurns);
+    TW_CHECK_EQ(capped.last().content, QStringLiteral("turn 39"));
+
+    // A file that is not what this writes is forgotten, not reported.
+    QFile damaged{store.path()};
+    TW_CHECK(damaged.open(QIODevice::WriteOnly));
+    damaged.write("this is not json");
+    damaged.close();
+    TW_CHECK(store.load().isEmpty());
+    // ... and a role this program would never send does not get read back either.
+    TW_CHECK(damaged.open(QIODevice::WriteOnly));
+    damaged.write(R"({"turns":[{"role":"system","content":"x"},)"
+                  R"({"role":"user","content":"kept"}]})");
+    damaged.close();
+    const QList<Message> filtered = store.load();
+    TW_CHECK_EQ(filtered.size(), 1);
+    if (!filtered.isEmpty()) {
+        TW_CHECK_EQ(filtered.first().content, QStringLiteral("kept"));
+    }
+
+    store.clear();
+    TW_CHECK(store.load().isEmpty());
+    // Clearing twice is not an error: the panel does it whenever the switch is
+    // turned off, whether or not anything was kept.
+    store.clear();
+}
+
+// Where a key lives, and the switch that decides it. Without a platform store this
+// build keeps the key in the file, which is what every other case here assumes; the
+// variable is honoured in both directions so a user can refuse the system store (and
+// a test can refuse it without asking).
+void test_the_keyring_is_a_seam() {
+    announce("config: where the key lives");
+    TW_CHECK_EQ(timewarp::ai::keyring_name(timewarp::ai::KeyRing::File),
+                QStringLiteral("the settings file, restricted to its owner"));
+    TW_CHECK(!timewarp::ai::keyring_name(timewarp::ai::KeyRing::System).isEmpty());
+
+    qputenv("TIME_WARP_AI_KEYRING", "system");
+    const timewarp::ai::KeyRing asked = timewarp::ai::available_keyring();
+    // A build without a store answers File even when asked for the system one: a
+    // configuration that cannot be honoured is reported, not pretended.
+    TW_CHECK(asked == timewarp::ai::KeyRing::System ||
+             asked == timewarp::ai::KeyRing::File);
+    qputenv("TIME_WARP_AI_KEYRING", "file");
+    TW_CHECK(timewarp::ai::available_keyring() == timewarp::ai::KeyRing::File);
+    // A file-backed build reads nothing from a store it does not have, and says so
+    // rather than answering with a secret from somewhere else.
+    TW_CHECK(timewarp::ai::keyring_read(QStringLiteral("assistant")).isEmpty());
+
+    // Asked for the system store, a key still round-trips: either the store took it
+    // or the file did, and no caller can tell the difference -- which is the whole
+    // point of the seam. On a machine whose store refuses (no daemon, no unlocked
+    // keyring) this asserts the fallback; on one whose store works it asserts the
+    // store.
+    qputenv("TIME_WARP_AI_KEYRING", "system");
+    Config keyed = example_config();
+    keyed.api_key = QStringLiteral("sk-keyring-probe");
+    timewarp::ai::save(keyed);
+    TW_CHECK_EQ(timewarp::ai::load().api_key, QStringLiteral("sk-keyring-probe"));
+    timewarp::ai::clear_stored_key();
+    TW_CHECK(timewarp::ai::load().api_key.isEmpty());
+    qputenv("TIME_WARP_AI_KEYRING", "file");
 }
 
 void test_environment_wins() {
@@ -494,6 +610,44 @@ void test_prompt_fix_carries_the_last_run() {
     TW_CHECK(text.contains(QStringLiteral("Find what is wrong")));
 }
 
+// The Console's "ask about the last error" starts from the failure rather than the
+// program: the message is the question, and the run's output rides along so the
+// answer is about the run that failed rather than about a program in the abstract.
+// A suggestion is one line, pasted by a key press: the instruction is as much about
+// the shape of the answer as about its content.
+void test_prompt_continue_asks_for_the_next_line_only() {
+    announce("prompt: continue is the next line");
+    Context context;
+    context.language = QStringLiteral("BASIC");
+    context.source = QStringLiteral("10 PRINT \"HI\"\n20 ");
+    const QString text =
+        timewarp::ai::build_prompt(Task::Continue, context, QString{}).messages.at(0).content;
+    TW_CHECK(text.contains(QStringLiteral("no code fence")));
+    TW_CHECK(text.contains(QStringLiteral("At most three lines")));
+    TW_CHECK(text.contains(QStringLiteral("```basic")));
+    TW_CHECK_EQ(timewarp::ai::task_key(Task::Continue), QStringLiteral("continue"));
+}
+
+void test_prompt_diagnose_carries_the_error() {
+    announce("prompt: diagnose sends what the run reported");
+    Context context;
+    context.language = QStringLiteral("BASIC");
+    context.file_name = QStringLiteral("guess.bas");
+    context.source = QStringLiteral("10 INPUT \"N\"; N\n20 PRINT N + \"x\"\n");
+    context.last_output = QStringLiteral("Errors:\n❌ line 20: expected a number, got \"x\"");
+    const QString reported = QStringLiteral("❌ line 20: expected a number, got \"x\"");
+    const QString text =
+        timewarp::ai::build_prompt(Task::Diagnose, context, reported).messages.at(0).content;
+    TW_CHECK(text.contains(QStringLiteral("reported the message below")));
+    TW_CHECK(text.contains(reported));
+    TW_CHECK(text.contains(QStringLiteral("```basic")));
+    TW_CHECK(text.contains(QStringLiteral("20 PRINT N")));
+    // The last run's output is evidence, the same as it is for `fix`.
+    TW_CHECK(text.contains(QStringLiteral("last run reported")));
+    TW_CHECK_EQ(timewarp::ai::task_key(Task::Diagnose), QStringLiteral("diagnose"));
+    TW_CHECK_EQ(timewarp::ai::task_label(Task::Diagnose), QStringLiteral("Diagnose"));
+}
+
 void test_prompt_write_sends_no_program() {
     announce("prompt: write is not about the open document");
     Context context;
@@ -573,7 +727,12 @@ void test_openai_body() {
                 QStringLiteral("deepseek-chat"));
     TW_CHECK_EQ(root.value(QStringLiteral("max_tokens")).toInt(), 512);
     TW_CHECK(root.value(QStringLiteral("temperature")).toDouble() > 0.29);
-    TW_CHECK_EQ(root.value(QStringLiteral("stream")).toBool(), false);
+    // Every request streams, and the usage flag is what keeps the counts arriving.
+    TW_CHECK_EQ(root.value(QStringLiteral("stream")).toBool(), true);
+    TW_CHECK(root.value(QStringLiteral("stream_options"))
+                 .toObject()
+                 .value(QStringLiteral("include_usage"))
+                 .toBool());
     const QJsonArray turns = root.value(QStringLiteral("messages")).toArray();
     TW_CHECK_EQ(turns.size(), 4);
     TW_CHECK_EQ(turns.at(0).toObject().value(QStringLiteral("role")).toString(),
@@ -610,7 +769,8 @@ void test_anthropic_body() {
                 QStringLiteral("one\n\ntwo"));
     TW_CHECK_EQ(turns.at(1).toObject().value(QStringLiteral("role")).toString(),
                 QStringLiteral("assistant"));
-    TW_CHECK(!root.contains(QStringLiteral("stream")));
+    // Anthropic streams in its Messages API, where the counts arrive as events.
+    TW_CHECK_EQ(root.value(QStringLiteral("stream")).toBool(), true);
 }
 
 void test_request_headers() {
@@ -786,8 +946,12 @@ void test_a_chat_request_is_a_post() {
     TW_CHECK(!transport->payload.isEmpty());
 }
 
-void test_a_hosted_endpoint_is_asked_for_whole_answers() {
-    announce("client: a hosted endpoint is not streamed");
+// A hosted endpoint used to be asked for the whole answer, because its token
+// counts and its one finished string were what the panel reported and neither
+// arrived inside a stream. Both protocols now carry the counts as events, so every
+// request streams and Stop can end an answer that is half written.
+void test_every_endpoint_is_asked_to_stream() {
+    announce("client: a hosted endpoint streams too");
     auto network = std::make_unique<FakeNetwork>();
     FakeNetwork* transport = network.get();
     transport->respond(R"({"choices":[{"message":{"content":"ok"}}]})");
@@ -796,8 +960,71 @@ void test_a_hosted_endpoint_is_asked_for_whole_answers() {
     conversation.messages.append(Message{QStringLiteral("user"), QStringLiteral("hi")});
     client.send(example_config(), conversation);
     settle();
-    TW_CHECK(transport->payload.contains("\"stream\":false"));
+    TW_CHECK(transport->payload.contains("\"stream\":true"));
+    TW_CHECK(transport->payload.contains("include_usage"));
+    // The config is still a hosted one: the question is where it goes, not whether
+    // it streams.
     TW_CHECK(timewarp::ai::is_local_endpoint(example_config()) == false);
+}
+
+// A service that ignores `stream` answers with one JSON document rather than
+// events. That body is all the client has, so the ordinary reader gets it.
+void test_a_service_that_ignores_stream_is_still_read() {
+    announce("client: an answer that is not events");
+    auto network = std::make_unique<FakeNetwork>();
+    FakeNetwork* transport = network.get();
+    transport->respond(R"({"model":"deepseek-chat","choices":[{"message":{"content":"whole"}}],
+                          "usage":{"prompt_tokens":3,"completion_tokens":1}})");
+    timewarp::ai::Client client{std::move(network)};
+    QString answer;
+    QString failure;
+    QObject::connect(&client, &timewarp::ai::Client::answered,
+                     [&answer](const timewarp::ai::Reply& reply) { answer = reply.text; });
+    QObject::connect(&client, &timewarp::ai::Client::failed,
+                     [&failure](const QString& message) { failure = message; });
+    Conversation conversation;
+    conversation.messages.append(Message{QStringLiteral("user"), QStringLiteral("hi")});
+    client.send(example_config(), conversation);
+    settle();
+    TW_CHECK(failure.isEmpty());
+    TW_CHECK_EQ(answer.toStdString(), std::string{"whole"});
+}
+
+// The answer arrives in pieces, the user presses Stop, and nothing else is
+// delivered: a hosted endpoint's half-written sentence is abandoned like a local
+// one's, which is the whole point of asking for a stream.
+void test_a_hosted_stream_can_be_stopped() {
+    announce("client: stop ends a hosted answer");
+    auto network = std::make_unique<FakeNetwork>();
+    FakeNetwork* transport = network.get();
+    transport->auto_finish = false;
+    transport->status = 200;
+
+    timewarp::ai::Client client{std::move(network)};
+    QStringList pieces;
+    bool answered = false;
+    bool failure_reported = false;
+    QObject::connect(&client, &timewarp::ai::Client::delta,
+                     [&pieces](const QString& text) { pieces.append(text); });
+    QObject::connect(&client, &timewarp::ai::Client::answered,
+                     [&answered](const timewarp::ai::Reply&) { answered = true; });
+    QObject::connect(&client, &timewarp::ai::Client::failed,
+                     [&failure_reported](const QString&) { failure_reported = true; });
+
+    Conversation conversation;
+    conversation.messages.append(Message{QStringLiteral("user"), QStringLiteral("hi")});
+    client.send(example_config(), conversation);
+    transport->pump("data: {\"choices\":[{\"delta\":{\"content\":\"Half\"}}]}\n");
+    settle();
+    TW_CHECK_EQ(pieces.size(), 1);
+    TW_CHECK(client.busy());
+
+    client.cancel();
+    settle();
+    TW_CHECK(!client.busy());
+    TW_CHECK(!answered);
+    TW_CHECK(!failure_reported);
+    TW_CHECK_EQ(pieces.join(QString{}).toStdString(), std::string{"Half"});
 }
 
 void test_a_local_endpoint_streams_in_order() {
@@ -1056,6 +1283,12 @@ int main(int argc, char** argv) {
     QTemporaryDir settings_dir;
     TW_CHECK(settings_dir.isValid());
     QSettings::setPath(QSettings::IniFormat, QSettings::UserScope, settings_dir.path());
+    // The key's home is pinned to the settings file for the whole suite. On a
+    // machine with a real keyring the platform store would otherwise keep secrets
+    // between cases -- and a test must never write to the keychain of the person
+    // running it.
+    qputenv("TIME_WARP_AI_KEYRING", "file");
+    TW_CHECK(timewarp::ai::available_keyring() == timewarp::ai::KeyRing::File);
 
     test_base_url_validation();
     test_endpoint_assembly();
@@ -1063,6 +1296,8 @@ int main(int argc, char** argv) {
     test_presets_include_deepseek();
     test_readiness();
     test_saved_configuration_round_trip();
+    test_the_conversation_store();
+    test_the_keyring_is_a_seam();
     test_environment_wins();
     test_redaction();
 
@@ -1070,6 +1305,8 @@ int main(int argc, char** argv) {
     test_prompt_explain_carries_the_program();
     test_prompt_selection_wins_over_the_document();
     test_prompt_fix_carries_the_last_run();
+    test_prompt_continue_asks_for_the_next_line_only();
+    test_prompt_diagnose_carries_the_error();
     test_prompt_write_sends_no_program();
     test_prompt_truncates_a_huge_program();
     test_translation_target_is_the_users_words();
@@ -1085,7 +1322,9 @@ int main(int argc, char** argv) {
     test_models_answer_is_read();
     test_client_asks_for_the_models();
     test_a_chat_request_is_a_post();
-    test_a_hosted_endpoint_is_asked_for_whole_answers();
+    test_every_endpoint_is_asked_to_stream();
+    test_a_service_that_ignores_stream_is_still_read();
+    test_a_hosted_stream_can_be_stopped();
     test_a_local_endpoint_streams_in_order();
     test_an_anthropic_stream_is_read_the_same_way();
     test_client_answers();

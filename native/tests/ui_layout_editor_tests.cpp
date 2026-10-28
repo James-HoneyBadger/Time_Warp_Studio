@@ -4,6 +4,8 @@
 
 #include "ui_layout/support.hpp"
 
+#include <QKeyEvent>
+
 namespace tw::ui_layout {
 
 void test_the_split_editor_moves_documents_between_panes() {
@@ -383,6 +385,90 @@ void test_edit_menu_acts_on_whatever_has_focus() {
     undo->trigger();
     TW_CHECK_EQ(console->toPlainText().toStdString(), std::string{"log"});
     TW_CHECK_EQ(editor->toPlainText().toStdString(), std::string{"kept"});
+}
+
+// A suggested next line is a promise about the shape of an answer: one line of
+// ghost text, taken with Tab or refused with Esc, and never inserted until asked
+// for. The endpoint behind it is the window's, so this half is what can be asserted
+// without one.
+void test_a_suggested_line_can_be_taken_or_refused() {
+    announce("editor: a suggested line");
+    CodeEditor editor;
+    timewarp::ui::EditorSettings settings = editor.settings();
+    settings.inline_suggestions = true;
+    editor.applySettings(settings);
+    editor.setPlainText(QStringLiteral("10 PRINT \"HI\"\n20 "));
+    QTextCursor cursor = editor.textCursor();
+    cursor.movePosition(QTextCursor::End);
+    editor.setTextCursor(cursor);
+
+    // A model that answers in prose has answered the wrong question: a suggestion is
+    // the rest of the line, so the first line is what is shown.
+    editor.setGhostText(QStringLiteral("PRINT \"BYE\"\n20 REM and so on"));
+    TW_CHECK_EQ(editor.ghostText(), QStringLiteral("PRINT \"BYE\""));
+
+    QKeyEvent tab{QEvent::KeyPress, Qt::Key_Tab, Qt::NoModifier};
+    QApplication::sendEvent(&editor, &tab);
+    TW_CHECK(editor.ghostText().isEmpty());
+    TW_CHECK(editor.toPlainText().endsWith(QStringLiteral("20 PRINT \"BYE\"")));
+
+    // Esc refuses one without touching the document.
+    const QString before = editor.toPlainText();
+    editor.setGhostText(QStringLiteral("REM no"));
+    QKeyEvent escape{QEvent::KeyPress, Qt::Key_Escape, Qt::NoModifier};
+    QApplication::sendEvent(&editor, &escape);
+    TW_CHECK(editor.ghostText().isEmpty());
+    TW_CHECK_EQ(editor.toPlainText(), before);
+
+    // Any other key dismisses it and is typed as usual: a suggestion that swallowed
+    // a keystroke would be worse than no suggestion.
+    editor.setGhostText(QStringLiteral("REM no"));
+    QKeyEvent word{QEvent::KeyPress, Qt::Key_X, Qt::NoModifier, QStringLiteral("X")};
+    QApplication::sendEvent(&editor, &word);
+    TW_CHECK(editor.ghostText().isEmpty());
+    TW_CHECK(editor.toPlainText().endsWith(QStringLiteral("X")));
+
+    // Turning the setting off takes a visible suggestion with it.
+    editor.setGhostText(QStringLiteral("REM no"));
+    settings.inline_suggestions = false;
+    editor.applySettings(settings);
+    TW_CHECK(editor.ghostText().isEmpty());
+}
+
+void test_the_typing_pause_asks_for_the_text_before_the_caret() {
+    announce("editor: the typing pause");
+    CodeEditor editor;
+    timewarp::ui::EditorSettings settings = editor.settings();
+    settings.inline_suggestions = true;
+    editor.applySettings(settings);
+    QStringList asked;
+    QObject::connect(&editor, &CodeEditor::inlineSuggestionWanted,
+                     [&asked](const QString& prefix) { asked.append(prefix); });
+
+    editor.setPlainText(QStringLiteral("10 REM one\n20 REM two"));
+    QTextCursor cursor = editor.textCursor();
+    cursor.movePosition(QTextCursor::End);
+    editor.setTextCursor(cursor);
+    // The text a suggestion is about is everything before the caret, and that is
+    // also what the window sends as the program.
+    TW_CHECK_EQ(editor.textBeforeCursor(), QStringLiteral("10 REM one\n20 REM two"));
+    // The tail, because it is the end of the program that comes next from.
+    TW_CHECK_EQ(editor.textBeforeCursor(10), QStringLiteral("20 REM two"));
+
+    QKeyEvent word{QEvent::KeyPress, Qt::Key_X, Qt::NoModifier, QStringLiteral("X")};
+    QApplication::sendEvent(&editor, &word);
+    TW_CHECK(spin_until([&asked] { return !asked.isEmpty(); }, 3000));
+    if (!asked.isEmpty()) {
+        TW_CHECK(asked.last().endsWith(QStringLiteral("20 REM twoX")));
+    }
+    // Off, a pause asks for nothing: the switch is the promise that typing sends no
+    // request.
+    asked.clear();
+    settings.inline_suggestions = false;
+    editor.applySettings(settings);
+    QApplication::sendEvent(&editor, &word);
+    TW_CHECK(!spin_until([&asked] { return !asked.isEmpty(); }, 1200));
+    TW_CHECK(asked.isEmpty());
 }
 
 }  // namespace tw::ui_layout

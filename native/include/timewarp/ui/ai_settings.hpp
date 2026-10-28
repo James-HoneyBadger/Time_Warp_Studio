@@ -98,6 +98,8 @@ private:
     QCheckBox* show_key_ = nullptr;
     QCheckBox* store_key_ = nullptr;
     QCheckBox* send_document_ = nullptr;
+    QCheckBox* remember_ = nullptr;
+    QCheckBox* inline_ = nullptr;
     QSpinBox* max_tokens_ = nullptr;
     QDoubleSpinBox* temperature_ = nullptr;
     QSpinBox* timeout_ = nullptr;
