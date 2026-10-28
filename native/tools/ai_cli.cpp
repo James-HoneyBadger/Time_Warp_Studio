@@ -24,6 +24,7 @@
 #include <QCoreApplication>
 #include <QEventLoop>
 #include <QFile>
+#include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QFileInfo>
@@ -307,6 +308,56 @@ void write_report(const Invocation& invocation, const QJsonObject& report) {
     return status;
 }
 
+/// Asks the endpoint what it can run. Its own function because it is the one
+/// command that needs no program, and the answer is a list rather than text.
+[[nodiscard]] int run_models(const Invocation& invocation) {
+    const Config config = config_for(invocation, true);
+    QString why;
+    // A model name is not needed to ask what the models are.
+    if (!timewarp::ai::reachable(config, &why)) {
+        std::cerr << "\u274C " << why.toStdString() << '\n';
+        return 1;
+    }
+    timewarp::ai::Client client;
+    QEventLoop loop;
+    int status = 1;
+    QObject::connect(&client, &timewarp::ai::Client::modelsListed, &loop,
+                     [&](const QStringList& models) {
+                         QJsonArray array;
+                         for (const QString& model : models) {
+                             array.append(model);
+                         }
+                         write_report(invocation,
+                                      QJsonObject{{QStringLiteral("ok"), true},
+                                                  {QStringLiteral("models"), array}});
+                         if (!invocation.json_stdout) {
+                             if (models.isEmpty()) {
+                                 std::cout << "the service named no models\n";
+                             }
+                             for (const QString& model : models) {
+                                 std::cout << model.toStdString() << '\n';
+                             }
+                             std::cout.flush();
+                         }
+                         status = 0;
+                         loop.quit();
+                     });
+    QObject::connect(&client, &timewarp::ai::Client::failed, &loop,
+                     [&](const QString& message) {
+                         write_report(invocation,
+                                      QJsonObject{{QStringLiteral("ok"), false},
+                                                  {QStringLiteral("error"), message}});
+                         std::cerr << "\u274C " << message.toStdString() << '\n';
+                         status = 1;
+                         loop.quit();
+                     });
+    client.listModels(config);
+    if (client.busy()) {
+        loop.exec();
+    }
+    return status;
+}
+
 /// Everything a task without free text needs: the configuration, the program and
 /// one message.
 [[nodiscard]] int run_task(const Invocation& invocation, Task task) {
@@ -399,13 +450,14 @@ int main(int argc, char** argv) {
     QCoreApplication::setApplicationName(QStringLiteral("TimeWarpStudio"));
 
     const Invocation invocation = timewarp::cli::parse("time_warp_ai", argc, argv);
-    constexpr std::array<Command, 8> kCommands{{
+    constexpr std::array<Command, 9> kCommands{{
         {"ask", "ask a question about a program", run_ask},
         {"explain", "explain what a program does", run_explain},
         {"fix", "find and correct what is wrong", run_fix},
         {"comment", "comment a program without changing it", run_comment},
         {"translate", "rewrite a program in another language", run_translate},
         {"write", "write a new program from a description", run_write},
+        {"models", "list the models the endpoint can run", run_models},
         {"check", "say whether the assistant is configured", run_check},
         {"config", "print the configuration, never the key", run_config},
     }};

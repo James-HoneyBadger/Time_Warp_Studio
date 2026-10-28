@@ -57,6 +57,12 @@ public:
     [[nodiscard]] QLabel* testStatus() const noexcept { return test_status_; }
     /// What the Test button does, without a click.
     void testConnection();
+    /// Asks the endpoint what it can run and fills the chooser. Also called when
+    /// the dialog opens on an endpoint on this machine, because the point of a local
+    /// server is that you should not have to know the model's name.
+    void findModels();
+    /// The model chooser, for the tests.
+    [[nodiscard]] QComboBox* modelChooser() const noexcept { return models_; }
 
 signals:
     /// OK was pressed. The window saves it and hands it to the panel.
@@ -71,6 +77,9 @@ private:
     [[nodiscard]] timewarp::ai::Config collected() const;
     /// Choosing a preset writes its protocol, endpoint and model into the fields.
     void applyPreset(int index);
+    /// True when the endpoint is on this machine, which is when discovery is worth
+    /// doing without being asked.
+    [[nodiscard]] bool endpoint_is_local() const;
     /// Points the dropdown at the preset the endpoint matches, without firing the
     /// handler that would overwrite the fields the user typed.
     void syncPresetToEndpoint();
@@ -93,6 +102,8 @@ private:
     QDoubleSpinBox* temperature_ = nullptr;
     QSpinBox* timeout_ = nullptr;
     QPushButton* test_ = nullptr;
+    QPushButton* find_models_ = nullptr;
+    QComboBox* models_ = nullptr;
     QLabel* test_status_ = nullptr;
     QLabel* note_ = nullptr;
 };

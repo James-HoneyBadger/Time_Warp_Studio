@@ -145,6 +145,46 @@ QByteArray body_for(const Config& config, const Conversation& conversation) {
     return QJsonDocument{body_object(config, conversation)}.toJson(QJsonDocument::Compact);
 }
 
+QNetworkRequest models_request(const Config& config) {
+    const QString base = config.base_url.trimmed();
+    QString trimmed = base;
+    while (trimmed.endsWith(QLatin1Char('/'))) {
+        trimmed.chop(1);
+    }
+    QNetworkRequest request{QUrl{trimmed + QStringLiteral("/models")}};
+    request.setRawHeader("Accept", "application/json");
+    request.setHeader(QNetworkRequest::UserAgentHeader, QStringLiteral("TimeWarpStudio"));
+    request.setTransferTimeout(config.timeout_seconds * 1000);
+    request.setAttribute(QNetworkRequest::RedirectPolicyAttribute,
+                         QNetworkRequest::NoLessSafeRedirectPolicy);
+    const QString key = effective_key(config);
+    if (!key.isEmpty()) {
+        if (config.protocol == Protocol::Anthropic) {
+            request.setRawHeader("x-api-key", key.toUtf8());
+            request.setRawHeader("anthropic-version", "2023-06-01");
+        } else {
+            request.setRawHeader("Authorization", "Bearer " + key.toUtf8());
+        }
+    }
+    return request;
+}
+
+QStringList parse_models(const QByteArray& body) {
+    QStringList models;
+    const QJsonDocument document = QJsonDocument::fromJson(body);
+    if (!document.isObject()) {
+        return models;
+    }
+    for (const QJsonValue& entry : document.object().value(QStringLiteral("data")).toArray()) {
+        const QString identifier = entry.toObject().value(QStringLiteral("id")).toString();
+        if (!identifier.isEmpty() && !models.contains(identifier)) {
+            models.append(identifier);
+        }
+    }
+    models.sort(Qt::CaseInsensitive);
+    return models;
+}
+
 QNetworkRequest request_for(const Config& config) {
     QNetworkRequest request{QUrl{endpoint_url(config)}};
     request.setHeader(QNetworkRequest::ContentTypeHeader,
@@ -271,38 +311,52 @@ Client::Client(std::unique_ptr<QNetworkAccessManager> network, QObject* parent)
 Client::~Client() { cancel(); }
 
 void Client::send(const Config& config, const Conversation& conversation) {
-    cancel();
-
     QString why;
     if (!ready(config, &why)) {
+        cancel();
         emit failed(why);
         return;
     }
+    post(config, request_for(config), body_for(config, conversation), Kind::Chat);
+}
+
+void Client::listModels(const Config& config) {
+    QString why;
+    // No model is needed to ask what the models are.
+    if (!reachable(config, &why)) {
+        cancel();
+        emit failed(why);
+        return;
+    }
+    post(config, models_request(config), QByteArray{}, Kind::Models);
+}
+
+void Client::post(const Config& config, const QNetworkRequest& request, const QByteArray& body,
+                  Kind kind) {
+    cancel();
     if (network_ == nullptr) {
         emit failed(QStringLiteral("no network transport is available"));
         return;
     }
 
-    const QByteArray body = body_for(config, conversation);
-    QNetworkRequest request = request_for(config);
     const QString key = effective_key(config);
     const Protocol protocol = config.protocol;
     const int generation = generation_;
+    kind_ = kind;
 
-    QNetworkReply* reply = network_->post(request, body);
+    // A GET with no body for discovery; a POST for a conversation. The transport
+    // decides nothing else about the difference, which is why `kind_` exists: the
+    // answer is read by the parser its request belongs to.
+    QNetworkReply* reply = kind == Kind::Models ? network_->get(request)
+                                                : network_->post(request, body);
     reply_ = reply;
-    connect(reply, &QNetworkReply::finished, this, [this, reply, key, protocol, generation] {
+    connect(reply, &QNetworkReply::finished, this, [this, reply, key, protocol, generation,
+                                                    kind] {
         reply->deleteLater();
         if (generation != generation_) {
             return;
         }
         reply_.clear();
-        // The status first. Qt reports an HTTP error as a *network* error -- a 401
-        // arrives as `AuthenticationRequiredError`, a 404 as `ContentNotFoundError`
-        // -- and treating those as transport failures would replace the service's
-        // own explanation ("Incorrect API key provided") with "the network request
-        // failed", which is the one sentence that helps nobody. A status code means
-        // the service answered, so its body is what gets read.
         const int status =
             reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
         if (status <= 0) {
@@ -310,7 +364,17 @@ void Client::send(const Config& config, const Conversation& conversation) {
             emit failed(redact(message, key));
             return;
         }
-        const Reply parsed = parse_reply(protocol, status, reply->readAll());
+        const QByteArray body_bytes = reply->readAll();
+        if (kind == Kind::Models) {
+            if (status < 200 || status >= 300) {
+                const Reply parsed = parse_reply(protocol, status, body_bytes);
+                emit failed(redact(parsed.error, key));
+                return;
+            }
+            emit modelsListed(parse_models(body_bytes));
+            return;
+        }
+        const Reply parsed = parse_reply(protocol, status, body_bytes);
         if (parsed.ok) {
             emit answered(parsed);
         } else {

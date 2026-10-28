@@ -15,6 +15,7 @@
 #include <QLineEdit>
 #include <QPushButton>
 #include <QSpinBox>
+#include <QUrl>
 #include <QVBoxLayout>
 
 namespace timewarp::ui {
@@ -83,7 +84,23 @@ void AiSettingsDialog::buildUi() {
     model_ = new QLineEdit{service};
     model_->setObjectName(QStringLiteral("aiModelField"));
     model_->setPlaceholderText(QStringLiteral("deepseek-chat"));
-    form->addRow(tr("Model:"), model_);
+    auto* model_row = new QHBoxLayout{};
+    model_row->setSpacing(6);
+    model_row->addWidget(model_, 1);
+    find_models_ = new QPushButton{tr("Find models\u2026"), service};
+    find_models_->setObjectName(QStringLiteral("aiFindModelsButton"));
+    find_models_->setToolTip(tr("Ask the service what it can run, and pick from the "
+                                "list rather than typing a name from memory"));
+    model_row->addWidget(find_models_);
+    form->addRow(tr("Model:"), model_row);
+
+    // The answer to "what can this endpoint run": hidden until there is one, because
+    // an empty dropdown is a control that says the service offered nothing when all
+    // it means is that nobody has asked yet.
+    models_ = new QComboBox{service};
+    models_->setObjectName(QStringLiteral("aiModelChooser"));
+    models_->setVisible(false);
+    form->addRow(QString{}, models_);
 
     key_ = new QLineEdit{service};
     key_->setObjectName(QStringLiteral("aiKeyField"));
@@ -193,6 +210,31 @@ void AiSettingsDialog::buildUi() {
                                       : tr("used for this session, not saved"));
     });
     connect(test_, &QPushButton::clicked, this, &AiSettingsDialog::testConnection);
+    connect(find_models_, &QPushButton::clicked, this, &AiSettingsDialog::findModels);
+    connect(models_, QOverload<int>::of(&QComboBox::activated), this, [this](int index) {
+        if (index >= 0) {
+            model_->setText(models_->itemText(index));
+        }
+    });
+    connect(test_client_, &timewarp::ai::Client::modelsListed, this,
+            [this](const QStringList& models) {
+                find_models_->setEnabled(true);
+                models_->clear();
+                models_->addItems(models);
+                models_->setVisible(!models.isEmpty());
+                if (models.isEmpty()) {
+                    test_status_->setText(
+                        tr("The service answered but named no models. Type the name "
+                           "of one instead."));
+                    return;
+                }
+                test_status_->setText(
+                    tr("%1 model(s) available \u2014 pick one above.").arg(models.size()));
+                // A model already typed stays: discovery is an offer, not a reset.
+                if (model_->text().trimmed().isEmpty()) {
+                    model_->setText(models.first());
+                }
+            });
     connect(test_client_, &timewarp::ai::Client::answered, this,
             [this](const timewarp::ai::Reply& reply) {
                 test_->setEnabled(true);
@@ -269,6 +311,11 @@ void AiSettingsDialog::fillFrom(const Config& config) {
     }
     adjusting_ = false;
     test_status_->clear();
+    if (endpoint_is_local()) {
+        // A server on this machine is the configuration to recommend and the one
+        // whose model names nobody remembers: ask it, unasked.
+        findModels();
+    }
 }
 
 Config AiSettingsDialog::collected() const {
@@ -352,6 +399,29 @@ void AiSettingsDialog::testConnection() {
     conversation.messages.append(timewarp::ai::Message{
         QStringLiteral("user"), QStringLiteral("Reply with the single word: ready.")});
     test_client_->send(probe, conversation);
+}
+
+bool AiSettingsDialog::endpoint_is_local() const {
+    const QUrl url{base_url_->text().trimmed()};
+    const QString host = url.host().toLower();
+    return host == QStringLiteral("localhost") || host == QStringLiteral("127.0.0.1") ||
+           host == QStringLiteral("::1");
+}
+
+void AiSettingsDialog::findModels() {
+    collect();
+    timewarp::ai::Config probe = config_;
+    // Asking what is available is an explicit act, like pressing Test.
+    probe.enabled = true;
+    QString why;
+    // Not `ready`: a model name is what this call exists to find.
+    if (!timewarp::ai::reachable(probe, &why)) {
+        test_status_->setText(tr("\u274C %1").arg(why));
+        return;
+    }
+    find_models_->setEnabled(false);
+    test_status_->setText(tr("Asking %1 for its models\u2026").arg(probe.base_url));
+    test_client_->listModels(probe);
 }
 
 Config AiSettingsDialog::config() const { return collected(); }

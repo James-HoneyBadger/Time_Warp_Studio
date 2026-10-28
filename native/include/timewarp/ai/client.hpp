@@ -26,6 +26,7 @@
 
 #include <QByteArray>
 #include <QObject>
+#include <QStringList>
 #include <QPointer>
 #include <QString>
 
@@ -54,6 +55,19 @@ struct Reply {
 
 /// The JSON body for *conversation*, in the endpoint's own shape.
 [[nodiscard]] QByteArray body_for(const Config& config, const Conversation& conversation);
+
+/// The URL and headers for a request that asks the endpoint what it can run.
+/// `GET {base}/models` is the one discovery call both protocols share -- OpenAI
+/// made it a convention, Anthropic and every compatible server follow it -- so the
+/// settings dialog can offer the real model names instead of making somebody guess
+/// at `deepseek-chat` from memory.
+[[nodiscard]] QNetworkRequest models_request(const Config& config);
+
+/// The model identifiers out of a `/models` answer: `data[].id`, which is what both
+/// protocols return. Empty and no error when the body is not JSON -- a service that
+/// does not implement the call is not a failure, it is an endpoint that cannot be
+/// browsed.
+[[nodiscard]] QStringList parse_models(const QByteArray& body);
 
 /// The URL, the headers and the timeout for a request. The key is applied here and
 /// nowhere else.
@@ -86,6 +100,10 @@ public:
     /// question, and the button that starts one is the button that means "this,
     /// now".
     ///
+    /// Asks the endpoint what models it offers. Answers through `modelsListed`, or
+    /// through `failed` when the service does not implement the call.
+    void listModels(const Config& config);
+
     /// Emits `failed` rather than throwing when the configuration is not usable, so
     /// a caller has one path for "no" whether the reason is a missing model or a
     /// refused connection.
@@ -97,9 +115,18 @@ public:
 signals:
     void started();
     void answered(const timewarp::ai::Reply& reply);
+    /// The identifiers a `listModels` call found, in the order the service gave
+    /// them. Empty when it answered with nothing usable.
+    void modelsListed(const QStringList& models);
     void failed(const QString& message);
 
 private:
+    /// What the request in flight was, so its answer is read by the right parser.
+    enum class Kind { Chat, Models };
+
+    void post(const Config& config, const QNetworkRequest& request, const QByteArray& body,
+              Kind kind);
+
     std::unique_ptr<QNetworkAccessManager> owned_network_;
     QNetworkAccessManager* network_ = nullptr;
     QPointer<QNetworkReply> reply_;
@@ -107,6 +134,7 @@ private:
     /// abandoned is recognised and dropped instead of reporting a cancellation as
     /// an error.
     int generation_ = 0;
+    Kind kind_ = Kind::Chat;
 };
 
 }  // namespace timewarp::ai

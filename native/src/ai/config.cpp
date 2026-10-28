@@ -173,7 +173,7 @@ QString effective_key(const Config& config) {
     return from_environment.isEmpty() ? config.api_key.trimmed() : from_environment;
 }
 
-bool ready(const Config& config, QString* why) {
+bool reachable(const Config& config, QString* why) {
     const auto fail = [why](const QString& reason) {
         if (why != nullptr) {
             *why = reason;
@@ -189,11 +189,21 @@ bool ready(const Config& config, QString* why) {
     if (!valid_base_url(config.base_url)) {
         return fail(QStringLiteral("the endpoint must be an http or https address"));
     }
-    if (config.model.trimmed().isEmpty()) {
-        return fail(QStringLiteral("no model is named"));
-    }
     if (why != nullptr) {
         why->clear();
+    }
+    return true;
+}
+
+bool ready(const Config& config, QString* why) {
+    if (!reachable(config, why)) {
+        return false;
+    }
+    if (config.model.trimmed().isEmpty()) {
+        if (why != nullptr) {
+            *why = QStringLiteral("no model is named");
+        }
+        return false;
     }
     return true;
 }

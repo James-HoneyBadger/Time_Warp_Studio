@@ -150,9 +150,15 @@ struct Preset {
 /// one. Empty when neither is.
 [[nodiscard]] QString effective_key(const Config& config);
 
-/// Whether a request can be attempted, and if not, a sentence saying what is
-/// missing. A key is *not* required: a local server needs none, and demanding one
-/// would shut out the one configuration that keeps the document on the machine.
+/// Whether there is an endpoint to ask anything at all: switched on, and an address
+/// a request can go to. A model list needs this and not a model name, which is why
+/// it is separate from `ready` -- discovering the model names is what somebody does
+/// *because* they do not have one yet.
+[[nodiscard]] bool reachable(const Config& config, QString* why = nullptr);
+
+/// Whether a question can be asked, and if not, a sentence saying what is missing.
+/// A key is *not* required: a local server needs none, and demanding one would shut
+/// out the one configuration that keeps the document on the machine.
 [[nodiscard]] bool ready(const Config& config, QString* why = nullptr);
 
 /// Reads the stored configuration and applies the environment overrides. Never

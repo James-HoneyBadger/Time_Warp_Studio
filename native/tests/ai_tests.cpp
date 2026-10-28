@@ -124,6 +124,8 @@ private:
 class FakeNetwork final : public QNetworkAccessManager {
 public:
     QNetworkRequest request;
+    QNetworkAccessManager::Operation last_operation =
+        QNetworkAccessManager::UnknownOperation;
     QByteArray payload;
     int status = 200;
     QByteArray body;
@@ -150,6 +152,7 @@ protected:
     QNetworkReply* createRequest(Operation operation, const QNetworkRequest& incoming,
                                  QIODevice* outgoing) override {
         request = incoming;
+        last_operation = operation;
         payload = outgoing != nullptr ? outgoing->readAll() : QByteArray{};
         ++posts;
         auto* reply = new FakeReply{operation, incoming, this};
@@ -688,6 +691,77 @@ void test_network_error_sentences() {
     TW_CHECK(!timewarp::ai::describe_network_error(9999).isEmpty());
 }
 
+
+// "Which models can this endpoint run?" is the question a person configures the
+// assistant by guessing at, and `GET /models` is the answer both protocols share.
+// Reading it is a pure function; asking for it is one more kind of exchange.
+
+void test_models_answer_is_read() {
+    announce("client: reading a model list");
+    const QStringList models = timewarp::ai::parse_models(
+        R"({"object":"list","data":[{"id":"llama3.2:latest"},{"id":"deepseek-chat"},{"id":"deepseek-chat"}]})");
+    TW_CHECK_EQ(models.size(), 2);
+    // Sorted, and never the same name twice: a dropdown of duplicates is a
+    // dropdown nobody can use.
+    if (models.size() == 2) {
+        TW_CHECK_EQ(models.at(0), QStringLiteral("deepseek-chat"));
+        TW_CHECK_EQ(models.at(1), QStringLiteral("llama3.2:latest"));
+    }
+    // A service that does not implement the call, or answers with something else,
+    // is an empty list rather than an error: the dialog says "type the name
+    // instead".
+    TW_CHECK(timewarp::ai::parse_models("not json").isEmpty());
+    TW_CHECK(timewarp::ai::parse_models(R"({"models":[]})").isEmpty());
+
+    Config config = example_config();
+    config.api_key = QStringLiteral("sk-test");
+    const QNetworkRequest request = timewarp::ai::models_request(config);
+    TW_CHECK_EQ(request.url().toString(),
+                QStringLiteral("https://api.deepseek.com/v1/models"));
+    TW_CHECK(!request.rawHeader("Authorization").isEmpty());
+}
+
+void test_client_asks_for_the_models() {
+    announce("client: a model list, live");
+    auto network = std::make_unique<FakeNetwork>();
+    FakeNetwork* transport = network.get();
+    transport->respond(R"({"data":[{"id":"m-one"},{"id":"m-two"}]})");
+
+    timewarp::ai::Client client{std::move(network)};
+    QStringList listed;
+    QString failure;
+    QObject::connect(&client, &timewarp::ai::Client::modelsListed,
+                     [&listed](const QStringList& models) { listed = models; });
+    QObject::connect(&client, &timewarp::ai::Client::failed,
+                     [&failure](const QString& message) { failure = message; });
+
+    // No model named: asking what the models are must not require knowing one.
+    Config config = example_config();
+    config.model.clear();
+    client.listModels(config);
+    settle();
+    TW_CHECK(failure.isEmpty());
+    TW_CHECK_EQ(listed.size(), 2);
+    TW_CHECK_EQ(listed.value(0), QStringLiteral("m-one"));
+    // A GET with no body: the request is a question, not a conversation.
+    TW_CHECK(transport->last_operation == QNetworkAccessManager::GetOperation);
+    TW_CHECK(transport->payload.isEmpty());
+}
+
+void test_a_chat_request_is_a_post() {
+    announce("client: a conversation is a post");
+    auto network = std::make_unique<FakeNetwork>();
+    FakeNetwork* transport = network.get();
+    transport->respond(R"({"choices":[{"message":{"content":"hello"}}]})");
+    timewarp::ai::Client client{std::move(network)};
+    Conversation conversation;
+    conversation.messages.append(Message{QStringLiteral("user"), QStringLiteral("hi")});
+    client.send(example_config(), conversation);
+    settle();
+    TW_CHECK(transport->last_operation == QNetworkAccessManager::PostOperation);
+    TW_CHECK(!transport->payload.isEmpty());
+}
+
 void test_client_answers() {
     announce("client: a successful exchange");
     auto network = std::make_unique<FakeNetwork>();
@@ -884,6 +958,9 @@ int main(int argc, char** argv) {
     test_parse_anthropic_reply();
     test_parse_errors();
     test_network_error_sentences();
+    test_models_answer_is_read();
+    test_client_asks_for_the_models();
+    test_a_chat_request_is_a_post();
     test_client_answers();
     test_client_reports_and_redacts();
     test_client_transport_error();
