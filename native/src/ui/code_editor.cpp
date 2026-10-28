@@ -1157,7 +1157,10 @@ QString CodeEditor::textBeforeCursor(int limit) const {
 void CodeEditor::mousePressEvent(QMouseEvent* event) {
     if (event->button() == Qt::LeftButton &&
         (event->modifiers() & Qt::ControlModifier) != 0 && !isReadOnly()) {
-        addCursorAt(cursorForPosition(event->position().toPoint()).position());
+        // Qt 6 spells this `position()`, Qt 5 `localPos()`; the seam header holds the
+        // difference so this call site does not.
+        addCursorAt(
+            cursorForPosition(timewarp::core::eventPosition(event).toPoint()).position());
         event->accept();
         return;
     }
