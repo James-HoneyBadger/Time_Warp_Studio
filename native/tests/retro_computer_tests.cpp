@@ -82,6 +82,8 @@ int main(int argc, char** argv) {
     test_hb_dos_survives_a_restart();
     test_hb_dos_a_file_belongs_to_its_rom();
     test_hb_dos_refuses_bad_names_and_a_full_disk();
+    test_llist_prints_the_program_to_the_paper_tray();
+    test_lprint_prints_a_line_and_needs_one();
     test_a_machine_survives_a_round_trip_through_a_file();
     test_a_machine_image_refuses_what_it_cannot_read();
     test_the_machine_words_save_and_load_an_image();

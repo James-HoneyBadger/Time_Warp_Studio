@@ -65,4 +65,7 @@ void test_a_machine_image_refuses_what_it_cannot_read();
 void test_the_machine_words_save_and_load_an_image();
 void test_hb_dos_refuses_bad_names_and_a_full_disk();
 
+void test_llist_prints_the_program_to_the_paper_tray();
+void test_lprint_prints_a_line_and_needs_one();
+
 }  // namespace tw::retro

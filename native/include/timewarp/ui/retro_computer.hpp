@@ -137,6 +137,10 @@ public:
     /// The disk this machine is using. Public so a test can assert what a
     /// catalogue should have shown without reading the console back.
     [[nodiscard]] const HbDos& disk() const noexcept { return dos_; }
+    /// The paper the printer has written, or empty when it has printed nothing.
+    /// A test reads this rather than the console, for the same reason it reads the
+    /// disk: the page is the artefact, the message is about the page.
+    [[nodiscard]] QString paperPath() const { return paper_path_; }
     [[nodiscard]] QLabel* statusLabel() const noexcept { return status_label_; }
     /// Runs the program in the editor through the selected language's engine.
     void runProgram();
@@ -278,6 +282,11 @@ private:
     /// The disk rattle, in one place: every DOS word that moves the head calls it.
     void diskAccessed();
     void listDisk();
+    /// Sends text to the machine's printer: a page appended to the paper tray in the
+    /// data directory, and a line on the console saying where it went. The HB-1 has
+    /// no printer port, so the tray is a file -- which is also what makes the output
+    /// something a person can keep, read or print elsewhere.
+    void printToPaper(const QString& body, const QString& what);
     void showDiskStatus();
     void saveToDisk(const QString& name);
     void loadFromDisk(const QString& name);
@@ -326,6 +335,8 @@ private:
     QSplitter* screen_splitter_ = nullptr;
     CrtOverlay* overlay_ = nullptr;
     QLabel* prompt_label_ = nullptr;
+    /// Where the printer last wrote. Empty until `LLIST` or `LPRINT` is used.
+    QString paper_path_;
     QLineEdit* input_ = nullptr;
     QPushButton* run_button_ = nullptr;
     QPushButton* stop_button_ = nullptr;

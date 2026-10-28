@@ -192,6 +192,28 @@ bool RetroComputerWindow::handleMachineCommand(const QString& command) {
         typeFromDisk(firstArgument(command));
         return true;
     }
+    if (word == QStringLiteral("LLIST") || word == QStringLiteral("LPRINT")) {
+        // The 1982 machine printed to a line printer; this one appends to a page in
+        // the data directory, which is the same artefact a printer produced and a
+        // better one to keep. LLIST prints the listing, LPRINT prints what follows
+        // the word.
+        if (word == QStringLiteral("LLIST")) {
+            const QString source = program_->toPlainText();
+            if (source.trimmed().isEmpty()) {
+                appendConsole(QStringLiteral("?NO PROGRAM"));
+                return true;
+            }
+            printToPaper(source, QStringLiteral("LISTING"));
+            return true;
+        }
+        const QString text = firstArgument(command);
+        if (text.isEmpty()) {
+            appendConsole(QStringLiteral("?LPRINT WHAT"));
+            return true;
+        }
+        printToPaper(text, QStringLiteral("LPRINT"));
+        return true;
+    }
     if (word == QStringLiteral("HELP") || command.trimmed() == QStringLiteral("?")) {
         text_tabs_->setCurrentWidget(tube_);
         appendConsole(QStringLiteral("RUN [\"N\"]  run the program; with a name, load N and run it"));
@@ -213,6 +235,8 @@ bool RetroComputerWindow::handleMachineCommand(const QString& command) {
         appendConsole(QStringLiteral("DELETE \"N\"   erase N (LOCK protects it)"));
         appendConsole(QStringLiteral("RENAME \"A\",\"B\"  rename a file"));
         appendConsole(QStringLiteral("LOCK / UNLOCK \"N\"  protect a file"));
+        appendConsole(QStringLiteral("LLIST        print the program to the paper tray"));
+        appendConsole(QStringLiteral("LPRINT \"TEXT\"  print a line to the paper tray"));
         appendConsole(QStringLiteral("VERIFY \"N\"   compare memory with the disk"));
         appendConsole(QStringLiteral("TYPE \"N\"     print a file"));
         appendConsole(QStringLiteral("INIT         erase the whole disk (asks twice)"));

@@ -1140,6 +1140,7 @@ if(TIME_WARP_QT_FOUND)
             add_executable(retro_computer_tests
                 tests/retro_computer_tests.cpp
                 tests/retro_basic_tests.cpp
+                tests/retro/paper_tests.cpp
                 tests/retro_boot_tests.cpp
                 tests/retro_config_tests.cpp
                 tests/retro_dos_tests.cpp
