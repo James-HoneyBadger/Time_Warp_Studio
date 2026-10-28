@@ -143,5 +143,7 @@ struct ReplAnswer {
 [[nodiscard]] int runRegistry(const QStringList& arguments);
 /// Fails if a source file or the build file has grown past its budget.
 [[nodiscard]] int runStructure(const QStringList& arguments);
+/// Fails if a call site names a Qt signal that Qt 5.15 overloads and Qt 6 does not.
+[[nodiscard]] int runQt5(const QStringList& arguments);
 
 }  // namespace timewarp::gates

@@ -78,7 +78,11 @@ int runStructure(const Invocation& invocation) {
     return timewarp::gates::runStructure(wordsOf(invocation));
 }
 
-constexpr std::array<timewarp::cli::Command, 7> kCommands{{
+int runQt5(const Invocation& invocation) {
+    return timewarp::gates::runQt5(wordsOf(invocation));
+}
+
+constexpr std::array<timewarp::cli::Command, 8> kCommands{{
     {"smoke", "every Examples/** program through time_warp_check", runSmoke},
     {"commands", "every row of the command table, one program each", runCommands},
     {"repl", "every row again, through the REPL API", runRepl},
@@ -86,6 +90,7 @@ constexpr std::array<timewarp::cli::Command, 7> kCommands{{
     {"tree", "that the tree holds no Python", runTree},
     {"registry", "that the language table has one home", runRegistry},
     {"structure", "that no file has outgrown its budget", runStructure},
+    {"qt5", "that no call site needs the Qt 6 spelling of a signal", runQt5},
 }};
 
 constexpr std::string_view kSynopsis{"<command> [--language NAME] [--verbose] [--explain]"};

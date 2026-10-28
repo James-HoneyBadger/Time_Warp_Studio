@@ -53,6 +53,7 @@ add_executable(time_warp_gates
     tools/gates/tree.cpp
     tools/gates/registry.cpp
     tools/gates/structure.cpp
+    tools/gates/qt5.cpp
 )
 # The gates read `timewarp/lang/registry.hpp` for the language table -- the header is
 # a constexpr table with no library behind it, so this is an include path, not a link.

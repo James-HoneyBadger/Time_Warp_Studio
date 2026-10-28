@@ -120,6 +120,28 @@ A tampered or stale entry is a failure, not a skip: each entry carries a SHA-256
 its program, so editing an example without re-recording is reported as a corpus
 problem rather than as a mismatch in the engine.
 
+## The second Qt
+
+One tree builds Qt 6 and Qt 5.15, and a call site that only one of them accepts
+compiles everywhere except the job that exists to compile the other. That job is the
+Windows 7 artifact, so the failure is found last, in a build nobody runs locally.
+
+```bash
+make qt5-check        # or: ./native/build/time_warp_gates qt5
+```
+
+`qt5` reads every tracked source file and fails on a bare pointer to a signal Qt 5.15
+overloads -- `&QComboBox::currentIndexChanged`, `&QProcess::finished`,
+`&QButtonGroup::buttonClicked` and the two other `QComboBox` signals this tree can
+reach. Qt 6 declares each of them once, so the pointer resolves there and a person
+reading Qt 6's documentation writes it without thinking; Qt 5.15 declares them twice,
+so it does not. `QOverload<int>::of(...)` says which one is meant and compiles in
+both, which is also what the rest of the tree already does.
+
+It is a name-based check and says so: a *shape* that only one Qt accepts -- the
+`QList<bool>(size, value)` constructor that stopped the same job once -- is not
+something it can see, and that class of mistake is still found by the Windows 7 job.
+
 ## Curriculum and documentation gates
 
 ```bash

@@ -33,6 +33,8 @@ a hand-written copy, kept in step by `time_warp_docs version` and checked by the
 - [ ] `make repl-matrix` — every command row through the native REPL
 - [ ] `make lint-md`, `make doc-links`, `make doc-claims` and `make tree-check` — the
       documentation gates, and the one that fails if a `.py` comes back
+- [ ] `make qt5-check` — no call site names a signal Qt 5.15 overloads and Qt 6 does
+      not, so the Windows 7 artifact is not the first build to notice
 - [ ] Manual smoke test of the IDE (launch, open an example, run a turtle program)
 
 ### Documentation
