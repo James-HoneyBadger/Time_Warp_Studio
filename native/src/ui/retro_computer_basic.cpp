@@ -68,6 +68,13 @@ void RetroComputerWindow::submitCommand(const QString& command) {
         return;
     }
     const QString trimmed = command.trimmed();
+    // On the telephone, every line belongs to the board -- including a blank one,
+    // which is a paragraph in a message. It has to come before the machine's own
+    // words, or a caller typing B for "bulletins" would list the BASIC program.
+    if (online_ != OnlineState::Off && handleOnlineLine(command)) {
+        emit commandFinished();
+        return;
+    }
     if (trimmed.isEmpty()) {
         // An empty line is the way out of AUTO, which is the one thing a user types
         // at this prompt that means something precisely because it is empty.

@@ -57,15 +57,21 @@ written down in `WAIVERS`.
 
 **Still open**
 
-Two, both about a structured block that cannot do what its name suggests:
+One, about a structured block that cannot do what its name suggests:
 
-- **A COMAL `FUNC` body must be a single expression**, and `LOCAL` is not
-  implemented, so a function cannot hold a working variable of its own. A four-way
-  choice has to be a `PROC` that leaves its answer in a global, which is what
-  `comal/results_table.comal` does and comments on.
-- **A FOCAL `DO` group runs to the end of the program**: there is no `RETURN`, so a
-  group cannot hand control back to its caller. `focal/showcase.foc` works around it
-  by putting its group last and saying so.
+- **A COMAL `FUNC` body is a sequence of `LOCAL` declarations, assignments and one
+  `RETURN`** -- `IF` and loops inside it are not evaluated, because an expression
+  cannot hand control back to the statement loop. A four-way choice therefore still
+  has to be a `PROC` that leaves its answer in a global, which is what
+  `comal/results_table.comal` does and comments on. `LOCAL` itself works since
+  23.2.0: a function can hold a working variable of its own again, and the caller's
+  value goes back on every exit path.
+
+A FOCAL `DO` group used to run to the end of the program because there was no
+`RETURN`. At 23.2.0 there is one: `RETURN` leaves the innermost group and hands
+control back to the line after the `DO`, a `RETURN` with no group around it is
+reported rather than quietly stopping the program, and `focal/showcase.foc` no longer
+has to put its group last.
 
 One gap closed itself: at 22.4.0 a COMAL program read `mark(8)` as zero four lines
 after reading it correctly inside a loop. It has not reproduced since, in the program

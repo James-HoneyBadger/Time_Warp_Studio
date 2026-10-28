@@ -654,6 +654,46 @@ Chip8Machine::Chip8Machine(std::vector<std::uint8_t> program_memory, int entry, 
     random_.seed_unsigned((static_cast<std::uint64_t>(device()) << 32) | device());
 }
 
+Chip8State Chip8Machine::save_state() const {
+    Chip8State state;
+    state.v = v;
+    state.rpl = rpl_;
+    state.framebuffer = framebuffer_;
+    state.memory = memory;
+    state.stack = stack;
+    state.i = i;
+    state.pc = pc;
+    state.delay_timer = delay_timer;
+    state.sound_timer = sound_timer;
+    state.keys = keys_;
+    state.hi_res = hi_res_;
+    state.halted = halted_;
+    state.waiting_for_key = waiting_for_key_;
+    state.waiting_register = waiting_register_;
+    state.cycles = cycles_;
+    state.collisions = collisions_;
+    return state;
+}
+
+void Chip8Machine::restore_state(const Chip8State& state) {
+    v = state.v;
+    rpl_ = state.rpl;
+    framebuffer_ = state.framebuffer;
+    memory = state.memory;
+    stack = state.stack;
+    i = state.i;
+    pc = state.pc;
+    delay_timer = state.delay_timer;
+    sound_timer = state.sound_timer;
+    keys_ = state.keys;
+    hi_res_ = state.hi_res;
+    halted_ = state.halted;
+    waiting_for_key_ = state.waiting_for_key;
+    waiting_register_ = state.waiting_register;
+    cycles_ = state.cycles;
+    collisions_ = state.collisions;
+}
+
 std::uint16_t Chip8Machine::fetch() {
     if (pc + 1 >= kChip8MemorySize) {
         throw Chip8Error("the program counter ran past the end of memory");

@@ -5,6 +5,8 @@
 
 #include "timewarp/lessons/curriculum.hpp"
 
+#include "timewarp/core/share_files.hpp"
+
 #include <algorithm>
 #include <cctype>
 #include <cstddef>
@@ -226,28 +228,7 @@ bool load_curriculum(const QString& path, std::vector<Lesson>& lessons, QString*
 }
 
 QString default_curriculum_path() {
-    const QString override = qEnvironmentVariable("TIME_WARP_LESSONS").trimmed();
-    if (!override.isEmpty() && QFileInfo{override}.isFile()) {
-        return QFileInfo{override}.absoluteFilePath();
-    }
-    // Without an application object there is no directory to look beside, which
-    // is the case for a library user that passes its own path anyway.
-    const QString app_dir = QCoreApplication::instance() != nullptr
-                                ? QCoreApplication::applicationDirPath()
-                                : QString{};
-    if (app_dir.isEmpty()) {
-        return {};
-    }
-    for (const QString& candidate :
-         {app_dir + QStringLiteral("/../share/time-warp-studio/lessons.json"),
-          app_dir + QStringLiteral("/../share/lessons.json"),
-          app_dir + QStringLiteral("/../Resources/share/time-warp-studio/lessons.json"),
-          app_dir + QStringLiteral("/../../native/share/lessons.json")}) {
-        if (QFileInfo{candidate}.isFile()) {
-            return QFileInfo{candidate}.absoluteFilePath();
-        }
-    }
-    return {};
+    return timewarp::core::shareFile("TIME_WARP_LESSONS", QStringLiteral("lessons.json"));
 }
 
 std::string_view extension_for(lang::Language language) noexcept {

@@ -587,7 +587,52 @@ void MainWindow::showFindInFiles() {
                         goToLine(line);
                     }
                 });
+        // Replace All writes to disk, so every open document it changed is reloaded
+        // here: a buffer still holding the old text would write it back over the
+        // replacement on the next save. Documents with unsaved changes are named as
+        // off limits before the write, so there is nothing to reconcile for them.
+        connect(find_in_files_, &FindInFilesDialog::filesReplaced, this,
+                [this](const QStringList& paths) {
+                    int reloaded = 0;
+                    const QList<CodeEditor*> editors = findChildren<CodeEditor*>();
+                    for (CodeEditor* editor : editors) {
+                        const QString path = pathOf(editor);
+                        if (path.isEmpty() ||
+                            !paths.contains(QFileInfo{path}.absoluteFilePath())) {
+                            continue;
+                        }
+                        QFile file{path};
+                        if (!file.open(QIODevice::ReadOnly)) {
+                            continue;
+                        }
+                        const QString text = QString::fromUtf8(file.readAll());
+                        editor->setPlainText(text);
+                        editor->document()->setModified(false);
+                        ++reloaded;
+                    }
+                    setExecutionState(tr("ready"),
+                                      reloaded > 0
+                                          ? tr("Replaced in %1 file(s); %2 open document(s) "
+                                               "reloaded")
+                                                .arg(paths.size())
+                                                .arg(reloaded)
+                                          : tr("Replaced in %1 file(s)").arg(paths.size()));
+                });
     }
+    // Documents holding unsaved work are the ones a bulk edit must not write behind:
+    // the disk copy is older than the buffer, and saving it back would be silent data
+    // loss. Named before every use, because the set changes as documents do.
+    QSet<QString> off_limits;
+    for (CodeEditor* editor : findChildren<CodeEditor*>()) {
+        if (!editor->document()->isModified()) {
+            continue;
+        }
+        const QString path = pathOf(editor);
+        if (!path.isEmpty()) {
+            off_limits.insert(QFileInfo{path}.absoluteFilePath());
+        }
+    }
+    find_in_files_->setOffLimits(off_limits);
     // The folder of the document in front, because that is what "in files" means
     // to whoever pressed the key; a selection becomes the term, because searching
     // for what you just highlighted is the common case.

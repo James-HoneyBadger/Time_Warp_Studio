@@ -21,6 +21,7 @@
 #include <QHeaderView>
 #include <QKeySequence>
 #include <QLabel>
+#include <QSlider>
 #include <QMessageBox>
 #include <QMimeData>
 #include <QPlainTextEdit>
@@ -96,7 +97,31 @@ void Chip8Window::buildUi() {
 
     screen_ = new Chip8Screen{central};
     screen_->setColors(QColor{224, 248, 208}, QColor{10, 10, 20});
-    row->addWidget(screen_, 1);
+
+    // The screen and the rewind strip under it, in one column: a slider beside the
+    // keypad would be a control for the machine and not for the picture, and the
+    // picture is what it changes.
+    auto* screen_column = new QVBoxLayout;
+    screen_column->setContentsMargins(0, 0, 0, 0);
+    auto* rewind_row = new QHBoxLayout;
+    rewind_row->setSpacing(6);
+    auto* rewind_caption = new QLabel{tr("\u23EA Rewind"), central};
+    rewind_row->addWidget(rewind_caption);
+    rewind_ = new QSlider{Qt::Horizontal, central};
+    rewind_->setObjectName(QStringLiteral("chip8Rewind"));
+    rewind_->setRange(0, 0);
+    rewind_->setEnabled(false);
+    rewind_->setToolTip(
+        tr("Drag back to the machine as it was a moment ago. Run resumes from there."));
+    rewind_row->addWidget(rewind_, 1);
+    rewind_label_ = new QLabel{central};
+    rewind_label_->setObjectName(QStringLiteral("chip8RewindLabel"));
+    rewind_label_->setMinimumWidth(84);
+    rewind_label_->setAlignment(Qt::AlignRight | Qt::AlignVCenter);
+    rewind_row->addWidget(rewind_label_);
+    screen_column->addLayout(rewind_row);
+    screen_column->addWidget(screen_, 1);
+    row->addLayout(screen_column, 1);
 
     auto* column = new QVBoxLayout;
     keypad_ = new Chip8Keypad{central};
@@ -115,6 +140,25 @@ void Chip8Window::buildUi() {
     });
     connect(keypad_, &Chip8Keypad::keyChanged, this,
             [this](int key, bool down) { emulator_->setKey(key, down); });
+
+    connect(rewind_, &QSlider::valueChanged, this, [this](int value) {
+        if (rewind_ == nullptr) {
+            return;
+        }
+        if (emulator_->rewindPosition() < 0 && value < rewind_->maximum()) {
+            // The first touch captures the live state, so the right edge is exactly
+            // the frame the user was looking at when they reached for the slider and
+            // not the last scheduled snapshot, up to a quarter second older.
+            const int moments = emulator_->beginRewind();
+            const QSignalBlocker blocker{rewind_};
+            rewind_->setRange(0, std::max(0, moments - 1));
+            rewind_->setValue(std::max(0, moments - 1));
+        }
+        const int newest = rewind_->maximum();
+        emulator_->rewindTo(value >= newest ? newest : value);
+        updateRewind();
+        updateControls();
+    });
 
     state_label_ = new QLabel{tr("Open a .ch8 listing or ROM"), this};
     state_label_->setObjectName(QStringLiteral("chip8State"));
@@ -424,6 +468,7 @@ void Chip8Window::refresh() {
     }
 
     updateSound(snapshot);
+    updateRewind();
 
     // A running program changes memory constantly; four refreshes a second is
     // enough to watch it and cheap enough not to compete with the emulation.
@@ -490,6 +535,31 @@ void Chip8Window::updateControls() {
             const QSignalBlocker blocker{speed_};
             speed_->setValue(emulator_->speed());
         }
+    }
+}
+
+void Chip8Window::updateRewind() {
+    if (rewind_ == nullptr || rewind_label_ == nullptr) {
+        return;
+    }
+    const int moments = emulator_->rewindCount();
+    const QSignalBlocker blocker{rewind_};
+    // One moment is no history at all: a slider with a single position is a
+    // control that cannot do anything. The enabled state lives here rather than in
+    // `updateControls` because this runs on every frame, and a machine that has
+    // been stepping is a machine with history whether or not it ever announced a
+    // state change.
+    rewind_->setRange(0, std::max(0, moments - 1));
+    rewind_->setEnabled(emulator_->loaded() && moments > 1);
+    const int position = emulator_->rewindPosition();
+    if (position >= 0 && position < moments - 1) {
+        rewind_->setValue(position);
+        const int frames_back = (moments - 1 - position) * kChip8RewindStride;
+        const double seconds = static_cast<double>(frames_back) / kChip8FramesPerSecond;
+        rewind_label_->setText(tr("\u2212%1 s").arg(seconds, 0, 'f', 2));
+    } else {
+        rewind_->setValue(rewind_->maximum());
+        rewind_label_->setText(moments > 1 ? tr("now") : QString{});
     }
 }
 

@@ -32,6 +32,7 @@
 
 #include "timewarp/ui/hb_clock.hpp"
 #include "timewarp/ui/hb_dos.hpp"
+#include "timewarp/ui/hb_bbs.hpp"
 #include "timewarp/ui/hb_memory.hpp"
 #include "timewarp/ui/hb_tube.hpp"
 #include "timewarp/ui/language.hpp"
@@ -137,6 +138,14 @@ public:
     /// The disk this machine is using. Public so a test can assert what a
     /// catalogue should have shown without reading the console back.
     [[nodiscard]] const HbDos& disk() const noexcept { return dos_; }
+    /// What the telephone line is doing. `Off` is a machine at its prompt.
+    enum class OnlineState { Off, Handle, Menu, Posting };
+    [[nodiscard]] OnlineState onlineState() const noexcept { return online_; }
+    [[nodiscard]] QString bbsHandle() const noexcept { return handle_; }
+    /// The paper the printer has written, or empty when it has printed nothing.
+    /// A test reads this rather than the console, for the same reason it reads the
+    /// disk: the page is the artefact, the message is about the page.
+    [[nodiscard]] QString paperPath() const { return paper_path_; }
     [[nodiscard]] QLabel* statusLabel() const noexcept { return status_label_; }
     /// Runs the program in the editor through the selected language's engine.
     void runProgram();
@@ -278,6 +287,24 @@ private:
     /// The disk rattle, in one place: every DOS word that moves the head calls it.
     void diskAccessed();
     void listDisk();
+    /// Sends text to the machine's printer: a page appended to the paper tray in the
+    /// data directory, and a line on the console saying where it went. The HB-1 has
+    /// no printer port, so the tray is a file -- which is also what makes the output
+    /// something a person can keep, read or print elsewhere.
+    void printToPaper(const QString& body, const QString& what);
+
+    // -- the board ---------------------------------------------------------
+    /// The modem: `CONNECT`, the greeting, a handle, the menu.
+    void dialBoard();
+    /// Leaves the line and puts the machine back at its prompt.
+    void hangUp(const QString& reason);
+    /// Every line typed while connected comes here, including the blank lines of a
+    /// message body. Returns false only when the line is not the line's business.
+    [[nodiscard]] bool handleOnlineLine(const QString& line);
+    void finishPost();
+    void listBulletins();
+    void readBulletin(int number);
+    void showOnlineHelp();
     void showDiskStatus();
     void saveToDisk(const QString& name);
     void loadFromDisk(const QString& name);
@@ -326,6 +353,14 @@ private:
     QSplitter* screen_splitter_ = nullptr;
     CrtOverlay* overlay_ = nullptr;
     QLabel* prompt_label_ = nullptr;
+    /// The line, its state, and who is calling.
+    OnlineState online_ = OnlineState::Off;
+    QString handle_;
+    QString post_subject_;
+    QStringList post_body_;
+    HbBbs bbs_;
+    /// Where the printer last wrote. Empty until `LLIST` or `LPRINT` is used.
+    QString paper_path_;
     QLineEdit* input_ = nullptr;
     QPushButton* run_button_ = nullptr;
     QPushButton* stop_button_ = nullptr;

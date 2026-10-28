@@ -31,6 +31,11 @@
 
 #include "timewarp/canvas/host_adapter.hpp"
 #include "timewarp/canvas/qt_bridge.hpp"
+#ifdef TIME_WARP_HAVE_AI
+#include "timewarp/ai/config.hpp"
+#include "timewarp/ui/ai_panel.hpp"
+#include "timewarp/ui/ai_settings.hpp"
+#endif
 #include "timewarp/ui/app.hpp"
 #include "timewarp/ui/app_paths.hpp"
 #include "timewarp/ui/benchmark.hpp"
@@ -38,6 +43,7 @@
 #include "timewarp/ui/chip8_window.hpp"
 #include "timewarp/ui/code_editor.hpp"
 #include "timewarp/ui/classroom_marker.hpp"
+#include "timewarp/ui/command_reference.hpp"
 #include "timewarp/ui/command_palette.hpp"
 #include "timewarp/ui/export.hpp"
 #include "timewarp/ui/find_bar.hpp"
@@ -91,7 +97,14 @@ struct PanelEntry {
 constexpr PanelEntry kPanelTable[] = {
     {"output", 0},   {"variables", 1}, {"telemetry", 2},
     {"debug", 3},    {"lessons", 4},   {"classroom", 5},
-    {"sql", 6}};
+    {"sql", 6},      {"reference", 7},
+#ifdef TIME_WARP_HAVE_AI
+    // Last because it is the one page that needs something outside this machine,
+    // and a build without Qt Network does not have it at all rather than offering
+    // a page that can only report that it cannot work.
+    {"ai", 8},
+#endif
+};
 
 }  // namespace
 
@@ -675,5 +688,157 @@ void MainWindow::finishRun(const QString& error, bool completed) {
                       completed ? tr("Finished") : tr("Stopped"));
 }
 
+
+
+void MainWindow::buildCommandReference() {
+    reference_panel_ = new CommandReferencePanel{right_tabs_};
+    right_tabs_->addTab(reference_panel_, tr("\U0001F4D6 Reference"));
+    // **Try it** opens the row's program in a new document, through the same path a
+    // lesson's starting program takes: a language override and an untitled label,
+    // so the editor highlights and runs it without a file extension to guess from.
+    connect(reference_panel_, &CommandReferencePanel::tryRequested, this,
+            [this](const QString& languageKey, const QString& source, const QString& name) {
+                openLessonCode(languageKey, source, name);
+            });
+    connect(reference_panel_, &CommandReferencePanel::statusMessage, this,
+            [this](const QString& message) {
+                statusBar()->showMessage(message, kStatusMessageMilliseconds);
+            });
+}
+
+#ifdef TIME_WARP_HAVE_AI
+
+// ---------------------------------------------------------------------------
+// The assistant
+// ---------------------------------------------------------------------------
+
+void MainWindow::buildAiPanel() {
+    // Read once, at construction: the settings file is the source of truth until
+    // the user changes it, and a window that re-read it per question would ignore
+    // an edit made in the meantime by another copy of the application.
+    ai_config_ = timewarp::ai::load();
+    ai_panel_ = new AiPanel{right_tabs_};
+    ai_panel_->setContextProvider([this] { return aiContext(); });
+    ai_panel_->setConfig(ai_config_);
+    right_tabs_->addTab(ai_panel_, tr("\U0001F916 Assistant"));
+
+    connect(ai_panel_, &AiPanel::configureRequested, this, &MainWindow::showAiSettings);
+    connect(ai_panel_, &AiPanel::insertRequested, this, &MainWindow::insertAssistantCode);
+    connect(ai_panel_, &AiPanel::statusMessage, this, [this](const QString& message) {
+        statusBar()->showMessage(message, kStatusMessageMilliseconds * 2);
+    });
+}
+
+timewarp::ai::Context MainWindow::aiContext() const {
+    timewarp::ai::Context context;
+    const CodeEditor* editor = currentEditor();
+    if (editor == nullptr) {
+        return context;
+    }
+    context.language = displayName(languageOf(editor));
+    context.file_name = nameOf(editor);
+    context.source = editor->toPlainText();
+    // A selection is what the user means when there is one: "explain this" pointed
+    // at six lines is a question about six lines.
+    if (editor->textCursor().hasSelection()) {
+        QString selected = editor->textCursor().selectedText();
+        // QTextCursor separates paragraphs with U+2029, which a model reads as a
+        // character rather than a line break.
+        selected.replace(QChar::ParagraphSeparator, QLatin1Char('\n'));
+        context.selection = selected;
+    }
+    // What the last run said, for "find what is wrong with this". Bounded: the
+    // console holds every run of the session, and a thousand lines of an earlier
+    // program is not evidence about this one.
+    if (errors_view_ != nullptr) {
+        const QString errors = errors_view_->toPlainText().trimmed();
+        if (!errors.isEmpty()) {
+            context.last_output += tr("Errors:\n%1").arg(errors.right(2000));
+        }
+    }
+    if (console_view_ != nullptr) {
+        const QString output = console_view_->toPlainText().trimmed();
+        if (!output.isEmpty()) {
+            if (!context.last_output.isEmpty()) {
+                context.last_output += QStringLiteral("\n\n");
+            }
+            context.last_output += tr("Output:\n%1").arg(output.right(4000));
+        }
+    }
+    return context;
+}
+
+void MainWindow::insertAssistantCode(const QString& code) {
+    if (code.trimmed().isEmpty()) {
+        return;
+    }
+    CodeEditor* editor = currentEditor();
+    // No document open is not a refusal: the answer is a program, and a program
+    // with nowhere to go would be lost. It opens in a new document, which is what
+    // the user would have done next.
+    if (editor == nullptr) {
+        editor = newFile();
+    }
+    QTextCursor cursor = editor->textCursor();
+    cursor.beginEditBlock();
+    if (cursor.hasSelection()) {
+        cursor.removeSelectedText();
+    }
+    cursor.insertText(code);
+    cursor.endEditBlock();
+    editor->setTextCursor(cursor);
+    editor->setFocus();
+    setExecutionState(tr("ready"), tr("The answer was inserted into %1").arg(nameOf(editor)));
+}
+
+void MainWindow::showAiSettings() {
+    auto* dialog = new AiSettingsDialog{ai_config_, this};
+    dialog->setAttribute(Qt::WA_DeleteOnClose);
+    connect(dialog, &AiSettingsDialog::saved, this,
+            [this](const timewarp::ai::Config& config) {
+                ai_config_ = config;
+                timewarp::ai::save(config);
+                if (ai_panel_ != nullptr) {
+                    ai_panel_->setConfig(config);
+                }
+                setExecutionState(tr("ready"),
+                                  tr("Assistant settings saved — %1")
+                                      .arg(timewarp::ai::summary(config)));
+            });
+    dialog->open();
+}
+
+void MainWindow::showAssistant() {
+    // The key is in the table, so the only way this fails is a build with no
+    // assistant -- and then there is no panel to focus either.
+    static_cast<void>(showPanel(QStringLiteral("ai")));
+    if (ai_panel_ == nullptr) {
+        return;
+    }
+    ai_panel_->focusInput();
+    if (!ai_panel_->configured()) {
+        showAiSettings();
+    }
+}
+
+void MainWindow::askAssistant(timewarp::ai::Task task) {
+    static_cast<void>(showPanel(QStringLiteral("ai")));
+    if (ai_panel_ == nullptr) {
+        return;
+    }
+    if (!ai_panel_->configured()) {
+        // A menu entry that reports "not configured" and stops is a dead end. The
+        // window it needs is one click away, and the question can be asked again
+        // with the button that is still in front of the user.
+        showAiSettings();
+        setExecutionState(tr("ready"),
+                          tr("Choose a service and a model, then ask again"));
+        return;
+    }
+    ai_panel_->ask(task);
+    ai_panel_->focusInput();
+}
+
+#endif  // TIME_WARP_HAVE_AI
 
 }  // namespace timewarp::ui

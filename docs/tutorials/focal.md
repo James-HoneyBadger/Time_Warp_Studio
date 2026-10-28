@@ -152,10 +152,23 @@ A FOR body being the rest of the line is why the square below fits on one line:
 02.10 T "INSIDE"
 ```
 
-There is **no RETURN statement in FOCAL-69**. A group called with DO is expected
-to end where the program ends, so a DO that needs to come back simply stops. A
-nested DO is bounded by a depth limit, so a cycle reports itself instead of
-hanging.
+FOCAL-69 had **no RETURN**, so a group called with DO ran on to the end of the
+program and a group that had to come back was placed after the `Q`. This
+implementation adds `RETURN` (`R`), which leaves the innermost group and hands
+control back to the line after its `DO`:
+
+```focal
+01.10 DO 2.10
+01.20 T "BACK"
+01.30 Q
+02.10 T "INSIDE"
+02.20 RETURN
+02.30 T "NEVER"
+```
+
+A `RETURN` with no group around it is reported instead of quietly stopping the
+program, and a nested DO is bounded by a depth limit, so a cycle reports itself
+instead of hanging.
 
 ## 8. Functions
 
@@ -240,6 +253,7 @@ a mistyped command reports itself instead of printing nothing.
 | `IF` | `I` | Three-way branch on the sign |
 | `FOR` | `F` | Loop over the rest of the line |
 | `DO` | `D` | Call a group |
+| `RETURN` | `R` | Leave the group (an extension) |
 | `GOTO` | `G` | Jump to a group |
 | `COMMENT` | `C` | The rest of the line is text |
 | `ERASE` | `E` | Forget variables |

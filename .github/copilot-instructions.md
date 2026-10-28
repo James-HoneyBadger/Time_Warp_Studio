@@ -38,10 +38,11 @@ the parity gate compares with a recorded corpus, and the harnesses drive
     the expression evaluator (`timewarp_expr`, linked into `timewarp_lang` and
     used by every arithmetic evaluator the executors share).
 - **The workspace libraries** — `timewarp_project` (`.twproject` groups),
-  `timewarp_sql` (one SQLite connection) and `timewarp_api` (JSON-RPC with no
-  transport of its own). The IDE's Projects dock, Database tab and `./api` are
-  views over these; `./twc` links the language engines into a standalone
-  executable.
+  `timewarp_sql` (one SQLite connection), `timewarp_ai` (the assistant's
+  configuration, prompts and one Qt Network client) and `timewarp_api` (JSON-RPC
+  with no transport of its own). The IDE's Projects dock, Database tab, Assistant
+  page and `./api` are views over these; `./twc` links the language engines into a
+  standalone executable.
 - **The frozen parity corpus** — `native/tests/golden/lang_corpus.json.gz`.
   - The Python reference engine was deleted at 18.0. The corpus is what remains of
     it: 470 programs, each with the program text, what it printed, every drawing
@@ -114,7 +115,7 @@ make -C native run
 ### Testing Strategy
 
 ```bash
-# The Qt suites (24 of them)
+# The Qt suites (26 of them)
 ctest --test-dir native/build --output-on-failure
 make -C native test-debug     # Debug tree
 make -C native asan           # AddressSanitizer; ASAN=undefined for UBSan
@@ -297,6 +298,18 @@ needs an interpreter: if a guide names a `python3` command it is out of date, an
   progress, and the classroom with rosters, handouts, marking and bundles),
   `native/src/ui/panels_lessons.cpp` (`LessonPanel`), and the two commands
   `native/tools/{learn,teach}.cpp`
+- **The AI assistant**: `native/src/ai/` (`timewarp_ai`: `config.cpp` for the
+  endpoint, model and key, `prompt.cpp` for what the model is told about the eleven
+  languages, `client.cpp` for the one request in flight), `native/src/ui/ai_panel.cpp`
+  (the 🤖 Assistant page) and `ai_settings.cpp` (presets, limits, **Test
+  connection**), plus `native/tools/ai_cli.cpp` (`time_warp_ai`, the same thing from
+  a shell). Off until configured; two wire shapes — OpenAI-compatible and
+  Anthropic's Messages API — so a vendor such as DeepSeek is a preset holding an
+  endpoint and a model, not a protocol. The key comes from
+  `TIME_WARP_AI_API_KEY` before the settings file and is stripped from every
+  message by `redact()`. A build with no Qt Network has no assistant at all, which
+  is what `TIME_WARP_HAVE_AI` gates in `main_window_panels.cpp` and the Tools menu.
+  `docs/AI.md` is the manual.
 - **The run report**: `native/tools/check.cpp` (`time_warp_check`) — one program through
   the native engines, with what it printed and what it drew. This is what the example
   and command harnesses drive, and what a person at a terminal can ask.
@@ -407,7 +420,8 @@ Each fact has one home; the other guides link to it rather than restating it.
 | `docs/MACHINES.md` | The two machines as a set, and the parallel-universe premise item by item |
 | `docs/hb1/` | The HB-1: owner's manual, ROM library, HB DOS reference, CONFIG reference, engineering companion |
 | `docs/chip8/` | The CHIP-8: machine manual, assembler, instruction set |
-| `docs/USER_GUIDE.md` | The IDE: projects, the REPL bar, debugging, SQL, terminal, automation, appearance |
+| `docs/USER_GUIDE.md` | The IDE: projects, the REPL bar, debugging, SQL, the assistant, terminal, automation, appearance |
+| `docs/AI.md` | The AI assistant: presets, the key, and exactly what is sent |
 | `docs/LANGUAGE_GUIDE.md`, `docs/tutorials/` | Every command, and how to learn each language |
 | `docs/lessons/` | The curriculum, and the student and teacher guides |
 | `docs/ARCHITECTURE.md`, `native/README.md` | How it is built and why |

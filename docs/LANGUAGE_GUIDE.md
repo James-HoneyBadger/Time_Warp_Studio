@@ -939,6 +939,22 @@ COMAL-80 adds structured programming to the BASIC family: `IF … ENDIF`,
 
 ### Procedures
 
+A `FUNC` returns a value and can be used inside an expression; a `PROC` is called for
+its effect. A function body may declare its own variables with `LOCAL`:
+
+```comal
+100 FUNC DOUBLE(N)
+110 LOCAL T
+120 T = N * 2
+130 RETURN T
+140 ENDFUNC
+```
+
+`T` is the function's while it runs and the caller's afterwards whether or not the
+caller had one. A `FUNC` body is read as declarations, assignments and one `RETURN`:
+a body that needs an `IF` or a loop has to be a `PROC` that leaves its answer in a
+global.
+
 ```comal
 10 PROC GREET(NAME$)
 20   PRINT "Hello, "; NAME$
@@ -1280,7 +1296,8 @@ single-letter form and a full name; both work.
 | `SET` | `S` | Assign |
 | `IF` | `I` | Three-way branch on the sign of an expression |
 | `FOR` | `F` | Loop over the rest of the line |
-| `DO` | `D` | Run a group, returning when the program runs off the end |
+| `DO` | `D` | Run a group; `RETURN` hands control back to the line after the `DO` |
+| `RETURN` | `R` | Leave the innermost `DO` group (an extension, not DEC's) |
 | `GOTO` | `G` | Jump to a group |
 | `COMMENT` | `C` | The rest of the line is text |
 | `ERASE` | `E` | Forget variables: `ERASE ALL`, or `ERASE X,Y` |

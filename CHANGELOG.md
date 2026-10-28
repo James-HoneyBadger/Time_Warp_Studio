@@ -2,6 +2,174 @@
 
 <!-- history: all -->
 
+## [23.2.0] - 2026-10-27
+
+Six gaps in features that were otherwise finished -- and one in a machine -- closed
+in the same shape: the behaviour a person can see, a free function behind it that a
+test can drive without a window, and the reasoning written down where the code is.
+
+### Added
+
+- **Version History shows what changed.** It could list copies and preview one of
+  them, which answers "what did it look like" and never "what did I change since".
+  **Compare with what is open** puts the chosen copy against the editor's text as a
+  unified diff with the changed lines coloured, `-` for what restoring takes away and
+  `+` for what it brings back. The comparison is `native/src/ui/diff.cpp`: an LCS
+  over lines with the common head and tail stripped first, bounded so two unrelated
+  large files get a plain answer rather than a slow one.
+- **Replace in Files.** Find in Files could search a folder and change nothing in it.
+  The dialog now has a replacement field and **Replace All**, and the writing half
+  (`replaceInFiles`) has three rules: a file is rewritten once through `QSaveFile` and
+  only when something matched; a file the caller names as off limits is skipped and
+  reported, which is how the window keeps a bulk edit away from a document with
+  unsaved changes; and a pattern that cannot be compiled writes nothing. A literal
+  replacement is inserted as typed, a regular expression's expands `\1`, and the
+  window reloads the open documents a replacement changed so a buffer cannot save the
+  old text back over it.
+- **The CHIP-8 can be rewound.** A snapshot of the whole machine every quarter second,
+  thirty seconds deep, and a strip under the screen to go back through it. Touching
+  the strip captures the live frame first, so the right-hand end is exactly what the
+  user was looking at; Run resumes from there and forgets the future. It replays the
+  drawing, not the luck: the random generator is not in the snapshot, and the header
+  says so.
+- **The assistant's pages name what they show.** A field, list or slider with no
+  accessible name is announced as "edit" or "slider" -- the same as not being there.
+  Every control on the 📖 Reference page, the ✨ Assistant page and the assistant's
+  settings now carries a name, and `ui_layout_tests` asserts it: a widget must have an
+  accessible name or visible text of its own. The case covers those three pages
+  rather than the whole window, and says so, because a gate over every control has to
+  be written against what every control is.
+- **A Reference page.** The 📖 **Reference** tab lists every command for the selected
+  language with the smallest program that runs it and what it does, read from
+  `native/share/command_rows.json` -- the table `time_warp_gates commands` drives, now
+  installed with the application. **Try it** opens a row's program in a new document.
+  The reference and the gate are one fact rather than two documents that agree until
+  somebody edits one.
+- **The HB-1 has a telephone.** `DIAL` connects to **WARP BOARD**, a bulletin board kept
+  in `~/.time_warp/bbs/board.json`: a handle, a menu, the bulletins, a read, a post
+  that takes more than the one line the prompt holds (`P SUBJECT`, the body, a line
+  with a full stop), and a log-off that leaves the machine at its prompt. It is on the
+  machine rather than on a network -- a class can show what a board *was* without a
+  packet leaving the room -- and a board that cannot be read is refused rather than
+  overwritten.
+- **The HB-1 has a printer.** `LLIST` prints the program and `LPRINT "TEXT"` prints a
+  line, both appending a headed page to `~/.time_warp/print/paper.txt` and answering
+  with the line count and the file. The machine has no printer port and never did: a
+  file is the same artefact a printer produced and the one output that survives being
+  switched off.
+- **The assistant can ask an endpoint what it runs.** `GET {base}/models` is the
+  discovery call both request shapes share: **Find models…** in the settings dialog, an
+  automatic probe when the endpoint is on this machine, and `time_warp_ai models` from
+  a shell.
+
+### Changed
+
+- **COMAL `FUNC` bodies can declare `LOCAL`.** A function could not hold a variable of
+  its own: every name it touched was the caller's. `LOCAL T` now gives it one, and the
+  caller's value -- if there was one -- goes back on every exit path, including a
+  throw. A `FUNC` body is still read as declarations, assignments and one `RETURN`; a
+  body that needs an `IF` or a loop still has to be a `PROC`.
+- **FOCAL has `RETURN`.** A `DO` group used to run to the end of the program because
+  DEC's ten commands had no way back; `RETURN` (`R`) now leaves the innermost group
+  and hands control back to the line after the `DO`, including from the middle of a
+  `;`-separated line. A `RETURN` with no group around it is reported rather than
+  quietly stopping the program. `focal/showcase.foc` demonstrates it instead of
+  working around it, and the roadmap's "still open" list is down to one entry.
+- **The share-directory search is one header** (`timewarp/core/share_files.hpp`):
+  installed, beside a build tree, inside a macOS bundle, then the checkout. The
+  snippet catalogue and the curriculum had reached their second and third copies;
+  `TIME_WARP_COMMANDS` joins `TIME_WARP_SNIPPETS` and `TIME_WARP_LESSONS` as the
+  override, and the next data file needs no new list.
+- **The right column has nine pages** where the build has Qt Network and eight where
+  it does not: Reference sits before the assistant, which stays last because it is the
+  one page that needs something outside this machine.
+- **`ready()` is now `reachable()` plus a model name.** Asking what the models are
+  cannot require knowing one, so the client and the dialog check the first and a
+  question checks the second.
+
+### Notes
+
+- **Two bulk operations now write to a person's files** -- Replace All and the HB-1's
+  paper -- and both are testable without a window: the rules are free functions, and
+  the confirmation dialogs are the only part that needs a person. Where a write cannot
+  be undone, the count and the number of files are in the question.
+- **The rewind keeps no random state, and says so** rather than letting a user
+  discover that a replayed RND program draws something else.
+
+## [23.1.0] - 2026-10-27
+
+An AI assistant you configure yourself: a page beside the editor that can explain a
+program, find what is wrong with it, comment it, translate it or write a new one
+through a service you choose. Off on a fresh install, nothing sent until a button is
+pressed, and the key need never touch the disk.
+
+### Added
+
+- **The Assistant page.** The eighth page of the right column, beside Output,
+  Variables, Telemetry, Debug, Lessons, Classroom and Database, because the questions
+  it answers are about the document in the editor.
+  **Explain**, **Fix**, **Comment**, **Translate** and **Write** are one click each;
+  the box takes anything else and `Ctrl+Enter` sends it. **Stop** abandons a request,
+  **Clear** forgets the last six exchanges, **Insert** puts the answer's code into the
+  editor at the cursor — replacing a selection — and **Copy** takes the whole answer.
+  A selection wins over the whole document, and the last run's errors ride along with
+  **Fix**, because "find what is wrong" without the error is a guess.
+- **Tools > AI Settings…** chooses the service. A **Provider** dropdown fills the
+  protocol, endpoint and model from a preset: OpenAI, DeepSeek, Anthropic, Ollama and
+  LM Studio on this machine, OpenRouter, or a custom endpoint. **Test connection**
+  sends one short question and shows the model's own answer, which is the only quick
+  way to tell a wrong key from a wrong endpoint from a retired model name.
+- **`timewarp::ai`**, the library: `config.cpp` reads, validates and rewrites the
+  settings; `prompt.cpp` builds the system prompt and the user turn; `client.cpp` is
+  the one class that opens a socket, and it is asynchronous because the window must
+  stay live at 60 Hz whether or not a service is thinking.
+- **Two request shapes, not a vendor list**: OpenAI-compatible (`/chat/completions`,
+  bearer token) and Anthropic's Messages API (`/messages`, `x-api-key`). DeepSeek is a
+  preset holding an endpoint and a model, not a third protocol: the *protocol* is how
+  a request is built and the *provider* is who receives it, and only one of those
+  changes any code.
+- **`time_warp_ai`**, the same assistant from a shell: `ask`, `explain`, `fix`,
+  `comment`, `translate`, `write`, `check` and `config`. It reads the settings the IDE
+  writes, prints the answer on stdout alone so a pipe can have it, and `--file -`
+  reads the program from stdin.
+- **`ai_tests`**, 29 cases. The interesting half needs no network: the configuration,
+  the prompts and both wire formats are pure functions, and the client is driven by a
+  transport of the test's own — a 200 in each protocol's envelope, a 401 with an
+  error object, a body that is not JSON, a refused connection, and a cancellation
+  that arrives after the button was pressed. What a real model *says* is another
+  company's property and is not asserted.
+- **`docs/AI.md`**: the presets, every environment variable, exactly what leaves the
+  machine, and what each error means. The user guide has a section, the FAQ answers
+  "does it send my code anywhere?", and the API page lists the library.
+
+### Changed
+
+- **The right column has eight pages**, so `MainWindow::showPanel` accepts `ai` and
+  `panelKeys()` lists it. The layout suite asserts the count, the order and the title,
+  which is how the page cannot exist without being reachable.
+- **The suite count is 26, not 24.** `cli_tests` had been missing from the list in
+  `docs/README_TESTING.md` long before this release; adding `ai_tests` made the
+  arithmetic wrong by two instead of one. The list and the four documents that repeat
+  the number now say 26.
+- **`docs/USER_GUIDE.md` has a section 8 and the later sections moved down one.** The
+  anchor references in `README.md`, `docs/API.md` and `docs/FAQ.md` moved with them.
+
+### Notes
+
+- **The key is treated as a secret, not a setting.** `TIME_WARP_AI_API_KEY` wins over
+  anything stored and is never written; unticking **Keep the key on this machine**
+  removes a stored one; a stored one restricts the settings file to its owner on
+  POSIX; and every message a service can influence goes through `redact()` before it
+  is shown, because a proxy that echoes the request must not be able to put the key in
+  the status bar.
+- **It does not stream, and it does not run what it writes.** A reply arrives whole,
+  and an answer reaches the editor before anything executes it: **Insert**, read it,
+  then **Run**. A model with a keyboard is not a feature this project will ship.
+- **A build without Qt Network gets no assistant at all** rather than a page that can
+  only report that it cannot work — the same rule as the Svg and PrintSupport
+  components, applied one step earlier because a client with no transport is not a
+  smaller client.
+
 ## [23.0.1] - 2026-10-22
 
 Two dangling references the sanitizer found once the tree was split, a tube that

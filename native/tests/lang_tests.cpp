@@ -89,6 +89,10 @@ int main() {
     test_focal_for_takes_a_step_and_a_limit();
     test_focal_for_runs_turtle_statements();
     test_focal_for_keeps_the_last_value_the_body_saw();
+    test_focal_return_ends_the_group_early();
+    test_focal_return_nests_and_ends_the_line();
+    test_focal_return_ends_a_for_body();
+    test_focal_return_without_a_group_is_reported();
     test_focal_do_runs_a_group_and_returns();
     test_focal_do_nesting_is_bounded();
     test_focal_labels_compare_as_numbers();
@@ -116,6 +120,8 @@ int main() {
     test_comal_loops();
     test_comal_procedures();
     test_comal_arrays_and_data();
+    test_comal_function_local_keeps_the_callers_variable();
+    test_comal_function_local_is_not_leaked_to_the_caller();
     test_comal_turtle();
     test_logo_definition_does_not_run_until_it_is_called();
     test_logo_repeat_counts_for_repcount();

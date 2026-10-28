@@ -383,6 +383,27 @@ void MainWindow::buildMenuBar() {
     add(tools, tr("&HB-1 Computer..."),
         timewarp::core::keySequence(Qt::CTRL | Qt::ALT, Qt::Key_W), [this] { openRetroComputer(); })
         ->setObjectName(QStringLiteral("retroComputerAction"));
+#ifdef TIME_WARP_HAVE_AI
+    tools->addSeparator();
+    // The assistant sits beside the machines rather than in a menu of its own: one
+    // heading for what this IDE can do *to a program* is a menu a person can find,
+    // and a top-level menu with three entries is a heading that exists to hold its
+    // own name.
+    add(tools, tr("\U0001F916 &Assistant"),
+        timewarp::core::keySequence(Qt::CTRL | Qt::SHIFT, Qt::Key_A),
+        [this] { showAssistant(); })
+        ->setObjectName(QStringLiteral("aiAssistantAction"));
+    // The two questions a learner asks most often, one click from the program they
+    // are looking at. No shortcut: a key pressed by accident spends a request.
+    add(tools, tr("&Explain This Program"), QKeySequence{},
+        [this] { askAssistant(timewarp::ai::Task::Explain); })
+        ->setObjectName(QStringLiteral("aiExplainAction"));
+    add(tools, tr("Fix This &Program"), QKeySequence{},
+        [this] { askAssistant(timewarp::ai::Task::Fix); })
+        ->setObjectName(QStringLiteral("aiFixAction"));
+    add(tools, tr("AI &Settings..."), QKeySequence{}, [this] { showAiSettings(); })
+        ->setObjectName(QStringLiteral("aiSettingsAction"));
+#endif
 
     // -- View -------------------------------------------------------------
     QMenu* view = bar->addMenu(tr("&View"));

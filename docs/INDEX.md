@@ -21,6 +21,7 @@ This page is the map.
 | [hb1/roms.md](hb1/roms.md) | The ROM library: all eleven languages as cartridges, with prompts, direct mode and examples |
 | [hb1/hb-dos.md](hb1/hb-dos.md) | **HB DOS 1.0** — every word, the catalogue, the errors, the image format |
 | [hb1/config.md](hb1/config.md) | CONFIG: every setting, the phosphors, the glass, where it is stored |
+| [hb1/bbs.md](hb1/bbs.md) | **WARP BOARD** — the machine's modem, the bulletins, posting, and where the board is kept |
 | [hb1/inside.md](hb1/inside.md) | Inside the HB-1: how a keystroke becomes ink |
 | [chip8/README.md](chip8/README.md) | **CHIP-8 Machine Manual** — the two ways to run, the window, keys, debugging, sound, limits |
 | [chip8/assembly.md](chip8/assembly.md) | The assembler: listings, labels, directives, errors, worked programs |
@@ -34,7 +35,8 @@ This page is the map.
 | --- | --- |
 | [INSTALLATION.md](INSTALLATION.md) | Requirements, building, running, troubleshooting a build |
 | [ARCHITECTURE.md](ARCHITECTURE.md) | How the IDE, the machines, the engines and the bridge fit together |
-| [USER_GUIDE.md](USER_GUIDE.md) | The IDE manual: projects, the REPL, debugging, SQL, terminal tools, automation and appearance |
+| [USER_GUIDE.md](USER_GUIDE.md) | The IDE manual: projects, the REPL, debugging, SQL, the AI assistant, terminal tools, automation and appearance |
+| [AI.md](AI.md) | The AI assistant: the services it speaks to, how to configure one, and exactly what is sent |
 | [LANGUAGE_GUIDE.md](LANGUAGE_GUIDE.md) | Command reference for all eleven languages |
 | [lessons/](lessons/README.md) | The guided lessons: the curriculum, and the student and teacher guides |
 | [README_TESTING.md](README_TESTING.md) | The suites, the example gate and the parity harnesses |
@@ -76,6 +78,7 @@ One per active language, each written to be worked through:
 | Programme the HB-1 | [hb1/README.md](hb1/README.md), [hb1/hb-dos.md](hb1/hb-dos.md) |
 | Programme the CHIP-8 | [chip8/README.md](chip8/README.md), [chip8/assembly.md](chip8/assembly.md) |
 | Use projects, the REPL, debugging, SQL or the API | [USER_GUIDE.md](USER_GUIDE.md) |
+| Ask an AI to explain or fix a program | [AI.md](AI.md) |
 | Learn a language's commands | [LANGUAGE_GUIDE.md](LANGUAGE_GUIDE.md) |
 | Understand the design | [ARCHITECTURE.md](ARCHITECTURE.md) |
 | See what the old application had and this one does not | [PORTING_PLAN.md](PORTING_PLAN.md) |

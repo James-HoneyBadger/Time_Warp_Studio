@@ -7,7 +7,7 @@ complete computers inside it.*
 [![Machines](https://img.shields.io/badge/machines-2-purple)](docs/MACHINES.md)
 [![Platforms](https://img.shields.io/badge/platforms-Windows%20%7C%20macOS%20%7C%20Linux-green)](docs/INSTALLATION.md)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/Version-23.0.1-orange)](https://github.com/James-HoneyBadger/Time_Warp_Studio)
+[![Version](https://img.shields.io/badge/Version-23.2.0-orange)](https://github.com/James-HoneyBadger/Time_Warp_Studio)
 
 Time Warp Studio is a desktop programming environment for people who like old
 computers. It is the one the 1980s promised and never quite delivered: a full IDE,
@@ -39,9 +39,11 @@ people teaching with it, though nothing in the application assumes a classroom.
 | --- | --- | --- |
 | What it is | A complete home computer: CRT, prompt, eleven-language ROM socket, real editor, turtle canvas, disk | A complete virtual machine: 4 KB of memory, sixteen registers, a 64×32 screen, sixteen keys |
 | When it belongs | 1982, where one machine shipped eleven language ROMs | 1977, where the machine was written in software and ran everywhere |
-| Storage | **HB DOS 1.0** — 512 sectors of 256 bytes, a catalogue, lock bits, a two-step `INIT` | Your own folder of listings and ROMs, browsed by a library dialog |
+| Storage | **HB DOS 1.0** — 512 sectors of 256 bytes, a catalogue, lock bits, a two-step `INIT`, and a printer (`LLIST`/`LPRINT`) that leaves a page | Your own folder of listings and ROMs, browsed by a library dialog |
+| Debugging on the machine | `LIST`, `VERIFY`, and one `UNDO` after `NEW` | **Rewind**: thirty seconds of state, a quarter second at a time |
+| Telephone | A modem: `DIAL` into **WARP BOARD**, read the bulletins, post one, hang up | — |
 | Run it | Tools > **HB-1 Computer…** (`Ctrl+Alt+W`) or `./run.sh --computer` | Tools > **CHIP-8 Emulator…** (`Ctrl+Shift+M`) |
-| Read it | [Owner's Manual](docs/hb1/README.md) · [ROMs](docs/hb1/roms.md) · [HB DOS](docs/hb1/hb-dos.md) · [CONFIG](docs/hb1/config.md) · [Inside](docs/hb1/inside.md) | [Machine Manual](docs/chip8/README.md) · [Assembler](docs/chip8/assembly.md) · [Instruction set](docs/chip8/instruction-set.md) |
+| Read it | [Owner's Manual](docs/hb1/README.md) · [ROMs](docs/hb1/roms.md) · [HB DOS](docs/hb1/hb-dos.md) · [WARP BOARD](docs/hb1/bbs.md) · [CONFIG](docs/hb1/config.md) · [Inside](docs/hb1/inside.md) | [Machine Manual](docs/chip8/README.md) · [Assembler](docs/chip8/assembly.md) · [Instruction set](docs/chip8/instruction-set.md) |
 
 What you can do with them:
 
@@ -156,7 +158,8 @@ rest of the environment, feature by feature.
 | **Projects** | `.twproject` groups that organise programs without moving them on disk | [USER_GUIDE](docs/USER_GUIDE.md#2-projects-and-groups) |
 | **SQL** | A SQLite Database tab, plus `SQL` statements in nine languages and through the API | [USER_GUIDE](docs/USER_GUIDE.md#6-sql-and-the-database-tab) |
 | **Automation** | JSON-RPC over stdin/stdout, a standalone `twc` compiler, and scriptable screenshots and exports | [API](docs/API.md), [USER_GUIDE](docs/USER_GUIDE.md#7-terminal-tools) |
-| **Appearance and display** | 35 themes, high contrast, 100/125/150% text, focus mode, CRT settings and four monitor presets, presentation mode | [USER_GUIDE](docs/USER_GUIDE.md#9-lessons-classroom-and-appearance) |
+| **An AI assistant you configure** | Explain, fix, comment, translate or write a program through the service you choose — OpenAI, DeepSeek, Anthropic, or a model on this machine; off until you set it up, and the key need never touch the disk | [AI](docs/AI.md) |
+| **Appearance and display** | 35 themes, high contrast, 100/125/150% text, focus mode, CRT settings and four monitor presets, presentation mode | [USER_GUIDE](docs/USER_GUIDE.md#10-lessons-classroom-and-appearance) |
 | **Help that covers the whole thing** | `F1` context help, `Ctrl+F1` keyword inspector, the documentation browser, a guided tour and a shortcut reference | [Help](#help-from-inside-the-studio) |
 | **Lessons, if you teach** | 22 lessons and 66 checkpoints checked by running the program, plus rosters, handouts and marking | [lessons/](docs/lessons/README.md) |
 
@@ -185,12 +188,13 @@ exercised by the command matrix.
 
 - **Code editor** — line-number gutter, current-line highlight, 4-space tab stops, per-language file handling, per-language syntax colouring (comments, strings, numbers, keywords), and find/replace with go-to-line (F3 for the next match, Ctrl+L for a line number)
 - **Documents** — tabs, per-file language detection, unsaved-change prompts, new/open/save/save-as, a recent-files menu, and the files from the last session reopened at launch
-- **Find and navigate** — find, find and replace (`Ctrl+F`, `Ctrl+H`), next/previous (`F3`, `Shift+F3`), go to line (`Ctrl+L`), and **Find in Files** (`Ctrl+Shift+F`) across a folder or project
+- **Find and navigate** — find, find and replace (`Ctrl+F`, `Ctrl+H`), next/previous (`F3`, `Shift+F3`), go to line (`Ctrl+L`), and **Find in Files** (`Ctrl+Shift+F`) across a folder or project, including **Replace All** — which names the count and the files, leaves a document with unsaved changes alone, and reloads the open documents it did change
 - **Command palette** — `Ctrl+Shift+P` or `F10` lists every action in the window, so a feature you cannot find in a menu is three letters away
+- **Reference** — the 📖 **Reference** tab lists every command for the selected language with the smallest program that runs it and what it does, read from the same table `time_warp_gates commands` drives; **Try it** puts a row's program in a document
 - **Snippets** — `Ctrl+Shift+I` inserts a language-aware example from a catalogue the build installs (`share/time-warp-studio/snippets.json`; `TIME_WARP_SNIPPETS` points at your own)
 - **Outline** — a dock listing every named place in the current program — procedures, labels, functions, methods — as a jump list
 - **Format and lint** — `Ctrl+I` re-indents the document for its language, preserving line endings and blank lines, and the editor's lint runs as you type (Settings > Editor turns either off)
-- **Autosave and version history** — snapshots on a timer you set, and **File > Version History…** (`Ctrl+Alt+V`) to read or restore any of them, including buffers that were never saved
+- **Autosave and version history** — snapshots on a timer you set, and **File > Version History…** (`Ctrl+Alt+V`) to read or restore any of them, including buffers that were never saved, with **Compare with what is open** showing the choice as a diff against the editor
 - **Two panes** — **Split Editor Right** (`Ctrl+\`) shows two documents side by side; **Run Both Panes** (`Ctrl+Alt+B`) runs both headless and reports time, turtle calls and each program's own output in one table — a comparison, not a race
 - **Output console** — program output as it is produced, with interpreter errors in their own tab
 - **Run controls** — Run (F9) and Stop, with a status bar showing language, cursor position and execution state
@@ -203,6 +207,7 @@ exercised by the command matrix.
 - **Printing and export** — File > Print Code (Ctrl+P) sends the program to a printer as the same A4 page the PDF export writes, and File > Print Drawing sends the drawing scaled to fit the page; both entries appear only in a build with the PrintSupport module. The program also exports as PDF, and the program, output and drawing as one HTML page; a lesson session exports as Markdown or PDF
 - **Profiling** — View > Profile Run times every statement of a line-by-line program and ends with a report of line, hits, time and share, longest first. It is off at every launch because timing costs
 - **Presentation and access** — 35 themes including the retro CRT sets and the Windows 2000 and Windows 7 schemes, a High Contrast variant of whichever is active, 100/125/150% text sizes, focus mode, CRT settings with four monitor presets, and **Presentation Mode** (`Shift+F11`, `Esc` to leave) for showing the screen to a room
+- **AI assistant (opt-in)** — the 🤖 **Assistant** tab explains a program, finds what is wrong with it, comments it, translates it or writes a new one, through the service you configure in **Tools > AI Settings…** (`Ctrl+Shift+A` opens the page). OpenAI, DeepSeek, Anthropic, OpenRouter, or Ollama and LM Studio on this machine; **Insert** puts the answer into the editor and nothing runs until you press F9. [The manual](docs/AI.md) says exactly what leaves the machine.
 - **Terminal (opt-in)** — Settings > Workspace adds a 💻 Terminal tab that runs commands through your own shell, starting in the current document's folder. It is off by default, stopped and removed in presentation and player modes, and is a command line rather than a terminal emulator: no prompts, no job control, no full-screen programs
 - **Automation** — `./api` speaks the JSON-RPC API on stdin/stdout: run a program, keep a REPL session, start and step a debug session, query SQL, edit a project including folder import, and evaluate watches. See [docs/API.md](docs/API.md)
 - **Terminal tools** — `./run.sh` builds if needed and launches the IDE; `./twc program.bas -o program` compiles a program into a standalone executable that embeds the interpreter, writes its drawing as SVG, and takes `--db FILE` when the program uses SQL

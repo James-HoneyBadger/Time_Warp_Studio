@@ -16,7 +16,11 @@
 #include <QInputDialog>
 #include <QKeyEvent>
 #include <QLabel>
+#include <QDateTime>
+#include <QDir>
+#include <QFile>
 #include <QLineEdit>
+#include <QTextStream>
 #include <QPalette>
 #include <QPlainTextEdit>
 #include <QPushButton>
@@ -34,6 +38,7 @@
 #include "timewarp/canvas/command_queue.hpp"
 #include "timewarp/canvas/qt_bridge.hpp"
 #include "timewarp/core/qt_gui_compat.hpp"
+#include "timewarp/ui/app_paths.hpp"
 #include "timewarp/ui/code_editor.hpp"
 #include "timewarp/ui/native_runner.hpp"
 #include "timewarp/ui/panels.hpp"
@@ -44,6 +49,38 @@
 namespace timewarp::ui {
 
 using namespace retro_detail;
+
+void RetroComputerWindow::printToPaper(const QString& body, const QString& what) {
+    const QString folder = dataDirFor(QStringLiteral("print"));
+    if (folder.isEmpty()) {
+        appendConsole(QStringLiteral("?PRINTER OFFLINE"));
+        return;
+    }
+    const QString path = QDir{folder}.filePath(QStringLiteral("paper.txt"));
+    QFile file{path};
+    if (!file.open(QIODevice::Append | QIODevice::WriteOnly)) {
+        appendConsole(QStringLiteral("?PAPER JAM -- %1").arg(QFileInfo{path}.fileName()));
+        return;
+    }
+    QTextStream out{&file};
+    out << "--- " << what << "  "
+        << QDateTime::currentDateTime().toString(QStringLiteral("yyyy-MM-dd HH:mm:ss"))
+        << "\n";
+    out << body;
+    if (!body.endsWith(QLatin1Char('\n'))) {
+        out << '\n';
+    }
+    out << '\n';
+    file.close();
+    paper_path_ = path;
+    // The page count is the honest summary: a listing that printed one line and one
+    // that printed forty both said "PRINTED", and only one of them is what the user
+    // expected.
+    const int lines = body.split(QLatin1Char('\n')).size();
+    appendConsole(QStringLiteral("PRINTED %1 LINE(S) TO %2")
+                      .arg(lines)
+                      .arg(QFileInfo{path}.fileName()));
+}
 
 void RetroComputerWindow::diskAccessed() {
     if (voice_ != nullptr) {

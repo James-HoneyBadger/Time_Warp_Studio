@@ -211,6 +211,73 @@ else()
 endif()
 
 # ---------------------------------------------------------------------------
+# The AI assistant (Qt Core and Qt Network)
+#
+# Where the endpoint is, how a conversation is composed, and the one class that
+# carries it. The IDE's panel and settings dialog are views over this, and
+# `time_warp_ai` is the same thing from a terminal.
+#
+# Qt Network is not optional the way Svg and PrintSupport are: a client with no
+# transport is not a smaller assistant, it is none. So a Qt built without Network
+# gets no assistant at all -- the panel is not created and its menu entries are
+# absent -- rather than a dial that reports a failure every time it is used.
+# ---------------------------------------------------------------------------
+
+if(TIME_WARP_QT_FOUND)
+    find_package(${TIME_WARP_QT} QUIET COMPONENTS Network)
+
+    if(${TIME_WARP_QT}Network_FOUND)
+        add_library(timewarp_ai
+            src/ai/client.cpp
+            src/ai/config.cpp
+            src/ai/prompt.cpp
+            # Listed so AUTOMOC scans them: the Q_OBJECT class lives in the header,
+            # which is outside this target's source directory.
+            include/timewarp/ai/client.hpp
+            include/timewarp/ai/config.hpp
+            include/timewarp/ai/prompt.hpp
+        )
+        add_library(timewarp::ai ALIAS timewarp_ai)
+
+        target_include_directories(timewarp_ai
+            PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+        )
+        target_compile_features(timewarp_ai PUBLIC cxx_std_20)
+        target_link_libraries(timewarp_ai PUBLIC
+            ${TIME_WARP_QT}::Core ${TIME_WARP_QT}::Network)
+        set_target_properties(timewarp_ai PROPERTIES AUTOMOC ON)
+
+        if(MSVC)
+            target_compile_options(timewarp_ai PRIVATE /W4 /permissive-)
+        else()
+            target_compile_options(timewarp_ai PRIVATE
+                -Wall -Wextra -Wpedantic -Wshadow -Wcast-qual ${TIME_WARP_GNU_WARNING_FLAGS}
+                ${TIME_WARP_NULL_DEREFERENCE}
+            )
+            if(TIME_WARP_EXPR_WERROR)
+                target_compile_options(timewarp_ai PRIVATE -Werror)
+            endif()
+        endif()
+
+        # The same assistant from a shell, for a script and for a person who wants
+        # to know whether the key works without opening a window.
+        add_executable(time_warp_ai tools/ai_cli.cpp)
+        target_link_libraries(time_warp_ai PRIVATE timewarp::ai)
+        timewarp_enable_warnings(time_warp_ai)
+
+        if(TIME_WARP_EXPR_BUILD_TESTS)
+            add_executable(ai_tests tests/ai_tests.cpp)
+            target_link_libraries(ai_tests PRIVATE timewarp::ai)
+            target_include_directories(ai_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/tests)
+            timewarp_enable_warnings(ai_tests)
+            add_test(NAME ai_tests COMMAND ai_tests)
+        endif()
+    else()
+        message(STATUS "${TIME_WARP_QT} Network not found: skipping the AI assistant")
+    endif()
+endif()
+
+# ---------------------------------------------------------------------------
 # Lessons (Qt Core)
 #
 # The curriculum and the verifier the Lessons panel, `time_warp_teach` and
@@ -474,11 +541,14 @@ if(TIME_WARP_QT_FOUND)
             src/ui/chip8_window.cpp
             src/ui/code_editor.cpp
             src/ui/command_palette.cpp
+            src/ui/command_reference.cpp
+            src/ui/diff.cpp
             src/ui/export.cpp
             src/ui/find_bar.cpp
             src/ui/find_in_files.cpp
             src/ui/formatter.cpp
             src/ui/gif_encoder.cpp
+            src/ui/hb_bbs.cpp
             src/ui/hb_dos.cpp
             src/ui/hb_clock.cpp
             src/ui/hb_memory.cpp
@@ -509,6 +579,7 @@ if(TIME_WARP_QT_FOUND)
             src/ui/repl_runner.cpp
             src/ui/resizable_tab_widget.cpp
             src/ui/retro_computer_basic.cpp
+            src/ui/retro_computer_bbs.cpp
             src/ui/retro_computer_boot.cpp
             src/ui/retro_computer_dos.cpp
             src/ui/retro_computer_machine.cpp
@@ -535,9 +606,12 @@ if(TIME_WARP_QT_FOUND)
             include/timewarp/ui/chip8_screen.hpp
             include/timewarp/ui/chip8_window.hpp
             include/timewarp/ui/command_palette.hpp
+            include/timewarp/ui/command_reference.hpp
+            include/timewarp/ui/diff.hpp
             include/timewarp/ui/export.hpp
             include/timewarp/ui/find_bar.hpp
             include/timewarp/ui/find_in_files.hpp
+            include/timewarp/ui/hb_bbs.hpp
             include/timewarp/ui/hb_dos.hpp
             include/timewarp/ui/hb_clock.hpp
             include/timewarp/ui/hb_memory.hpp
@@ -618,6 +692,21 @@ if(TIME_WARP_QT_FOUND)
             message(STATUS "Qt PrintSupport not found: printing disabled")
         endif()
         set_target_properties(timewarp_ui PROPERTIES AUTOMOC ON)
+
+        # The assistant's page and its settings dialog exist only where there is a
+        # transport to put behind them. `TIME_WARP_HAVE_AI` is PUBLIC because a
+        # test asks `MainWindow::panelKeys()` how many pages the right column has,
+        # and that count is different in a build with no Qt Network.
+        if(TARGET timewarp::ai)
+            target_sources(timewarp_ui PRIVATE
+                src/ui/ai_panel.cpp
+                src/ui/ai_settings.cpp
+                include/timewarp/ui/ai_panel.hpp
+                include/timewarp/ui/ai_settings.hpp
+            )
+            target_link_libraries(timewarp_ui PRIVATE timewarp::ai)
+            target_compile_definitions(timewarp_ui PUBLIC TIME_WARP_HAVE_AI=1)
+        endif()
 
         if(MSVC)
             target_compile_options(timewarp_ui PRIVATE /W4 /permissive-)
@@ -809,6 +898,13 @@ if(TIME_WARP_QT_FOUND)
             FILES ${CMAKE_CURRENT_SOURCE_DIR}/share/lessons.json
             DESTINATION ${TIME_WARP_SHARE_DIR}/time-warp-studio
         )
+        # The command table: the Reference page reads it, and it is the same file
+        # `time_warp_gates commands` drives, so a package's reference shows what the
+        # gate proved. It was development data until the page existed.
+        install(
+            FILES ${CMAKE_CURRENT_SOURCE_DIR}/share/command_rows.json
+            DESTINATION ${TIME_WARP_SHARE_DIR}/time-warp-studio
+        )
         # The documentation browser reads these. `docsRoot()` looks in
         # `share/doc/time-warp-studio` first, so a package and a checkout show the
         # same pages; without this rule an installed help window would explain
@@ -951,7 +1047,8 @@ if(TIME_WARP_QT_FOUND)
             # is recorded here -- the arrangement chip8_emulator_tests uses for
             # its Examples. An installed tree still finds its own copy first.
             target_compile_definitions(ui_layout_tests PRIVATE
-                TIME_WARP_TEST_SNIPPETS="${CMAKE_CURRENT_SOURCE_DIR}/share/snippets.json")
+                TIME_WARP_TEST_SNIPPETS="${CMAKE_CURRENT_SOURCE_DIR}/share/snippets.json"
+                TIME_WARP_TEST_COMMANDS="${CMAKE_CURRENT_SOURCE_DIR}/share/command_rows.json")
             timewarp_enable_warnings(ui_layout_tests)
             # The test sets QT_QPA_PLATFORM=offscreen itself, so it runs with no
             # display and belongs in the default CTest set.
@@ -1046,6 +1143,8 @@ if(TIME_WARP_QT_FOUND)
             add_executable(retro_computer_tests
                 tests/retro_computer_tests.cpp
                 tests/retro_basic_tests.cpp
+                tests/retro/paper_tests.cpp
+                tests/retro/bbs_tests.cpp
                 tests/retro_boot_tests.cpp
                 tests/retro_config_tests.cpp
                 tests/retro_dos_tests.cpp

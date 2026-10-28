@@ -69,6 +69,33 @@ struct Chip8Program {
     int entry = kChip8ProgramAddress;
 };
 
+/// Everything that decides what the machine does next, in one value.
+///
+/// A CHIP-8 program is four kilobytes, so a state is small enough to keep a few
+/// seconds of -- which is what makes **rewind** possible: a game that died three
+/// seconds ago is a game somebody can look at again rather than a story about how it
+/// died. The random generator is deliberately *not* in here: restoring replays the
+/// drawing, not the luck, and a rewind that re-rolled the dice would not show what
+/// happened.
+struct Chip8State {
+    std::array<std::uint8_t, 16> v{};
+    std::array<std::uint8_t, 16> rpl{};
+    std::vector<std::uint8_t> framebuffer;
+    std::vector<std::uint8_t> memory;
+    std::vector<int> stack;
+    int i = 0;
+    int pc = 0;
+    int delay_timer = 0;
+    int sound_timer = 0;
+    unsigned keys = 0;
+    bool hi_res = false;
+    bool halted = false;
+    bool waiting_for_key = false;
+    int waiting_register = 0;
+    std::uint64_t cycles = 0;
+    std::uint64_t collisions = 0;
+};
+
 /// Assembles *source*, or loads it as a binary ROM when it contains a NUL byte.
 /// Throws Chip8Error on a malformed listing or a ROM larger than memory.
 [[nodiscard]] Chip8Program assemble_chip8(std::string_view source);
@@ -97,6 +124,11 @@ public:
         const unsigned bit = 1U << static_cast<unsigned>(key);
         keys_ = down ? (keys_ | bit) : (keys_ & ~bit);
     }
+
+    /// The machine as one value, and back. `restore` replaces the whole state, so a
+    /// rewind cannot leave the pixels of one frame over the registers of another.
+    [[nodiscard]] Chip8State save_state() const;
+    void restore_state(const Chip8State& state);
     [[nodiscard]] unsigned keys() const noexcept { return keys_; }
     /// True while `LD Vx, K` is waiting for a press. `step()` completes the
     /// instruction when a key is held.

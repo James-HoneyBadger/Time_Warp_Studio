@@ -909,6 +909,33 @@ private:
                     restore();
                     return value;
                 }
+                // LOCAL: a working variable of the function's own. The previous
+                // value -- if the caller had one under the same name -- is in
+                // `saved` and goes back on every exit path, including an exception,
+                // so a function cannot leave a caller's variable altered.
+                if (upper(code).rfind("LOCAL", 0) == 0) {
+                    for (const std::string& part :
+                         split_top(std::string_view{code}.substr(5))) {
+                        const std::string local = upper(trim(part));
+                        if (local.empty()) {
+                            continue;
+                        }
+                        const bool already = std::any_of(
+                            saved.begin(), saved.end(),
+                            [&local](const SavedValue& entry) { return entry.name == local; });
+                        if (already) {
+                            continue;
+                        }
+                        SavedValue entry{local, std::nullopt};
+                        const auto existing = interpreter_.variables().find(local);
+                        if (existing != interpreter_.variables().end()) {
+                            entry.value = existing->second;
+                        }
+                        saved.push_back(std::move(entry));
+                        set_variable(local, Value{0.0});
+                    }
+                    continue;
+                }
                 static const std::regex assignment{
                     R"(^([A-Za-z_]\w*)\s*=\s*(.+)$)", std::regex::ECMAScript};
                 std::smatch match;

@@ -54,6 +54,7 @@ who owns the clock.
 ├───────────────────────────────┬─────────────────────────────────┤
 │                               │  Registers │ Memory │ Listing  │
 │      64 × 32 screen           │  V0  00  0  …                   │
+│  ⏪ Rewind [───────────●] now  │                                 │
 │      (128 × 64 in hi-res)     │  I   0x200                      │
 │                               │  PC  0x200                      │
 │                               │  …                              │
@@ -79,6 +80,8 @@ who owns the clock.
 - **Speed** — opcodes executed per 60 Hz frame. Ten is the original pace; 2000
   is as fast as one frame may run without monopolising the window.
 - **Mute** — silences the buzzer without stopping the timer.
+- **⏪ Rewind** — goes back through the last thirty seconds, a quarter second at a
+  time (see below).
 
 The status line is the machine readout: state, program counter, cycles executed,
 and the speed. States are `open a program`, `running`, `paused`, `halted`,
@@ -113,6 +116,7 @@ be left believing a key is down for the rest of the run.
 | Registers | `V0`–`VF`, `I`, `PC`, the delay and sound timers, the cycle count, and the call stack |
 | Memory | The whole 4 KiB, refreshed per frame |
 | Listing | Your source, with a status line and **Assemble & Load** |
+| Registers (after a rewind) | The state of the moment the strip is showing, not the live machine |
 
 The snapshot is taken once per frame, so the inspector never reads a
 half-executed instruction.
@@ -120,6 +124,29 @@ half-executed instruction.
 The CHIP-8 window has no breakpoints of its own: use **Step**. Gutter breakpoints
 belong to the editor's whole-program Run, where the machine pauses before the
 instruction whose listing line carries the breakpoint.
+
+### Rewind
+
+The machine keeps a snapshot of its whole state -- registers, memory, timers, the
+framebuffer and the mode -- every quarter second, thirty seconds' worth. The strip
+under the screen goes back through them, and the status beside it says how far back
+you are (`−1.25 s`) or `now`.
+
+Three decisions make it behave the way a person expects:
+
+- **Touching the strip captures the live frame first**, so the right-hand end is
+  exactly the frame you were looking at, not the last scheduled snapshot up to a
+  quarter of a second older. The label reads `now` at the right-hand end and
+  `−1.25 s` a few moments back.
+- **Run after a rewind resumes from where you are** and drops the moments that came
+  after it. You are in a new timeline, and a strip that still offered the old one
+  would be lying.
+- **It replays the drawing, not the luck.** The random generator is not part of the
+  snapshot, so a program drawing from `RND` gets its registers and pixels back but
+  not its dice roll. Rewind is for looking at what happened; a deterministic replay
+  would need the seed history and is not what this is.
+
+**Reset** clears the history: a new program's past is not the old one's.
 
 ### Sound
 

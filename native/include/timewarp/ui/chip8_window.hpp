@@ -17,6 +17,7 @@
 
 class QAction;
 class QCheckBox;
+class QSlider;
 class QLabel;
 class QPlainTextEdit;
 class QSpinBox;
@@ -71,6 +72,8 @@ private:
     void buildInspector(QVBoxLayout* column);
     void refresh();
     void updateControls();
+    /// Points the rewind strip at the emulator's history.
+    void updateRewind();
     void updateInspector(const Chip8Snapshot& snapshot);
     void updateSound(const Chip8Snapshot& snapshot);
     void setListing(const QString& text, const QString& status);
@@ -94,6 +97,10 @@ private:
     QWidget* listing_page_ = nullptr;
     QLabel* state_label_ = nullptr;
     QLabel* detail_label_ = nullptr;
+    /// The rewind strip: a slider over the moments the emulator kept, and the label
+    /// saying how far back it is.
+    QSlider* rewind_ = nullptr;
+    QLabel* rewind_label_ = nullptr;
     bool buzzer_on_ = false;
     int last_sound_timer_ = 0;
     int inspector_countdown_ = 0;

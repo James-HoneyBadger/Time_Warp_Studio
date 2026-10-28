@@ -4,6 +4,8 @@
 
 #include <QCheckBox>
 #include <QDir>
+#include <QMessageBox>
+#include <QSaveFile>
 #include <QDirIterator>
 #include <QFile>
 #include <QFileInfo>
@@ -158,6 +160,145 @@ QList<FindHit> searchInFiles(const QString& root, const FindQuery& query, QStrin
 }
 
 // ---------------------------------------------------------------------------
+// Replacing
+// ---------------------------------------------------------------------------
+
+namespace {
+
+/// The pattern a replacement uses. A literal term is escaped, so a search for
+/// `a.b` does not become a regular expression that also matches `axb`.
+[[nodiscard]] QRegularExpression replacementPattern(const FindQuery& query) {
+    const QString pattern =
+        query.regex ? query.term : QRegularExpression::escape(query.term);
+    return QRegularExpression{pattern, query.case_sensitive
+                                           ? QRegularExpression::NoPatternOption
+                                           : QRegularExpression::CaseInsensitiveOption};
+}
+
+}  // namespace
+
+QString replacedText(const QString& text, const FindQuery& query, const QString& replacement,
+                     int* count, QString* error) {
+    if (count != nullptr) {
+        *count = 0;
+    }
+    if (error != nullptr) {
+        error->clear();
+    }
+    if (query.term.isEmpty()) {
+        if (error != nullptr) {
+            *error = QStringLiteral("there is nothing to replace");
+        }
+        return text;
+    }
+    const QRegularExpression pattern = replacementPattern(query);
+    if (!pattern.isValid()) {
+        if (error != nullptr) {
+            *error = QStringLiteral("invalid regular expression: %1").arg(pattern.errorString());
+        }
+        return text;
+    }
+
+    // A literal replacement is inserted as typed and a regular expression's is a
+    // template, so the two take different routes: `QString::replace` expands `\1`,
+    // which is what a regular expression user expects and exactly what somebody
+    // replacing `C:\temp` does not. The literal route also cannot see an empty
+    // match, because its pattern is an escaped non-empty term.
+    if (!query.regex) {
+        QString result;
+        qsizetype at = 0;
+        int fired = 0;
+        QRegularExpressionMatchIterator iterator = pattern.globalMatch(text);
+        while (iterator.hasNext()) {
+            const QRegularExpressionMatch match = iterator.next();
+            result += text.mid(at, match.capturedStart() - at);
+            result += replacement;
+            at = match.capturedEnd();
+            ++fired;
+        }
+        result += text.mid(at);
+        if (count != nullptr) {
+            *count = fired;
+        }
+        return fired == 0 ? text : result;
+    }
+
+    int fired = 0;
+    QRegularExpressionMatchIterator iterator = pattern.globalMatch(text);
+    while (iterator.hasNext()) {
+        iterator.next();
+        ++fired;
+    }
+    if (count != nullptr) {
+        *count = fired;
+    }
+    if (fired == 0) {
+        return text;
+    }
+    QString result = text;
+    result.replace(pattern, replacement);
+    return result;
+}
+
+ReplaceResult replaceInFiles(const QStringList& paths, const FindQuery& query,
+                             const QString& replacement, const QSet<QString>& off_limits) {
+    ReplaceResult outcome;
+    if (query.term.isEmpty()) {
+        outcome.error = QStringLiteral("there is nothing to replace");
+        return outcome;
+    }
+    // Compiled once, before anything is touched: a broken pattern must not leave
+    // half the folder rewritten.
+    const QRegularExpression pattern = replacementPattern(query);
+    if (!pattern.isValid()) {
+        outcome.error = QStringLiteral("invalid regular expression: %1")
+                            .arg(pattern.errorString());
+        return outcome;
+    }
+
+    QStringList seen;
+    for (const QString& path : paths) {
+        const QString absolute = QFileInfo{path}.absoluteFilePath();
+        if (seen.contains(absolute)) {
+            continue;
+        }
+        seen.append(absolute);
+        if (off_limits.contains(absolute)) {
+            outcome.skipped_paths.append(absolute);
+            continue;
+        }
+        QFile file{absolute};
+        if (!file.open(QIODevice::ReadOnly)) {
+            outcome.skipped_paths.append(absolute);
+            continue;
+        }
+        const QString text = QString::fromUtf8(file.readAll());
+        file.close();
+
+        int fired = 0;
+        const QString replaced =
+            replacedText(text, query, replacement, &fired);
+        if (fired == 0) {
+            continue;
+        }
+        QSaveFile output{absolute};
+        if (!output.open(QIODevice::WriteOnly)) {
+            outcome.skipped_paths.append(absolute);
+            continue;
+        }
+        const QByteArray bytes = replaced.toUtf8();
+        if (output.write(bytes) != bytes.size() || !output.commit()) {
+            outcome.skipped_paths.append(absolute);
+            continue;
+        }
+        outcome.files_changed += 1;
+        outcome.replacements += fired;
+        outcome.changed_paths.append(absolute);
+    }
+    return outcome;
+}
+
+// ---------------------------------------------------------------------------
 // The worker
 // ---------------------------------------------------------------------------
 
@@ -207,6 +348,11 @@ FindInFilesDialog::FindInFilesDialog(QWidget* parent) : QDialog{parent} {
     term_->setPlaceholderText(tr("Find in files\u2026"));
     term_->setClearButtonEnabled(true);
 
+    replacement_ = new QLineEdit{this};
+    replacement_->setObjectName(QStringLiteral("findInFilesReplacement"));
+    replacement_->setPlaceholderText(tr("Replace with\u2026 (leave empty to delete)"));
+    replacement_->setClearButtonEnabled(true);
+
     case_ = new QCheckBox{tr("Match case"), this};
     case_->setObjectName(QStringLiteral("findInFilesCase"));
     regex_ = new QCheckBox{tr("Regular expression"), this};
@@ -222,6 +368,11 @@ FindInFilesDialog::FindInFilesDialog(QWidget* parent) : QDialog{parent} {
     stop_ = new QPushButton{tr("Stop"), this};
     stop_->setObjectName(QStringLiteral("findInFilesStop"));
     stop_->setEnabled(false);
+    replace_ = new QPushButton{tr("Replace All\u2026"), this};
+    replace_->setObjectName(QStringLiteral("findInFilesReplace"));
+    replace_->setEnabled(false);
+    replace_->setToolTip(tr("Replace every match in the files found, on disk. Asks "
+                            "first, and never touches a document with unsaved changes."));
 
     results_ = new QTreeWidget{this};
     results_->setObjectName(QStringLiteral("findInFilesResults"));
@@ -240,9 +391,11 @@ FindInFilesDialog::FindInFilesDialog(QWidget* parent) : QDialog{parent} {
     options->addStretch(1);
     options->addWidget(search_);
     options->addWidget(stop_);
+    options->addWidget(replace_);
 
     auto* layout = new QVBoxLayout{this};
     layout->addWidget(term_);
+    layout->addWidget(replacement_);
     layout->addWidget(root_label_);
     layout->addLayout(options);
     layout->addWidget(results_, 1);
@@ -251,6 +404,7 @@ FindInFilesDialog::FindInFilesDialog(QWidget* parent) : QDialog{parent} {
     connect(search_, &QPushButton::clicked, this, [this] { startSearch(); });
     connect(stop_, &QPushButton::clicked, this, [this] { stopSearch(); });
     connect(term_, &QLineEdit::returnPressed, this, [this] { startSearch(); });
+    connect(replace_, &QPushButton::clicked, this, [this] { replaceAll(); });
     connect(results_, &QTreeWidget::itemActivated, this, [this](QTreeWidgetItem* item, int) {
         if (item == nullptr || item->parent() == nullptr) {
             return;
@@ -289,6 +443,9 @@ void FindInFilesDialog::startSearch() {
     }
     results_->clear();
     hits_ = 0;
+    if (replace_ != nullptr) {
+        replace_->setEnabled(false);
+    }
 
     FindQuery query;
     query.term = term_->text();
@@ -335,6 +492,9 @@ void FindInFilesDialog::stopSearch() {
 
 void FindInFilesDialog::addHit(const QString& path, int line, const QString& text) {
     ++hits_;
+    if (replace_ != nullptr) {
+        replace_->setEnabled(true);
+    }
     QTreeWidgetItem* file_item = nullptr;
     for (int index = 0; index < results_->topLevelItemCount(); ++index) {
         if (results_->topLevelItem(index)->data(0, Qt::UserRole).toString() == path) {
@@ -354,6 +514,65 @@ void FindInFilesDialog::addHit(const QString& path, int line, const QString& tex
     row->setText(1, QString::number(line));
     row->setData(0, Qt::UserRole, path);
     row->setData(1, Qt::UserRole, line);
+}
+
+void FindInFilesDialog::setOffLimits(const QSet<QString>& paths) { off_limits_ = paths; }
+
+void FindInFilesDialog::replaceAll() {
+    if (hits_ == 0 || term_->text().isEmpty()) {
+        showMessage(tr("Search first: Replace All works on what was found."));
+        return;
+    }
+
+    QStringList paths;
+    for (int index = 0; index < results_->topLevelItemCount(); ++index) {
+        paths.append(results_->topLevelItem(index)->data(0, Qt::UserRole).toString());
+    }
+    if (paths.isEmpty()) {
+        return;
+    }
+
+    // The confirmation is the whole safety story of a bulk edit: a count, the
+    // number of files, and the fact that it writes to disk. There is no undo for a
+    // write, so there is no button that skips this.
+    const QString question =
+        tr("Replace %1 match(es) in %2 file(s) on disk?").arg(hits_).arg(paths.size());
+    if (QMessageBox::question(this, tr("Replace in Files"), question,
+                              QMessageBox::Yes | QMessageBox::No, QMessageBox::No) !=
+        QMessageBox::Yes) {
+        return;
+    }
+
+    FindQuery query;
+    query.term = term_->text();
+    query.case_sensitive = case_->isChecked();
+    query.regex = regex_->isChecked();
+    const ReplaceResult outcome = replaceInFiles(paths, query, replacement_->text(), off_limits_);
+
+    if (outcome.failed()) {
+        showMessage(outcome.error);
+        return;
+    }
+    QString summary = tr("Replaced %1 match(es) in %2 file(s).")
+                          .arg(outcome.replacements)
+                          .arg(outcome.files_changed);
+    if (!outcome.skipped_paths.isEmpty()) {
+        summary += QStringLiteral(" ") +
+                   tr("%1 file(s) skipped: unsaved changes or unreadable.")
+                       .arg(outcome.skipped_paths.size());
+    }
+    showMessage(summary);
+    if (!outcome.changed_paths.isEmpty()) {
+        emit filesReplaced(outcome.changed_paths);
+    }
+    // The tree is now stale, so it is emptied and the search re-run: a list of hits
+    // that are no longer in the files is worse than a list that is being rebuilt.
+    hits_ = 0;
+    results_->clear();
+    replace_->setEnabled(false);
+    if (!outcome.changed_paths.isEmpty()) {
+        startSearch();
+    }
 }
 
 }  // namespace timewarp::ui

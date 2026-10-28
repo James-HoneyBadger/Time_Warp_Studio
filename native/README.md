@@ -108,7 +108,7 @@ executable without a second front end to keep in step.
 ```bash
 # The short way: native/Makefile drives the CMake build below.
 make -C native                # release build
-make -C native test           # build, then all 24 suites
+make -C native test           # build, then all 26 suites
 make -C native test-debug     # unoptimised, with Q_ASSERT and hardening live
 make -C native asan           # under AddressSanitizer, in a third tree
 make -C native asan ASAN=undefined SAN_DIR=build-ubsan \

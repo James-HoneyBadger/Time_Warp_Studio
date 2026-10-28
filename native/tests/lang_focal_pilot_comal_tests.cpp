@@ -124,6 +124,69 @@ void test_focal_for_keeps_the_last_value_the_body_saw() {
     TW_CHECK(!contains(run.output, "5.00"));
 }
 
+
+// RETURN is this implementation's one addition to DEC's ten commands: a group that
+// can hand control back before the end of the program. Without it a DO group is a
+// one-way jump, and every group has to be written as if it were the last thing the
+// program does.
+
+void test_focal_return_ends_the_group_early() {
+    const FocalRun run = run_focal(
+        "01.10 T \"START\"\n"
+        "01.20 DO 2.10\n"
+        "01.30 T \"AFTER\"\n"
+        "01.40 Q\n"
+        "02.10 T \"GROUP\"\n"
+        "02.20 RETURN\n"
+        "02.30 T \"NEVER\"");
+    TW_CHECK(contains(run.output, "START"));
+    TW_CHECK(contains(run.output, "GROUP"));
+    TW_CHECK(contains(run.output, "AFTER"));
+    TW_CHECK(!contains(run.output, "NEVER"));
+    TW_CHECK(!any_error(run.output));
+}
+
+void test_focal_return_nests_and_ends_the_line() {
+    const FocalRun run = run_focal(
+        "01.10 DO 2.10\n"
+        "01.20 T \"DONE\"\n"
+        "01.30 Q\n"
+        "02.10 T \"OUTER\";DO 3.10;T \"BACK\"\n"
+        "02.20 RETURN\n"
+        "02.30 T \"NEVER-OUTER\"\n"
+        "03.10 T \"INNER\";RETURN;T \"NEVER-LINE\"\n"
+        "03.20 T \"NEVER-INNER\"");
+    // The inner RETURN ends the inner group only; the outer group carries on after
+    // its DO, and its own RETURN ends the outer one.
+    TW_CHECK(contains(run.output, "OUTER"));
+    TW_CHECK(contains(run.output, "INNER"));
+    TW_CHECK(contains(run.output, "BACK"));
+    TW_CHECK(contains(run.output, "DONE"));
+    TW_CHECK(!contains(run.output, "NEVER"));
+}
+
+void test_focal_return_ends_a_for_body() {
+    const FocalRun run = run_focal(
+        "01.10 DO 2.10\n"
+        "01.20 T \"AFTER\"\n"
+        "01.30 Q\n"
+        "02.10 FOR I=1,5;T I;RETURN\n"
+        "02.20 T \"NEVER\"");
+    // The loop stops on its first pass as well as the group: printing 1 then 2..5
+    // would mean the RETURN only ended the group after the body had run to its end.
+    TW_CHECK(contains(run.output, "1"));
+    TW_CHECK(!contains(run.output, "2"));
+    TW_CHECK(contains(run.output, "AFTER"));
+    TW_CHECK(!contains(run.output, "NEVER"));
+    TW_CHECK(!any_error(run.output));
+}
+
+void test_focal_return_without_a_group_is_reported() {
+    const FocalRun run = run_focal("01.10 RETURN");
+    TW_CHECK(any_error(run.output));
+    TW_CHECK(contains(run.output, "RETURN without a DO group"));
+}
+
 void test_focal_do_runs_a_group_and_returns() {
     const FocalRun run = run_focal(
         "01.10 T \"START\"\n01.20 DO 2.10\n01.30 T \"END\"\n01.40 Q\n02.10 T \"GROUP\"");
@@ -370,6 +433,43 @@ void test_comal_arrays_and_data() {
     const ComalRun data =
         run_comal("10 DATA 4, 5\n20 READ X, Y\n30 PRINT X + Y");
     TW_CHECK(contains(data.output, "9"));
+}
+
+// A FUNC could do nothing with a variable of its own: every name it touched was the
+// caller's. LOCAL gives it one, and gives the caller theirs back on the way out --
+// including when the body throws.
+
+void test_comal_function_local_keeps_the_callers_variable() {
+    const ComalRun run = run_comal(
+        "10 T = 99\n"
+        "20 PRINT DOUBLE(21)\n"
+        "30 PRINT T\n"
+        "40 END\n"
+        "100 FUNC DOUBLE(N)\n"
+        "110 LOCAL T\n"
+        "120 T = N * 2\n"
+        "130 RETURN T\n"
+        "140 ENDFUNC");
+    TW_CHECK(contains(run.output, "42"));
+    // The caller's T is 99 again: the function's T was its own.
+    TW_CHECK(contains(run.output, "99"));
+    TW_CHECK(!any_error(run.output));
+}
+
+void test_comal_function_local_is_not_leaked_to_the_caller() {
+    // With no T of the caller's, the local one is gone after the call rather than
+    // left behind at its last value.
+    const ComalRun run = run_comal(
+        "10 PRINT DOUBLE(4)\n"
+        "20 PRINT T\n"
+        "30 END\n"
+        "100 FUNC DOUBLE(N)\n"
+        "110 LOCAL T\n"
+        "120 T = N * 2\n"
+        "130 RETURN T\n"
+        "140 ENDFUNC");
+    TW_CHECK(contains(run.output, "8"));
+    TW_CHECK(contains(run.output, "0"));
 }
 
 void test_comal_turtle() {

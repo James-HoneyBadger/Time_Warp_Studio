@@ -14,6 +14,7 @@
 // The cases themselves are in `ui_layout/*.cpp`, one file per part of the
 // window, and the order they run in is `ui_layout/cases.hpp`.
 
+#include "timewarp/ui/command_reference.hpp"
 #include "ui_layout/cases.hpp"
 #include "ui_layout/support.hpp"
 
@@ -34,6 +35,12 @@ int main(int argc, char** argv) {
     // supplied through the resolver's own override.
     if (timewarp::ui::snippetRoot().isEmpty()) {
         qputenv("TIME_WARP_SNIPPETS", QStringLiteral(TIME_WARP_TEST_SNIPPETS).toUtf8());
+    }
+    // The command table is read by the Reference page. Same arrangement, same
+    // reason: the resolver walks up from the executable, which reaches the checkout
+    // from `native/build` and from nowhere else.
+    if (timewarp::ui::commandRowsPath().isEmpty()) {
+        qputenv("TIME_WARP_COMMANDS", QStringLiteral(TIME_WARP_TEST_COMMANDS).toUtf8());
     }
 
     test_editor_tabs_refuse_to_be_sized_by_their_largest_page();
@@ -60,6 +67,9 @@ int main(int argc, char** argv) {
     test_a_run_writes_beside_its_document_without_a_project();
     test_watch_and_data_breakpoint_controls();
     test_sql_panel_runs_and_shows_results();
+    test_the_new_pages_name_what_they_show();
+    test_the_command_reference_lists_the_table();
+    test_assistant_panel_contract();
     test_repl_bar_runs_and_keeps_bindings();
     test_repl_bar_scheme_errors_and_language_switch();
     test_repl_basic_direct_mode();
@@ -89,7 +99,9 @@ int main(int argc, char** argv) {
     test_help_menu_opens_the_documentation();
     test_edit_menu_has_find_in_files();
     test_snippet_picker_filters_by_language();
+    test_find_in_files_offers_replace();
     test_version_history_lists_snapshots();
+    test_version_history_compares_with_the_open_document();
     test_editor_minimap_and_whitespace();
     test_every_right_column_page_has_a_key();
     test_file_menu_new_opens_a_document();

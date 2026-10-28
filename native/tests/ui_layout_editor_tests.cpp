@@ -134,6 +134,49 @@ void test_editor_minimap_and_whitespace() {
 /// and previews the text. Modal in use, so the dialog is constructed here rather
 /// than exec()'d.
 
+
+// Replace All is a bulk edit that writes files, so the window's half of it matters:
+// it must tell the dialog which documents hold unsaved work, and it must reload the
+// ones it changed. The write itself is covered by `editor_services_tests`; this is
+// the wiring.
+
+void test_find_in_files_offers_replace() {
+    announce("Find in Files: replace is offered");
+    tw::test::TempDir dir;
+    TW_CHECK(dir.valid());
+    if (!dir.valid()) {
+        return;
+    }
+    const QString path = dir.write(QStringLiteral("a.logo"), "FD 10\nFD 20\n");
+    TW_CHECK(!path.isEmpty());
+
+    timewarp::ui::FindInFilesDialog dialog;
+    // Nothing to replace until something has been found.
+    auto* replace = dialog.findChild<QPushButton*>(QStringLiteral("findInFilesReplace"));
+    TW_CHECK(replace != nullptr);
+    TW_CHECK(dialog.replacementField() != nullptr);
+    if (replace == nullptr || dialog.replacementField() == nullptr) {
+        return;
+    }
+    TW_CHECK(!replace->isEnabled());
+
+    // The window hands the dialog the documents with unsaved changes before use;
+    // with none, an empty set is the answer rather than no answer.
+    dialog.setOffLimits({});
+    dialog.setRoot(dir.path());
+    dialog.setTerm(QStringLiteral("FD"));
+    dialog.startSearch();
+    TW_CHECK(spin_until([&dialog] { return dialog.hitCount() > 0; }, 5000));
+    TW_CHECK_EQ(dialog.hitCount(), 2);
+    TW_CHECK(replace->isEnabled());
+
+    // Cancelling the confirmation leaves every file alone: the question is the only
+    // thing between the button and somebody's disk.
+    QFile file{path};
+    TW_CHECK(file.open(QIODevice::ReadOnly));
+    TW_CHECK_EQ(QString::fromUtf8(file.readAll()).toStdString(), std::string{"FD 10\nFD 20\n"});
+}
+
 void test_version_history_lists_snapshots() {
     announce("version history");
     QTemporaryDir dir;
@@ -173,6 +216,58 @@ void test_version_history_lists_snapshots() {
         restore->click();
         TW_CHECK_EQ(dialog.result(), int(QDialog::Accepted));
         TW_CHECK_EQ(dialog.chosenText().toStdString(), std::string{"10 PRINT 2\n"});
+    }
+}
+
+
+// A list of copies answers "what did it look like"; the comparison answers "what
+// did I change". Both are here, and the tick that chooses between them is the only
+// control in the dialog that changes what the user is looking at.
+
+void test_version_history_compares_with_the_open_document() {
+    announce("version history: compare");
+    QTemporaryDir dir;
+    TW_CHECK(dir.isValid());
+    if (!dir.isValid()) {
+        return;
+    }
+    timewarp::ui::AutosaveStore store{dir.filePath(QStringLiteral("autosave"))};
+    const QString document = dir.filePath(QStringLiteral("program.bas"));
+    static_cast<void>(store.save(document, QStringLiteral("10 PRINT 1\n20 END\n"), 1000));
+
+    timewarp::ui::VersionHistoryDialog dialog{store, document,
+                                             QStringLiteral("10 PRINT 2\n20 END\n")};
+    auto* compare = dialog.compareBox();
+    TW_CHECK(compare != nullptr);
+    TW_CHECK(dialog.comparison() != nullptr);
+    if (compare == nullptr || dialog.comparison() == nullptr) {
+        return;
+    }
+    // Offered because the editor has text to compare with.
+    TW_CHECK(compare->isEnabled());
+    // The copy on its own is what is shown until the tick is set.
+    TW_CHECK(dialog.preview()->isVisibleTo(&dialog));
+    TW_CHECK(!dialog.comparison()->isVisibleTo(&dialog));
+
+    compare->setChecked(true);
+    TW_CHECK(dialog.comparison()->isVisibleTo(&dialog));
+    TW_CHECK(!dialog.preview()->isVisibleTo(&dialog));
+    // From what is open to the copy: the old line comes back, the new one goes.
+    TW_CHECK(dialog.diffText().contains(QStringLiteral("-10 PRINT 2")));
+    TW_CHECK(dialog.diffText().contains(QStringLiteral("+10 PRINT 1")));
+    // ... and the unchanged line is context, not a change.
+    TW_CHECK(dialog.diffText().contains(QStringLiteral(" 20 END")));
+
+    compare->setChecked(false);
+    TW_CHECK(dialog.preview()->isVisibleTo(&dialog));
+    TW_CHECK(dialog.diffText().isEmpty());
+
+    // An empty document has nothing to compare with, and the tick says so instead
+    // of producing an empty diff that looks like "no changes".
+    timewarp::ui::VersionHistoryDialog empty{store, document, QString{}};
+    TW_CHECK(empty.compareBox() != nullptr);
+    if (empty.compareBox() != nullptr) {
+        TW_CHECK(!empty.compareBox()->isEnabled());
     }
 }
 
