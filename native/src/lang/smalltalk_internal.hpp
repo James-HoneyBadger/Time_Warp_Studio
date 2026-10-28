@@ -134,6 +134,18 @@ struct Activation {
     std::map<std::string, Ptr> variables;
 };
 
+/// One message send that has not returned, for the debugger's call stack.
+///
+/// `procedure` is pre-rendered because the name is the one thing the debugger
+/// shows and formatting it where the stack is read would mean keeping the class
+/// object alive for the reader rather than for the run.
+struct ActiveSend {
+    std::string procedure;
+    /// The source line this frame is at: the send it is executing while it is
+    /// the innermost frame, and the call site in the caller while it is not.
+    int line = 0;
+};
+
 /// Everything one run owns: globals, classes, the Transcript's pending line.
 struct Runtime {
     TurtleHost* turtle = nullptr;
@@ -142,6 +154,10 @@ struct Runtime {
     std::map<std::string, ClassPtr> classes;
     std::vector<std::string> transcript_buffer;
     FramePtr workspace;
+    /// The sends that have not returned, outermost first. Smalltalk's frames are
+    /// not chained: a method body cannot see its caller's temporaries, so the
+    /// `Frame` graph is lexical and this is the call chain the debugger shows.
+    std::vector<ActiveSend> active_sends;
     /// The turtle's pose, mirrored for `x`, `y` and `heading`; the host has no
     /// readback, so the library updates this with the same maths the hosts use.
     double x = 0.0;
@@ -156,6 +172,21 @@ struct Runtime {
 
     void emit(std::string text) { output.push_back(std::move(text)); }
     FramePtr workspace_frame();
+};
+
+/// Records a frame for as long as it is executing, including while an error or a
+/// debugger stop unwinds the C++ stack.
+class ActiveSendScope {
+public:
+    ActiveSendScope(Runtime& runtime, std::string procedure, int line) : runtime_{runtime} {
+        runtime_.active_sends.push_back(ActiveSend{std::move(procedure), line});
+    }
+    ~ActiveSendScope() { runtime_.active_sends.pop_back(); }
+    ActiveSendScope(const ActiveSendScope&) = delete;
+    ActiveSendScope& operator=(const ActiveSendScope&) = delete;
+
+private:
+    Runtime& runtime_;
 };
 
 struct Frame {
@@ -212,8 +243,10 @@ struct Node {
 };
 
 Ptr evaluate(const Node& node, const FramePtr& frame);
+/// Sends `selector` to `receiver`; `line` is the source line the send was
+/// written on, recorded so the debugger can name the frame's call site.
 Ptr send_message(const Ptr& receiver, const std::string& selector,
-                 std::vector<Ptr> arguments, const FramePtr& frame);
+                 std::vector<Ptr> arguments, const FramePtr& frame, int line = 0);
 ClassPtr class_of(const Ptr& value);
 
 // -- the library, built once by `smalltalk_library.cpp` ----------------------
@@ -252,8 +285,11 @@ Ptr make_method_call(const std::shared_ptr<Method>& method, const Ptr& receiver,
                      const ClassPtr& defining);
 
 /// Parses a chunk of code into statements. `temporaries` receives any `| a b |`.
+/// `first_line` is the line the chunk starts on in the file, so every node's line
+/// is the one the gutter shows.
 std::vector<NodePtr> parse_statements(std::string_view source,
-                                      std::vector<std::string>& temporaries);
+                                      std::vector<std::string>& temporaries,
+                                      int first_line = 1);
 
 /// Parses what follows `>>`: `foo`, `+ a`, or `foo: a bar: b`.
 void parse_method_pattern(std::string_view pattern, std::string& selector,

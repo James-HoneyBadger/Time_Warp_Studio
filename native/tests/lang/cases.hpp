@@ -168,6 +168,7 @@ void test_smalltalk_inject_and_range();
 void test_smalltalk_non_local_return_leaves_the_block();
 void test_smalltalk_method_answers_its_last_expression();
 void test_smalltalk_turtle_messages_draw();
+void test_smalltalk_pause_names_the_frames_it_is_inside();
 void test_basic_dollar_string_functions_are_calls_not_array_reads();
 void test_basic_string_array_index_is_an_expression();
 void test_basic_unreadable_print_reports_the_evaluator_message();

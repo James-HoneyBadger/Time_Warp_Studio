@@ -210,4 +210,62 @@ void test_smalltalk_turtle_messages_draw() {
     TW_CHECK_EQ(run.host.ops.at(1), std::string{"right 90"});
 }
 
+// The debugger's stack list is what says *where* a stopped Smalltalk program is,
+// and a Smalltalk method keeps no frame chain to ask: a method body cannot see its
+// caller's temporaries, so the `Frame` graph is lexical. The runtime records the
+// sends instead, and the interpreter lends that chain to whoever paused.
+//
+// The line the pause names has to be the line the gutter shows. A chunk is parsed
+// on its own, and its nodes used to be numbered from 1 inside the chunk -- which
+// made a breakpoint set by clicking the gutter never match inside a method.
+void test_smalltalk_pause_names_the_frames_it_is_inside() {
+    std::printf("-- debug: smalltalk call stack\n");
+    RecordingHost host;
+    Interpreter interpreter{Language::Smalltalk, host};
+    timewarp::lang::DebugSession session;
+    session.set_breakpoints({7});  // line 8: `count := count + 1`, inside bump
+    std::vector<timewarp::lang::CallFrame> frames;
+    int pauses = 0;
+    int paused_at = 0;
+    session.on_paused = [&](int line) {
+        ++pauses;
+        paused_at = line;
+        frames = interpreter.call_stack();
+        session.request_continue();
+    };
+    interpreter.set_debug_session(&session);
+    interpreter.load_program(
+        "Object subclass: #Counter\n"
+        "  instanceVariableNames: 'count'\n"
+        "\n"
+        "Counter >> initialize\n"
+        "  count := 0\n"
+        "\n"
+        "Counter >> bump\n"
+        "  count := count + 1\n"
+        "  ^count\n"
+        "\n"
+        "| c |\n"
+        "c := Counter new.\n"
+        "c bump");
+    interpreter.run();
+
+    TW_CHECK_EQ(pauses, 1);
+    TW_CHECK_EQ(paused_at, 8);
+    TW_CHECK_EQ(frames.size(), std::size_t{2});
+    if (frames.size() == 2) {
+        // Outermost first, the same order the Scheme machine reports, so the panel
+        // needs no second convention. A waiting frame's line is its call site, so
+        // the chunk shows the `c bump` it is standing on rather than the line it
+        // started at.
+        TW_CHECK_EQ(frames.at(0).procedure, std::string{"DoIt"});
+        TW_CHECK_EQ(frames.at(0).line, 13);
+        TW_CHECK_EQ(frames.at(1).procedure, std::string{"Counter>>bump"});
+        TW_CHECK_EQ(frames.at(1).line, 8);
+    }
+    // The chain describes a run, not a machine: once the run is over the probe is
+    // gone, so nothing can answer with frames whose objects were freed.
+    TW_CHECK(interpreter.call_stack().empty());
+}
+
 }  // namespace tw::lang_tests

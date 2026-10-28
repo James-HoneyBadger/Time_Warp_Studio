@@ -829,6 +829,9 @@ private:
     /// Shows the Scheme runner's stack and variables in the variables and debug
     /// panels. Harmless when nothing is paused: it shows the last known state.
     void showRunnerSnapshot();
+    /// The same for a native engine: its own call chain, as the Debug panel's
+    /// stack list. Empty for a language that keeps no chain.
+    void showNativeStack(const NativeRunner& runner);
     /// Re-evaluates every watch against the last bindings published. Called at
     /// each pause, at the end of a run, and when the watch list changes.
     void refreshWatches();

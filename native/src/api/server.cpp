@@ -241,6 +241,15 @@ QJsonObject debugSnapshotJson(const std::string& id, const debug::Snapshot& snap
     object.insert(QStringLiteral("line"), snapshot.line);
     object.insert(QStringLiteral("depth"), snapshot.depth);
     object.insert(QStringLiteral("procedure"), QString::fromStdString(snapshot.procedure));
+    QJsonArray stack;
+    for (const debug::Frame& frame : snapshot.stack) {
+        QJsonObject row;
+        row.insert(QStringLiteral("procedure"),
+                   QString::fromStdString(frame.procedure));
+        row.insert(QStringLiteral("line"), frame.line);
+        stack.append(row);
+    }
+    object.insert(QStringLiteral("stack"), stack);
     object.insert(QStringLiteral("reason"), QString::fromStdString(snapshot.reason));
     object.insert(QStringLiteral("changedVariable"),
                   QString::fromStdString(snapshot.changed_variable));

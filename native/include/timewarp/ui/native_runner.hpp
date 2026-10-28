@@ -197,6 +197,13 @@ public:
         QString value;
     };
 
+    /// One entry of the paused call chain: the innermost frame's own line and the
+    /// call site of each frame around it.
+    struct FrameRow {
+        QString procedure;
+        int line = 0;
+    };
+
     NativeRunner(timewarp::lang::Language language,
                  timewarp::canvas::CanvasCommandQueue& queue, QObject* parent = nullptr);
     ~NativeRunner() override;
@@ -261,6 +268,10 @@ public:
     void set_wakeup(std::function<void()> wakeup);
 
     [[nodiscard]] std::vector<VariableRow> variables() const;
+    /// The call chain at the last pause, outermost first; empty for a language
+    /// that keeps none (the six line-loop languages have a statement loop, not a
+    /// stack the engine can name).
+    [[nodiscard]] std::vector<FrameRow> callStack() const;
     /// Per-line totals from the last run, longest first; empty when the run was
     /// not profiled or the language runs as a whole program.
     [[nodiscard]] std::vector<timewarp::lang::LineProfile> profile() const;
@@ -294,6 +305,9 @@ private:
     /// and at the end of a run: the Variables panel is an inspector while the
     /// program is stopped as well as after it finishes.
     void publishVariables(const timewarp::lang::Interpreter& engine);
+    /// Copies the engine's call chain, asked while the run is stopped so the
+    /// probe sees the frames the pause is inside.
+    void publishCallStack(const timewarp::lang::Interpreter& engine);
 
     timewarp::lang::Language language_;
     std::unique_ptr<NativeCanvasHost> host_;
@@ -307,6 +321,7 @@ private:
 
     mutable std::mutex snapshot_mutex_;
     std::vector<VariableRow> variables_;
+    std::vector<FrameRow> call_stack_;
     std::vector<timewarp::lang::LineProfile> profile_;
     std::uint64_t steps_ = 0;
     double elapsed_ms_ = 0.0;

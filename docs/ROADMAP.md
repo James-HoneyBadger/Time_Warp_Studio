@@ -38,7 +38,7 @@ derived rather than remembered.
 | Printing | File > Print Code (Ctrl+P) and Print Drawing, through the optional Qt6 PrintSupport |
 | Profiling | View > Profile Run times every statement in the line-by-line languages and ends with a per-line report, longest first |
 | Terminal | Opt-in in Settings > Workspace: an embedded shell in the document's folder, absent in presentation and player modes |
-| Debugging | Breakpoints, Pause, Continue and Trace in all eleven languages; Scheme adds a stack and frame bindings; watch expressions and data breakpoints in the Debug panel |
+| Debugging | Breakpoints, Pause, Continue and Trace in all eleven languages; Scheme adds a stack and frame bindings, and Smalltalk reports its own message-send chain; watch expressions and data breakpoints in the Debug panel |
 | Database | A SQLite-backed Database tab, the shared `SQL` statement in nine languages, scripts, tables and schema; compiled programs link SQLite |
 | Automation | JSON-RPC over stdin/stdout (`language.run`, `repl.*`, `debug.*`, `sql.*`, `project.*`, `watch.evaluate`) and the `twc` terminal compiler |
 | Packaging | `make install`; tagged releases build a Windows installer and portable ZIP (Qt 6), a second Windows installer for Windows 7 (Qt 5.15), a universal macOS disk image, `.deb`, `.rpm`, AppImage, tarball and container artifacts |
@@ -480,9 +480,18 @@ expressions** are evaluated by the same expression engine a program uses, over t
 bindings the pause reported, and **data breakpoints** stop a run when a named
 variable changes — after the statement that changed it for the line-loop
 languages, at the next form for Scheme, and at the next natural boundary for a
-whole-program language. What is still missing is a call stack for the languages
-that do not keep one: a Smalltalk Program Counter is shown as a line rather than a
-frame.
+whole-program language. **Smalltalk's call stack is built**: the runtime records
+the message sends that have not returned, and a pause publishes them — outermost
+first, each as `Class>>selector` with the line it is at — to the Debug panel and to
+`debug.*` over the API. The same pass fixed the lines they are reported with: a
+chunk is parsed on its own, and its sends used to be numbered from 1 inside the
+chunk, so a breakpoint set by clicking the gutter could never match inside a
+method. The chain mechanism is `Interpreter::set_call_stack_probe`, so the next
+machine that has a stack to show joins by answering the probe rather than by
+growing the debugger. The six line-loop languages report an empty chain for now:
+their engines jump between statements, and the frames they do keep — BASIC's
+`GOSUB` and user `FUNCTION` stacks, COMAL's procedure calls, PILOT's `U:` groups —
+are internal stacks of line indices that no pause publishes yet.
 
 **Variables and the Telemetry HUD** are built too, and both answer the question a
 placeholder could not: *what did that run actually do?* The **Variables** tab lists every

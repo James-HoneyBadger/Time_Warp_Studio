@@ -93,10 +93,10 @@ bool starts_with(std::string_view text, std::string_view prefix) {
     return text.size() >= prefix.size() && text.substr(0, prefix.size()) == prefix;
 }
 
-std::vector<Token> tokenize(const std::string& source) {
+std::vector<Token> tokenize(const std::string& source, int first_line = 1) {
     std::vector<Token> tokens;
     std::size_t index = 0;
-    int line = 1;
+    int line = first_line;
     const std::size_t length = source.size();
     while (index < length) {
         const char character = source[index];
@@ -711,7 +711,19 @@ ClassPtr class_of(const Ptr& value) {
 }
 
 Ptr send_message(const Ptr& receiver, const std::string& selector,
-                 std::vector<Ptr> arguments, const FramePtr& frame) {
+                 std::vector<Ptr> arguments, const FramePtr& frame, int line) {
+    // A primitive is one C++ call that answers rather than a Smalltalk frame -- a
+    // stack with `Integer>>+` at every level would bury the program -- so only a
+    // method body is recorded. `defining` is the class the lookup started at: the
+    // receiver's class for an ordinary send, the superclass for `super`.
+    const auto invoke = [&](const Ptr& target, const std::shared_ptr<Method>& method,
+                            const ClassPtr& defining, std::string procedure) {
+        if (method->primitive) {
+            return method->invoke(target, std::move(arguments), frame, defining);
+        }
+        const ActiveSendScope scope{frame->runtime(), std::move(procedure), line};
+        return method->invoke(target, std::move(arguments), frame, defining);
+    };
     if (receiver->kind == Value::Kind::Super) {
         const ClassPtr start = receiver->super_defining;
         const auto method = start->lookup_above(selector, start);
@@ -719,8 +731,8 @@ Ptr send_message(const Ptr& receiver, const std::string& selector,
             throw StError("super sent " + selector + ", but no superclass of " +
                           start->name + " implements it");
         }
-        return method->invoke(receiver->super_receiver, std::move(arguments), frame,
-                              start);
+        return invoke(receiver->super_receiver, method, start,
+                      start->name + ">>" + selector);
     }
     if (receiver->kind == Value::Kind::Class) {
         const auto method = receiver->klass->lookup(selector, true);
@@ -728,14 +740,15 @@ Ptr send_message(const Ptr& receiver, const std::string& selector,
             throw StError(receiver->klass->name + " class does not understand " +
                           selector);
         }
-        return method->invoke(receiver, std::move(arguments), frame, receiver->klass);
+        return invoke(receiver, method, receiver->klass,
+                      receiver->klass->name + " class>>" + selector);
     }
     const ClassPtr klass = class_of(receiver);
     const auto method = klass->lookup(selector, false);
     if (method == nullptr) {
         throw StError(describe(receiver) + " does not understand " + selector);
     }
-    return method->invoke(receiver, std::move(arguments), frame, klass);
+    return invoke(receiver, method, klass, klass->name + ">>" + selector);
 }
 
 // ---------------------------------------------------------------------------
@@ -786,7 +799,8 @@ Ptr evaluate(const Node& node, const FramePtr& frame) {
             for (const NodePtr& argument : node.arguments) {
                 arguments.push_back(evaluate(*argument, frame));
             }
-            Ptr result = send_message(receiver, node.selector, std::move(arguments), frame);
+            Ptr result = send_message(receiver, node.selector, std::move(arguments),
+                                      frame, node.line);
             // Every cascaded send goes to the *original* receiver; that is what
             // distinguishes `;` from another message on the result.
             for (const auto& [selector, nodes] : node.cascades) {
@@ -795,7 +809,8 @@ Ptr evaluate(const Node& node, const FramePtr& frame) {
                 for (const NodePtr& argument : nodes) {
                     values.push_back(evaluate(*argument, frame));
                 }
-                result = send_message(receiver, selector, std::move(values), frame);
+                result = send_message(receiver, selector, std::move(values), frame,
+                                      node.line);
             }
             return result;
         }
@@ -1142,9 +1157,13 @@ private:
 };
 
 // The parser is also used by the driver, for method bodies and top-level code.
+// `first_line` is where that text starts in the file: the driver hands over a
+// chunk, and a send's line has to be the number the gutter shows or a breakpoint
+// set by clicking one would never match.
 std::vector<NodePtr> parse_statements(std::string_view source,
-                                      std::vector<std::string>& temporaries) {
-    Parser parser{tokenize(std::string{source})};
+                                      std::vector<std::string>& temporaries,
+                                      int first_line) {
+    Parser parser{tokenize(std::string{source}, first_line)};
     auto [names, statements] = parser.parse_body({});
     temporaries = std::move(names);
     return statements;

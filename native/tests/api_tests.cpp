@@ -532,6 +532,42 @@ void test_debug_sessions() {
     TW_CHECK_EQ(scheme_end.value(QStringLiteral("output")).toString(),
                 QStringLiteral("1"));
 
+    // A whole-program language reports its own call chain, so a client can say
+    // where a stop is rather than only which line it is on.
+    QJsonObject smalltalk;
+    smalltalk.insert(QStringLiteral("language"), QStringLiteral("smalltalk"));
+    smalltalk.insert(QStringLiteral("source"),
+                     QStringLiteral("Object subclass: #Thing\n"
+                                    "  instanceVariableNames: ''\n"
+                                    "\n"
+                                    "Thing >> greet\n"
+                                    "  ^1 + 2\n"
+                                    "\n"
+                                    "Thing new greet\n"));
+    smalltalk.insert(QStringLiteral("breakpoints"), QJsonArray{5});
+    const QJsonObject talk_pause =
+        resultOf(server, QStringLiteral("debug.start"), smalltalk).toObject();
+    TW_CHECK_EQ(talk_pause.value(QStringLiteral("state")).toString(),
+                QStringLiteral("paused"));
+    TW_CHECK_EQ(talk_pause.value(QStringLiteral("line")).toInt(), 5);
+    const QJsonArray stack = talk_pause.value(QStringLiteral("stack")).toArray();
+    TW_CHECK_EQ(stack.size(), 2);
+    if (stack.size() == 2) {
+        TW_CHECK_EQ(stack.at(0).toObject().value(QStringLiteral("procedure")).toString(),
+                    QStringLiteral("DoIt"));
+        TW_CHECK_EQ(
+            stack.at(1).toObject().value(QStringLiteral("procedure")).toString(),
+            QStringLiteral("Thing>>greet"));
+        TW_CHECK_EQ(stack.at(1).toObject().value(QStringLiteral("line")).toInt(), 5);
+    }
+    QJsonObject talk_id;
+    talk_id.insert(QStringLiteral("session"),
+                   talk_pause.value(QStringLiteral("session")).toString());
+    const QJsonObject talk_end =
+        resultOf(server, QStringLiteral("debug.continue"), talk_id).toObject();
+    TW_CHECK_EQ(talk_end.value(QStringLiteral("state")).toString(),
+                QStringLiteral("finished"));
+
     QJsonObject missing;
     missing.insert(QStringLiteral("session"), QStringLiteral("no-such"));
     TW_CHECK_EQ(call(server, QStringLiteral("debug.continue"), missing)

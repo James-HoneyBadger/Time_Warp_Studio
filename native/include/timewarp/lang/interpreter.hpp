@@ -67,6 +67,18 @@ struct LineProfile {
     double elapsed_ms = 0.0;
 };
 
+/// One entry of the running program's call chain, outermost first.
+///
+/// A whole-program executor keeps its own idea of where it is -- Smalltalk's
+/// message sends, for instance -- and this is how it says so while a debugger
+/// has it stopped. `procedure` is the machine's own name for the frame
+/// (`Counter>>increment`) and `line` is the source line it is at, or 0 when the
+/// frame has no line of its own.
+struct CallFrame {
+    std::string procedure;
+    int line = 0;
+};
+
 /// An error an executor reports to the learner. The message is rendered with
 /// the ❌ prefix by the loop, so an executor never has to know how the IDE
 /// decorates it.
@@ -142,6 +154,26 @@ public:
     /// Returns false when the session asked for the run to stop; the executor
     /// returns its output and the run ends cleanly.
     [[nodiscard]] bool pause_if_requested(int line);
+
+    /// Supplies the running program's call chain while it is stopped.
+    ///
+    /// Set by an executor that keeps one. It is called on the interpreter's
+    /// thread from inside a pause -- the session's `on_paused` and
+    /// `on_data_changed` run before the run blocks -- so a machine that has a
+    /// stack pays nothing until it actually stops, and what the probe reads is
+    /// the state at the pause rather than a copy taken earlier.
+    ///
+    /// The executor must clear it before it returns: the probe refers to objects
+    /// that live only for that run.
+    void set_call_stack_probe(std::function<std::vector<CallFrame>()> probe) {
+        call_stack_probe_ = std::move(probe);
+    }
+    /// The running program's call chain, outermost first; empty when the
+    /// language keeps none. Meaningful only while the run is paused, because that
+    /// is the only time the executor is between frames rather than inside one.
+    [[nodiscard]] std::vector<CallFrame> call_stack() const {
+        return call_stack_probe_ ? call_stack_probe_() : std::vector<CallFrame>{};
+    }
 
     // -- the surface executors use ---------------------------------------
 
@@ -420,6 +452,8 @@ private:
     bool iteration_capped_ = false;
     /// Set by `jump_to`, cleared by the run loop before each statement.
     bool jumped_ = false;
+    /// The executor's call chain, asked only when a pause is published.
+    std::function<std::vector<CallFrame>()> call_stack_probe_;
     std::string error_;
 };
 

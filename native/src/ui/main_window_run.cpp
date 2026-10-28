@@ -817,6 +817,7 @@ void MainWindow::runNatively(CodeEditor* editor, timewarp::lang::Language langua
             // answer, and it is better than an empty table while stopped.
             debug_panel_->setVariables(rows);
         }
+        showNativeStack(*runner);
         refreshWatches();
         static_cast<void>(showPanel(QStringLiteral("debug")));
     });
@@ -841,6 +842,7 @@ void MainWindow::runNatively(CodeEditor* editor, timewarp::lang::Language langua
                 if (debug_panel_ != nullptr) {
                     debug_panel_->setVariables(rows);
                 }
+                showNativeStack(*runner);
                 refreshWatches();
                 static_cast<void>(showPanel(QStringLiteral("debug")));
             });

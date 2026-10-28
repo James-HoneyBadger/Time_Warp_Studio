@@ -174,6 +174,7 @@ int main() {
     test_smalltalk_non_local_return_leaves_the_block();
     test_smalltalk_method_answers_its_last_expression();
     test_smalltalk_turtle_messages_draw();
+    test_smalltalk_pause_names_the_frames_it_is_inside();
     test_basic_dollar_string_functions_are_calls_not_array_reads();
     test_basic_string_array_index_is_an_expression();
     test_basic_unreadable_print_reports_the_evaluator_message();

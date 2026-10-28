@@ -135,7 +135,7 @@ std::vector<std::string> split_lines(const std::string& text) {
     return lines;
 }
 
-std::string install_method(const std::string& chunk, Runtime& runtime) {
+std::string install_method(const std::string& chunk, Runtime& runtime, int first_line) {
     const std::vector<std::string> lines = split_lines(chunk);
     std::smatch match;
     if (!std::regex_match(lines.front(), match, method_header())) {
@@ -173,7 +173,7 @@ std::string install_method(const std::string& chunk, Runtime& runtime) {
     std::vector<std::string> temporaries;
     std::vector<NodePtr> statements;
     try {
-        statements = parse_statements(body_source, temporaries);
+        statements = parse_statements(body_source, temporaries, first_line + 1);
     } catch (const StError& error) {
         throw StError("in " + class_name + " >> " + selector + ": " + error.what());
     }
@@ -201,10 +201,10 @@ std::string install_method(const std::string& chunk, Runtime& runtime) {
     return (class_side ? class_name + " class" : class_name) + " >> " + selector;
 }
 
-std::vector<std::string> run_code(const std::string& chunk, Runtime& runtime) {
+std::vector<std::string> run_code(const std::string& chunk, Runtime& runtime, int first_line) {
     std::vector<std::string> lines;
     std::vector<std::string> temporaries;
-    const std::vector<NodePtr> statements = parse_statements(chunk, temporaries);
+    const std::vector<NodePtr> statements = parse_statements(chunk, temporaries, first_line);
     if (statements.empty()) {
         return lines;
     }
@@ -237,7 +237,8 @@ std::string join_output(const Runtime& runtime) {
     return result;
 }
 
-/// Dismantles the frame graph when a run ends.
+/// Dismantles the frame graph when a run ends, and takes the debugger's probe
+/// with it.
 ///
 /// A block closure holds the frame that created it, and `| b | b := [:x | ...]`
 /// stores that closure in the same frame, so the run owns a reference cycle that
@@ -246,10 +247,16 @@ std::string join_output(const Runtime& runtime) {
 /// destructor because the run has five exits (two errors, a non-local return
 /// outside a method, and the normal end). Without it every program that creates
 /// a block leaks its AST under LeakSanitizer.
+///
+/// The probe goes the same way for the same reason: it points at `runtime`, which
+/// this destructor is the last thing to own, and an interpreter outlives a run in
+/// a REPL session.
 struct RunTeardown {
     Runtime& runtime;
+    Interpreter& interpreter;
 
     ~RunTeardown() {
+        interpreter.set_call_stack_probe({});
         for (FramePtr frame = runtime.workspace; frame; frame = frame->parent) {
             frame->temporaries.clear();
             if (frame->activation) {
@@ -270,13 +277,28 @@ std::string execute_smalltalk(Interpreter& interpreter, std::string_view source,
     using namespace smalltalk;  // NOLINT(google-build-using-namespace)
     Runtime runtime;
     runtime.turtle = &turtle;
-    runtime.pause = [&interpreter](int line) {
+    runtime.pause = [&interpreter, &runtime](int line) {
+        // The innermost frame is where the run is standing, so it is the one whose
+        // line moves: the frames around it keep the line that called them.
+        if (!runtime.active_sends.empty()) {
+            runtime.active_sends.back().line = line;
+        }
         return interpreter.pause_if_requested(line);
     };
     runtime.sql = [&interpreter](std::string_view sql) {
         return interpreter.run_sql(sql);
     };
-    const RunTeardown teardown{runtime};
+    const RunTeardown teardown{runtime, interpreter};
+    // Asked only while a debugger has the run stopped, which is the only time the
+    // chain is stable and the only time anybody reads it.
+    interpreter.set_call_stack_probe([&runtime] {
+        std::vector<CallFrame> frames;
+        frames.reserve(runtime.active_sends.size());
+        for (const ActiveSend& send : runtime.active_sends) {
+            frames.push_back(CallFrame{send.procedure, send.line});
+        }
+        return frames;
+    });
 
     std::vector<Chunk> chunks;
     try {
@@ -287,17 +309,20 @@ std::string execute_smalltalk(Interpreter& interpreter, std::string_view source,
 
     for (const Chunk& chunk : chunks) {
         // A chunk boundary is the driver's own statement boundary. Message sends
-        // inside it pause through `runtime.pause` with their own lines.
+        // inside it pause through `runtime.pause` with their own lines. The chunk
+        // itself is a frame so a pause at a top-level send has something to name
+        // rather than an empty stack.
+        const ActiveSendScope chunk_scope{runtime, "DoIt", chunk.line};
         if (!interpreter.pause_if_requested(chunk.line)) {
             return join_output(runtime);
         }
         const std::string first = split_lines(chunk.text).front();
         try {
             if (std::regex_match(first, method_header())) {
-                runtime.emit(install_method(chunk.text, runtime));
+                runtime.emit(install_method(chunk.text, runtime, chunk.line));
                 continue;
             }
-            for (const std::string& line : run_code(chunk.text, runtime)) {
+            for (const std::string& line : run_code(chunk.text, runtime, chunk.line)) {
                 runtime.emit(line);
             }
         } catch (const DebugStop&) {

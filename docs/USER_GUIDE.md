@@ -436,7 +436,10 @@ Press **Debug** on the toolbar, or use the Debug tab:
 
 The paused location is shown as a line, with the procedure name and call depth
 where the language has them. Scheme reports its call stack and the paused frame's
-bindings; native languages publish their visible bindings to the Variables tab.
+bindings; a whole-program language reports the chain its engine keeps — Smalltalk
+lists its message sends, outermost first, each as `Counter>>bump` with the line it
+is at — while the six line-loop languages report an empty chain and publish their
+visible bindings to the Variables tab instead.
 
 ### Watch expressions
 

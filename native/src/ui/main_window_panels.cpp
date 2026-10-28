@@ -682,6 +682,17 @@ void MainWindow::showRunnerSnapshot() {
     refreshWatches();
 }
 
+void MainWindow::showNativeStack(const NativeRunner& runner) {
+    if (debug_panel_ == nullptr) {
+        return;
+    }
+    QList<DebugPanel::Frame> frames;
+    for (const NativeRunner::FrameRow& frame : runner.callStack()) {
+        frames.append({frame.procedure, frame.line});
+    }
+    debug_panel_->setStack(frames);
+}
+
 void MainWindow::clearRunState() {
     engine_telemetry_.clear();
     last_variables_.clear();

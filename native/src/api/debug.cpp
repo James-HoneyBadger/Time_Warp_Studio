@@ -142,6 +142,11 @@ private:
             snapshot.variables.push_back(
                 {name, std::string{value.type_name()}, value.render()});
         }
+        // Read here and not in `snapshot()`: the probe is only meaningful while
+        // the interpreter's thread is parked in the pause, which is this call.
+        for (const timewarp::lang::CallFrame& frame : interpreter_->call_stack()) {
+            snapshot.stack.push_back({frame.procedure, frame.line});
+        }
         {
             const std::lock_guard<std::mutex> lock{mutex_};
             snapshot.output = joinLines(output_);
@@ -247,6 +252,9 @@ public:
         snapshot.reason = reasonOf(debug.cause);
         snapshot.changed_variable = debug.changed_variable.toStdString();
         snapshot.error = debug.error.toStdString();
+        for (const timewarp::debugger::StackFrameInfo& frame : debug.stack) {
+            snapshot.stack.push_back({frame.procedure.toStdString(), frame.line});
+        }
         for (const timewarp::debugger::DebugVariable& variable : debug.variables) {
             snapshot.variables.push_back({variable.name.toStdString(),
                                           variable.kind.toStdString(),

@@ -30,6 +30,13 @@ struct Variable {
     std::string value;
 };
 
+/// One entry of the paused call chain, outermost first. Empty for a language
+/// whose engine keeps no chain of its own.
+struct Frame {
+    std::string procedure;
+    int line = 0;
+};
+
 struct Snapshot {
     bool paused = false;
     bool finished = false;
@@ -40,6 +47,8 @@ struct Snapshot {
     std::string reason;
     std::string changed_variable;
     std::string error;
+    std::vector<Frame> stack;
+    /// The bindings at the pause, or at the end of the run when it finished.
     std::vector<Variable> variables;
     std::string output;
     std::string svg;

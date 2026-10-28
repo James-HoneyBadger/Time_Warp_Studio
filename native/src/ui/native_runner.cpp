@@ -709,6 +709,20 @@ std::vector<NativeRunner::VariableRow> NativeRunner::variables() const {
     return variables_;
 }
 
+void NativeRunner::publishCallStack(const timewarp::lang::Interpreter& engine) {
+    std::vector<FrameRow> frames;
+    for (const timewarp::lang::CallFrame& frame : engine.call_stack()) {
+        frames.push_back(FrameRow{QString::fromStdString(frame.procedure), frame.line});
+    }
+    const std::lock_guard<std::mutex> lock{snapshot_mutex_};
+    call_stack_ = std::move(frames);
+}
+
+std::vector<NativeRunner::FrameRow> NativeRunner::callStack() const {
+    const std::lock_guard<std::mutex> lock{snapshot_mutex_};
+    return call_stack_;
+}
+
 std::vector<timewarp::lang::LineProfile> NativeRunner::profile() const {
     const std::lock_guard<std::mutex> lock{snapshot_mutex_};
     return profile_;
@@ -768,12 +782,16 @@ void NativeRunner::run() {
     timewarp::lang::Interpreter* engine_ptr = engine.get();
     session->on_paused = [this, engine_ptr](int line) {
         // While the run is stopped, the Variables panel has to show the state it
-        // is stopped in rather than the state it will end in.
+        // is stopped in rather than the state it will end in, and the Debug panel
+        // has to show the chain the pause is inside. Both are read here, on the
+        // interpreter's thread, from inside the pause.
         publishVariables(*engine_ptr);
+        publishCallStack(*engine_ptr);
         emit paused(line);
     };
     session->on_data_changed = [this, engine_ptr](int line, const std::string& name) {
         publishVariables(*engine_ptr);
+        publishCallStack(*engine_ptr);
         emit dataBreakpointHit(QString::fromStdString(name), line);
     };
     {
@@ -805,6 +823,7 @@ void NativeRunner::run() {
     host_->flush();
 
     publishVariables(*engine);
+    publishCallStack(*engine);
     {
         const std::lock_guard<std::mutex> lock{snapshot_mutex_};
         steps_ = engine->steps_used();
