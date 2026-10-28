@@ -592,6 +592,97 @@ void test_sql_panel_runs_and_shows_results() {
 // page can only show commands the gate has run, and a command the gate loses fails
 // the build rather than quietly leaving the reference.
 
+
+// Accessibility starts with a name. A screen reader announces what a control is
+// called; a control with no accessible name and no text of its own is announced as
+// "button" or "edit", which is the same as not being there.
+//
+// This case covers the three pages added at 23.1 and 23.2 -- the assistant, its
+// settings and the reference -- rather than the whole window, because a gate over
+// everything has to be written against what everything is, and that is a pass of its
+// own. What it asserts is the invariant worth keeping: a field, list or slider must
+// carry a name, and a button or tick must carry one or its own visible text.
+
+namespace {
+
+QStringList unnamedControls(QWidget* page) {
+    QStringList anonymous;
+    const auto note = [&anonymous](QWidget* widget) {
+        if (widget == nullptr || widget->isHidden()) {
+            return;
+        }
+        if (!widget->accessibleName().trimmed().isEmpty()) {
+            return;
+        }
+        // A spin box carries its own line edit; that edit is the spin box to a screen
+        // reader, so naming the box is what counts.
+        if (qobject_cast<QAbstractSpinBox*>(widget->parentWidget()) != nullptr) {
+            return;
+        }
+        const auto* button = qobject_cast<QAbstractButton*>(widget);
+        if (button != nullptr && !button->text().trimmed().isEmpty()) {
+            return;
+        }
+        anonymous << QStringLiteral("%1 (%2)")
+                         .arg(widget->objectName().isEmpty()
+                                  ? QString::fromLatin1(widget->metaObject()->className())
+                                  : widget->objectName(),
+                              QString::fromLatin1(widget->metaObject()->className()));
+    };
+    for (QLineEdit* field : page->findChildren<QLineEdit*>()) {
+        note(field);
+    }
+    for (QComboBox* box : page->findChildren<QComboBox*>()) {
+        note(box);
+    }
+    for (QAbstractSpinBox* spin : page->findChildren<QAbstractSpinBox*>()) {
+        note(spin);
+    }
+    for (QPlainTextEdit* edit : page->findChildren<QPlainTextEdit*>()) {
+        note(edit);
+    }
+    for (QSlider* slider : page->findChildren<QSlider*>()) {
+        note(slider);
+    }
+    for (QAbstractButton* button : page->findChildren<QAbstractButton*>()) {
+        note(button);
+    }
+    return anonymous;
+}
+
+}  // namespace
+
+void test_the_new_pages_name_what_they_show() {
+    announce("assistant and reference: every control has a name");
+    MainWindow window;
+    if (CommandReferencePanel* reference = window.commandReferencePanel()) {
+        reference->ensureLoaded();
+        const QStringList anonymous = unnamedControls(reference);
+        if (!anonymous.isEmpty()) {
+            std::printf("     reference: %s\n", anonymous.join(", ").toStdString().c_str());
+        }
+        TW_CHECK(anonymous.isEmpty());
+    }
+#ifdef TIME_WARP_HAVE_AI
+    if (AiPanel* panel = window.aiPanel()) {
+        const QStringList anonymous = unnamedControls(panel);
+        if (!anonymous.isEmpty()) {
+            std::printf("     assistant: %s\n", anonymous.join(", ").toStdString().c_str());
+        }
+        TW_CHECK(anonymous.isEmpty());
+    }
+    timewarp::ai::Config config;
+    config.base_url = QStringLiteral("https://api.deepseek.com/v1");
+    config.model = QStringLiteral("deepseek-chat");
+    AiSettingsDialog dialog{config};
+    const QStringList anonymous = unnamedControls(&dialog);
+    if (!anonymous.isEmpty()) {
+        std::printf("     settings: %s\n", anonymous.join(", ").toStdString().c_str());
+    }
+    TW_CHECK(anonymous.isEmpty());
+#endif
+}
+
 void test_the_command_reference_lists_the_table() {
     announce("command reference page");
     MainWindow window;

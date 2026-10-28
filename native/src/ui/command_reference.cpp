@@ -108,6 +108,7 @@ void CommandReferencePanel::buildUi() {
     top->addWidget(language_);
 
     filter_ = new QLineEdit{this};
+    filter_->setAccessibleName(tr("Filter commands"));
     filter_->setObjectName(QStringLiteral("commandReferenceFilter"));
     filter_->setPlaceholderText(tr("Filter commands\\u2026"));
     filter_->setClearButtonEnabled(true);
@@ -115,6 +116,7 @@ void CommandReferencePanel::buildUi() {
     layout->addLayout(top);
 
     list_ = new QTreeWidget{this};
+    list_->setAccessibleName(tr("Commands"));
     list_->setObjectName(QStringLiteral("commandReferenceList"));
     list_->setColumnCount(2);
     list_->setHeaderLabels({tr("Command"), tr("What it does")});

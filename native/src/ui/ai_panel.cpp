@@ -77,6 +77,7 @@ void AiPanel::buildUi() {
            "Unticked, only your words are sent."));
     context_row->addWidget(include_document_);
     context_hint_ = new QLabel{this};
+    include_document_->setAccessibleName(tr("Send the program with the question"));
     context_hint_->setObjectName(QStringLiteral("aiContextHint"));
     context_hint_->setWordWrap(true);
     context_row->addWidget(context_hint_, 1);
@@ -194,6 +195,7 @@ void AiPanel::buildUi() {
     layout->addWidget(privacy_);
 
     status_ = new QLabel{this};
+    status_->setAccessibleName(tr("Assistant status"));
     status_->setObjectName(QStringLiteral("aiStatus"));
     status_->setWordWrap(true);
     status_->setTextInteractionFlags(Qt::TextSelectableByMouse);

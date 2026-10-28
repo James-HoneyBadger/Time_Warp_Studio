@@ -32,6 +32,13 @@ test can drive without a window, and the reasoning written down where the code i
   user was looking at; Run resumes from there and forgets the future. It replays the
   drawing, not the luck: the random generator is not in the snapshot, and the header
   says so.
+- **The assistant's pages name what they show.** A field, list or slider with no
+  accessible name is announced as "edit" or "slider" -- the same as not being there.
+  Every control on the 📖 Reference page, the ✨ Assistant page and the assistant's
+  settings now carries a name, and `ui_layout_tests` asserts it: a widget must have an
+  accessible name or visible text of its own. The case covers those three pages
+  rather than the whole window, and says so, because a gate over every control has to
+  be written against what every control is.
 - **A Reference page.** The 📖 **Reference** tab lists every command for the selected
   language with the smallest program that runs it and what it does, read from
   `native/share/command_rows.json` -- the table `time_warp_gates commands` drives, now

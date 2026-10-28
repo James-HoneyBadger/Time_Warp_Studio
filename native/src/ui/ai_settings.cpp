@@ -60,11 +60,13 @@ void AiSettingsDialog::buildUi() {
     auto* form = new QFormLayout{service};
 
     preset_ = new QComboBox{service};
+    preset_->setAccessibleName(tr("Service"));
     preset_->setObjectName(QStringLiteral("aiPresetChooser"));
     preset_->setToolTip(tr("Fills the three fields below. They stay editable."));
     form->addRow(tr("Provider:"), preset_);
 
     protocol_ = new QComboBox{service};
+    protocol_->setAccessibleName(tr("Protocol"));
     protocol_->setObjectName(QStringLiteral("aiProtocolChooser"));
     protocol_->addItem(timewarp::ai::protocol_name(Protocol::OpenAi), QStringLiteral("openai"));
     protocol_->addItem(timewarp::ai::protocol_name(Protocol::Anthropic),
@@ -75,6 +77,7 @@ void AiSettingsDialog::buildUi() {
     form->addRow(tr("Protocol:"), protocol_);
 
     base_url_ = new QLineEdit{service};
+    base_url_->setAccessibleName(tr("Endpoint"));
     base_url_->setObjectName(QStringLiteral("aiBaseUrlField"));
     base_url_->setPlaceholderText(QStringLiteral("https://api.deepseek.com/v1"));
     base_url_->setToolTip(tr("The whole prefix, version path included. The protocol's "
@@ -82,6 +85,7 @@ void AiSettingsDialog::buildUi() {
     form->addRow(tr("Endpoint:"), base_url_);
 
     model_ = new QLineEdit{service};
+    model_->setAccessibleName(tr("Model"));
     model_->setObjectName(QStringLiteral("aiModelField"));
     model_->setPlaceholderText(QStringLiteral("deepseek-chat"));
     auto* model_row = new QHBoxLayout{};
@@ -98,11 +102,13 @@ void AiSettingsDialog::buildUi() {
     // an empty dropdown is a control that says the service offered nothing when all
     // it means is that nobody has asked yet.
     models_ = new QComboBox{service};
+    models_->setAccessibleName(tr("Available models"));
     models_->setObjectName(QStringLiteral("aiModelChooser"));
     models_->setVisible(false);
     form->addRow(QString{}, models_);
 
     key_ = new QLineEdit{service};
+    key_->setAccessibleName(tr("API key"));
     key_->setObjectName(QStringLiteral("aiKeyField"));
     key_->setEchoMode(QLineEdit::Password);
     key_->setPlaceholderText(tr("not needed for a server on this machine"));
@@ -130,6 +136,7 @@ void AiSettingsDialog::buildUi() {
     auto* limits = new QGroupBox{tr("Limits"), this};
     auto* limits_form = new QFormLayout{limits};
     max_tokens_ = new QSpinBox{limits};
+    max_tokens_->setAccessibleName(tr("Reply ceiling"));
     max_tokens_->setObjectName(QStringLiteral("aiMaxTokensSpin"));
     max_tokens_->setRange(16, 32768);
     max_tokens_->setSingleStep(256);
@@ -137,6 +144,7 @@ void AiSettingsDialog::buildUi() {
     limits_form->addRow(tr("Reply ceiling:"), max_tokens_);
 
     temperature_ = new QDoubleSpinBox{limits};
+    temperature_->setAccessibleName(tr("Temperature"));
     temperature_->setObjectName(QStringLiteral("aiTemperatureSpin"));
     temperature_->setRange(0.0, 2.0);
     temperature_->setSingleStep(0.1);
@@ -145,6 +153,7 @@ void AiSettingsDialog::buildUi() {
     limits_form->addRow(tr("Temperature:"), temperature_);
 
     timeout_ = new QSpinBox{limits};
+    timeout_->setAccessibleName(tr("Give up after"));
     timeout_->setObjectName(QStringLiteral("aiTimeoutSpin"));
     timeout_->setRange(5, 600);
     timeout_->setSuffix(tr(" s"));
