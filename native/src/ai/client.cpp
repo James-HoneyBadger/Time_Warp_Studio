@@ -32,8 +32,17 @@ constexpr int kErrorDetailCharacters = 300;
     root.insert(QStringLiteral("temperature"), config.temperature);
 
     QJsonArray turns;
+    // A local server streams; a hosted one is asked for the whole answer in one.
+    // `is_local_endpoint` is the question both protocols need answered, so it is
+    // asked once here rather than in each branch.
+    const bool stream = is_local_endpoint(config);
     if (config.protocol == Protocol::Anthropic) {
         root.insert(QStringLiteral("system"), conversation.system);
+        if (stream) {
+            // Anthropic defaults to a whole answer, so the field is only sent when
+            // it is true -- the shape of a hosted request is unchanged.
+            root.insert(QStringLiteral("stream"), true);
+        }
         // Anthropic's API requires the turns to alternate and to begin with a
         // user turn. A conversation with two questions in a row (the first one
         // failed) is legal to us and a 400 to it, so adjacent turns with the same
@@ -70,7 +79,13 @@ constexpr int kErrorDetailCharacters = 300;
             turns.append(QJsonObject{{QStringLiteral("role"), message.role},
                                      {QStringLiteral("content"), message.content}});
         }
-        root.insert(QStringLiteral("stream"), false);
+        root.insert(QStringLiteral("stream"), stream);
+        if (stream) {
+            // Without this the streamed answer carries no token counts at all, and
+            // the panel's "· 412 in, 96 out" would silently become zero.
+            root.insert(QStringLiteral("stream_options"),
+                        QJsonObject{{QStringLiteral("include_usage"), true}});
+        }
     }
     root.insert(QStringLiteral("messages"), turns);
     return root;
@@ -343,6 +358,14 @@ void Client::post(const Config& config, const QNetworkRequest& request, const QB
     const Protocol protocol = config.protocol;
     const int generation = generation_;
     kind_ = kind;
+    streaming_ = kind == Kind::Chat && is_local_endpoint(config);
+    stream_raw_.clear();
+    stream_buffer_.clear();
+    stream_text_.clear();
+    stream_model_.clear();
+    stream_error_.clear();
+    stream_prompt_tokens_ = 0;
+    stream_completion_tokens_ = 0;
 
     // A GET with no body for discovery; a POST for a conversation. The transport
     // decides nothing else about the difference, which is why `kind_` exists: the
@@ -350,6 +373,17 @@ void Client::post(const Config& config, const QNetworkRequest& request, const QB
     QNetworkReply* reply = kind == Kind::Models ? network_->get(request)
                                                 : network_->post(request, body);
     reply_ = reply;
+    if (streaming_) {
+        // The pieces are read as they arrive; `finished` then has the whole answer
+        // already accumulated, so one code path decides whether it is one.
+        connect(reply, &QNetworkReply::readyRead, this,
+                [this, reply, generation, protocol] {
+                    if (generation != generation_) {
+                        return;
+                    }
+                    consumeStream(reply, protocol);
+                });
+    }
     connect(reply, &QNetworkReply::finished, this, [this, reply, key, protocol, generation,
                                                     kind] {
         reply->deleteLater();
@@ -362,6 +396,21 @@ void Client::post(const Config& config, const QNetworkRequest& request, const QB
         if (status <= 0) {
             const QString message = describe_network_error(static_cast<int>(reply->error()));
             emit failed(redact(message, key));
+            return;
+        }
+        if (kind == Kind::Chat && streaming_) {
+            // Anything still buffered when the connection closes is a line without
+            // its newline; it is parsed rather than dropped.
+            if (!stream_buffer_.isEmpty()) {
+                handleStreamLine(stream_buffer_, protocol);
+                stream_buffer_.clear();
+            }
+            const Reply parsed = finishStream(status, protocol);
+            if (parsed.ok) {
+                emit answered(parsed);
+            } else {
+                emit failed(redact(parsed.error, key));
+            }
             return;
         }
         const QByteArray body_bytes = reply->readAll();
@@ -382,6 +431,124 @@ void Client::post(const Config& config, const QNetworkRequest& request, const QB
         }
     });
     emit started();
+}
+
+void Client::consumeStream(QNetworkReply* reply, Protocol protocol) {
+    const QByteArray piece = reply->readAll();
+    stream_raw_ += piece;
+    stream_buffer_ += piece;
+    int newline = stream_buffer_.indexOf('\n');
+    while (newline >= 0) {
+        const QByteArray line = stream_buffer_.left(newline);
+        stream_buffer_.remove(0, newline + 1);
+        handleStreamLine(line, protocol);
+        newline = stream_buffer_.indexOf('\n');
+    }
+}
+
+void Client::handleStreamLine(const QByteArray& line, Protocol protocol) {
+    const QByteArray text = line.trimmed();
+    // A blank line ends an event, `:` is a keep-alive comment, and `event:`/`id:`
+    // name things this client does not act on -- only `data:` carries the answer.
+    if (text.isEmpty() || text.startsWith(':')) {
+        return;
+    }
+    if (!text.startsWith("data:")) {
+        return;
+    }
+    const QByteArray payload = text.mid(5).trimmed();
+    if (payload == "[DONE]") {
+        return;
+    }
+    const QJsonDocument document = QJsonDocument::fromJson(payload);
+    if (!document.isObject()) {
+        return;
+    }
+    const QJsonObject root = document.object();
+    QString piece_text;
+    if (protocol == Protocol::Anthropic) {
+        const QString type = root.value(QStringLiteral("type")).toString();
+        if (type == QLatin1String("message_start")) {
+            const QJsonObject message = root.value(QStringLiteral("message")).toObject();
+            stream_model_ = message.value(QStringLiteral("model")).toString();
+            stream_prompt_tokens_ = message.value(QStringLiteral("usage"))
+                                        .toObject()
+                                        .value(QStringLiteral("input_tokens"))
+                                        .toInt();
+        } else if (type == QLatin1String("content_block_delta")) {
+            piece_text = root.value(QStringLiteral("delta"))
+                             .toObject()
+                             .value(QStringLiteral("text"))
+                             .toString();
+        } else if (type == QLatin1String("message_delta")) {
+            stream_completion_tokens_ = root.value(QStringLiteral("usage"))
+                                            .toObject()
+                                            .value(QStringLiteral("output_tokens"))
+                                            .toInt();
+        } else if (type == QLatin1String("error")) {
+            stream_error_ = root.value(QStringLiteral("error"))
+                                .toObject()
+                                .value(QStringLiteral("message"))
+                                .toString();
+        }
+    } else {
+        const QJsonArray choices = root.value(QStringLiteral("choices")).toArray();
+        if (!choices.isEmpty()) {
+            piece_text = openai_content(choices.at(0)
+                                            .toObject()
+                                            .value(QStringLiteral("delta"))
+                                            .toObject()
+                                            .value(QStringLiteral("content")));
+        }
+        const QJsonObject usage = root.value(QStringLiteral("usage")).toObject();
+        if (!usage.isEmpty()) {
+            stream_prompt_tokens_ = usage.value(QStringLiteral("prompt_tokens")).toInt();
+            stream_completion_tokens_ =
+                usage.value(QStringLiteral("completion_tokens")).toInt();
+        }
+        const QString model = root.value(QStringLiteral("model")).toString();
+        if (!model.isEmpty()) {
+            stream_model_ = model;
+        }
+    }
+    if (piece_text.isEmpty()) {
+        return;
+    }
+    stream_text_ += piece_text;
+    emit delta(piece_text);
+}
+
+Reply Client::finishStream(int status, Protocol protocol) const {
+    if (status < 200 || status >= 300) {
+        // A refusal is a JSON body rather than events, and `stream_raw_` has it.
+        Reply parsed = parse_reply(protocol, status, stream_raw_);
+        if (parsed.error.trimmed().isEmpty()) {
+            parsed.error = QStringLiteral("the service refused the request");
+        }
+        return parsed;
+    }
+    if (!stream_error_.isEmpty()) {
+        Reply parsed;
+        parsed.error = stream_error_;
+        return parsed;
+    }
+    if (stream_text_.trimmed().isEmpty()) {
+        // The endpoint answered 200 and streamed nothing: either a plain answer this
+        // reader could not use, or a service that ignores `stream`. The whole body is
+        // still here, so the ordinary reader gets a second chance at it.
+        Reply parsed = parse_reply(protocol, status, stream_raw_);
+        if (!parsed.ok && parsed.error.trimmed().isEmpty()) {
+            parsed.error = QStringLiteral("the service returned no text");
+        }
+        return parsed;
+    }
+    Reply reply;
+    reply.ok = true;
+    reply.text = stream_text_;
+    reply.model = stream_model_;
+    reply.prompt_tokens = stream_prompt_tokens_;
+    reply.completion_tokens = stream_completion_tokens_;
+    return reply;
 }
 
 void Client::cancel() {

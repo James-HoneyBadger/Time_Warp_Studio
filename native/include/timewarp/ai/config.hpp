@@ -146,6 +146,12 @@ struct Preset {
 /// The key in `TIME_WARP_AI_API_KEY`, or empty.
 [[nodiscard]] QString environment_key();
 
+/// Whether the endpoint is on this machine. A local server -- Ollama, LM Studio,
+/// llama.cpp, vLLM on a laptop -- streams its answer token by token, and doing so
+/// costs nothing to reach; a hosted service is asked for whole answers, because the
+/// panel's token counts and a single finished string are what it reports.
+[[nodiscard]] bool is_local_endpoint(const Config& config);
+
 /// The key a request should use: the environment's when it is set, else the stored
 /// one. Empty when neither is.
 [[nodiscard]] QString effective_key(const Config& config);

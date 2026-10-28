@@ -182,6 +182,13 @@ The answer goes to standard output alone, so a pipeline can have it; messages a
 person reads go to standard error. `check` exits 1 when the assistant is not
 configured, and a failed request exits 1 with `❌` and a sentence.
 
+The same question is available over the automation API, for a script that already
+speaks JSON-RPC to the Studio: `ai.ask` takes `prompt`, an optional `system` and an
+optional `history`, and returns the answer with its model and token counts.
+`docs/API.md` has the request and response shapes. It reads the same configuration,
+so `TIME_WARP_AI_API_KEY` and the `TIME_WARP_AI_*` overrides apply there too, and a
+local endpoint streams into the client the panel shares.
+
 ## When it does not work
 
 Every one of these is shown in the panel's status line and, for a network failure,
@@ -237,9 +244,15 @@ and the rule that code comes back in one fenced block labelled with the language
 
 ### What it deliberately does not do
 
-- **It does not stream.** A reply arrives when it is complete. A partial answer
-  arriving into a transcript is a feature with a cancel button in the middle of it,
-  and this one has a Stop button instead.
+- **It streams from a local endpoint, and only from a local one.** A server on this
+  machine -- Ollama, LM Studio, llama.cpp -- sends the answer token by token, so the
+  Assistant page shows it being written, replacing the partial text as each piece
+  arrives rather than logging fragments. A hosted endpoint is asked for the whole
+  answer: the token counts and the single finished string are what the panel reports,
+  and a cancel button in the middle of a stream is not something this panel offers.
+  `ai::is_local_endpoint` is the test -- the host is `localhost`, `127.0.0.1`, `::1`
+  or a `*.localhost` name -- and `timewarp::ai::Client::delta` is what a caller
+  receives while it waits.
 - **It does not run what it writes.** Press **Insert**, then **Run** (F9): the
   program reaches the editor first, where you can read it. An answer that executed
   itself would be a language model with a keyboard.

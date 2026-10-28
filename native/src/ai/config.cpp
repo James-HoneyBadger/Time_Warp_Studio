@@ -168,6 +168,13 @@ QString endpoint_url(const Config& config) {
 
 QString environment_key() { return variable(kEnvApiKey); }
 
+bool is_local_endpoint(const Config& config) {
+    const QUrl url{config.base_url.trimmed()};
+    const QString host = url.host().toLower();
+    return host == QLatin1String("localhost") || host == QLatin1String("127.0.0.1") ||
+           host == QLatin1String("::1") || host.endsWith(QLatin1String(".localhost"));
+}
+
 QString effective_key(const Config& config) {
     const QString from_environment = environment_key();
     return from_environment.isEmpty() ? config.api_key.trimmed() : from_environment;

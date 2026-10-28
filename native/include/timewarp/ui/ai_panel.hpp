@@ -26,6 +26,7 @@
 #include <QFrame>
 #include <QList>
 #include <QString>
+#include <QTextCursor>
 
 #include <functional>
 
@@ -98,6 +99,12 @@ private:
     /// Adds one block of rich text at the end of the transcript.
     void appendHtml(const QString& html);
     void renderTurn(const QString& who, const QString& text);
+    /// Grows the answer as a local endpoint streams it, replacing the partial text
+    /// rather than appending fragments: what a user reads while waiting is the
+    /// answer so far.
+    void appendStreamPiece(const QString& piece);
+    /// Puts `text` where the streamed answer is being written.
+    void replaceStreamed(const QString& text);
     void renderNotice(const QString& text);
     void setBusy(bool busy);
     void updateEnabledState();
@@ -130,6 +137,11 @@ private:
     QList<timewarp::ai::Message> history_;
     QString last_answer_;
     bool busy_ = false;
+    /// A streaming answer: whether one is being written, where it starts, and what
+    /// has arrived so far.
+    bool streaming_ = false;
+    QTextCursor stream_anchor_;
+    QString stream_text_;
 };
 
 }  // namespace timewarp::ui

@@ -114,6 +114,10 @@ public:
 
 signals:
     void started();
+    /// A piece of the answer as it arrives, for a local endpoint that streams. The
+    /// finished text still arrives through `answered`: this is what a panel shows
+    /// while it waits, not a second way to receive an answer.
+    void delta(const QString& text);
     void answered(const timewarp::ai::Reply& reply);
     /// The identifiers a `listModels` call found, in the order the service gave
     /// them. Empty when it answered with nothing usable.
@@ -126,6 +130,12 @@ private:
 
     void post(const Config& config, const QNetworkRequest& request, const QByteArray& body,
               Kind kind);
+    /// Adds what has arrived to the stream buffer and hands each complete `data:`
+    /// line to the protocol's reader.
+    void consumeStream(class QNetworkReply* reply, Protocol protocol);
+    void handleStreamLine(const QByteArray& line, Protocol protocol);
+    /// The reply for a stream that has ended, from what was accumulated.
+    [[nodiscard]] Reply finishStream(int status, Protocol protocol) const;
 
     std::unique_ptr<QNetworkAccessManager> owned_network_;
     QNetworkAccessManager* network_ = nullptr;
@@ -135,6 +145,16 @@ private:
     /// an error.
     int generation_ = 0;
     Kind kind_ = Kind::Chat;
+    /// What a streaming request has accumulated: the raw bytes (so an error body is
+    /// still parseable), the answer so far, and what the service said about itself.
+    bool streaming_ = false;
+    QByteArray stream_raw_;
+    QByteArray stream_buffer_;
+    QString stream_text_;
+    QString stream_model_;
+    QString stream_error_;
+    int stream_prompt_tokens_ = 0;
+    int stream_completion_tokens_ = 0;
 };
 
 }  // namespace timewarp::ai

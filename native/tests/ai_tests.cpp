@@ -81,6 +81,11 @@ public:
         setAttribute(QNetworkRequest::HttpStatusCodeAttribute, status);
     }
     void set_body(QByteArray body) { body_ = std::move(body); }
+    /// Delivers `bytes` now, the way a streaming transport does before `finish`.
+    void pump(const QByteArray& bytes) {
+        body_ += bytes;
+        emit readyRead();
+    }
     void set_failure(int error, const QString& text) {
         setError(static_cast<NetworkError>(error), text);
     }
@@ -132,6 +137,21 @@ public:
     int network_error = 0;
     QString network_error_text;
     int posts = 0;
+    /// True for the streaming tests, which deliver the body in pieces and finish it
+    /// themselves.
+    bool auto_finish = true;
+    FakeReply* last = nullptr;
+
+    void pump(const QByteArray& bytes) {
+        if (last != nullptr) {
+            last->pump(bytes);
+        }
+    }
+    void finish() {
+        if (last != nullptr) {
+            last->finish();
+        }
+    }
 
     void respond(QByteArray json, int http_status = 200) {
         body = std::move(json);
@@ -156,6 +176,7 @@ protected:
         payload = outgoing != nullptr ? outgoing->readAll() : QByteArray{};
         ++posts;
         auto* reply = new FakeReply{operation, incoming, this};
+        last = reply;
         // Qt's own behaviour: a transport failure has no HTTP status at all, while
         // an HTTP error arrives as both a status *and* a network error (a 401 is
         // `AuthenticationRequiredError`). The client must prefer the status, and
@@ -168,7 +189,10 @@ protected:
         if (status > 0) {
             reply->set_status(status);
         }
-        QTimer::singleShot(0, reply, [reply] { reply->finish(); });
+        if (auto_finish) {
+            QTimer::singleShot(0, reply, [reply] { reply->finish(); });
+        }
+        // Otherwise the pieces are delivered by the test through `pump`/`finish`.
         return reply;
     }
 };
@@ -762,6 +786,106 @@ void test_a_chat_request_is_a_post() {
     TW_CHECK(!transport->payload.isEmpty());
 }
 
+void test_a_hosted_endpoint_is_asked_for_whole_answers() {
+    announce("client: a hosted endpoint is not streamed");
+    auto network = std::make_unique<FakeNetwork>();
+    FakeNetwork* transport = network.get();
+    transport->respond(R"({"choices":[{"message":{"content":"ok"}}]})");
+    timewarp::ai::Client client{std::move(network)};
+    Conversation conversation;
+    conversation.messages.append(Message{QStringLiteral("user"), QStringLiteral("hi")});
+    client.send(example_config(), conversation);
+    settle();
+    TW_CHECK(transport->payload.contains("\"stream\":false"));
+    TW_CHECK(timewarp::ai::is_local_endpoint(example_config()) == false);
+}
+
+void test_a_local_endpoint_streams_in_order() {
+    announce("client: a local endpoint streams");
+    auto network = std::make_unique<FakeNetwork>();
+    FakeNetwork* transport = network.get();
+    transport->auto_finish = false;
+    transport->status = 200;
+
+    timewarp::ai::Client client{std::move(network)};
+    QStringList pieces;
+    QString answer;
+    QString failure;
+    bool answered = false;
+    QObject::connect(&client, &timewarp::ai::Client::delta,
+                     [&pieces](const QString& text) { pieces.append(text); });
+    QObject::connect(&client, &timewarp::ai::Client::answered,
+                     [&answered, &answer](const timewarp::ai::Reply& reply) {
+                         answered = true;
+                         answer = reply.text;
+                     });
+    QObject::connect(&client, &timewarp::ai::Client::failed,
+                     [&failure](const QString& message) { failure = message; });
+
+    Config local = example_config();
+    local.base_url = QStringLiteral("http://127.0.0.1:11434/v1");
+    TW_CHECK(timewarp::ai::is_local_endpoint(local));
+    Conversation conversation;
+    conversation.messages.append(Message{QStringLiteral("user"), QStringLiteral("hi")});
+    client.send(local, conversation);
+    TW_CHECK(transport->payload.contains("\"stream\":true"));
+    TW_CHECK(transport->payload.contains("include_usage"));
+
+    transport->pump("data: {\"model\":\"local-1\",\"choices\":[{\"delta\":{\"content\":\"Hel\"}}]}\n");
+    settle();
+    // One piece has arrived and nothing has finished: the panel can show it.
+    TW_CHECK_EQ(pieces.size(), 1);
+    TW_CHECK(!answered);
+
+    transport->pump("data: {\"choices\":[{\"delta\":{\"content\":\"lo\"}}]}\n\n");
+    transport->pump("data: [DONE]\n\n");
+    // A line without its newline at the end of the stream is still read.
+    transport->pump("data: {\"choices\":[],\"usage\":{\"prompt_tokens\":4,\"completion_tokens\":2}}");
+    transport->finish();
+    settle();
+
+    TW_CHECK(failure.isEmpty());
+    TW_CHECK(answered);
+    TW_CHECK_EQ(pieces.join(QString{}).toStdString(), std::string{"Hello"});
+    TW_CHECK_EQ(answer.toStdString(), std::string{"Hello"});
+}
+
+void test_an_anthropic_stream_is_read_the_same_way() {
+    announce("client: an Anthropic stream");
+    auto network = std::make_unique<FakeNetwork>();
+    FakeNetwork* transport = network.get();
+    transport->auto_finish = false;
+
+    timewarp::ai::Client client{std::move(network)};
+    QStringList pieces;
+    QString answer;
+    QObject::connect(&client, &timewarp::ai::Client::delta,
+                     [&pieces](const QString& text) { pieces.append(text); });
+    QObject::connect(&client, &timewarp::ai::Client::answered,
+                     [&answer](const timewarp::ai::Reply& reply) { answer = reply.text; });
+
+    Config local = example_config();
+    local.protocol = Protocol::Anthropic;
+    local.base_url = QStringLiteral("http://localhost:8080");
+    Conversation conversation;
+    conversation.messages.append(Message{QStringLiteral("user"), QStringLiteral("hi")});
+    client.send(local, conversation);
+
+    transport->pump("event: message_start\ndata: {\"type\":\"message_start\",\"message\":"
+                    "{\"model\":\"claude-local\",\"usage\":{\"input_tokens\":7}}}\n\n");
+    transport->pump("event: content_block_delta\ndata: {\"type\":\"content_block_delta\","
+                    "\"delta\":{\"type\":\"text_delta\",\"text\":\"Hi \"}}\n\n");
+    transport->pump("event: content_block_delta\ndata: {\"type\":\"content_block_delta\","
+                    "\"delta\":{\"type\":\"text_delta\",\"text\":\"there\"}}\n\n");
+    transport->pump("event: message_delta\ndata: {\"type\":\"message_delta\","
+                    "\"usage\":{\"output_tokens\":2}}\n\n");
+    transport->finish();
+    settle();
+
+    TW_CHECK_EQ(pieces.join(QString{}).toStdString(), std::string{"Hi there"});
+    TW_CHECK_EQ(answer.toStdString(), std::string{"Hi there"});
+}
+
 void test_client_answers() {
     announce("client: a successful exchange");
     auto network = std::make_unique<FakeNetwork>();
@@ -961,6 +1085,9 @@ int main(int argc, char** argv) {
     test_models_answer_is_read();
     test_client_asks_for_the_models();
     test_a_chat_request_is_a_post();
+    test_a_hosted_endpoint_is_asked_for_whole_answers();
+    test_a_local_endpoint_streams_in_order();
+    test_an_anthropic_stream_is_read_the_same_way();
     test_client_answers();
     test_client_reports_and_redacts();
     test_client_transport_error();

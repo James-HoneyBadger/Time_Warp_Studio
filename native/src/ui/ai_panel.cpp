@@ -205,13 +205,25 @@ void AiPanel::buildUi() {
 void AiPanel::connectClient() {
     connect(client_, &timewarp::ai::Client::started, this, [this] {
         setBusy(true);
+        streaming_ = false;
+        stream_text_.clear();
         status_->setText(tr("Asking %1…").arg(config_.model));
     });
+    connect(client_, &timewarp::ai::Client::delta, this,
+            [this](const QString& text) { appendStreamPiece(text); });
     connect(client_, &timewarp::ai::Client::answered, this,
             [this](const timewarp::ai::Reply& reply) {
                 setBusy(false);
                 last_answer_ = reply.text;
-                renderTurn(tr("Assistant"), reply.text);
+                if (streaming_) {
+                    // The pieces and the finished answer should be the same text;
+                    // if they are not, the service's last word is the answer.
+                    replaceStreamed(reply.text);
+                    streaming_ = false;
+                    stream_text_.clear();
+                } else {
+                    renderTurn(tr("Assistant"), reply.text);
+                }
                 history_.append(Message{QStringLiteral("assistant"), reply.text});
                 QString detail = reply.model.isEmpty() ? config_.model : reply.model;
                 if (reply.prompt_tokens > 0 || reply.completion_tokens > 0) {
@@ -368,6 +380,38 @@ void AiPanel::renderTurn(const QString& who, const QString& text) {
                    .arg(who.toHtmlEscaped()));
     if (!text.isEmpty()) {
         appendHtml(
+            QStringLiteral("<pre style=\"white-space:pre-wrap; margin:0;\">%1</pre>")
+                .arg(text.toHtmlEscaped()));
+    }
+    scrollToEnd();
+}
+
+void AiPanel::appendStreamPiece(const QString& piece) {
+    if (transcript_ == nullptr || piece.isEmpty()) {
+        return;
+    }
+    if (!streaming_) {
+        streaming_ = true;
+        stream_text_.clear();
+        renderTurn(tr("Assistant"), QString{});
+        // Everything after this point is the answer being written, and it is
+        // replaced on each piece rather than appended to.
+        stream_anchor_ = QTextCursor{transcript_->document()};
+        stream_anchor_.movePosition(QTextCursor::End);
+    }
+    stream_text_ += piece;
+    replaceStreamed(stream_text_);
+}
+
+void AiPanel::replaceStreamed(const QString& text) {
+    if (transcript_ == nullptr || stream_anchor_.isNull()) {
+        return;
+    }
+    QTextCursor cursor = stream_anchor_;
+    cursor.movePosition(QTextCursor::End, QTextCursor::KeepAnchor);
+    cursor.removeSelectedText();
+    if (!text.isEmpty()) {
+        cursor.insertHtml(
             QStringLiteral("<pre style=\"white-space:pre-wrap; margin:0;\">%1</pre>")
                 .arg(text.toHtmlEscaped()));
     }
