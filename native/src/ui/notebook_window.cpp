@@ -158,7 +158,7 @@ NotebookWindow::CellWidgets NotebookWindow::addCell(NotebookCell::Kind kind,
 
     connect(widgets.text, &QPlainTextEdit::textChanged, this, [this] { markDirty(); });
     if (widgets.language != nullptr) {
-        connect(widgets.language, &QComboBox::currentIndexChanged, this,
+        connect(widgets.language, QOverload<int>::of(&QComboBox::currentIndexChanged), this,
                 [this] { markDirty(); });
     }
     return widgets;
