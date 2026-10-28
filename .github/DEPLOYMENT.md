@@ -17,7 +17,7 @@ that exist and what they gate.
 
 **The actions, and the Node runtime behind them.** Every `uses:` names a full
 commit SHA, with the release that SHA was taken from in the comment after it —
-`checkout@fbc6f39…# v5.1.0`, `upload-artifact@b7c566a…# v6.0.0`,
+`checkout@3d3c42e…# v7.0.1`, `upload-artifact@cf430e0…# v7.0.2`,
 `docker/build-push-action@c3c9e26…# v7.4.0`. A tag is a name upstream is free to
 move, and the artifacts built here are the ones people install, so the pin is what
 makes "the action that ran" the action that was reviewed. A SHA cannot say when it
@@ -30,8 +30,8 @@ upstream publishes `v4.x.y` tags and no `v4` tag at all — `v4` is a **branch**
 that equals `v4.5.0`.
 
 Seven of the pinned actions are JavaScript, and every one of those releases is a
-Node 24 major — `checkout` `v5.1.0`, `upload-artifact` `v6.0.0`, `download-artifact`
-`v7.0.0` and the four `docker/*` actions at `v4`/`v7` — because GitHub runs a
+Node 24 major — `checkout` `v7.0.1`, `upload-artifact` `v7.0.2`, `download-artifact`
+`v8.0.2` and the four `docker/*` actions at `v4`/`v7` — because GitHub runs a
 Node 20 action on Node 24 only until it stops, and a workflow that pins one is a
 workflow with a date on it. `ilammy/msvc-dev-cmd` is the exception worth knowing:
 its newest release (`v1.13.0`, pinned as `0b201ec…`) is still a Node 20 action and
