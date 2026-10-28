@@ -6,6 +6,7 @@
 
 #include <cmath>
 
+#include <QComboBox>
 #include <QHBoxLayout>
 #include <QHeaderView>
 #include <QLabel>
@@ -206,6 +207,40 @@ DebugPanel::DebugPanel(QWidget* parent) : QFrame(parent) {
     connect(step_out_, &QPushButton::clicked, this, &DebugPanel::stepOutRequested);
     connect(stop_, &QPushButton::clicked, this, &DebugPanel::stopRequested);
 
+    // Walking a run back needs somewhere to walk to, so the depth is a run setting
+    // rather than a button: a session started with "off" has nothing behind it, and
+    // the panel would otherwise be offering a control the engine cannot honour.
+    auto* back_row = new QHBoxLayout;
+    back_row->setSpacing(4);
+    back_row->addWidget(new QLabel{tr("History")});
+    history_ = new QComboBox;
+    history_->setObjectName(QStringLiteral("debugHistory"));
+    for (const int depth : {0, 100, 500, 2000}) {
+        history_->addItem(depth == 0 ? tr("off") : QString::number(depth), depth);
+    }
+    history_->setToolTip(tr("Statements this run remembers, so it can be walked back"));
+    back_row->addWidget(history_);
+    back_ = new QPushButton{tr("\u25c0 Back")};
+    back_->setObjectName(QStringLiteral("debugBack"));
+    back_->setToolTip(tr("Go back one statement, with the bindings it had"));
+    back_row->addWidget(back_);
+    back_ten_ = new QPushButton{tr("\u25c0\u25c0 10")};
+    back_ten_->setObjectName(QStringLiteral("debugBackTen"));
+    back_ten_->setToolTip(tr("Go back ten statements, or as far as this run kept"));
+    back_row->addWidget(back_ten_);
+    back_row->addStretch(1);
+    layout->addLayout(back_row);
+
+    connect(back_, &QPushButton::clicked, this, &DebugPanel::requestRewind);
+    connect(back_ten_, &QPushButton::clicked, this, &DebugPanel::requestRewindTen);
+    connect(history_, &QComboBox::currentIndexChanged, this, [this] {
+        emit historyChanged(historyDepth());
+        // The choice applies to the next run, so a button that cannot move right
+        // now must not stay enabled because the menu was just set.
+        setRewindAvailable(rewind_available_ && historyDepth() > 0,
+                           tr("Set History above, then run again to keep any"));
+    });
+
     auto* breakpoint_row = new QHBoxLayout;
     breakpoint_row->setSpacing(4);
     breakpoint_row->addWidget(new QLabel{tr("Line")});
@@ -316,7 +351,51 @@ DebugPanel::DebugPanel(QWidget* parent) : QFrame(parent) {
     connect(data_input_, &QLineEdit::returnPressed, this,
             [this] { addDataBreakpoint(data_input_->text()); });
 
+    setRewindAvailable(false, QString{});
     setAvailable(false, tr("Run a Scheme program to step through it."));
+}
+
+void DebugPanel::setHistoryDepth(int depth) {
+    const int index = history_->findData(depth);
+    // An unrecognised depth is the closest thing the menu offers rather than a
+    // silent switch to "off": a stored 1000 should keep 500, not nothing.
+    if (index < 0) {
+        int closest = 0;
+        for (int i = 0; i < history_->count(); ++i) {
+            if (history_->itemData(i).toInt() <= depth) {
+                closest = i;
+            }
+        }
+        history_->setCurrentIndex(closest);
+        return;
+    }
+    history_->setCurrentIndex(index);
+}
+
+int DebugPanel::historyDepth() const { return history_->currentData().toInt(); }
+
+bool DebugPanel::isRewindAvailable() const { return rewind_available_; }
+
+void DebugPanel::setRewindAvailable(bool available, const QString& reason) {
+    rewind_available_ = available;
+    back_->setEnabled(available);
+    back_ten_->setEnabled(available);
+    back_->setToolTip(available ? tr("Go back one statement, with the bindings it had")
+                                : reason);
+    back_ten_->setToolTip(
+        available ? tr("Go back ten statements, or as far as this run kept") : reason);
+}
+
+void DebugPanel::requestRewind() {
+    if (back_->isEnabled()) {
+        emit rewindRequested(1);
+    }
+}
+
+void DebugPanel::requestRewindTen() {
+    if (back_ten_->isEnabled()) {
+        emit rewindRequested(10);
+    }
 }
 
 void DebugPanel::setAvailable(bool available, const QString& reason) {
@@ -360,6 +439,12 @@ void DebugPanel::setPaused(bool paused, int line, const QString& procedure) {
     if (!paused) {
         status_->setText(tr("not paused"));
         setPauseReason(QString{});
+        // Nothing is paused, so nothing can be walked back: a Back button that
+        // stayed alive between pauses would be asking the engine to move a run
+        // that is not stopped.
+        if (rewind_available_) {
+            setRewindAvailable(false, tr("Pause the run first"));
+        }
         return;
     }
     // Line 0 means the program has no source line for the next unit (a binary

@@ -575,6 +575,20 @@ void MainWindow::connectDebugPanel() {
                 QSettings{}.setValue(QLatin1String(kSettingWatches), expressions);
                 refreshWatches();
             });
+    // How much a run remembers so it can be walked back. A run setting, so it is
+    // persisted and applied when the next run starts rather than mid-run.
+    debug_panel_->setHistoryDepth(settings.value(QLatin1String(kSettingHistory), 0).toInt());
+    connect(debug_panel_, &DebugPanel::historyChanged, this, [this](int depth) {
+        QSettings{}.setValue(QLatin1String(kSettingHistory), depth);
+        if (native_runner_ != nullptr) {
+            native_runner_->set_history(static_cast<std::size_t>(depth));
+        }
+    });
+    connect(debug_panel_, &DebugPanel::rewindRequested, this, [this](int steps) {
+        if (native_runner_ != nullptr && native_runner_->canRewind()) {
+            native_runner_->request_rewind(static_cast<std::size_t>(steps));
+        }
+    });
     connect(debug_panel_, &DebugPanel::dataBreakpointsChanged, this,
             [this](const QStringList& names) {
                 QSettings{}.setValue(QLatin1String(kSettingDataBreakpoints), names);

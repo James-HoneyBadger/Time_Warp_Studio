@@ -735,6 +735,87 @@ void test_a_run_writes_beside_its_document_without_a_project() {
 }
 
 
+// The Debug panel's Back button, through the window: a run started with history
+// pauses at a breakpoint, and walking it back lands on an earlier statement with
+// the bindings that statement had.
+void test_a_paused_run_can_be_walked_back() {
+    announce("a paused run can be walked back");
+    QSettings{}.remove(QStringLiteral("debug/history"));
+    QTemporaryDir dir;
+    TW_CHECK(dir.isValid());
+    const QString program = QDir{dir.path()}.filePath(QStringLiteral("walk.bas"));
+    QFile file{program};
+    TW_CHECK(file.open(QIODevice::WriteOnly));
+    file.write("10 LET A = 1\n"
+               "20 LET A = 2\n"
+               "30 PRINT A\n"
+               "40 END\n");
+    file.close();
+
+    MainWindow window;
+    window.closeProject();
+    TW_CHECK(window.openFile(program));
+    CodeEditor* editor = window.currentEditor();
+    DebugPanel* panel = window.debugPanel();
+    TW_CHECK(editor != nullptr && panel != nullptr);
+    if (editor == nullptr || panel == nullptr) {
+        return;
+    }
+    // Stop before the third statement, and keep enough to walk back through it.
+    editor->toggleBreakpoint(2);
+    panel->setHistoryDepth(100);
+
+    auto* status = panel->findChild<QLabel*>(QStringLiteral("debugStatus"));
+    auto* back = panel->findChild<QPushButton*>(QStringLiteral("debugBack"));
+    auto* variables = panel->findChild<QTableWidget*>(QStringLiteral("debugVariables"));
+    TW_CHECK(status != nullptr && back != nullptr && variables != nullptr);
+    if (status == nullptr || back == nullptr || variables == nullptr) {
+        return;
+    }
+    const auto variable_named = [variables](const QString& name) -> QString {
+        for (int row = 0; row < variables->rowCount(); ++row) {
+            if (QTableWidgetItem* item = variables->item(row, 0);
+                item != nullptr && item->text() == name) {
+                QTableWidgetItem* value = variables->item(row, 1);
+                return value != nullptr ? value->text() : QString{};
+            }
+        }
+        return {};
+    };
+
+    window.runCurrentDocument();
+    TW_CHECK(spin_until([status] {
+        return status->text().contains(QStringLiteral("paused at line 30"));
+    }));
+    TW_CHECK_EQ(variable_named(QStringLiteral("A")), QStringLiteral("2"));
+    TW_CHECK(panel->isRewindAvailable());
+    TW_CHECK(back->isEnabled());
+
+    // One statement back: line 20 had not yet set A to 2.
+    back->click();
+    TW_CHECK(spin_until([status] {
+        return status->text().contains(QStringLiteral("paused at line 20"));
+    }));
+    TW_CHECK_EQ(variable_named(QStringLiteral("A")), QStringLiteral("1"));
+
+    // Back once more reaches the first statement, where the run had not set A at
+    // all. There is nothing behind it, so the button says so instead of staying
+    // alive and doing nothing when it is pressed.
+    back->click();
+    TW_CHECK(spin_until([status] {
+        return status->text().contains(QStringLiteral("paused at line 10"));
+    }));
+    TW_CHECK(variable_named(QStringLiteral("A")).isEmpty() ||
+             variable_named(QStringLiteral("A")) == QStringLiteral("0"));
+    TW_CHECK(!panel->isRewindAvailable());
+    TW_CHECK(!back->isEnabled());
+
+    window.stopRunningDocument();
+    // Leave the setting as it was found: the next suite's "off is the default"
+    // would otherwise be reading this test's choice.
+    QSettings{}.remove(QStringLiteral("debug/history"));
+}
+
 void test_watch_and_data_breakpoint_controls() {
     announce("watch and data breakpoint controls");
     // The panel restores the session-wide lists; a value written by an earlier

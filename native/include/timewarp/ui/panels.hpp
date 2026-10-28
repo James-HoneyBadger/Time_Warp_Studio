@@ -617,10 +617,26 @@ public:
     /// the cursor's line, so the key cannot produce a set the buttons could not.
     void toggleBreakpointAt(int line);
 
+    /// How many snapshots the next run keeps so it can be walked back through.
+    /// Zero is off and costs nothing; the panel holds the choice, the window
+    /// persists it and the runner applies it at the start of a run.
+    void setHistoryDepth(int depth);
+    [[nodiscard]] int historyDepth() const;
+
+    /// Whether the pause in front of the user can be walked back. False for a run
+    /// started with no history, for a finished run, and for Scheme, which says
+    /// why rather than offering a button that cannot move.
+    void setRewindAvailable(bool available, const QString& reason);
+    [[nodiscard]] bool isRewindAvailable() const;
+
     /// Emit the matching request, exactly as the panel's own button does. The
     /// function-key bar and the command palette go through these so a key is not
     /// a second implementation of a control.
     void requestContinue();
+    /// Back one statement, or back ten. Both are requests: how far the run can
+    /// actually go is the engine's answer, and it moves as far as it kept.
+    void requestRewind();
+    void requestRewindTen();
     void requestPause();
     void requestStepInto();
     void requestStepOver();
@@ -630,6 +646,10 @@ public:
 signals:
     void continueRequested();
     void pauseRequested();
+    /// Walk the paused run back `steps` statements.
+    void rewindRequested(int steps);
+    /// The depth the user chose, so the next run keeps that many snapshots.
+    void historyChanged(int depth);
     void stepIntoRequested();
     void stepOverRequested();
     void stepOutRequested();
@@ -655,6 +675,10 @@ private:
 
     QLabel* status_ = nullptr;
     QLabel* reason_ = nullptr;
+    QComboBox* history_ = nullptr;
+    QPushButton* back_ = nullptr;
+    QPushButton* back_ten_ = nullptr;
+    bool rewind_available_ = false;
     QPushButton* continue_ = nullptr;
     QPushButton* pause_ = nullptr;
     QPushButton* step_into_ = nullptr;

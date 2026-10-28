@@ -679,6 +679,29 @@ void NativeRunner::request_step() {
     }
 }
 
+void NativeRunner::set_history(std::size_t depth) noexcept { history_depth_ = depth; }
+
+std::size_t NativeRunner::historyDepth() const noexcept { return history_depth_; }
+
+bool NativeRunner::canRewind() const {
+    const std::lock_guard<std::mutex> lock{interpreter_mutex_};
+    // The newest snapshot is the statement the run is at, so there has to be one
+    // behind it to go back to. Asking the engine is what stops Back from staying
+    // alive at the oldest statement and doing nothing when it is pressed.
+    return debug_ != nullptr && debug_->paused() && interpreter_ != nullptr &&
+           interpreter_->history().size() > 1;
+}
+
+void NativeRunner::request_rewind(std::size_t steps) {
+    const std::lock_guard<std::mutex> lock{interpreter_mutex_};
+    if (debug_ != nullptr) {
+        // The pause that follows the rewind reports `rewind` and stops before the
+        // statement it returned to, which is what the caller wants to look at.
+        debug_->request_rewind(steps);
+        emit resumed();
+    }
+}
+
 bool NativeRunner::isPaused() const {
     const std::lock_guard<std::mutex> lock{interpreter_mutex_};
     return debug_ != nullptr && debug_->paused();
@@ -818,6 +841,8 @@ void NativeRunner::run() {
                             source_.contains(QChar{0});
     engine->load_program(binary_rom ? romTextToBytes(source_).toStdString()
                                     : source_.toStdString());
+    // After the program: loading resets the run, which empties the history.
+    engine->set_history(history_depth_);
     host_->begin_run();
     engine->run();
     host_->flush();

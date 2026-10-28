@@ -344,6 +344,9 @@ void test_telemetry_panel_contract() {
 
 void test_debug_panel_controls() {
     announce("debug panel");
+    // The depth is a persisted run setting, so an earlier test's choice would
+    // make "the default is off" wrong here.
+    QSettings{}.remove(QStringLiteral("debug/history"));
     const std::unique_ptr<MainWindow> window = shownWindow();
     DebugPanel* panel = window->debugPanel();
     TW_CHECK(panel != nullptr);
@@ -426,6 +429,63 @@ void test_debug_panel_controls() {
     // progress from one that has finished, so it says only what it knows.
     TW_CHECK(status != nullptr && !status->text().contains(QStringLiteral("area")));
     TW_CHECK(status != nullptr && status->text() != QStringLiteral("running"));
+
+    // Walking a run back is offered only when it can happen: the buttons are dead
+    // with nothing paused, and the depth is a run setting rather than a button,
+    // because a session started with no history has nothing behind it.
+    auto* back = panel->findChild<QPushButton*>(QStringLiteral("debugBack"));
+    auto* back_ten = panel->findChild<QPushButton*>(QStringLiteral("debugBackTen"));
+    auto* history = panel->findChild<QComboBox*>(QStringLiteral("debugHistory"));
+    TW_CHECK(back != nullptr && back_ten != nullptr && history != nullptr);
+    TW_CHECK(!panel->isRewindAvailable());
+    TW_CHECK(back != nullptr && !back->isEnabled());
+
+    int announced_steps = 0;
+    QObject::connect(panel, &DebugPanel::rewindRequested,
+                     [&announced_steps](int steps) { announced_steps = steps; });
+    int announced_depth = -1;
+    QObject::connect(panel, &DebugPanel::historyChanged,
+                     [&announced_depth](int depth) { announced_depth = depth; });
+
+    if (history != nullptr) {
+        // Off costs nothing and is the default; anything else is a run that can
+        // be walked back.
+        TW_CHECK_EQ(panel->historyDepth(), 0);
+        panel->setHistoryDepth(500);
+        TW_CHECK_EQ(panel->historyDepth(), 500);
+        TW_CHECK_EQ(announced_depth, 500);
+        // A depth the menu does not offer becomes the closest one it does, rather
+        // than silently meaning "off".
+        panel->setHistoryDepth(1500);
+        TW_CHECK_EQ(panel->historyDepth(), 500);
+    }
+
+    panel->setPaused(true, 12, QString{});
+    panel->setRewindAvailable(true, QString{});
+    TW_CHECK(panel->isRewindAvailable());
+    if (back != nullptr && back_ten != nullptr) {
+        TW_CHECK(back->isEnabled());
+        back->click();
+        TW_CHECK_EQ(announced_steps, 1);
+        back_ten->click();
+        TW_CHECK_EQ(announced_steps, 10);
+    }
+    // A disabled button emits nothing, so the window never has to ask whether the
+    // engine is in a state to answer.
+    panel->setRewindAvailable(false, QStringLiteral("Pause the run first"));
+    if (back != nullptr) {
+        TW_CHECK(!back->isEnabled());
+        announced_steps = 0;
+        back->click();
+        TW_CHECK_EQ(announced_steps, 0);
+    }
+    // Leaving the pause puts the buttons back to dead by itself.
+    panel->setRewindAvailable(true, QString{});
+    panel->setPaused(false, 0, QString{});
+    TW_CHECK(!panel->isRewindAvailable());
+    if (back != nullptr) {
+        TW_CHECK(!back->isEnabled());
+    }
 
     // The stack and the frame's variables.
     panel->setStack({DebugPanel::Frame{QStringLiteral("<program>"), 1},

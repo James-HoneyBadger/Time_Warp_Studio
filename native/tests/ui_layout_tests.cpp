@@ -66,6 +66,7 @@ int main(int argc, char** argv) {
     test_run_project_runs_the_entry_point_in_the_project_folder();
     test_a_run_writes_beside_its_document_without_a_project();
     test_watch_and_data_breakpoint_controls();
+    test_a_paused_run_can_be_walked_back();
     test_sql_panel_runs_and_shows_results();
     test_the_new_pages_name_what_they_show();
     test_the_command_reference_lists_the_table();

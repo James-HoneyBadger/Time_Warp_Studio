@@ -393,9 +393,15 @@ void Interpreter::run() {
         // statements and only when a caller asked for history: a run with no interest
         // in going back copies nothing.
         if (history_depth_ > 0 && iterations % history_interval_ == 0) {
-            history_.push_back(snapshot());
-            if (history_.size() > history_depth_) {
-                history_.erase(history_.begin());
+            if (suppress_history_capture_) {
+                // The run was put back on this statement by a rewind, so a copy of
+                // it is already in the history.
+                suppress_history_capture_ = false;
+            } else {
+                history_.push_back(snapshot());
+                if (history_.size() > history_depth_) {
+                    history_.erase(history_.begin());
+                }
             }
         }
         if (tracing_) {
@@ -409,14 +415,32 @@ void Interpreter::run() {
             }
             // A rewind asked for while the run was stopped happened here, on this
             // thread, and moved the position: this statement is not the one to run.
-            if (const std::optional<std::size_t> back = debug_->take_rewind();
-                back.has_value()) {
+            bool moved = false;
+            for (;;) {
+                const std::optional<std::size_t> back = debug_->take_rewind();
+                if (!back.has_value()) {
+                    break;
+                }
                 if (rewind(*back).has_value()) {
                     debug_->mark_rewound();
+                    moved = true;
+                    // The pause that follows lands on the statement the rewind chose,
+                    // which is what the caller asking for one wants to see.
+                    debug_->request_step();
+                    break;
                 }
-                // The pause that follows lands on the statement the rewind chose,
-                // which is what the caller asking for one wants to see.
+                // Nothing earlier is kept. Stay here and pause again rather than
+                // stepping on: a rewind that cannot move must not move the run.
                 debug_->request_step();
+                if (!debug_->note_line(current_line, traced_line)) {
+                    running = false;
+                    break;
+                }
+            }
+            if (!running) {
+                break;
+            }
+            if (moved) {
                 continue;
             }
         }
@@ -862,19 +886,25 @@ void Interpreter::set_history(std::size_t depth, std::size_t interval) {
     history_depth_ = depth;
     history_interval_ = interval == 0 ? 1 : interval;
     history_.clear();
+    suppress_history_capture_ = false;
     history_.reserve(std::min<std::size_t>(depth, 256));
 }
 
 std::optional<Interpreter::Snapshot> Interpreter::rewind(std::size_t steps) {
     // The newest snapshot is the statement the run is *at*, so going back one means
-    // the one before it: `steps + 1` from the end.
-    if (steps == 0 || history_.size() < steps + 1) {
+    // the one before it: `steps + 1` from the end. Asking for more than is kept goes
+    // as far back as there is rather than refusing: "back 10" at the oldest statement
+    // a run remembers is a request to go back, and moving *forward* is the one answer
+    // it must never give.
+    if (steps == 0 || history_.size() < 2) {
         return std::nullopt;
     }
+    steps = std::min(steps, history_.size() - 1);
     const auto at = history_.end() - static_cast<std::ptrdiff_t>(steps + 1);
     const Snapshot landed = *at;
-    history_.erase(at, history_.end());
+    history_.erase(at + 1, history_.end());
     restore(landed);
+    suppress_history_capture_ = true;
     return landed;
 }
 

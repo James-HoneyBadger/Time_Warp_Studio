@@ -247,10 +247,13 @@ ends and releases the session.
 
 `debug.rewind` takes `steps` (default 1) and goes back that many statements,
 answering a state with `reason` `rewind`, the bindings the run had there and the
-output it had printed by then. It needs a session started with `history`: without
-one the answer carries `"unmoved": true` and an `error` saying so, rather than
-looking like a rewind that happened to land where the run already was. What is
-*not* rewound is stated rather than implied — the canvas keeps the ink it was
+output it had printed by then. Asking for more than the session kept goes as far
+back as there is rather than failing: "back 10" at the oldest statement is a
+request to go back, and moving *forward* is the one answer it must never give. It
+needs a session started with `history`: without one, or when the run is already at
+the oldest statement it kept, the answer carries `"unmoved": true` and an `error`
+saying so, rather than looking like a rewind that happened to land where the run
+already was. What is *not* rewound is stated rather than implied — the canvas keeps the ink it was
 given (the IDE's scrubber steps back through it), an open file stays open at its
 offset, and a scheme program cannot be rewound at all, because its state is an
 arena and a continuation chain rather than a value: `Scheme` answers with an

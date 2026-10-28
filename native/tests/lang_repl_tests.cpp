@@ -327,14 +327,20 @@ void test_history_rewinds_a_finished_run() {
     if (!landed.has_value()) {
         return;
     }
-    // Three back from four kept leaves the oldest one to go back to again.
-    TW_CHECK_EQ(interpreter.history().size(), std::size_t{0});
+    // The snapshot the run landed on stays as the newest one -- it is the statement
+    // the run is at -- and the three it passed are gone.
+    TW_CHECK_EQ(interpreter.history().size(), std::size_t{1});
     interpreter.run();
     TW_CHECK(interpreter.output() == first);
 
-    const auto before = interpreter.history().size();
-    TW_CHECK(!interpreter.rewind(99).has_value());
-    TW_CHECK_EQ(interpreter.history().size(), before);
+    // Asking for more than the run remembers goes as far back as there is rather
+    // than refusing: "back 99" at the oldest statement still means "back", and a
+    // rewind must never move the run forward instead.
+    const std::optional<Interpreter::Snapshot> farthest = interpreter.rewind(99);
+    TW_CHECK(farthest.has_value());
+    TW_CHECK_EQ(interpreter.history().size(), std::size_t{1});
+    // With nothing left behind it, there is genuinely nowhere to go.
+    TW_CHECK(!interpreter.rewind(1).has_value());
 }
 
 }  // namespace tw::lang_tests

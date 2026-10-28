@@ -661,6 +661,11 @@ void MainWindow::runSource(CodeEditor* editor, const QString& source) {
                 }
                 if (debug_panel_ != nullptr) {
                     debug_panel_->setPaused(true, line, procedure);
+                    // Nor is going back offered here: the Scheme machine's state is
+                    // an arena and a continuation chain, which is not a value a
+                    // snapshot can copy.
+                    debug_panel_->setRewindAvailable(
+                        false, tr("The Scheme machine cannot be walked back"));
                 }
                 showRunnerSnapshot();
             });
@@ -797,6 +802,11 @@ void MainWindow::runNatively(CodeEditor* editor, timewarp::lang::Language langua
     // report is built from this run's own numbers.
     const bool profiling = profile_action_ != nullptr && profile_action_->isChecked();
     runner->set_profiling(profiling);
+    // Likewise the history depth: the panel holds the choice, and this is the run
+    // that keeps it.
+    if (debug_panel_ != nullptr) {
+        runner->set_history(static_cast<std::size_t>(debug_panel_->historyDepth()));
+    }
     const QString profile_title = nameOf(editor);
     QStringList profile_source;
     if (profiling) {
@@ -928,6 +938,14 @@ void MainWindow::runNatively(CodeEditor* editor, timewarp::lang::Language langua
         // program is inspectable wherever the user looks.
         if (debug_panel_ != nullptr) {
             debug_panel_->setPaused(true, line, QString{});
+            // Going back is offered exactly when it can happen: a paused run whose
+            // session was asked to keep history. Scheme is not offered it at all,
+            // because that machine's state is not a value to copy.
+            const bool rewindable = runner->canRewind();
+            debug_panel_->setRewindAvailable(
+                rewindable,
+                rewindable ? QString{}
+                           : tr("Start the run with History to walk it back"));
         }
         QList<timewarp::ui::VariableRow> rows;
         for (const NativeRunner::VariableRow& row : runner->variables()) {

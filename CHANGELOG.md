@@ -2,6 +2,43 @@
 
 <!-- history: all -->
 
+## [23.7.0] - 2026-11-11
+
+The controls. 23.6 made a run able to go back; nothing offered it. This release puts
+the depth and the buttons in the Debug tab, and finishes the engine work the buttons
+needed to be honest.
+
+### Added
+
+- **History and Back in the Debug tab.** A **History** depth — off, 100, 500 or 2000
+  statements, remembered between sessions — decides how much the next run keeps.
+  When the run pauses, **Back** returns to the statement before it with the bindings
+  and output it had there, and **Back 10** goes ten statements back.
+- **The buttons are live exactly when they can move.** Back is dead when there is
+  nothing behind the pause, when the run was started with History off, and always for
+  Scheme, which is offered the reason instead of a control. Leaving a pause puts them
+  back to dead without the window having to remember to.
+- **`ui_layout_tests` walks a paused run backwards through the window**: a BASIC
+  program stopped at line 30, one press of Back for line 20 with `A` at 1, another for
+  line 10 where `A` is unset, and the button dead there rather than pressed into a
+  no-op.
+
+### Changed
+
+- **A rewind goes as far back as the run kept, and never forward.** 23.6 refused a
+  rewind deeper than the history and left the position alone, which meant a run
+  stepped forward instead — the one answer "go back" must not give. It now lands on
+  the oldest statement it kept and says how far that was.
+- **A statement is not snapshotted twice.** A rewind used to leave its landing point
+  in the history *and* let the loop record the same statement again, so "back 1" from
+  the oldest statement went to the statement it was already on. The landing snapshot
+  now stays as the newest and the loop skips that one capture, which is what lets the
+  panel know there is nothing further back.
+- **The API says `unmoved` for that case too**, not only for a session started
+  without history: the run pauses with reason `rewind` exactly when it moved, so
+  anything else is reported rather than passed off as a rewind that happened to land
+  where it already was.
+
 ## [23.6.0] - 2026-11-04
 
 A run can be walked backwards. The debugger could stop a program and look at it; it could

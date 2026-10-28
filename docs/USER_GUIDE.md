@@ -447,6 +447,24 @@ run loop, so a breakpoint set on one of them used to never fire; it now stops th
 like any other line. Every language publishes its visible bindings to the Variables
 tab.
 
+### Going back
+
+A run can be walked backwards. Set **History** in the Debug tab to how many
+statements the run should remember — off, 100, 500 or 2000 — and the next run
+keeps that many. When it pauses, **Back** returns to the statement before it with
+the bindings and output the run had there, and **Back 10** goes ten statements
+back, or as far as the run kept. Pressing Back at the oldest statement the run
+remembers disables the button rather than doing nothing, and a run started with
+History off says so instead of offering it.
+
+What a rewind does and does not undo: the bindings, the printed output and the
+language's own scratch state go back with the statement, so carrying on from there
+is running the program from there and not a replay. The canvas keeps the ink it
+has already been given — the drawing half of going back is the canvas scrubber,
+which steps through the display list — and Scheme is not offered it at all,
+because that machine's state is an arena and a continuation chain rather than a
+value. History costs one copy per statement while it is on; off costs nothing.
+
 ### Watch expressions
 
 In **Debug → Watch expressions**, enter an arithmetic expression over the paused
@@ -606,7 +624,7 @@ The method families are:
 | `studio.info`, `ping`, `studio.shutdown` | Discover features and languages; liveness; orderly exit |
 | `language.run` | Run a program with optional input answers; returns output, errors, variables, drawing and telemetry |
 | `repl.create`, `repl.eval`, `repl.reset`, `repl.close` | Persistent REPL sessions |
-| `debug.start`, `debug.snapshot`, `debug.continue`, `debug.step`, `debug.stop`, `debug.close` | Start a run at breakpoints, inspect it, step and stop it |
+| `debug.start`, `debug.snapshot`, `debug.continue`, `debug.step`, `debug.rewind`, `debug.stop`, `debug.close` | Start a run at breakpoints, inspect it, step it, walk it back through the history it kept, and stop it |
 | `sql.open`, `sql.query`, `sql.tables`, `sql.schema`, `sql.close` | Drive the shared SQLite connection |
 | `project.create`, `project.open`, `project.save`, `project.info`, `project.addFile`, `project.addFiles`, `project.addFolder`, `project.removeFile`, `project.addGroup`, `project.renameGroup`, `project.removeGroup`, `project.moveFile` | Read and edit projects |
 | `watch.evaluate` | Evaluate debugger-style expressions over supplied bindings |

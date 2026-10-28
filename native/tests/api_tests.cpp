@@ -605,6 +605,14 @@ void test_debug_sessions() {
     }
     TW_CHECK(!saw_a || a == 0.0);
 
+    // Pressing back again at the oldest statement the run kept must not move it on:
+    // the answer says unmoved and the line is the one it was already at.
+    const QJsonObject again =
+        resultOf(server, QStringLiteral("debug.rewind"), backward).toObject();
+    TW_CHECK(again.value(QStringLiteral("unmoved")).toBool());
+    TW_CHECK_EQ(again.value(QStringLiteral("line")).toInt(), 10);
+    TW_CHECK(!again.value(QStringLiteral("error")).toString().isEmpty());
+
     // A session asked for none keeps none, and says so rather than looking unchanged.
     QJsonObject no_history;
     no_history.insert(QStringLiteral("session"), session);

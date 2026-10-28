@@ -90,6 +90,7 @@ constexpr auto kSettingRecentDatabases = "sql/recentDatabases";
 /// is usually asked of the next run too.
 constexpr auto kSettingWatches = "debug/watches";
 constexpr auto kSettingDataBreakpoints = "debug/dataBreakpoints";
+constexpr auto kSettingHistory = "debug/history";
 constexpr int kRecentDatabaseLimit = 8;
 
 constexpr int kMinimumWindowWidth = 900;

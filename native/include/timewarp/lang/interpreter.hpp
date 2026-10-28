@@ -533,6 +533,10 @@ private:
     std::string last_input_;
     std::vector<std::string> output_;
     std::any executor_state_;
+    /// Set by `rewind`: the statement the run has just been put back on must not
+    /// push a second copy of itself, or the newest snapshot would be the statement
+    /// it is at and going back from there would go nowhere.
+    bool suppress_history_capture_ = false;
     /// The snapshots the run has passed, oldest first, and how often to take one.
     std::vector<Snapshot> history_;
     std::size_t history_depth_ = 0;

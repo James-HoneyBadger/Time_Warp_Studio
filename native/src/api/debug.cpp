@@ -135,7 +135,14 @@ public:
         const std::uint64_t seen = event();
         debug_.request_rewind(steps);
         (void)waitFor(seen);
-        return snapshot();
+        Snapshot after = snapshot();
+        if (!after.finished && after.reason != "rewind") {
+            // The loop pauses with reason `rewind` exactly when it moved, so anything
+            // else means the run is at the oldest statement it kept. Saying so is the
+            // difference between a button that did nothing and a button that lied.
+            after.error = "the run is at the oldest statement it kept; nothing further back";
+        }
+        return after;
     }
 
 private:

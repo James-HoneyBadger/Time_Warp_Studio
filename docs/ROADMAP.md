@@ -460,6 +460,7 @@ measuring the wrong machine.
 | 22.2 ✓ | The Markdown lint is C++: `time_warp_docs md` -- twenty-eight rules, `--explain` to see how a line was read -- replacing `markdownlint-cli2` and its `.markdownlint.json`, with the CI job promoted from advisory to a gate; running it found a line-splitting bug in the shared scanner that had been cutting every `✅` bullet in two |
 | 23.5 ✓ | The debt before a claim: Forth joins the parity corpus (three programs recorded from this engine by `golden --record`, because no reference run exists) and the console gains the line links, error filter and save that this page had already been claiming; the editor gains several carets; and `time_warp_docs claims` reads `native/share/unbuilt.txt` so a page that calls a shipped feature missing fails a gate instead of standing |
 | 23.6 ✓ | A run can be walked backwards: `Interpreter::snapshot()`/`restore()` copy a statement's position, bindings, output and the language's own scratch state, `set_history` keeps the last N of them and `rewind` goes back through them; `debug.start` takes `history` and `debug.rewind` returns to a statement with the bindings and output it had. The test is the property a person would check: go back, run on, and the transcript is what it was |
+| 23.7 ✓ | And a person can press it: the Debug tab's **History** depth decides how much a run remembers, **Back** and **Back 10** walk the pause back through it, and both are live exactly when they can move — never at the oldest statement, never for Scheme, which says why. The engine goes as far back as it kept instead of refusing, and never forward, and the panel asks the engine how far back that is before it offers the button |
 
 Smaller items belong in one of those releases rather than a release of their own:
 Flatpak, Snap and an arm64 AppImage, and the distribution work described under
@@ -517,9 +518,17 @@ rewind, run on, and the transcript is what it was. Two honest limits, both state
 in [API.md](API.md) rather than discovered: the canvas keeps the ink it has
 already been given — the drawing half of a rewind belongs to the scrubber, which
 steps back through the display list — and Scheme cannot be rewound at all, because
-its state is an arena and a continuation chain rather than a value. **The strip
-under the canvas that offers this to a person is the next release** (23.7), then
-Logo and Forth (23.8); until then the capability is the engine's and the API's.
+its state is an arena and a continuation chain rather than a value.
+
+**The controls are in the Debug tab** (23.7): a **History** depth — off, 100, 500
+or 2000 statements, persisted — that the next run keeps, and **Back** and
+**Back 10** to walk the pause back through it. The buttons are live exactly when
+they can act: not off, not at the oldest statement the run remembers, and not
+Scheme, which is offered nothing rather than a control that cannot move. A
+snapshot taken for a statement is not taken twice when a rewind puts the run back
+on it, which is what makes "there is nothing further back" a thing the panel can
+know. Logo and Forth join in 23.8 with snapshots of their own interpreter state,
+and Smalltalk and Scheme stay out with the reason written down.
 
 **Variables and the Telemetry HUD** are built too, and both answer the question a
 placeholder could not: *what did that run actually do?* The **Variables** tab lists every

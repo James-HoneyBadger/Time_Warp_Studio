@@ -238,6 +238,17 @@ public:
     /// The IDE's SQL connection, called from the runner thread. The callback owns
     /// whatever locking the connection needs.
     void setSqlCallback(std::function<std::string(std::string_view)> callback);
+    /// How many snapshots the next run keeps, so it can be walked back. Zero --
+    /// the default -- keeps none and costs nothing. Set before `start()`.
+    void set_history(std::size_t depth) noexcept;
+    [[nodiscard]] std::size_t historyDepth() const noexcept;
+    /// Whether the pause in front of the user has anything behind it to walk back
+    /// to. False while the run is going, after it has finished, and when the run
+    /// was started with no history.
+    [[nodiscard]] bool canRewind() const;
+    /// Walk the paused run back `steps` statements. The engine goes as far as it
+    /// kept rather than refusing, and never forward.
+    void request_rewind(std::size_t steps);
     void request_continue();
     void request_step();
     /// True while the run is blocked inside a pause. Named apart from the
@@ -327,6 +338,7 @@ private:
     double elapsed_ms_ = 0.0;
     bool profiling_ = false;
     bool tracing_ = false;
+    std::size_t history_depth_ = 0;
     timewarp::lang::Interpreter::MachineBus machine_bus_;
 
     std::mutex input_mutex_;
