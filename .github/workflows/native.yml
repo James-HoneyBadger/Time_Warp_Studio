@@ -46,7 +46,7 @@ jobs:
       # X11 rather than wayland for the offscreen plugin's font handling.
       QT_QPA_PLATFORM_PLUGIN_PATH: ''
     steps:
-      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Install Qt 6 and the build tools
         run: |
@@ -205,7 +205,7 @@ jobs:
       run:
         shell: ${{ matrix.shell }}
     steps:
-      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       # macOS takes the newest Qt: 6.8 and 6.9 link `-framework AGL`, a framework
       # macOS 26's SDK no longer ships, and 6.10 stopped. Qt 6.12 is universal
@@ -331,7 +331,7 @@ jobs:
       run:
         shell: pwsh
     steps:
-      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       # 5.15.2 is the newest Qt 5.15 with an MSVC binary package, and it is built
       # for the 2019 toolset. Its DLLs declare Windows 7 as their floor.
