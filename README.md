@@ -268,6 +268,10 @@ See [docs/lessons/](docs/lessons/README.md) for the student and teacher guides.
   its face: each thumbnail is the program run headlessly under the engine's own step
   budget, so the gallery is a picture of the shipped programs rather than a list of
   names. A program that only prints gets a card naming its language.
+- **Notebooks** — **File > New Notebook…** opens prose and programs in one `.twnb`
+  file: a cell is either text or a program with its language, **Run** shows its output
+  and its drawing beneath it, and **Run All** walks the file. Cells do not share
+  variables; a notebook is a document, not a session.
 - **Error hints**, which offer a syntax suggestion beside an interpreter's error
   message.
 - **Eleven language tutorials**, one per language, under `docs/tutorials/`.

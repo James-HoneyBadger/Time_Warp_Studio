@@ -25,12 +25,21 @@
 #include <QString>
 #include <QStringList>
 
+namespace timewarp::graphics {
+class RecordingHost;
+}
+
 class QListWidget;
 class QListWidgetItem;
 class QPushButton;
 class QTimer;
 
 namespace timewarp::ui {
+
+/// Paints a recording into an image of `size`: the one renderer the gallery and
+/// the notebook share, so a cell's drawing and its thumbnail cannot disagree.
+[[nodiscard]] QImage renderRecording(const timewarp::graphics::RecordingHost& host,
+                                     const QSize& size);
 
 class GalleryDialog final : public QDialog {
     Q_OBJECT

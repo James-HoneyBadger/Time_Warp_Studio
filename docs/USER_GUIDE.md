@@ -89,6 +89,19 @@ drawing exports at the screen's own size. `SCREEN 0` gives the fitted canvas bac
 `Examples/basic/star_patrol.bas` is a program built on it. The mode table is in
 [the language guide](LANGUAGE_GUIDE.md#graphics).
 
+### Notebooks
+
+**File > New Notebook…** opens a window where prose and programs live in one file:
+add a **+ Prose** cell and write, add a **+ Program** cell, choose its language and
+press **Run**. The cell's own output appears beneath it, and a cell that draws shows
+the drawing. **Run All** runs every program cell top to bottom. A notebook saves as a
+`.twnb` — JSON, so it diffs — and **File > Open Notebook…** loads one back.
+
+Each cell runs on its own: it is the engine's answer, in this process, with a
+question answered empty rather than waiting for a person, and it does not share
+variables with the cell above it. A notebook is a document, not a session; a lesson
+that needs a running session puts one program in one cell.
+
 ### Browsing the examples
 
 **File > Examples Gallery…** lists every program that ships with the Studio with the

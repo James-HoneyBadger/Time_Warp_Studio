@@ -6,6 +6,7 @@
 
 #include "timewarp/ui/app_paths.hpp"
 #include "timewarp/ui/gallery.hpp"
+#include "timewarp/ui/notebook.hpp"
 
 namespace tw::ui_layout {
 
@@ -95,6 +96,49 @@ void test_examples_gallery_renders_a_program() {
         }
         TW_CHECK(marks > 20);
     }
+}
+
+void test_notebook_round_trips_and_runs_a_cell() {
+    announce("notebook: a file round-trips and a cell runs");
+    timewarp::ui::Notebook notebook;
+    notebook.title = QStringLiteral("Round trip");
+    notebook.cells.append(timewarp::ui::NotebookCell{
+        timewarp::ui::NotebookCell::Kind::Prose, {}, QStringLiteral("# Title\nProse.")});
+    notebook.cells.append(timewarp::ui::NotebookCell{
+        timewarp::ui::NotebookCell::Kind::Code, QStringLiteral("basic"),
+        QStringLiteral("10 PRINT 6 * 7")});
+
+    const QString path =
+        QDir::temp().filePath(QStringLiteral("timewarp-notebook-test.twnb"));
+    QString error;
+    TW_CHECK(timewarp::ui::writeNotebook(path, notebook, &error));
+    TW_CHECK(error.isEmpty());
+
+    QString read_error;
+    const timewarp::ui::Notebook read = timewarp::ui::readNotebook(path, &read_error);
+    TW_CHECK(read_error.isEmpty());
+    TW_CHECK_EQ(read.cells.size(), 2);
+    TW_CHECK(read.cells.at(0).kind == timewarp::ui::NotebookCell::Kind::Prose);
+    TW_CHECK_EQ(read.cells.at(1).language.toStdString(), std::string{"basic"});
+    TW_CHECK_EQ(read.cells.at(1).text.toStdString(), std::string{"10 PRINT 6 * 7"});
+    QFile::remove(path);
+
+    // A cell answer is the engine's, not a second implementation of it.
+    const timewarp::ui::CellResult result =
+        timewarp::ui::runNotebookCell(QStringLiteral("basic"),
+                                      QStringLiteral("10 PRINT 6 * 7"));
+    TW_CHECK(result.ok);
+    TW_CHECK(result.output.contains(QStringLiteral("42")));
+
+    // A cell that draws gives a picture rather than only text.
+    const timewarp::ui::CellResult drawn = timewarp::ui::runNotebookCell(
+        QStringLiteral("logo"), QStringLiteral("REPEAT 4 [FD 60 RT 90]"));
+    TW_CHECK(!drawn.drawing.isNull());
+
+    // An unknown language is a sentence, not a crash.
+    const timewarp::ui::CellResult unknown =
+        timewarp::ui::runNotebookCell(QStringLiteral("nosuch"), QStringLiteral("PRINT 1"));
+    TW_CHECK(!unknown.ok);
 }
 
 void test_gif_recording_toggles_and_samples_the_canvas() {

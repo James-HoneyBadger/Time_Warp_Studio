@@ -553,6 +553,8 @@ if(TIME_WARP_QT_FOUND)
             src/ui/find_bar.cpp
             src/ui/find_in_files.cpp
             src/ui/gallery.cpp
+            src/ui/notebook.cpp
+            src/ui/notebook_window.cpp
             src/ui/formatter.cpp
             src/ui/gif_encoder.cpp
             src/ui/hb_bbs.cpp
@@ -627,6 +629,8 @@ if(TIME_WARP_QT_FOUND)
             include/timewarp/ui/machine_voice.hpp
             include/timewarp/ui/help_browser.hpp
             include/timewarp/ui/gallery.hpp
+            include/timewarp/ui/notebook.hpp
+            include/timewarp/ui/notebook_window.hpp
             include/timewarp/ui/lint.hpp
             include/timewarp/ui/snippet_dialog.hpp
             include/timewarp/ui/main_window.hpp

@@ -331,6 +331,9 @@ public:
     void exportAudioDialog();
     /// Opens the examples gallery: every shipped program with its own drawing.
     void showExamplesGallery();
+    /// A new notebook window, and one loaded from a chosen `.twnb`.
+    void newNotebook();
+    void openNotebook();
     /// Asks for a path and writes the current program as a PDF.
     void exportCodePdfDialog();
     /// Asks for a path and writes the program, its output and its drawing as one

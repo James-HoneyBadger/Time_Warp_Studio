@@ -49,6 +49,7 @@
 #include "timewarp/ui/find_bar.hpp"
 #include "timewarp/ui/find_in_files.hpp"
 #include "timewarp/ui/gallery.hpp"
+#include "timewarp/ui/notebook_window.hpp"
 #include "timewarp/ui/formatter.hpp"
 #include "timewarp/ui/help_browser.hpp"
 #include "timewarp/ui/panels.hpp"
@@ -370,6 +371,32 @@ namespace {
 /// File > Open Example does.
 
 }  // namespace
+
+void MainWindow::newNotebook() {
+    auto* notebook = new NotebookWindow{};
+    notebook->setAttribute(Qt::WA_DeleteOnClose);
+    notebook->show();
+    notebook->raise();
+}
+
+void MainWindow::openNotebook() {
+    const QString path = QFileDialog::getOpenFileName(
+        this, tr("Open notebook"), QString{},
+        tr("Time Warp notebook (*.%1)").arg(QLatin1String{kNotebookExtension}));
+    if (path.isEmpty()) {
+        return;
+    }
+    auto* notebook = new NotebookWindow{};
+    notebook->setAttribute(Qt::WA_DeleteOnClose);
+    QString error;
+    if (!notebook->openPath(path, &error)) {
+        QMessageBox::warning(this, tr("Could not open"), error);
+        delete notebook;
+        return;
+    }
+    notebook->show();
+    notebook->raise();
+}
 
 void MainWindow::showExamplesGallery() {
     GalleryDialog gallery{this};

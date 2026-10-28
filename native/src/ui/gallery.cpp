@@ -77,7 +77,7 @@ struct Bounds {
     }
 };
 
-void paintRecording(QPainter& painter, const QRect& area, const graphics::RecordingHost& host) {
+void paintInto(QPainter& painter, const QRect& area, const graphics::RecordingHost& host) {
     Bounds bounds;
     bounds.add(0.0, 0.0);
     for (const graphics::RecordingHost::Segment& segment : host.segments()) {
@@ -165,6 +165,15 @@ void paintRecording(QPainter& painter, const QRect& area, const graphics::Record
 
 }  // namespace
 
+QImage renderRecording(const graphics::RecordingHost& host, const QSize& size) {
+    QImage image{size, QImage::Format_ARGB32_Premultiplied};
+    image.fill(QApplication::palette().color(QPalette::Base));
+    QPainter painter{&image};
+    painter.setRenderHints(QPainter::Antialiasing | QPainter::TextAntialiasing);
+    paintInto(painter, image.rect().adjusted(4, 4, -4, -4), host);
+    return image;
+}
+
 QImage GalleryDialog::renderThumbnail(const QString& path, const QSize& size) {
     QImage image{size, QImage::Format_ARGB32_Premultiplied};
     image.fill(QApplication::palette().color(QPalette::Base));
@@ -194,7 +203,7 @@ QImage GalleryDialog::renderThumbnail(const QString& path, const QSize& size) {
 
     QPainter painter{&image};
     painter.setRenderHints(QPainter::Antialiasing | QPainter::TextAntialiasing);
-    paintRecording(painter, image.rect().adjusted(4, 4, -4, -4), host);
+    paintInto(painter, image.rect().adjusted(4, 4, -4, -4), host);
     if (!host.drew()) {
         // A program with no ink gets a card rather than a blank square: the gallery
         // is a list of what is there, and "this one prints" is a true answer.

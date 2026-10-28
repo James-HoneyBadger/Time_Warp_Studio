@@ -90,6 +90,7 @@ int main(int argc, char** argv) {
     test_gif_recording_toggles_and_samples_the_canvas();
     test_export_audio_records_a_runs_notes();
     test_examples_gallery_renders_a_program();
+    test_notebook_round_trips_and_runs_a_cell();
     test_command_palette();
     test_standalone_payload();
     test_standalone_player_layout();

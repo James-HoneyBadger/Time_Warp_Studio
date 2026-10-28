@@ -141,6 +141,12 @@ void MainWindow::buildMenuBar() {
     add(file, tr("Examples &Gallery..."), QKeySequence{},
         [this] { showExamplesGallery(); })
         ->setObjectName(QStringLiteral("examplesGalleryAction"));
+    add(file, tr("&New Notebook..."), QKeySequence{},
+        [this] { newNotebook(); })
+        ->setObjectName(QStringLiteral("newNotebookAction"));
+    add(file, tr("&Open Notebook..."), QKeySequence{},
+        [this] { openNotebook(); })
+        ->setObjectName(QStringLiteral("openNotebookAction"));
     // Qt Gui carries QPdfWriter, so the PDF needs no component beyond the ones
     // this application already requires.
     add(file, tr("Export Code as &PDF..."), QKeySequence{},
