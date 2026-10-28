@@ -2,6 +2,91 @@
 
 <!-- history: all -->
 
+## [23.3.0] - 2026-10-28
+
+The tranche that finished the list: the assistant gains a wire method and a stream,
+the Studio gains the two documents it was missing, and the last open language defect
+closes. Each one arrived as a behaviour a person can see with a free function behind
+it, and each one's verification is in its own commit.
+
+### Added
+
+- **Notebooks.** A `.twnb` holds cells -- prose or a program with a language each --
+  and its window runs them one at a time or all the way down, with a cell's output
+  and its drawing shown beneath it. It is JSON, so it diffs and reads. The tab strip
+  still holds editors: a notebook is opened, edited and saved by a window of its own,
+  the way the two machines are, because every part of the shell that asks "which
+  document is this?" would otherwise have to learn about a second kind of thing.
+- **An Examples Gallery.** **File > Examples Gallery…** shows every shipped program
+  with the drawing it makes as its icon: each thumbnail is the program run headlessly
+  through the same `RecordingHost` the API and the compiled player use, then painted.
+  A program that prints and never draws gets a card naming its language rather than an
+  empty square, every render runs under the engine's step budget so a looping program
+  is stopped by the machinery a Run uses, and the thumbnails render three per
+  event-loop turn so the dialog is usable before the first is ready.
+- **A run's sound can be saved.** `SOUND` and `PLAY` went straight to a speaker through
+  a temporary WAV that was deleted when the note ended, so a program's audio existed
+  for as long as it played and no longer. `SoundPlayer` now records every tone before
+  the player check -- a machine with no `paplay`/`aplay` still keeps what its program
+  played -- and **File > Export Audio as WAV…** writes them as one file. The recording
+  belongs to the run: a second run's export is the second program's notes.
+- **`ai.ask` asks the assistant one question over JSON-RPC**, with an optional system
+  prompt and history, answering `{text, model, promptTokens, completionTokens}` from
+  the endpoint, model and key the settings already supply. The handler blocks on
+  purpose -- one request line in, one response line out -- and exists in every build:
+  without Qt Network it answers `-32000` with the reason rather than "unknown method",
+  and `studio.info` grew `features.assistant` so a client can tell the two apart.
+- **A local endpoint streams.** `localhost`, `127.0.0.1`, `::1` and `*.localhost`
+  stream; everything else is asked for the whole answer, because a hosted service's
+  token counts and one finished string are what the panel reports. `body_for` says so
+  for both protocols, the client reads `data:` lines as they arrive, and the panel
+  replaces the partial text rather than logging fragments. `answered` still delivers
+  the whole answer, so every existing caller is unchanged, and a stream that ends with
+  nothing in it falls back to the ordinary reader on the bytes it kept.
+- **A learner can hand work in.** `Classroom::handIn` writes the source under the
+  checkpoint's handout name in the learner's folder -- the same path `markingJobs` and
+  `time_warp_teach collect` read, so a file handed in from the IDE and a file a teacher
+  collects are the same file. Somebody not on the roster is refused and told so, an
+  existing hand-in is never replaced unless the caller asks, and the write goes
+  through `QSaveFile`. The 🎓 Lessons tab grows a **Hand In** button; with more than
+  one learner the window asks whose work it is.
+- **A stopped Smalltalk program says where it is, frame by frame.** The runtime records
+  the message sends that have not returned, and a pause publishes them outermost first
+  as `Class>>selector`, each with the line that frame is at: its own while it runs, its
+  call site while it waits. A primitive answers in one C++ call and is not a frame, a
+  top-level chunk is `DoIt`, and recursion shows up as frames rather than a counter.
+  The chain reaches every reporter through `Interpreter::set_call_stack_probe`.
+
+### Changed
+
+- **A COMAL `FUNC` body runs as statements.** It was a sequence of `LOCAL`
+  declarations, assignments and one `RETURN`, so an `IF` was impossible inside a
+  function and a four-way choice had to be a `PROC` leaving its answer in a global. The
+  body is now the re-entrant path BASIC's `FUNCTION` already used: a statement that
+  jumps moves the program counter and one that does not leaves it, `RETURN` answers the
+  frame instead of jumping, `resume_line` puts the caller's line back without recording
+  a jump, and the loop stack is truncated to its entry depth so a body cannot leave a
+  `FOR` open for its caller. `docs/ROADMAP.md`'s "still open" list is now empty.
+- **Two lines had to become true.** Chunks were tokenized from line 1, so a send in the
+  second method of a Smalltalk file reported a line inside its own chunk and a
+  breakpoint clicked in the gutter could never match one; `tokenize` and
+  `parse_statements` now take the line the chunk starts on, so a pause names the number
+  the gutter shows.
+- **One renderer for two features.** The thumbnail painter is `renderRecording`, which
+  the gallery and a notebook's drawing cell both call, so a cell's picture and its
+  gallery face cannot disagree.
+
+### Notes
+
+- **The RPC handler leaks a `QCoreApplication` on purpose.** This process never had
+  one; Qt's application object tears the network stack down on the way out and the
+  process then crashed at exit with a correct answer already written. Parameters are
+  also read before the configuration, so a mistyped `history` turn says so rather than
+  "the assistant is switched off".
+- **A hand-in and a collect are one invariant**, now stated in `docs/lessons/FORMAT.md`
+  beside the rule that `distribute` never overwrites: work a learner hands in lands
+  where marking reads.
+
 ## [23.2.0] - 2026-10-27
 
 Six gaps in features that were otherwise finished -- and one in a machine -- closed

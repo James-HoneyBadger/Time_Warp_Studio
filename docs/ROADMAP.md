@@ -42,7 +42,7 @@ derived rather than remembered.
 | Database | A SQLite-backed Database tab, the shared `SQL` statement in nine languages, scripts, tables and schema; compiled programs link SQLite |
 | Automation | JSON-RPC over stdin/stdout (`language.run`, `repl.*`, `debug.*`, `sql.*`, `project.*`, `watch.evaluate`) and the `twc` terminal compiler |
 | Packaging | `make install`; tagged releases build a Windows installer and portable ZIP (Qt 6), a second Windows installer for Windows 7 (Qt 5.15), a universal macOS disk image, `.deb`, `.rpm`, AppImage, tarball and container artifacts |
-| Quality gates | 24 CTest suites in 4 build configurations and on four platforms (Linux, Windows, Windows with Qt 5.15, macOS); the frozen-corpus gate over 667 programs (475 language, 192 Scheme); 565 command rows run as programs and through the REPL; 69 example programs through the smoke gate; and the documentation gates (links, claims, version, Markdown lint) |
+| Quality gates | 26 CTest suites in 4 build configurations and on four platforms (Linux, Windows, Windows with Qt 5.15, macOS); the frozen-corpus gate over 668 programs (476 language, 192 Scheme); 566 command rows run as programs and through the REPL; 69 example programs through the smoke gate; and the documentation gates (links, claims, version, Markdown lint) |
 
 ---
 
@@ -400,7 +400,7 @@ staged `cmake --install` contains **no Python file at all**.
 <!-- /history -->
 
 The parity gates' remaining dependency is done too: the reference's answers to
-475 programs are frozen in
+476 programs are frozen in
 `native/tests/golden/lang_corpus.json.gz`, program text included, and
 `make golden-check` compares the C++ engines with them without importing Python.
 `make golden-record` refreshes that file while the reference still exists; after

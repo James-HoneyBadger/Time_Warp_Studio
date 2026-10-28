@@ -598,7 +598,7 @@ Time_Warp_Studio/
 │   ├── CMakeLists.txt
 │   ├── include/ src/             # ui/, canvas/, scheme/, lang/, lessons/,
 │   │                             #   debugger/, project/, sql/, api/
-│   ├── tests/                    # 24 CTest suites, and the golden corpora
+│   ├── tests/                    # 26 CTest suites, and the golden corpora
 │   ├── share/                    # lessons.json, snippets.json, command_rows.json
 │   └── tools/                    # time_warp_ide.cpp, time_warp_api.cpp
 │                                 #   and the commands and gates: time_warp_check,

@@ -79,11 +79,11 @@ answers, frozen before the engine was deleted. `0 differences` is the verdict, a
 documented divergences are listed in the harness output and are expected.
 
 ```bash
-make golden-check                                  # both corpora; 667 programs
+make golden-check                                  # both corpora; 668 programs
 ./native/build/time_warp_gates golden --scheme     # the Scheme machine alone
 ```
 
-The language corpus (`native/tests/golden/lang_corpus.json.gz`) holds 475 programs:
+The language corpus (`native/tests/golden/lang_corpus.json.gz`) holds 476 programs:
 every command-table row and every example for a ported language, with the output
 lines it printed, every drawing call in order, and the variables it left behind.
 The Scheme corpus (`scheme_corpus.json.gz`) holds 192 programs and compares the
