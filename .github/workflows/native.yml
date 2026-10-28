@@ -133,7 +133,7 @@ jobs:
             ASAN_FLAGS='-fsanitize=undefined -fno-omit-frame-pointer -g'
 
       # The parity gate, against the corpora recorded from the reference engine
-      # before it was deleted: 475 language programs (output, every drawing call,
+      # before it was deleted: 476 language programs (output, every drawing call,
       # the variables each left behind) and 192 Scheme programs (whole output text,
       # with the 24 documented divergences listed rather than compared). The gate is
       # `time_warp_gates`, built from this repository, which is why the corpora carry
@@ -157,6 +157,12 @@ jobs:
 
       - name: Every language command through the REPL
         run: ./native/build/time_warp_gates repl
+
+      # One tree builds Qt 6 and Qt 5.15. A bare pointer to a signal the older Qt
+      # overloads compiles under Qt 6 and fails in the Windows 7 job, which is the
+      # last build to run -- so the check is a name match, and it runs here, first.
+      - name: The Qt 5.15 seam
+        run: ./native/build/time_warp_gates qt5
 
       # The curriculum is also checked here, not in the documentation job: both
       # checks need `time_warp_teach`, and this is the job that has built it. The
