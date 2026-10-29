@@ -75,7 +75,9 @@ const QSet<QString>& drawingExamples() {
         QStringLiteral("comal/results_table.comal"),
         QStringLiteral("focal/numerics.foc"),
         QStringLiteral("basic/space_simulation.bas"),
+        QStringLiteral("basic/observatory.bas"),
         QStringLiteral("logo/community_campus.logo"),
+        QStringLiteral("logo/constellation.logo"),
         QStringLiteral("logo/fractal_forest.logo"),
         QStringLiteral("logo/fractal_gallery.logo"),
         QStringLiteral("logo/galaxy.logo"),
@@ -91,6 +93,18 @@ const QSet<QString>& drawingExamples() {
         QStringLiteral("chip8/font_and_frames.ch8"),
         QStringLiteral("chip8/hires.ch8"),
         QStringLiteral("chip8/paint.ch8"),
+        QStringLiteral("chip8/rewind_lab.ch8"),
+        QStringLiteral("chip8/pattern_loom.ch8"),
+        QStringLiteral("chip8/waveform.ch8"),
+        QStringLiteral("chip8/collision_lab.ch8"),
+        QStringLiteral("chip8/font_ledger.ch8"),
+        QStringLiteral("chip8/hires_rings.ch8"),
+        QStringLiteral("chip8/keypad_probe.ch8"),
+        // The HB-1 demos: the tube is memory, so a silent run of one is a broken
+        // run even though the program is BASIC.
+        QStringLiteral("hb1/tube_writer.bas"),
+        QStringLiteral("hb1/ram_probe.bas"),
+        QStringLiteral("hb1/frame_clock.bas"),
         QStringLiteral("apl/arrays_and_turtle.apl"),
         QStringLiteral("smalltalk/shapes.st"),
         // The showcases: each draws as well as prints, so a silent run is a broken
@@ -173,8 +187,11 @@ int runSmoke(const QStringList& arguments) {
         paths.sort();
 
         for (const QString& path : paths) {
+            // The path below `Examples`, not the bare file name: a language may keep
+            // programs in more than one folder (the HB-1 demos are BASIC), and two
+            // `showcase.bas` files must not answer to one identifier.
             const QString identifier =
-                key + QLatin1Char('/') + QFileInfo{path}.fileName();
+                QFileInfo{path}.absoluteFilePath().mid(folder.size() + 1);
             if (nativeOnly().contains(identifier)) {
                 continue;
             }

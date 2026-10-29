@@ -16,12 +16,9 @@ repository; nothing has to be downloaded at run time.
 | or Qt5 | 5.15 | Only for the Windows 7 build (`-DTIME_WARP_QT5=ON`); same modules, same role |
 | SQLite3 | 3.35 | The database manager and the languages' `SQL` statement; the development package (`libsqlite3-dev`) is required to build |
 | zlib | 1.2 | Classroom bundles are zips, read and written with it; `zlib1g-dev` on Linux, the system library on macOS, `vcpkg install zlib` on Windows |
-| Python | 3.10 | *Optional* — only for the reference engine (parity gates, command matrix and lesson checks); running a language needs no Python |
-
-All eleven languages run in C++ inside the application, and so does the lesson check, so
-running a program needs **no Python at all** — and neither does the repository's gate
-suite, which compares the engines with a recorded corpus rather than with a live
-reference; see §6.
+All eleven languages and the lesson check run in C++ inside the application.
+Nothing in the product or its validation gates requires Python; the parity gate
+compares against the frozen corpus rather than a live reference. See §6.
 
 ### Installing the toolchain
 
@@ -142,7 +139,7 @@ the IDE and opens in player mode. The full guide is [USER_GUIDE.md](USER_GUIDE.m
 
 ```bash
 ctest --test-dir native/build --output-on-failure   # 26 suites
-make smoke                                          # all 63 examples
+make smoke                                          # all 81 examples
 make command-matrix                                 # every command-table row
 make repl-matrix                                    # every row through the REPL
 ./native/build/time_warp_teach validate             # every lesson solution
@@ -238,7 +235,7 @@ That installs these, and they have to stay together:
 The curriculum and the snippets go beside the application because that is where
 it looks for them (`../share/time-warp-studio` relative to the binary), so an
 installed build needs no path configuration. Nothing installed needs Python: the
-reference engine stays in the checkout, as development tooling.
+reference engine was removed, and its recorded answers remain in the checkout.
 
 ### Installing on Windows and macOS
 

@@ -18,7 +18,7 @@ something no amount of prose can supply.
 
 - **The sibling machine:** [the HB-1](../hb1/README.md) · [the machines](../MACHINES.md)
 - **The rest of this book:** [the assembler](assembly.md) ·
-  [the instruction set](instruction-set.md)
+  [the instruction set](instruction-set.md) · [enhancements](enhancements.md)
 
 ---
 
@@ -33,7 +33,7 @@ The Studio runs CHIP-8 in two places, and they are different on purpose.
 | Speed | Ten opcodes per frame, 600 frames — 60 seconds of machine time | 1 to 2000 opcodes per frame, adjustable while running |
 | Keys | The `; keys` line seeds the keypad; `LD Vx, K` reads it once | A real keypad, changing under the program's hands |
 | Output | The framebuffer is drawn on the turtle canvas | A dedicated 64×32 screen |
-| Debugging | Gutter breakpoints; the machine pauses before an instruction | Run, Pause and single **Step**, with a register and memory inspector |
+| Debugging | Gutter breakpoints; the machine pauses before an instruction, and a run can be walked back | Run, Pause and single **Step**, with a register and memory inspector |
 | Sound | The `sound_timer` is not played | A buzzer follows the sound timer; mute with one click |
 
 Use the editor to check that a listing assembles, to demonstrate an instruction,
@@ -123,7 +123,18 @@ half-executed instruction.
 
 The CHIP-8 window has no breakpoints of its own: use **Step**. Gutter breakpoints
 belong to the editor's whole-program Run, where the machine pauses before the
-instruction whose listing line carries the breakpoint.
+instruction whose listing line carries the breakpoint. Set **History** in the Debug
+tab and that run can be walked back too: the checkpoint is the whole machine plus
+the instruction's slot in its frame, so a rewind puts the registers, memory,
+timers, frame count and pixels back with the instruction it returns to without
+moving the next timer tick.
+
+For a guided editor run, open
+[`Examples/chip8/rewind_lab.ch8`](../../Examples/chip8/rewind_lab.ch8), set History
+in the Debug tab, and add a gutter breakpoint to the second `DRW` (line 12). Run
+until it pauses, then use Back three times to return to the first drawing
+instruction. The registers and visible pixels should move back together; continue
+to watch the sprites draw again.
 
 ### Rewind
 
@@ -252,4 +263,27 @@ says the program had not halted, rather than calling it a failure.
 - Read the opcodes: [the instruction set](instruction-set.md).
 - Learn the language: [tutorials/chip8.md](../tutorials/chip8.md) and
   [LANGUAGE_GUIDE.md](../LANGUAGE_GUIDE.md#chip-8).
+- See what a later release could add: [enhancements](enhancements.md), the
+  proposals written down after 24.0 became the golden release.
 - Compare machines: [the HB-1](../hb1/README.md).
+
+---
+
+## Programs to run on it
+
+Ten listings ship in [`Examples/chip8/`](../../Examples/chip8/). Four of them are
+machine-wide tours; the rest each teach one idea, and every one of them assembles
+and draws under the smoke gate.
+
+| Program | What it shows |
+| --- | --- |
+| [`showcase.ch8`](../../Examples/chip8/showcase.ch8) | The montage: hi-res, the font, sprites, collision, BCD, arithmetic and the keypad |
+| [`hires.ch8`](../../Examples/chip8/hires.ch8) | SuperChip hi-res, scrolling and the large `FX30` font |
+| [`hires_rings.ch8`](../../Examples/chip8/hires_rings.ch8) | One 16×16 `DXY0` sprite drawn at three places on a 128×64 screen |
+| [`paint.ch8`](../../Examples/chip8/paint.ch8) | A one-pixel paint program driven by the keypad |
+| [`pattern_loom.ch8`](../../Examples/chip8/pattern_loom.ch8) | XOR weaving: the same sprite drawn twice inverts what it covered |
+| [`waveform.ch8`](../../Examples/chip8/waveform.ch8) | A plotted curve read from a data table with `LD Vx, [I]` |
+| [`collision_lab.ch8`](../../Examples/chip8/collision_lab.ch8) | Draw, erase, and an overlap that leaves only the edges — with `VF` |
+| [`font_ledger.ch8`](../../Examples/chip8/font_ledger.ch8) | `LD B, Vx` and `FX29`: 147 becomes three font digits on the screen |
+| [`keypad_probe.ch8`](../../Examples/chip8/keypad_probe.ch8) | `FX0A` with a seeded key in the editor and a real keypad in the window |
+| [`rewind_lab.ch8`](../../Examples/chip8/rewind_lab.ch8) | Three sprites placed for the editor's breakpoint-and-rewind exercise |

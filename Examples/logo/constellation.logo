@@ -1,0 +1,25 @@
+; THE CONSTELLATION
+; Twelve rays make the compass rose; six shorter rays fill its centre.
+
+TO RAY :LENGTH
+  FORWARD :LENGTH
+  BACK :LENGTH
+  RIGHT 30
+END
+
+PENUP
+HOME
+PENDOWN
+SETPENWIDTH 2
+SETPENCOLOR 90 180 255
+REPEAT 12 [RAY 115]
+
+PENUP
+HOME
+PENDOWN
+SETPENWIDTH 1
+SETPENCOLOR 255 210 90
+REPEAT 6 [RAY 48]
+
+HIDETURTLE
+PRINT [Constellation complete: twelve blue rays and six gold.]

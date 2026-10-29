@@ -1,8 +1,8 @@
 # Testing Time Warp Studio
 
-The product is the Qt application in `native/`, so the primary suites are C++
-suites driven by CTest. The Python engine that the parity gates compare against,
-and that checks lessons, has its own small pytest suite.
+The product is the Qt application in `native/`, and its engines, lesson checks and
+validation gates are C++ suites and tools built from this tree. The Python reference
+engine was removed; parity uses its frozen recorded corpus.
 
 Run everything from the repository root.
 

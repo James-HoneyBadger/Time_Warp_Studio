@@ -1,0 +1,31 @@
+; FONT LEDGER
+; BCD turns a byte into three digits in memory, and FX29 turns each
+; digit into the address of its font glyph. 147 therefore becomes
+; "147" on the screen, drawn from the machine's own character set.
+
+start:  CLS
+        LD V0, 147
+        LD I, digits
+        LD B, V0            ; hundreds, tens, units into memory
+        LD I, digits
+        LD V1, [I]          ; hundreds; I advances past it
+        LD V2, 8
+        LD V3, 10
+        LD F, V1
+        DRW V2, V3, 5
+
+        LD V4, [I]          ; tens
+        LD V2, 16
+        LD F, V4
+        DRW V2, V3, 5
+
+        LD V5, [I]          ; units
+        LD V2, 24
+        LD F, V5
+        DRW V2, V3, 5
+
+        HALT
+
+digits: DB 0
+        DB 0
+        DB 0

@@ -63,6 +63,7 @@ void test_hb_dos_survives_a_restart();
 void test_hb_dos_a_file_belongs_to_its_rom();
 void test_a_machine_survives_a_round_trip_through_a_file();
 void test_a_machine_image_refuses_what_it_cannot_read();
+void test_the_shipped_demo_volume_loads();
 void test_the_machine_words_save_and_load_an_image();
 void test_hb_dos_refuses_bad_names_and_a_full_disk();
 

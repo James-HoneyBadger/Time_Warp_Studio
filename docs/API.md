@@ -260,11 +260,13 @@ transcript it was given and the one it gets after a rewind agree.
 
 Which languages can be walked back: the six line-by-line ones, Logo, whose executor
 hands its position (`pc`, procedures, words, lists, pen, pose and seeded generator)
-to the whole-program pause point with every statement, and Forth, which hands over
+to the whole-program pause point with every statement, Forth, which hands over
 its position in the token list, both stacks, the dictionary, the compile state and
 the text printed so far (with the 64K data space only when a program has written to
-it). Smalltalk and CHIP-8 pause at their boundaries but have no checkpoint yet, so
-`history` keeps nothing for them and `debug.rewind` answers `unmoved`. A Scheme program cannot be
+it), and CHIP-8, which hands over the machine itself — registers, memory, screen,
+timers and the frame count — before each instruction. Smalltalk pauses at its chunk
+boundaries but has no checkpoint yet, so `history` keeps nothing for it and
+`debug.rewind` answers `unmoved`. A Scheme program cannot be
 rewound at all, because its state is an arena and a continuation chain rather than
 a value: `Scheme` answers with an error and does not move. Each request blocks until the run pauses or
 finishes, and a `state` of `timeout` means the engine was still running after

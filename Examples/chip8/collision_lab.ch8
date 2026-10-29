@@ -1,0 +1,42 @@
+; COLLISION LAB
+; DRW is an XOR: drawing the same sprite twice erases it, and VF
+; says whether any lit pixel was turned off. This listing draws a
+; block, erases it, then draws two overlapping blocks so only the
+; shared pixels vanish -- which is the whole of CHIP-8 collision.
+
+start:  CLS
+        LD V0, 16
+        LD V1, 10
+        LD I, block
+        DRW V0, V1, 8       ; first draw: VF = 0
+        LD V2, VF
+        DRW V0, V1, 8       ; same place again: erased, VF = 1
+        LD V3, VF
+
+        LD V0, 30           ; two blocks shifted by four pixels
+        LD V1, 10
+        LD I, block
+        DRW V0, V1, 8
+        LD V0, 34
+        DRW V0, V1, 8       ; the overlap is erased, the edges stay
+
+        SE V3, 1            ; a marker only when the collision happened
+        JP done
+        LD V0, 52
+        LD V1, 20
+        LD I, mark
+        DRW V0, V1, 3
+
+done:   HALT
+
+block:  DB 0xFF
+        DB 0xFF
+        DB 0xFF
+        DB 0xFF
+        DB 0xFF
+        DB 0xFF
+        DB 0xFF
+        DB 0xFF
+mark:   DB 0xE0
+        DB 0xA0
+        DB 0xE0

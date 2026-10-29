@@ -1202,6 +1202,11 @@ if(TIME_WARP_QT_FOUND)
             )
             target_link_libraries(retro_computer_tests PRIVATE timewarp::ui)
             target_include_directories(retro_computer_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/tests)
+            # One case opens the demo volume shipped in `Examples/hb1`, so the test
+            # needs the checkout it is running from -- the same definition the
+            # player suite uses for the same reason.
+            target_compile_definitions(retro_computer_tests PRIVATE
+                TIME_WARP_TEST_SOURCE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/..")
             timewarp_enable_warnings(retro_computer_tests)
             add_test(NAME retro_computer_tests COMMAND retro_computer_tests)
         endif()

@@ -1,0 +1,35 @@
+; HI-RES RINGS
+; SuperChip's 00FF doubles the screen to 128x64, and in that mode
+; DXY0 draws a 16x16 sprite two bytes wide. Three rings, one
+; sprite, drawn at three places.
+
+start:  CLS
+        DW 0x00FF           ; hi-res: 128 x 64
+        LD I, ring
+        LD V0, 8
+        LD V1, 4
+        DRW V0, V1, 0
+        LD V0, 40
+        LD V1, 16
+        DRW V0, V1, 0
+        LD V0, 72
+        LD V1, 30
+        DRW V0, V1, 0
+        HALT
+
+ring:   DW 0xFFFF
+        DW 0x8001
+        DW 0x8001
+        DW 0x8001
+        DW 0x8001
+        DW 0x8001
+        DW 0x8001
+        DW 0x8001
+        DW 0x8001
+        DW 0x8001
+        DW 0x8001
+        DW 0x8001
+        DW 0x8001
+        DW 0x8001
+        DW 0x8001
+        DW 0xFFFF

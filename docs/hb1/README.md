@@ -377,7 +377,7 @@ A machine is defined by what it will not do.
 
 | Limit | Value | What happens at the edge |
 | --- | --- | --- |
-| ROMs | Ten, one at a time | Nothing else exists to select |
+| ROMs | Eleven, one at a time | Nothing else exists to select |
 | Program memory | One buffer per ROM | Switching keeps it; closing the machine keeps it only if *Remember each ROM's program* is on |
 | Screen | TEXT, SPLIT, GRAPHICS | A whole-program run cannot show more |
 | Disk volume | One, named `HBWARP` | There are no directories and no second volume |
@@ -391,6 +391,42 @@ period features; they are the parallel-universe part.
 
 ---
 
+## Programs to run on it
+
+Three programs in [`Examples/hb1/`](../../Examples/hb1/) are written for this
+machine rather than for the IDE. Each one uses something only the HB-1 has, and
+each runs in the IDE as well — the tube writes land there as the same arithmetic,
+and the drawing lands on the canvas.
+
+| Program | What it shows |
+| --- | --- |
+| [`tube_writer.bas`](../../Examples/hb1/tube_writer.bas) | The screen is memory: characters and colours written with `POKE` into `$8000`/`$9000`, read back with `PEEK`, and a turtle frame round the result |
+| [`ram_probe.bas`](../../Examples/hb1/ram_probe.bas) | The 32K below the screen: a pattern written across it, three cells read back, and one bar drawn per byte |
+| [`frame_clock.bas`](../../Examples/hb1/frame_clock.bas) | Both clocks: the frame counter in registers `$A006`/`$A007`, and `ON TIMER` … `TIMER ON` interrupting a loop, with one spoke per interrupt |
+
+To run one on the machine:
+
+1. Open it in the IDE (**File > Open**) and copy the listing, or copy it from the
+   repository.
+2. On the HB-1, press **EDIT** (or click the PROGRAM page) and paste over the
+   listing, then **RUN** (F9).
+3. Watch the SCREEN page: a tube write is visible as a character, and
+   `PEEK` answers with what is in the cell.
+
+`SAVE "TUBE"` puts it on the disk when you want it there tomorrow, and
+[HB DOS](hb-dos.md) has the rest of that conversation.
+
+**The demo volume.** The same three programs are already saved on a 5.25" volume:
+[`Examples/hb1/HBWARP.dsk`](../../Examples/hb1/HBWARP.dsk) is a disk image in
+[the documented format](hb-dos.md#the-image), so nothing has to be typed. Copy it
+to `~/.time_warp/disks/HBWARP.dsk` (or `$TIME_WARP_DATA_DIR/disks/`) and boot the
+machine: `CATALOG` lists all three, and `RUN "FRAME CLOCK"` runs one. The machine
+has exactly one volume, so **copy your own image aside first** — this one replaces
+it. `retro_computer_tests` opens the shipped image and checks the three files and
+their ROM, so the disk cannot rot without a test failing.
+
+---
+
 ## Where next
 
 - Learn the eleven ROMs: [the ROM library](roms.md).
@@ -398,4 +434,6 @@ period features; they are the parallel-universe part.
 - Call somebody: [WARP BOARD](bbs.md), the board on the other end of the line.
 - Make it yours: [CONFIG](config.md).
 - Change the machine's mind: [Inside the HB-1](inside.md).
+- See what a later release could add: [enhancements](enhancements.md), the
+  proposals written down after 24.0 became the golden release.
 - Meet its sibling: [the CHIP-8](../chip8/README.md).

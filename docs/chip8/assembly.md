@@ -271,4 +271,5 @@ reader accepts either, because the NUL byte decides.
 
 - [The instruction set](instruction-set.md) — what each encoding does.
 - [The machine](README.md) — the window, the keys, the inspector.
-- [`Examples/chip8/`](../../Examples/chip8/) — four complete listings.
+- [`Examples/chip8/`](../../Examples/chip8/) — ten complete listings, from the
+  one-pixel paint program to the hi-res montage.

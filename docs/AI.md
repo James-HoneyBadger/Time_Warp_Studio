@@ -4,14 +4,17 @@ The Studio can explain a program, find what is wrong with it, comment it, rewrit
 in another language, or write a new one from a description — through a service you
 choose and configure yourself.
 
-It is **off until you configure it**, and it never sends anything until you press a
-button. There is no bundled model, no account, no default endpoint, and nothing on
-this page requires a particular vendor: the assistant speaks two request shapes, and
-any service that speaks one of them works.
+It is **off until you configure it**, and nothing is sent until you press a button or
+turn on the one setting that asks while you type. There is no bundled model, no
+account, no default endpoint, and nothing on this page requires a particular vendor:
+the assistant speaks two request shapes, and any service that speaks one of them
+works.
 
 - [What it does](#what-it-does)
 - [Configuring it](#configuring-it)
 - [The key, and what is sent](#the-key-and-what-is-sent)
+- [What a request looks like](#what-a-request-looks-like)
+- [What it costs, and what it reports](#what-it-costs-and-what-it-reports)
 - [Running it from a shell](#running-it-from-a-shell)
 - [When it does not work](#when-it-does-not-work)
 - [Where it is built](#where-it-is-built)
@@ -21,7 +24,14 @@ any service that speaks one of them works.
 The assistant is the **🤖 Assistant** page of the right column, reached from
 **Tools > 🤖 Assistant** (`Ctrl+Shift+A`). It is a conversation beside the editor
 rather than a window over it, because the questions you want to ask are about the
-program you are looking at.
+program you are looking at. Until it is configured the page shows one button,
+**Configure the assistant…**, which opens the same dialog as **Tools > AI Settings…**
+— a page whose only useful control is a disabled question box is a dead end.
+
+The buttons that ask about a program are disabled while a request is in flight, so
+two questions cannot be half-asked at once. **Stop** is the only enabled control
+then, and it abandons the request rather than letting an answer arrive into a
+conversation that has moved on.
 
 | Control | What it does |
 | --- | --- |
@@ -73,6 +83,19 @@ after the caret moved is dropped rather than pasted after the wrong line. Unlike
 panel, it has a client of its own: a suggestion must not cancel an answer you are
 reading.
 
+Three limits on the ghost line are worth knowing, because each of them is a way a
+code assistant usually goes wrong:
+
+- **It asks only when the caret is at the end of the text it is asking from.** A
+  suggestion for a caret in the middle of a line would have to be inserted between
+  two halves of a statement, and nothing knows where that cut belongs.
+- **It arrives only if nothing changed.** The editor keeps the text it sent, compares
+  it with the text before the caret when the answer comes back, and discards the
+  answer if a single keystroke landed in between.
+- **A failure is silent.** A suggestion that does not arrive is not something the
+  reader can act on, so it shows no status line — unlike the panel, where a failed
+  question is the whole exchange.
+
 ## Configuring it
 
 **Tools > AI Settings…** is the one place it is set up. The dialog's **Provider**
@@ -100,9 +123,9 @@ service, including a server on your own machine, uses one of them.
 | **Endpoint** | The whole prefix, version path included. The protocol's own path is appended, and an endpoint that already names it is used as written |
 | **Model** | The name the service knows it by. **Find models…** fills the list from the endpoint; retired model names are the most common cause of a 404 |
 | **API key** | See below. A server on this machine usually needs none |
-| **Reply ceiling** | The longest reply, in tokens. 1024 is a page of explanation |
-| **Temperature** | 0 is repeatable, 2 is inventive |
-| **Give up after** | The request timeout, in seconds |
+| **Reply ceiling** | The longest reply, in tokens. 1024 is a page of explanation; the field accepts 16 to 32768 |
+| **Temperature** | 0 is repeatable, 2 is inventive; the field accepts 0 to 2 |
+| **Give up after** | The request timeout, in seconds; the field accepts 5 to 600 |
 | **Send the current program by default** | What the panel's tick starts from |
 | **Keep the conversation between sessions** | Off, a conversation dies with the window. On, it is kept in the data directory and deleted when this is unticked |
 | **Suggest the next line in the editor** | Off, nothing is sent while you type. On, a pause in typing asks for the next line and shows it as ghost text |
@@ -137,6 +160,13 @@ A key is a secret. Three things follow, and all three are deliberate.
   `TIME_WARP_AI_KEYRING`: `file` refuses the system store, `system` asks for it, and a
   build that has none answers `file` either way rather than pretending.
 
+  The item is one per user and is named the same way everywhere it is visible: a
+  `TimeWarpStudio/assistant` target in the Windows Credential Manager, a generic
+  password with the service `Time Warp Studio` and the account `assistant` in the
+  macOS Keychain, and the same account name in the freedesktop secret service. A
+  reader who wants to remove a key by hand can find it; a reader who wants to know
+  where it went does not have to guess.
+
 The key is never logged, never shown in a message, and stripped from anything a
 service sends back — a proxy that echoes the request in an error still cannot put
 the key in the status bar.
@@ -159,16 +189,126 @@ One request contains:
 - your question, or the instruction a quick-action button stands for;
 - the current document, or the selected lines, when **Send the program** is ticked;
 - the document's file name and its language;
-- for **Fix**, what the last run printed and any errors it reported;
+- for **Fix** and **Ask About the Last Error**, what the last run printed and any
+  errors it reported;
 - the last six exchanges of the conversation;
 - with inline suggestions on, the document up to the caret, when typing pauses.
 
 Nothing else. No other tab, no other file, no path, no list of what you have open,
 no telemetry, no version of this application beyond the request itself.
 
+**The program is capped at 12,000 characters.** A larger document is cut at that
+point and the model is told so in the text it receives — a truncated program the
+model knows is truncated is worth more than a request the service rejects for size.
+The same cap applies to a selection and to the text sent for an inline suggestion.
+The last run's output is cut to its last 4,000 characters, because the end of a run
+is what a failure is at.
+
+**The selected lines win.** If a selection exists, the request carries the selection
+*instead of* the document — six selected lines and **Explain** is a question about
+six lines. The file name stays with it, so an answer can still say "in
+`mandala.logo`".
+
 `Ollama (this machine)` and `LM Studio (this machine)` point at `localhost`: with
 either of those nothing leaves the computer at all, which is the configuration to
 recommend to a classroom with no network policy for sending student work anywhere.
+The panel decides which note to show by looking at the endpoint's host — `localhost`,
+`127.0.0.1`, `::1` or anything ending in `.localhost` — and never by remembering which
+preset was chosen, so a custom endpoint on this machine gets the same sentence.
+
+## What a request looks like
+
+There are two shapes, and the difference is small enough to state in full.
+
+| | OpenAI-compatible | Anthropic Messages |
+| --- | --- | --- |
+| Path | `POST {base}/chat/completions` | `POST {base}/messages` |
+| Authentication | `Authorization: Bearer <key>` | `x-api-key: <key>` and `anthropic-version: 2023-06-01` |
+| The standing instructions | A `system` turn first in `messages` | A top-level `system` field |
+| The answer | `choices[0].message.content` | the `text` parts of `content[]` |
+| Token counts | `usage.prompt_tokens` / `completion_tokens` | `usage.input_tokens` / `output_tokens` |
+
+Both bodies carry `model`, `max_tokens`, `temperature` and `"stream": true`. The
+OpenAI-compatible body also asks for `stream_options.include_usage`, without which a
+streamed answer carries no token counts at all and the panel's `412 in, 96 out` would
+silently become zero.
+
+Four details are worth writing down because each of them is a bug the obvious version
+of this code has:
+
+- **A base URL that already ends in the protocol's path is used as written.** A
+  provider whose documentation hands out `https://host/v1/chat/completions` works,
+  and so does `https://host/v1`; appending `/chat/completions` to the first would
+  produce a 404 nobody can explain. Trailing slashes are removed first, for the same
+  reason.
+- **Anthropic requires turns to alternate and to begin with a user turn.** A
+  conversation with two questions in a row is legal here (the first one may have
+  failed) and a 400 there, so adjacent turns with the same role are joined with a
+  blank line rather than refused.
+- **The numbers are clamped on the way in and out.** The reply ceiling is held to
+  16–32768 tokens, the timeout to 5–600 seconds and the temperature to 0–2, whatever
+  a settings file says. A hand-edited `ai/maxTokens=10` is corrected rather than
+  honoured.
+- **There are no retries and no cache.** One request in flight, one answer or one
+  sentence. Sending again while one is in flight cancels the first: two answers
+  arriving out of order into one transcript is worse than a lost question.
+
+Every answer streams. The panel replaces the partial text as each piece arrives
+rather than logging fragments, so what is on screen while waiting is the answer being
+written; **Stop** ends a half-written one. A service that ignores `stream` and answers
+with one JSON document is read from the bytes it did send, so nothing is lost either
+way. A reply that finishes after it was cancelled is recognised and dropped rather
+than reported as a failed request.
+
+**Insert takes the program out of the answer.** The longest fenced block is what
+goes into the editor; a model that says "here is the fix" and then the code has both,
+and the code is what the button means. When there is no fence at all, the whole reply
+is inserted — which is what a one-line answer wants, and what makes it obvious the
+model did not follow the instruction.
+
+### What the model is told about this Studio
+
+The system prompt is a constant in `native/src/ai/prompt.cpp`, and every sentence in
+it is a mistake the assistant otherwise makes:
+
+- the eleven languages, by name, and that they are interpreters written between 1964
+  and 1980 running natively inside one application;
+- that BASIC, COMAL and FOCAL are numbered lines, PILOT is letter-coded units, and
+  Logo, Scheme, Smalltalk, Forth and CHIP-8 are whole programs;
+- the turtle vocabulary the language guide documents, that heading 0 is north and
+  increases clockwise, and that Logo has no `CIRCLE`, `RECTANGLE` or `POLYGON` —
+  shapes are `REPEAT`;
+- that a CHIP-8 program is assembly for the assembler in this application;
+- that no imports, packages or external libraries exist, so an answer must be one
+  self-contained file;
+- that code comes back in one fenced block labelled with the language key, and that
+  the user's program should not be quoted back unless it is being changed.
+
+`ai_tests` reads the language table and fails if the prompt stops naming a language,
+so a twelfth language cannot be added without the assistant learning about it.
+
+## What it costs, and what it reports
+
+The Studio has no account and bills nothing: the cost is whatever the service you
+chose charges, and a local server charges nothing. What the application does report
+is what it spent, in three places:
+
+- **The status line** under the transcript, after an answer: `✅ deepseek-chat · 412
+  in, 96 out`. The model is the service's own name for what answered, which is not
+  always the one asked for.
+- **A session line** above it once anything has been asked: `This session: 3
+  question(s), 1180 tokens in, 402 out`. A service that sends no usage events leaves
+  the counts at zero, and the line says `token counts not reported` rather than
+  showing three zeros as if they were a measurement.
+- **The Telemetry panel**, as `Assistant asks` and `Assistant tokens` rows, beside the
+  run timings. The counters are for the session: closing the window starts them
+  again, because they describe what this session spent.
+
+A remembered conversation is a file, and it is treated as one: `conversation.json`
+under the data directory's `assistant` leaf, the newest twelve turns, written through
+`QSaveFile` and restricted to its owner, deleted when the tick is removed or when
+**Clear** is pressed. A damaged file is forgotten silently — a learner who never
+opened it does not need an error message about it.
 
 ## Running it from a shell
 
@@ -221,26 +361,56 @@ so `TIME_WARP_AI_API_KEY` and the `TIME_WARP_AI_*` overrides apply there too, an
 request streams through the same client the panel uses -- the handler waits for the
 finished answer, which is what a one-line-in, one-line-out protocol can deliver.
 
+Because the call blocks, it gives up after the configured **Give up after** plus a
+five-second net for a transport that accepts the request and then reports nothing at
+all; the answer then arrives as an `-32000` error with the sentence that explains
+it. A caller that needs a shorter deadline changes the timeout in AI Settings — the
+same stored configuration the handler reads — rather than wrapping the call.
+
 ## When it does not work
 
 Every one of these is shown in the panel's status line and, for a network failure,
-in the conversation as well.
+in the conversation as well. The sentences are the ones the code produces, so this
+table can be read backwards from a screenshot.
+
+**Before anything is sent**
 
 | What you see | What to do |
 | --- | --- |
 | `❌ the assistant is switched off` | Tick **Use the AI assistant** in AI Settings |
-| `❌ no model is named` | Fill in **Model** |
-| `❌ the endpoint must be an http or https address` | The endpoint needs its scheme: `https://api.deepseek.com/v1` |
-| `❌ the key was rejected` | Check the key, and that it belongs to *this* endpoint. A key for one vendor will not work at another's URL |
-| `❌ the endpoint was not found` | The base URL should end at the version path — `https://api.openai.com/v1`, not the whole `/chat/completions` and not the bare domain |
-| `❌ the host could not be found` | The address is wrong, or this machine has no DNS |
-| `❌ the request timed out` | Raise **Give up after**, or the service is busy |
-| `❌ the service is rate-limiting requests` | Wait, or use a smaller model |
-| `❌ the network request failed` | No route to the service: a proxy, a firewall, or a machine that is offline |
-| `❌ the model does not exist` (in the service's words) | The model name has been retired; the settings dialog's **Test connection** is the quickest check |
+| `❌ no endpoint is configured` | Choose a preset, or type the base URL |
+| `❌ the endpoint must be an http or https address` | The endpoint needs its scheme and a host: `https://api.deepseek.com/v1`. A bare host name and a `file:` path are refused here rather than at the socket |
+| `❌ no model is named` | Fill in **Model**, or pick one with **Find models…** |
 
-A local server that answers `❌ the connection was refused` is not running: start
-Ollama or LM Studio, then press **Test connection** again.
+**The service said no**
+
+| What you see | What to do |
+| --- | --- |
+| `❌ the service rejected the request: …` | Usually a field the service does not accept. The words after the colon are the service's own |
+| `❌ the key was rejected — check the key and that it belongs to this endpoint` | A key for one vendor will not work at another vendor's URL, and a key with a stray space is the same thing |
+| `❌ the endpoint was not found — the base URL should end at the version path, such as https://api.openai.com/v1` | The base URL should end at the version path, not at the bare domain and not at the whole `/chat/completions`. A retired model name can also produce this from some services |
+| `❌ the program is too large for this model` | Select the part you are asking about; a selection replaces the document |
+| `❌ the service is rate-limiting requests — wait a moment and try again` | Wait, or use a smaller model |
+| `❌ the service reported an internal error` | The service's fault, not the configuration's. Try again |
+| `❌ the service answered HTTP 418` | Any status without a sentence of its own is reported by number |
+| `❌ the service returned no text` | A successful exchange with an empty answer, such as a refusal. The service's own explanation follows the colon when it sent one |
+| `❌ the service did not answer with JSON` | The endpoint is not the API it was taken for — a proxy's login page, or a web address rather than an API one |
+
+**The request never arrived**
+
+| What you see | What to do |
+| --- | --- |
+| `❌ the connection was refused — is the server running?` | A local server is not running: start Ollama or LM Studio, then press **Test connection** again |
+| `❌ the host could not be found — check the endpoint address` | The address is wrong, or this machine has no DNS |
+| `❌ the request timed out — the service did not answer in time` | Raise **Give up after**, or the service is busy |
+| `❌ the TLS handshake failed — the endpoint's certificate could not be verified` | A corporate proxy or an expired certificate. There is no "ignore the certificate" switch, deliberately |
+| `❌ the proxy refused the connection` | The proxy settings, or the credentials it wants |
+| `❌ the network request failed` | No route to the service: a firewall, or a machine that is offline |
+| `❌ the request was cancelled` | Only when something other than **Stop** ended it — a request that is stopped reports nothing |
+
+A failed request exits `time_warp_ai` with status 1 and the same sentence on
+standard error, so a script does not need to parse the panel to find out what
+happened.
 
 ## Where it is built
 
@@ -262,10 +432,26 @@ feature.
 
 The interesting half is testable without a network: what to ask and how to shape a
 request are pure functions, and the client is given a transport of the test's own.
-`ai_tests` exercises a 200 in each protocol's envelope, a 401 with an error object, a
-body that is not JSON, a refused connection and a cancellation that arrives after
-the button was pressed — every branch an endpoint can take, without an endpoint.
-What a real model *says* is not a property of this program and is not asserted.
+`ai_tests` covers, at the time of writing:
+
+- **configuration** — endpoint validation, path assembly for both protocols, protocol
+  names and their aliases, the DeepSeek preset, what a request needs before it is
+  sent, the settings round trip, where the key lives, the environment beating the
+  file, and a key that appears in an error message being removed;
+- **prompts** — that the system prompt names every language in the table, that
+  `Explain` sends the program exactly once, that a selection replaces the document,
+  that `Fix` and `Diagnose` carry what the run said, that `Write` sends no document,
+  that an oversized program is cut and says so, and how code is taken out of an
+  answer;
+- **the wire** — the OpenAI-compatible body and the Anthropic body, the authentication
+  header each one uses, reading an answer in each envelope, a refusal, the transport
+  failures as sentences, model-list parsing, a hosted endpoint streaming, a service
+  that ignores `stream`, **Stop** ending a hosted answer, and a second send
+  superseding the first.
+
+What a real model *says* is not a property of this program and is not asserted: the
+suite proves the request is well formed and the reply is read, not that the answer is
+good.
 
 ```bash
 cmake --build native/build --target ai_tests
@@ -279,16 +465,11 @@ and the rule that code comes back in one fenced block labelled with the language
 
 ### What it deliberately does not do
 
-- **It streams, and every request streams.** Both shapes send the answer token by
-  token, so the page shows it being written, replacing the partial text as each piece
-  arrives rather than logging fragments, and **Stop** ends an answer that is half
-  written instead of waiting for it. The token counts survive streaming because both
-  protocols carry them inside it -- OpenAI in a final `usage` chunk, Anthropic in
-  `message_start` and `message_delta`. A service that ignores the request to stream
-  and answers with one JSON document is read by the ordinary reader on the bytes it
-  kept, so nothing is lost either way. `timewarp::ai::Client::delta` is what a caller
-  receives while it waits; `ai::is_local_endpoint` is no longer about streaming at all
-  -- it is the privacy question, and the note beside the question box answers it.
+- **It streams, and every request streams** — what that means for a service that
+  ignores the request, for the token counts and for **Stop** is
+  [above](#what-a-request-looks-like). `timewarp::ai::Client::delta` is what a caller
+  receives while it waits; `ai::is_local_endpoint` is not about streaming at all — it
+  is the privacy question, and the note beside the question box answers it.
 - **It does not run what it writes.** Press **Insert**, then **Run** (F9): the
   program reaches the editor first, where you can read it. An answer that executed
   itself would be a language model with a keyboard.

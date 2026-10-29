@@ -1,6 +1,6 @@
 # Examples Catalog
 
-This catalog lists the example programs currently shipped with Time Warp Studio.
+This catalog lists the 82 example programs currently shipped with Time Warp Studio.
 It covers all eleven active languages.
 
 Each language has a **showcase** program — the first row in each section below —
@@ -37,6 +37,7 @@ smaller examples beside them each teach one idea; the showcases are the tour.
 | `basic/maze_generator.bas` | Maze generation and branching |
 | `basic/space_simulation.bas` | Simulation-style loops and state |
 | `basic/statistics.bas` | Basic statistics calculations |
+| `basic/observatory.bas` | Five orbital radii read from DATA and drawn as concentric paths |
 
 ## PILOT
 
@@ -67,6 +68,7 @@ smaller examples beside them each teach one idea; the showcases are the tour.
 | `logo/mandala.logo` | Repeated radial patterns |
 | `logo/spirograph.logo` | Spirograph-style curves |
 | `logo/turtle_3d.logo` | Perspective-inspired turtle drawing |
+| `logo/constellation.logo` | A twelve-ray compass rose built from a reusable turtle procedure |
 
 ## COMAL
 
@@ -128,6 +130,13 @@ so it can be opened, edited and re-assembled. The language is documented in
 | `chip8/font_and_frames.ch8` | A font glyph, a checker pattern and a frame, with a collision |
 | `chip8/hires.ch8` | SuperChip hi-res (128x64): a 16x16 ring, two scrolls and the large FX30 font |
 | `chip8/paint.ch8` | One-pixel paint: move with 2/8/4/6, paint with 5, clear with 0 |
+| `chip8/rewind_lab.ch8` | A three-sprite program with a suggested breakpoint for practising editor rewind |
+| `chip8/pattern_loom.ch8` | A woven lattice drawn with XOR, so every overlap inverts what it covers |
+| `chip8/waveform.ch8` | Sixteen y values read from a table with `LD Vx, [I]` and plotted one pixel at a time |
+| `chip8/collision_lab.ch8` | Draw, erase and overlap: `VF` and the XOR rule that makes CHIP-8 collision |
+| `chip8/font_ledger.ch8` | `LD B, Vx` plus `FX29`: 147 drawn as three digits from the built-in font |
+| `chip8/hires_rings.ch8` | One 16x16 `DXY0` sprite drawn three times on a 128x64 SuperChip screen |
+| `chip8/keypad_probe.ch8` | `FX0A` with a seeded key in the editor and a real keypad in the window |
 
 ## APL
 
@@ -152,6 +161,20 @@ so it can be opened, edited and re-assembled. The language is documented in
 | `forth/showcase.fs` | The stack workshop: the stack words, definitions, control structures, variables and memory, recursion, and three figures in three colours |
 | `forth/hello.fs` | The first program: `.` and `CR`, a recursive `FACT`, a counted loop and `EMIT` |
 | `forth/turtle.fs` | Nested squares, a pentagon and a star, each in its own palette colour |
+
+## HB-1
+
+These three are written for the [HB-1 machine](../docs/hb1/README.md) rather than
+for the IDE: they use the machine's screen memory, its I/O registers and its timer.
+They also run in the IDE, where the same arithmetic lands on the editor's canvas.
+The owner's manual explains [how to run one on the machine](../docs/hb1/README.md#programs-to-run-on-it).
+
+| File | Description |
+| --- | --- |
+| `hb1/tube_writer.bas` | POKEs a message and its colours into the screen cells at `$8000`/`$9000`, reads a cell back with `PEEK`, then frames it with the turtle |
+| `hb1/ram_probe.bas` | Writes a pattern across the 32K below the screen, reads three cells back, and draws one bar per byte |
+| `hb1/frame_clock.bas` | Reads the 60 Hz frame counter at `$A006`/`$A007`, arms `ON TIMER`, and turns the interrupt count into a dial |
+| `hb1/HBWARP.dsk` | The same three programs already saved on an HB DOS volume, ready to copy into `~/.time_warp/disks` |
 
 ## Validation
 

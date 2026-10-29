@@ -2,7 +2,68 @@
 
 <!-- history: all -->
 
-## [23.9.0] - 2026-11-25
+## [24.0.0] - 2026-10-29
+
+CHIP-8 can be walked back. It could already stop: a gutter breakpoint fires before
+the instruction on its listing line, and a step moves one opcode at a time. What it
+could not do was go back, because the pause point was handed no checkpoint and the
+Debug tab's Back buttons stayed dead with a reason that named the language. The
+checkpoint is the machine's whole state, which `Chip8State` already was — the CHIP-8
+window's rewind strip keeps it every quarter second — so this is the same value
+carried to the other surface rather than a second mechanism.
+
+> **24.0.0 is the golden release.** The feature set is frozen here: 24.x takes bug
+> fixes, and the two enhancement pages below are what a later release would build
+> from. The example corpus, the command and REPL matrices, the frozen parity
+> corpora, the curriculum and every documentation gate pass on this tree.
+
+### Added
+
+- **A CHIP-8 checkpoint.** Registers, memory, the stack, `I`, both timers, the RPL
+  flags, halt and key-wait state, the cycle and collision counts, the screen mode,
+  the framebuffer, the run's frame count and the instruction's slot within that
+  frame travel with the program counter, so a rewind puts the instruction back with
+  the registers it was about to read and the timers tick at the same place on replay.
+  It is taken before each instruction, which is the unit a CHIP-8 programmer steps
+  through.
+- **The screen goes back with it.** The restored framebuffer is handed to the
+  display's own painter, which diffs against what is already on the canvas: a pause
+  after a rewind shows the pixels the instruction it returned to was drawn on, and
+  the pixels the run had got to are turned off in the same pass.
+- **A test whose evidence is the drawing.** A CHIP-8 program prints nothing, so the
+  property the other languages' rewind tests assert on the transcript is asserted
+  here on the pixels: `lang_tests` stops a program before its second draw, rewinds
+  past the first one, lets it run to the end, and requires the drawing commands it
+  sent to be identical, in the same order, to those of the run nobody interrupted. A
+  rewind that restored the program counter without the framebuffer or `V0` toggles
+  different pixels and fails the test.
+- **Twelve new programs to run and inspect.** BASIC's `observatory.bas` turns five
+  `DATA` radii into concentric paths; Logo's `constellation.logo` builds a compass
+  rose from one reusable procedure; CHIP-8's `rewind_lab.ch8` is laid out for the
+  editor's breakpoint-and-rewind exercise, with `pattern_loom.ch8`,
+  `waveform.ch8`, `collision_lab.ch8`, `font_ledger.ch8`, `hires_rings.ch8` and
+  `keypad_probe.ch8` beside it, each teaching one part of the instruction set; and
+  three BASIC programs in `Examples/hb1/` are written for the HB-1 itself —
+  `tube_writer.bas` (the screen is memory), `ram_probe.bas` (32K proved with
+  `POKE`/`PEEK`) and `frame_clock.bas` (the frame counter and `ON TIMER`).
+- **Proposals for both machines.** `docs/hb1/enhancements.md` and
+  `docs/chip8/enhancements.md` specify what a later release could add — a tape
+  drive, a monitor and `SYS`, sprites, RAM size, HB DOS 1.1 and autoboot on one
+  side; window breakpoints, an instruction trace, memory watch, state files and a
+  library manifest on the other — each with the test that would prove it.
+
+### Changed
+
+- **The checkpoint is only taken when a history was asked for.** An ordinary Run
+  copies nothing, because there is nowhere for the copy to go; with **History** set,
+  it copies twelve kilobytes per instruction.
+- **The documentation says which languages can be walked back rather than which
+  cannot.** `docs/USER_GUIDE.md`, `docs/API.md` and the CHIP-8 manual name CHIP-8
+  among them, and the roadmap keeps Smalltalk as the one that still pauses without a
+  checkpoint — its heap is an object graph with identity, and copying it is the next
+  release's problem rather than this one's.
+
+## [23.9.0] - 2026-10-29
 
 Forth joins the debugger, and can be walked back. It was the one language that could
 not stop at all: its interpreter loop had no pause point, so a breakpoint set in a
@@ -33,7 +94,7 @@ token and hands over a checkpoint, so Forth is both steppable and rewindable.
   that identity — so it is not a one-release change; CHIP-8's copy is memory plus
   registers and waits until someone debugs a ROM step by step.
 
-## [23.8.0] - 2026-11-18
+## [23.8.0] - 2026-10-29
 
 Logo joins the languages that can be walked back. It runs its own statement loop, so
 the interpreter had no place to record its position — the snapshot machinery only ever
@@ -71,7 +132,7 @@ executor's own checkpoint, records it, and hands a restored one back.
   statement(s)` line marks the seam. Smalltalk, Forth and CHIP-8 are not walkable yet
   and say so, rather than offering a button whose only answer would be "unmoved".
 
-## [23.7.0] - 2026-11-11
+## [23.7.0] - 2026-10-28
 
 The controls. 23.6 made a run able to go back; nothing offered it. This release puts
 the depth and the buttons in the Debug tab, and finishes the engine work the buttons
@@ -108,7 +169,7 @@ needed to be honest.
   anything else is reported rather than passed off as a rewind that happened to land
   where it already was.
 
-## [23.6.0] - 2026-11-04
+## [23.6.0] - 2026-10-28
 
 A run can be walked backwards. The debugger could stop a program and look at it; it could
 not go back to a statement it had already passed and show what was true there. That is

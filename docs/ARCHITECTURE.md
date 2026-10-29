@@ -1,6 +1,6 @@
 # Architecture Guide
 
-## Time Warp Studio v23.9.0 — System Design and Implementation
+## Time Warp Studio v24.0.0 — System Design and Implementation
 
 > **This page describes the shipping product.** It was rewritten alongside the move
 > to C++20 / Qt6. Earlier revisions documented the PySide6 implementation, which has
@@ -848,15 +848,16 @@ function-key layers are all live, and no menu or toolbar entry is a disabled pro
 
 ## Tests and gates
 
-Twenty-one C++ suites run by `ctest`, plus the engine's own pytest suite, three parity
-gates and a command matrix. All of them must stay green, in every build tree.
+Twenty-six C++ suites run by `ctest`, alongside the example, parity, command,
+curriculum and documentation gates. All of them must stay green in every build
+tree.
 
 | Gate | Command | What it protects |
 | --- | --- | --- |
-| C++ suites (23) | `make -C native test` | Lexer, evaluator, Scheme, native languages, canvas queue, canvas bridge, debug, debugger runner, UI layout, UI documents, turtle canvas, syntax highlighter, media, editor services, help browser, CHIP-8 emulator, retro computer, project, SQL, API, audio, lessons, classroom |
+| C++ suites (26) | `make -C native test` | Lexer, evaluator, Scheme, native languages, canvas queue, canvas bridge, debug, debugger runner, UI layout, UI documents, turtle canvas, syntax highlighter, media, editor services, help browser, CHIP-8 emulator, retro computer, project, SQL, API, audio, lessons, classroom, CLI, AI and player |
 | Debug tree | `make -C native test-debug` | Keeps `Q_ASSERT` and standard-library hardening live; a suite green in Release can crash here |
 | Sanitisers | `make -C native asan` | Reads and writes of memory that is no longer valid, which no assertion can see. `ASAN=undefined` for UBSan |
-| Example corpus | `make smoke` | Every `Examples/**` program, through the native engines, including the 30 that must produce ink |
+| Example corpus | `make smoke` | Every `Examples/**` program, through the native engines, including the 48 that must produce ink |
 | Parity gate | `make golden-check` (`time_warp_gates golden`) | The ports against 671 recorded programs: the reference's answers, frozen before it was deleted, plus the Forth ones recorded from the native engine. 0 differences |
 | Lesson curriculum | `make teach-check` (`time_warp_teach validate`) | That every checkpoint's own solution passes, that no starter already passes, and that every language has a lesson |
 | Command matrix | `make command-matrix` (`time_warp_gates commands`) | One row per documented command, through `time_warp_check` and then through the REPL |

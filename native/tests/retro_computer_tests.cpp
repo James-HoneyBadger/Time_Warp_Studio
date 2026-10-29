@@ -92,6 +92,7 @@ int main(int argc, char** argv) {
     test_the_board_survives_a_corrupt_file();
     test_a_machine_survives_a_round_trip_through_a_file();
     test_a_machine_image_refuses_what_it_cannot_read();
+    test_the_shipped_demo_volume_loads();
     test_the_machine_words_save_and_load_an_image();
 
     return tw::test::summary("retro_computer_tests");

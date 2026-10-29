@@ -503,4 +503,128 @@ void test_chip8_display_is_cleared_before_the_first_frame() {
     TW_CHECK_EQ(host.ops.at(3), std::string{"rect -256 128 256 -128 #101014"});
 }
 
+namespace {
+
+std::string join_ops(const std::vector<std::string>& ops) {
+    std::string text;
+    for (const std::string& op : ops) {
+        text += op;
+        text += '\n';
+    }
+    return text;
+}
+
+}  // namespace
+
+// A CHIP-8 run can be walked back too, and the checkpoint is the whole machine:
+// registers, memory, the screen and the frame count all go back with the
+// instruction, so the replayed instructions draw what they drew the first time.
+// The property is the one the other languages are held to, read off the pixels
+// because a CHIP-8 program has no transcript: an interrupted run that rewinds and
+// replays leaves the same drawing as the run nobody touched.
+void test_chip8_run_can_be_walked_back() {
+    std::printf("-- debug: chip8 rewind\n");
+    const std::string source =
+        "start: LD V0, 2\n"       // 1
+        "       LD I, dot\n"      // 2
+        "       DRW V0, V1, 1\n"  // 3, lights x = 2..9
+        "       ADD V0, 1\n"      // 4, V0 = 3
+        "       DRW V0, V1, 1\n"  // 5, xors x = 3..10
+        "       HALT\n"           // 6
+        "dot:   DB 0xFF\n";       // 7
+
+    RecordingHost plain_host;
+    Interpreter plain{Language::Chip8, plain_host};
+    plain.load_program(source);
+    plain.run();
+
+    RecordingHost host;
+    Interpreter interpreter{Language::Chip8, host};
+    timewarp::lang::DebugSession session;
+    session.set_breakpoints({4});  // the listing's fifth line, the second DRW
+    int pauses = 0;
+    int rewound_to = 0;
+    bool was_a_rewind = false;
+    session.on_paused = [&](int line) {
+        ++pauses;
+        if (pauses == 1) {
+            // Back past the first draw, so the rewind has to put the pixels, V0 and
+            // the program counter all back for the replay to land where it did.
+            session.request_rewind(2);
+            return;
+        }
+        if (pauses == 2) {
+            rewound_to = line;
+            was_a_rewind = session.paused_for_rewind();
+        }
+        session.request_continue();
+    };
+    interpreter.set_debug_session(&session);
+    interpreter.set_history(16);
+    interpreter.load_program(source);
+    interpreter.run();
+
+    TW_CHECK_EQ(rewound_to, 3);
+    TW_CHECK(was_a_rewind);
+    // The breakpoint, the instruction the rewind put it back on, and the same
+    // breakpoint again when the replay reaches it.
+    TW_CHECK_EQ(pauses, 3);
+    TW_CHECK_EQ(join_ops(host.ops), join_ops(plain_host.ops));
+}
+
+void test_chip8_rewind_restores_frame_phase() {
+    std::printf("-- debug: chip8 rewind restores frame phase\n");
+    const std::string source =
+        "start: LD V0, 3\n"       // 1
+        "       LD DT, V0\n"      // 2
+        "       ADD V3, 0\n"      // 3
+        "       ADD V3, 0\n"      // 4, rewind target (cycle 3)
+        "       ADD V3, 0\n"      // 5
+        "       ADD V3, 0\n"      // 6
+        "       ADD V3, 0\n"      // 7
+        "       LD V1, DT\n"      // 8, before the first timer tick
+        "       SE V1, 3\n"      // 9
+        "       JP small\n"      // 10, skipped when V1 is still 3
+        "       LD V2, 0xF\n"    // 11
+        "       JP draw\n"       // 12
+        "small: LD V2, 1\n"      // 13
+        "draw:  LD I, dot\n"     // 14
+        "       ADD V3, 0\n"     // 15, leaves the breakpoint on a different frame slot
+        "       DRW V2, V4, 1\n" // 16
+        "       HALT\n"          // 17
+        "dot:   DB 0xFF\n";      // 18
+
+    RecordingHost plain_host;
+    Interpreter plain{Language::Chip8, plain_host};
+    plain.load_program(source);
+    plain.run();
+
+    RecordingHost host;
+    Interpreter interpreter{Language::Chip8, host};
+    timewarp::lang::DebugSession session;
+    session.set_breakpoints({16});
+    int pauses = 0;
+    int rewound_to = 0;
+    session.on_paused = [&](int line) {
+        ++pauses;
+        if (pauses == 1) {
+            // From line 16, eleven opcodes back is line 4, on a different frame slot.
+            session.request_rewind(11);
+            return;
+        }
+        if (pauses == 2) {
+            rewound_to = line;
+        }
+        session.request_continue();
+    };
+    interpreter.set_debug_session(&session);
+    interpreter.set_history(32);
+    interpreter.load_program(source);
+    interpreter.run();
+
+    TW_CHECK_EQ(rewound_to, 4);
+    TW_CHECK_EQ(pauses, 3);
+    TW_CHECK_EQ(join_ops(host.ops), join_ops(plain_host.ops));
+}
+
 }  // namespace tw::lang_tests

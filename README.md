@@ -7,7 +7,7 @@ complete computers inside it.*
 [![Machines](https://img.shields.io/badge/machines-2-purple)](docs/MACHINES.md)
 [![Platforms](https://img.shields.io/badge/platforms-Windows%20%7C%20macOS%20%7C%20Linux-green)](docs/INSTALLATION.md)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/Version-23.9.0-orange)](https://github.com/James-HoneyBadger/Time_Warp_Studio)
+[![Version](https://img.shields.io/badge/Version-24.0.0-orange)](https://github.com/James-HoneyBadger/Time_Warp_Studio)
 
 Time Warp Studio is a desktop programming environment for people who like old
 computers. It is the one the 1980s promised and never quite delivered: a full IDE,
@@ -96,6 +96,18 @@ you had:
   repository.
 
 ---
+
+---
+
+## The golden release
+
+**Version 24.0 is the release this project is finished at.** The eleven languages,
+the IDE, the two machines, the curriculum and every book in this repository are
+complete, and every gate that proves it runs on each push. The feature set is
+frozen: 24.x takes bug fixes, and what a later release could add lives in
+[the HB-1 proposals](docs/hb1/enhancements.md) and
+[the CHIP-8 proposals](docs/chip8/enhancements.md), written down with the proof each
+one would need rather than left as a wish.
 
 ## Install it
 
@@ -262,7 +274,7 @@ See [docs/lessons/](docs/lessons/README.md) for the student and teacher guides.
 
 ### What ships with it
 
-- **63 example programs** across the eleven languages, including a **showcase** per
+- **82 example programs** across the eleven languages, including a **showcase** per
   language that walks its whole surface and ends in a drawing, and
   [`star_patrol.bas`](Examples/basic/star_patrol.bas) — a small game on a
   fixed-coordinate screen. They are worth reading as reference material as much as

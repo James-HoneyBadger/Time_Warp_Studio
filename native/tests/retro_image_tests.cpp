@@ -170,4 +170,32 @@ void test_hb_dos_refuses_bad_names_and_a_full_disk() {
     QFile::remove(image);
 }
 
+// The demo volume that ships in `Examples/hb1` is a disk image like any other, and
+// the point of shipping one is that it loads: `CATALOG` lists the three programs,
+// and a program read from it is the listing in the repository rather than a stub.
+void test_the_shipped_demo_volume_loads() {
+    const QString image = QDir{QStringLiteral(TIME_WARP_TEST_SOURCE_DIR)}
+                              .filePath(QStringLiteral("Examples/hb1/HBWARP.dsk"));
+    TW_CHECK(QFileInfo::exists(image));
+    HbDos dos{image};
+    QString error;
+    TW_CHECK(dos.open(&error));
+    TW_CHECK(error.isEmpty());
+    TW_CHECK_EQ(dos.files().size(), 3);
+
+    for (const QString& name : {QStringLiteral("TUBE WRITER"),
+                                QStringLiteral("RAM PROBE"),
+                                QStringLiteral("FRAME CLOCK")}) {
+        DosFile file;
+        TW_CHECK(dos.read(name, &file, &error));
+        TW_CHECK_EQ(file.language, QStringLiteral("basic"));
+        TW_CHECK(file.source.contains(QStringLiteral("POKE")) ||
+                 file.source.contains(QStringLiteral("ON TIMER")));
+    }
+    // The catalogue the machine prints is the volume's own accounting: three files,
+    // and not more sectors than a 5.25" disk had.
+    TW_CHECK(dos.usedSectors() > 0);
+    TW_CHECK(dos.usedSectors() <= HbDos::kTotalSectors);
+}
+
 }  // namespace tw::retro

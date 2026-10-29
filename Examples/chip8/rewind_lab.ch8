@@ -1,0 +1,41 @@
+; REWIND LAB
+; In the editor, set History to 100 and a breakpoint on the second DRW
+; (line 12). Run, then use Back three times to revisit the first sprite.
+; Continue to compare the replay with the uninterrupted run.
+
+start:  LD V0, 4
+        LD V1, 8
+        LD I, first
+        DRW V0, V1, 8
+        ADD V0, 8
+        LD I, second
+        DRW V0, V1, 8
+        ADD V0, 8
+        LD I, third
+        DRW V0, V1, 8
+        HALT
+
+first:  DB 0x18
+        DB 0x3C
+        DB 0x7E
+        DB 0xDB
+        DB 0xFF
+        DB 0x24
+        DB 0x5A
+        DB 0xA5
+second: DB 0x3C
+        DB 0x42
+        DB 0x99
+        DB 0xA5
+        DB 0x81
+        DB 0xA5
+        DB 0x42
+        DB 0x3C
+third:  DB 0x10
+        DB 0x38
+        DB 0x7C
+        DB 0xFE
+        DB 0x7C
+        DB 0x38
+        DB 0x10
+        DB 0x00

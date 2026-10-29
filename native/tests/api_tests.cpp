@@ -636,6 +636,34 @@ void test_debug_sessions() {
     // The print that had already happened is gone with the state that made it.
     TW_CHECK(logo_rewound.value(QStringLiteral("output")).toString().isEmpty());
 
+    // CHIP-8 hands over the whole machine rather than a transcript, so the same
+    // request moves a run back to an earlier instruction -- the line is the
+    // listing's, and the registers and pixels come with the counter.
+    QJsonObject chip8;
+    chip8.insert(QStringLiteral("language"), QStringLiteral("chip8"));
+    chip8.insert(QStringLiteral("source"),
+                 QStringLiteral("start: LD V0, 2\n"
+                                "       LD I, dot\n"
+                                "       DRW V0, V1, 1\n"
+                                "       ADD V0, 1\n"
+                                "       DRW V0, V1, 1\n"
+                                "       HALT\n"
+                                "dot:   DB 0xFF\n"));
+    chip8.insert(QStringLiteral("breakpoints"), QJsonArray{5});
+    chip8.insert(QStringLiteral("history"), 8);
+    const QJsonObject chip8_pause =
+        resultOf(server, QStringLiteral("debug.start"), chip8).toObject();
+    TW_CHECK_EQ(chip8_pause.value(QStringLiteral("line")).toInt(), 5);
+    QJsonObject chip8_back;
+    chip8_back.insert(QStringLiteral("session"),
+                      chip8_pause.value(QStringLiteral("session")).toString());
+    chip8_back.insert(QStringLiteral("steps"), 2);
+    const QJsonObject chip8_rewound =
+        resultOf(server, QStringLiteral("debug.rewind"), chip8_back).toObject();
+    TW_CHECK_EQ(chip8_rewound.value(QStringLiteral("reason")).toString(),
+                QStringLiteral("rewind"));
+    TW_CHECK_EQ(chip8_rewound.value(QStringLiteral("line")).toInt(), 3);
+
     // A session asked for none keeps none, and says so rather than looking unchanged.
     QJsonObject no_history;
     no_history.insert(QStringLiteral("session"), session);

@@ -18,6 +18,7 @@
 #include "timewarp/lang/turtle_host.hpp"
 
 #include <algorithm>
+#include <any>
 #include <cctype>
 #include <charconv>
 #include <cstdint>
@@ -1097,6 +1098,21 @@ void Chip8Machine::tick_timers() {
     }
 }
 
+namespace {
+
+// What a rewind puts back: the whole machine, which `Chip8State` already is
+// (`save_state`'s comment says why CHIP-8 can afford this), plus the frame count
+// the run's own limits are measured in. The source position needs no field of its
+// own -- the program counter is in the state, and the listing line is looked up
+// from it at the next pause.
+struct Chip8Checkpoint {
+    Chip8State machine;
+    int frames = 0;
+    int cycle = 0;
+};
+
+}  // namespace
+
 std::string execute_chip8(Interpreter& interpreter, std::string_view source, TurtleHost& turtle) {
     Chip8Program program;
     try {
@@ -1128,8 +1144,32 @@ std::string execute_chip8(Interpreter& interpreter, std::string_view source, Tur
                 // boundary, which is the machine's own unit of visible change.
                 const auto found = source_lines.find(machine.pc);
                 const int line = found != source_lines.end() ? found->second : 0;
-                if (!interpreter.pause_if_requested(line)) {
+                // The checkpoint is a copy of the whole machine, which is what
+                // makes this run walkable back; it is only taken when a history
+                // was asked for, because an ordinary run has nowhere to put it.
+                const Interpreter::WholeProgramStep step =
+                    interpreter.historyDepth() > 0
+                        ? interpreter.whole_program_pause(
+                              line, Chip8Checkpoint{machine.save_state(), frames, cycle})
+                        : interpreter.whole_program_pause(line, std::any{});
+                if (!step.go_on) {
                     return {};
+                }
+                if (step.restored.has_value()) {
+                    const Chip8Checkpoint& back =
+                        std::any_cast<const Chip8Checkpoint&>(*step.restored);
+                    machine.restore_state(back.machine);
+                    frames = back.frames;
+                    // The loop increment below must land on the restored slot,
+                    // so the timer tick remains aligned with the instruction.
+                    cycle = back.cycle - 1;
+                    // The screen belongs to the machine, so it goes back with it:
+                    // a pause after a rewind shows the pixels the instruction it
+                    // returned to was drawn on. `paint` diffs against what is
+                    // already displayed, so this is the change and not a repaint.
+                    display.paint(machine.framebuffer(), machine.screen_width(),
+                                  machine.screen_height());
+                    continue;
                 }
                 machine.step();
             }

@@ -80,6 +80,8 @@ int main() {
     test_chip8_binary_rom_respects_memory();
     test_chip8_display_uses_the_palette();
     test_chip8_display_is_cleared_before_the_first_frame();
+    test_chip8_run_can_be_walked_back();
+    test_chip8_rewind_restores_frame_phase();
     test_focal_type_prints_text_and_expressions();
     test_focal_set_then_read_back();
     test_focal_format_directive_sets_decimal_places();

@@ -16,6 +16,27 @@ derived rather than remembered.
 
 ---
 
+## 24.0 is the golden release
+
+Version 24.0 is the release this project is finished at: the eleven languages, the
+IDE, the two machines, the curriculum and the documentation set are complete, and
+the gates in [README_TESTING.md](README_TESTING.md) prove it on every push. The
+feature set is **frozen** — nothing below is a promise to change the product, and a
+bug fix is the only change 24.x takes.
+
+What comes after is written down rather than wished for:
+
+| For | Proposal |
+| --- | --- |
+| The HB-1 | [hb1/enhancements.md](hb1/enhancements.md) — a tape drive, a monitor and `SYS`, programmable function keys, sprites, RAM size, HB DOS 1.1, autoboot |
+| The CHIP-8 | [chip8/enhancements.md](chip8/enhancements.md) — breakpoints in the window, an instruction trace, memory watch, state files, a library manifest, the rest of the SuperChip subset |
+
+Each proposal states what it is, why the machine wants it in period terms, and what
+would count as proof, so a later release has a specification to build to instead of
+a memory of a conversation.
+
+---
+
 ## Working today
 
 | Area | State |
@@ -31,18 +52,18 @@ derived rather than remembered.
 | Input | A program can ask for a line and wait for it — `INPUT`, FOCAL's `ASK`, PILOT's `ACCEPT`, REXX's `PULL` — on whichever engine runs it; BASIC's round trip is asserted on the engine, on `NativeRunner`, and through the API |
 | HB-1 machine | Tools > HB-1 Computer (`Ctrl+Alt+W`): one CRT with a boot intro, a language ROM socket for all eleven languages, TEXT/SPLIT/GRAPHICS modes, a program editor, a turtle canvas, and a prompt with BASIC direct mode; CONFIG (`Ctrl+,`) sets the boot ROM and screen, start-up message, phosphor palette, text sizes and CRT glass; each ROM's program, the ROM, the screen mode and the configuration persist; HB DOS 1.0 stores programs on a 512-sector volume with an Apple DOS-style catalogue, lock bits and a two-step INIT. Manuals: [the machines](MACHINES.md), [HB-1](hb1/README.md) |
 | CHIP-8 machine | Tools > CHIP-8 Emulator (`Ctrl+Shift+M`): a live 60 Hz CHIP-8 with a 64×32 screen (128×64 hi-res), keypad, Run/Pause/Step/Reset, 1–2000 opcodes per frame, register/memory/listing inspector, sound, and a ROM library the user points at a folder. It assembles listings and loads binary ROMs; the editor's CHIP-8 Run is the whole-program path. Manuals: [machine](chip8/README.md), [assembler](chip8/assembly.md), [instruction set](chip8/instruction-set.md) |
-| Languages | 11 languages, 63 verified example programs |
+| Languages | 11 languages, 82 example programs, three of them written for the HB-1 |
 | Native engines | Expression evaluator (`timewarp_expr`) and Scheme (`timewarp_scheme`) |
 | Bridged engines | None. Every language runs in process, nothing the product runs starts Python, and the reference engine itself is deleted — the parity gate compares against a frozen corpus instead |
 | Native executors | All eleven — BASIC, FOCAL, PILOT, COMAL, APL and REXX line-by-line; CHIP-8, Logo, Smalltalk, Scheme and Forth whole-program |
 | Printing | File > Print Code (Ctrl+P) and Print Drawing, through the optional Qt6 PrintSupport |
 | Profiling | View > Profile Run times every statement in the line-by-line languages and ends with a per-line report, longest first |
 | Terminal | Opt-in in Settings > Workspace: an embedded shell in the document's folder, absent in presentation and player modes |
-| Debugging | Breakpoints, Pause, Continue and Trace in all eleven languages; Scheme adds a stack and frame bindings, and Smalltalk reports its own message-send chain; watch expressions and data breakpoints in the Debug panel |
+| Debugging | Breakpoints, Pause, Continue and Trace in all eleven languages; a run can be walked back in every language but Smalltalk, whose heap is an object graph, and Scheme, whose state is an arena; Scheme adds a stack and frame bindings, and Smalltalk reports its own message-send chain; watch expressions and data breakpoints in the Debug panel |
 | Database | A SQLite-backed Database tab, the shared `SQL` statement in nine languages, scripts, tables and schema; compiled programs link SQLite |
 | Automation | JSON-RPC over stdin/stdout (`language.run`, `repl.*`, `debug.*`, `sql.*`, `project.*`, `watch.evaluate`) and the `twc` terminal compiler |
 | Packaging | `make install`; tagged releases build a Windows installer and portable ZIP (Qt 6), a second Windows installer for Windows 7 (Qt 5.15), a universal macOS disk image, `.deb`, `.rpm`, AppImage, tarball and container artifacts |
-| Quality gates | 26 CTest suites in 4 build configurations and on four platforms (Linux, Windows, Windows with Qt 5.15, macOS); the frozen-corpus gate over 671 programs (479 language, 192 Scheme); 566 command rows run as programs and through the REPL; 69 example programs through the smoke gate; and the documentation gates (links, claims, version, Markdown lint) |
+| Quality gates | 26 CTest suites in 4 build configurations and on four platforms (Linux, Windows, Windows with Qt 5.15, macOS); the frozen-corpus gate over 671 programs (479 language, 192 Scheme); 566 command rows run as programs and through the REPL; 81 example programs through the smoke gate; and the documentation gates (links, claims, version, Markdown lint) |
 
 ---
 
@@ -463,6 +484,7 @@ measuring the wrong machine.
 | 23.7 ✓ | And a person can press it: the Debug tab's **History** depth decides how much a run remembers, **Back** and **Back 10** walk the pause back through it, and both are live exactly when they can move — never at the oldest statement, never for Scheme, which says why. The engine goes as far back as it kept instead of refusing, and never forward, and the panel asks the engine how far back that is before it offers the button |
 | 23.8 ✓ | A language that runs its own loop can be walked back too: the whole-program pause point takes the executor's checkpoint, records it and returns a restored one to adopt, so Logo keeps its position, procedures, words, pen, pose and generator in a snapshot and a rewind puts the run back on an earlier statement. The API's transcript rolls back with it, and the console marks where a re-run begins |
 | 23.9 ✓ | Forth joins the debugger: a pause before each token, with the position, both stacks, the dictionary, the compile state and the text printed so far travelling in a checkpoint — and the 64K data space copied only when a program has actually written to it. A `.fs` breakpoint can fire for the first time, and the run can be walked back through it |
+| 24.0 ✓ | CHIP-8 can be walked back too: the checkpoint is the machine's whole state — registers, memory, timers, RPL flags, the frame count, the instruction's slot within the frame and the framebuffer — taken before each instruction and only when a history was asked for, and a rewind repaints the restored screen so the pause shows the pixels the instruction it returned to was drawn on. The test is the drawing rather than a transcript, because a CHIP-8 program prints nothing: an interrupted run that rewinds and replays leaves the same pixels, in the same order, as the run nobody touched |
 
 Smaller items belong in one of those releases rather than a release of their own:
 Flatpak, Snap and an arm64 AppImage, and the distribution work described under
@@ -537,9 +559,13 @@ know.
 at all, so a breakpoint in a `.fs` file could never fire. A token is now the unit,
 the checkpoint carries both stacks, the dictionary, the compile state and the text
 printed so far, and the 64K data space is copied only when a program has written
-to it. Smalltalk and CHIP-8 are the two still out: Smalltalk's heap is an object
-graph with identity, which a rewind would have to copy without losing, and CHIP-8
-waits until someone debugs a ROM step by step.
+to it. **CHIP-8 followed in 24.0**: the machine already had one value for its whole
+state, so the checkpoint is that value — registers, memory, timers, the frame count,
+the instruction's slot within the frame and the framebuffer — taken before each
+instruction and only when a history was asked for, and a rewind repaints the
+restored screen so the pause shows the pixels the instruction it returned to was
+drawn on. Smalltalk is the one still out: its heap is an object graph with identity,
+which a rewind would have to copy without losing.
 
 **Logo joined them (23.8), and the mechanism is the general one.** A whole-program
 executor keeps its own statement loop, so the interpreter had nowhere to record a
@@ -547,9 +573,9 @@ position; the pause point those executors already called now takes the executor'
 checkpoint, records it, and hands a restored one back to adopt. Logo's checkpoint
 is its position, its procedures, words, lists, pen, pose and seeded generator, and
 a test stops a four-statement program, rewinds two statements, and finds the
-earlier statement with `A` at 1 and no output at all. Smalltalk, Forth and CHIP-8
-have the same pause point and no checkpoint yet, so they say so instead of
-offering the button; Scheme is out for a reason of its own, written down.
+earlier statement with `A` at 1 and no output at all. Smalltalk has the same pause
+point and no checkpoint yet, so it says so instead of offering the button; Scheme is
+out for a reason of its own, written down.
 
 **Variables and the Telemetry HUD** are built too, and both answer the question a
 placeholder could not: *what did that run actually do?* The **Variables** tab lists every

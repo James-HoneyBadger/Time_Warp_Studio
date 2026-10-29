@@ -26,6 +26,8 @@ This page is the map.
 | [chip8/README.md](chip8/README.md) | **CHIP-8 Machine Manual** — the two ways to run, the window, keys, debugging, sound, limits |
 | [chip8/assembly.md](chip8/assembly.md) | The assembler: listings, labels, directives, errors, worked programs |
 | [chip8/instruction-set.md](chip8/instruction-set.md) | Every opcode as implemented, the 1977 quirks, timing, a full disassembly |
+| [hb1/enhancements.md](hb1/enhancements.md) | Proposals for the HB-1 after the 24.0 golden release: a tape drive, a monitor, sprites, DOS 1.1 |
+| [chip8/enhancements.md](chip8/enhancements.md) | Proposals for the CHIP-8 after the 24.0 golden release: breakpoints in the window, a trace, state files, a library manifest |
 
 ---
 
@@ -93,9 +95,9 @@ One per active language, each written to be worked through:
 ## A note on removed documentation
 
 Time Warp Studio was previously implemented in Python with PySide6. That
-application has been removed: the Qt application is the product, and the Python
-that remains is the reference engine the parity gates, the command matrix and the
-lesson check run in; every language runs in C++.
+application and the Python reference engine have both been removed: the Qt
+application is the product, every language runs in C++, and parity uses a frozen
+corpus of recorded answers.
 
 Documentation describing that application's interface — its old user guide,
 progressive how-to guides, shortcut reference, debugger guide and troubleshooting
