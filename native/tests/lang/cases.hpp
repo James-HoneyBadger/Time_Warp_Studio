@@ -145,6 +145,7 @@ void test_basic_gradients_reach_the_host();
 void test_logo_unknown_command_is_reported_with_the_statement_number();
 void test_logo_heading_starts_north_and_turns_clockwise();
 void test_turtle_pose_matches_the_reference_in_three_dimensions();
+void test_logo_run_can_be_walked_back();
 void test_mersenne_random_matches_the_recorded_sequence();
 void test_apl_iota_and_reshape();
 void test_apl_scalar_functions_are_pervasive();

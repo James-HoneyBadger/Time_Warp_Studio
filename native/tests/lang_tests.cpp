@@ -151,6 +151,7 @@ int main() {
     test_logo_unknown_command_is_reported_with_the_statement_number();
     test_logo_heading_starts_north_and_turns_clockwise();
     test_turtle_pose_matches_the_reference_in_three_dimensions();
+    test_logo_run_can_be_walked_back();
     test_mersenne_random_matches_the_recorded_sequence();
     test_apl_iota_and_reshape();
     test_apl_scalar_functions_are_pervasive();

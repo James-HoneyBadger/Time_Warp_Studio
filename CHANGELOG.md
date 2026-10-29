@@ -2,6 +2,44 @@
 
 <!-- history: all -->
 
+## [23.8.0] - 2026-11-18
+
+Logo joins the languages that can be walked back. It runs its own statement loop, so
+the interpreter had no place to record its position — the snapshot machinery only ever
+reached the six line-by-line languages. The fix is not a second mechanism but a
+generic one: the pause point a whole-program executor already calls now takes the
+executor's own checkpoint, records it, and hands a restored one back.
+
+### Added
+
+- **`Interpreter::whole_program_pause(line, checkpoint)`**, replacing the whole-program
+  use of `pause_if_requested`. It publishes the checkpoint as the run's own state,
+  records a snapshot when a history was asked for, pauses as before, and — if a rewind
+  was requested — applies it and answers with the checkpoint the executor must adopt.
+  A language that passes an empty checkpoint is never walked back and records nothing,
+  because there would be no position to put it back on.
+- **Logo's checkpoint.** `LogoMachine` carries its position in `pc_` and captures the
+  rest of the run — procedures and their parameters, words, lists, the last `OUTPUT`,
+  the pen, the turtle's pose and the seeded generator — so a rewind puts the run back
+  on an earlier statement with the state that statement had. `run()` resumes from `pc_`
+  instead of starting over.
+- **A test that the property holds for Logo over both surfaces**: `lang_tests` stops a
+  four-statement program at `PRINT :A`, rewinds two statements, and finds the earlier
+  statement with `A` at 1 and no output at all, then runs on to the transcript it had;
+  `api_tests` does the same over JSON-RPC and checks that the session's own transcript
+  rolls back with it.
+
+### Changed
+
+- **The API's `output` rolls back with a rewind.** The session kept its copy of the
+  stream, so a client read the lines the run had already printed and then read them
+  again as the statements re-ran. The engine's transcript is the one that goes back, so
+  the session's now follows it.
+- **The console says where a repeat begins.** It is a transcript of the session rather
+  than of the run, so a rewind makes statements print a second time; an `ℹ️ Back N
+  statement(s)` line marks the seam. Smalltalk, Forth and CHIP-8 are not walkable yet
+  and say so, rather than offering a button whose only answer would be "unmoved".
+
 ## [23.7.0] - 2026-11-11
 
 The controls. 23.6 made a run able to go back; nothing offered it. This release puts

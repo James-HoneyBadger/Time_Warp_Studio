@@ -772,21 +772,64 @@ std::string LogoMachine::resolve_colour_argument(
 
 // -- the run ---------------------------------------------------------------
 
-void LogoMachine::run(std::string_view source) {
-    std::mt19937_64 seeder{std::random_device{}()};
-    random_.seed_unsigned(seeder());
-    load(source);
+LogoMachine::Checkpoint LogoMachine::capture() const {
+    Checkpoint state;
+    state.pc = pc_;
+    state.procedures = procedures_;
+    state.procedure_params = procedure_params_;
+    state.words = words_;
+    state.lists = lists_;
+    state.last_output = last_output_;
+    state.pen_mode = pen_mode_;
+    state.font_size = font_size_;
+    state.pen_width = pen_width_;
+    state.pen_down = pen_down_;
+    state.pose = pose_;
+    state.random = random_;
+    return state;
+}
 
-    for (std::size_t index = 0; index < statements_.size(); ++index) {
-        // The debugger's pause point. A whole statement is the unit: the loader
-        // joins bracketed lines into one, and a procedure call is one statement
-        // whose body runs commands that have no line of their own.
-        if (!interpreter_.pause_if_requested(statement_source_lines_[index])) {
+void LogoMachine::apply(const Checkpoint& state) {
+    pc_ = state.pc;
+    procedures_ = state.procedures;
+    procedure_params_ = state.procedure_params;
+    words_ = state.words;
+    lists_ = state.lists;
+    last_output_ = state.last_output;
+    pen_mode_ = state.pen_mode;
+    font_size_ = state.font_size;
+    pen_width_ = state.pen_width;
+    pen_down_ = state.pen_down;
+    pose_ = state.pose;
+    random_ = state.random;
+}
+
+void LogoMachine::run(std::string_view source) {
+    if (statements_.empty()) {
+        std::mt19937_64 seeder{std::random_device{}()};
+        random_.seed_unsigned(seeder());
+        load(source);
+    }
+
+    while (pc_ < statements_.size()) {
+        // The debugger's pause point, and where a Logo run hands its position over:
+        // a whole statement is the unit, because the loader joins bracketed lines
+        // into one and a procedure call is one statement whose body runs commands
+        // with no line of their own. A rewind comes back as a checkpoint to adopt,
+        // which is how the run finds itself on an earlier statement.
+        const Interpreter::WholeProgramStep step =
+            interpreter_.whole_program_pause(statement_source_lines_[pc_], capture());
+        if (!step.go_on) {
             // Break rather than return: the words this run created are still
             // facts about it, and the Variables panel reads them after a stop.
             interpreter_.running = false;
             break;
         }
+        if (step.restored.has_value()) {
+            apply(std::any_cast<const Checkpoint&>(*step.restored));
+            continue;
+        }
+        const std::size_t index = pc_;
         try {
             tick();
         } catch (const BudgetStop&) {
@@ -805,6 +848,7 @@ void LogoMachine::run(std::string_view source) {
         if (!interpreter_.running) {
             break;
         }
+        ++pc_;
     }
 
     // The reference keeps its words in a second store that the Variables panel

@@ -155,6 +155,30 @@ public:
     /// returns its output and the run ends cleanly.
     [[nodiscard]] bool pause_if_requested(int line);
 
+    /// What a whole-program executor's pause point answers.
+    struct WholeProgramStep {
+        /// False when the session asked for the run to stop.
+        bool go_on = true;
+        /// Set when a rewind has been applied and the executor must adopt this
+        /// checkpoint -- its own program position included -- before it goes on.
+        /// The executor casts it back to the type it passed in.
+        std::optional<std::any> restored;
+    };
+
+    /// The pause point for an executor that can be walked back.
+    ///
+    /// `checkpoint` is that executor's own position and scratch state, which is
+    /// what a snapshot of a whole-program language has to carry: the statement
+    /// loop that records one for the line-by-line languages belongs to the
+    /// interpreter, and a language that runs its own loop has to hand its position
+    /// over here. Nothing is copied when no history was asked for.
+    ///
+    /// A rewind is applied inside this call and answered in `restored`; an
+    /// executor that passes an empty checkpoint is never walked back, because
+    /// there would be no position to put it back on.
+    [[nodiscard]] WholeProgramStep whole_program_pause(int line,
+                                                       const std::any& checkpoint);
+
     /// Supplies the running program's call chain while it is stopped.
     ///
     /// Set by an executor that keeps one. It is called on the interpreter's
@@ -515,6 +539,9 @@ public:
 private:
     void reset();
     void parse_lines(std::string_view source);
+    /// Records the state before a statement, when a caller asked for history.
+    /// Shared by the line loop and `whole_program_pause`.
+    void capture_history();
     /// Pauses when a watched variable changed since the last statement. Returns
     /// false when the user stopped the run instead of continuing.
     [[nodiscard]] bool check_data_breakpoints(int line);

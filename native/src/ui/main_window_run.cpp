@@ -944,8 +944,9 @@ void MainWindow::runNatively(CodeEditor* editor, timewarp::lang::Language langua
             const bool rewindable = runner->canRewind();
             debug_panel_->setRewindAvailable(
                 rewindable,
-                rewindable ? QString{}
-                           : tr("Start the run with History to walk it back"));
+                rewindable
+                    ? QString{}
+                    : tr("History is off, or this language cannot be walked back yet"));
         }
         QList<timewarp::ui::VariableRow> rows;
         for (const NativeRunner::VariableRow& row : runner->variables()) {

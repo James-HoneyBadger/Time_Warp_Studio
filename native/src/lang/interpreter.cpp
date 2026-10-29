@@ -393,16 +393,7 @@ void Interpreter::run() {
         // statements and only when a caller asked for history: a run with no interest
         // in going back copies nothing.
         if (history_depth_ > 0 && iterations % history_interval_ == 0) {
-            if (suppress_history_capture_) {
-                // The run was put back on this statement by a rewind, so a copy of
-                // it is already in the history.
-                suppress_history_capture_ = false;
-            } else {
-                history_.push_back(snapshot());
-                if (history_.size() > history_depth_) {
-                    history_.erase(history_.begin());
-                }
-            }
+            capture_history();
         }
         if (tracing_) {
             log_output("[" + std::to_string(traced_line) + "]");
@@ -816,13 +807,64 @@ double Interpreter::elapsed_ms() const noexcept {
 }
 
 bool Interpreter::pause_if_requested(int line) {
+    // No checkpoint means the executor has not learned to hand its position over,
+    // so there is nothing a rewind could put back; `whole_program_pause` says so
+    // rather than moving a run whose inside it cannot reach.
+    return whole_program_pause(line, std::any{}).go_on;
+}
+
+Interpreter::WholeProgramStep Interpreter::whole_program_pause(int line,
+                                                              const std::any& checkpoint) {
     if (debug_ == nullptr) {
-        return true;
+        return {};
     }
-    if (!check_data_breakpoints(line)) {
-        return false;
+    // The executor's position travels with the snapshot, and the snapshot itself is
+    // recorded here: a whole-program language has no loop of the interpreter's to
+    // do either. Once per visit, not once per re-pause below.
+    // Only an executor that can hand its position over is worth recording: an empty
+    // checkpoint would fill the history with states nothing could put back, and the
+    // panel would offer a button whose only possible answer is "unmoved".
+    if (history_depth_ > 0 && checkpoint.has_value()) {
+        executor_state_ = checkpoint;
+        capture_history();
     }
-    return debug_->note_source_line(line);
+    for (;;) {
+        if (!check_data_breakpoints(line)) {
+            return {false, std::nullopt};
+        }
+        if (!debug_->note_source_line(line)) {
+            return {false, std::nullopt};
+        }
+        const std::optional<std::size_t> back = debug_->take_rewind();
+        if (!back.has_value()) {
+            return {};
+        }
+        if (checkpoint.has_value() && rewind(*back).has_value()) {
+            debug_->mark_rewound();
+            // The pause that follows lands on the statement the rewind chose.
+            debug_->request_step();
+            return {true, executor_state_};
+        }
+        // Nothing earlier to go to: pause again at this statement rather than
+        // letting the run go on, which is what "go back" must never do.
+        debug_->request_step();
+    }
+}
+
+void Interpreter::capture_history() {
+    if (history_depth_ == 0) {
+        return;
+    }
+    if (suppress_history_capture_) {
+        // The run was put back on this statement by a rewind, so a copy of it is
+        // already in the history.
+        suppress_history_capture_ = false;
+        return;
+    }
+    history_.push_back(snapshot());
+    if (history_.size() > history_depth_) {
+        history_.erase(history_.begin());
+    }
 }
 
 std::vector<LineProfile> Interpreter::line_profiles() const {

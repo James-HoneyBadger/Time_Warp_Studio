@@ -461,6 +461,7 @@ measuring the wrong machine.
 | 23.5 ✓ | The debt before a claim: Forth joins the parity corpus (three programs recorded from this engine by `golden --record`, because no reference run exists) and the console gains the line links, error filter and save that this page had already been claiming; the editor gains several carets; and `time_warp_docs claims` reads `native/share/unbuilt.txt` so a page that calls a shipped feature missing fails a gate instead of standing |
 | 23.6 ✓ | A run can be walked backwards: `Interpreter::snapshot()`/`restore()` copy a statement's position, bindings, output and the language's own scratch state, `set_history` keeps the last N of them and `rewind` goes back through them; `debug.start` takes `history` and `debug.rewind` returns to a statement with the bindings and output it had. The test is the property a person would check: go back, run on, and the transcript is what it was |
 | 23.7 ✓ | And a person can press it: the Debug tab's **History** depth decides how much a run remembers, **Back** and **Back 10** walk the pause back through it, and both are live exactly when they can move — never at the oldest statement, never for Scheme, which says why. The engine goes as far back as it kept instead of refusing, and never forward, and the panel asks the engine how far back that is before it offers the button |
+| 23.8 ✓ | A language that runs its own loop can be walked back too: the whole-program pause point takes the executor's checkpoint, records it and returns a restored one to adopt, so Logo keeps its position, procedures, words, pen, pose and generator in a snapshot and a rewind puts the run back on an earlier statement. The API's transcript rolls back with it, and the console marks where a re-run begins |
 
 Smaller items belong in one of those releases rather than a release of their own:
 Flatpak, Snap and an arm64 AppImage, and the distribution work described under
@@ -527,8 +528,17 @@ they can act: not off, not at the oldest statement the run remembers, and not
 Scheme, which is offered nothing rather than a control that cannot move. A
 snapshot taken for a statement is not taken twice when a rewind puts the run back
 on it, which is what makes "there is nothing further back" a thing the panel can
-know. Logo and Forth join in 23.8 with snapshots of their own interpreter state,
-and Smalltalk and Scheme stay out with the reason written down.
+know.
+
+**Logo joined them (23.8), and the mechanism is the general one.** A whole-program
+executor keeps its own statement loop, so the interpreter had nowhere to record a
+position; the pause point those executors already called now takes the executor's
+checkpoint, records it, and hands a restored one back to adopt. Logo's checkpoint
+is its position, its procedures, words, lists, pen, pose and seeded generator, and
+a test stops a four-statement program, rewinds two statements, and finds the
+earlier statement with `A` at 1 and no output at all. Smalltalk, Forth and CHIP-8
+have the same pause point and no checkpoint yet, so they say so instead of
+offering the button; Scheme is out for a reason of its own, written down.
 
 **Variables and the Telemetry HUD** are built too, and both answer the question a
 placeholder could not: *what did that run actually do?* The **Variables** tab lists every

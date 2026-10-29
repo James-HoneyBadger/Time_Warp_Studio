@@ -461,9 +461,15 @@ What a rewind does and does not undo: the bindings, the printed output and the
 language's own scratch state go back with the statement, so carrying on from there
 is running the program from there and not a replay. The canvas keeps the ink it
 has already been given — the drawing half of going back is the canvas scrubber,
-which steps through the display list — and Scheme is not offered it at all,
-because that machine's state is an arena and a continuation chain rather than a
-value. History costs one copy per statement while it is on; off costs nothing.
+which steps through the display list. Because the console records the session
+rather than the run, statements that are re-run print a second time; an `ℹ️ Back 1
+statement(s)` line marks where the repeat starts.
+
+Which languages: all six line-by-line ones (BASIC, FOCAL, PILOT, COMAL, APL, REXX)
+and Logo. Smalltalk, Forth and CHIP-8 stop at their boundaries but cannot be walked
+back yet, so the buttons are dead for them and say why; Scheme is not offered it at
+all, because that machine's state is an arena and a continuation chain rather than
+a value. History costs one copy per statement while it is on; off costs nothing.
 
 ### Watch expressions
 

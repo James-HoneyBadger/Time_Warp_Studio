@@ -254,10 +254,17 @@ needs a session started with `history`: without one, or when the run is already 
 the oldest statement it kept, the answer carries `"unmoved": true` and an `error`
 saying so, rather than looking like a rewind that happened to land where the run
 already was. What is *not* rewound is stated rather than implied — the canvas keeps the ink it was
-given (the IDE's scrubber steps back through it), an open file stays open at its
-offset, and a scheme program cannot be rewound at all, because its state is an
-arena and a continuation chain rather than a value: `Scheme` answers with an
-error and does not move. Each request blocks until the run pauses or
+given (the IDE's scrubber steps back through it), and an open file stays open at
+its offset. `output` *is* rolled back with the state, so a client that keeps the
+transcript it was given and the one it gets after a rewind agree.
+
+Which languages can be walked back: the six line-by-line ones and Logo, whose
+executor hands its position (`pc`, procedures, words, lists, pen, pose and seeded
+generator) to the whole-program pause point with every statement. Smalltalk, Forth
+and CHIP-8 pause at their boundaries but have no checkpoint yet, so `history` keeps
+nothing for them and `debug.rewind` answers `unmoved`. A Scheme program cannot be
+rewound at all, because its state is an arena and a continuation chain rather than
+a value: `Scheme` answers with an error and does not move. Each request blocks until the run pauses or
 finishes, and a `state` of `timeout` means the engine was still running after
 15 seconds (the engine's own 10-second budget usually ends it first).
 

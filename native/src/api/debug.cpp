@@ -136,6 +136,14 @@ public:
         debug_.request_rewind(steps);
         (void)waitFor(seen);
         Snapshot after = snapshot();
+        if (after.reason == "rewind") {
+            // The engine's transcript went back with its state, so the session's
+            // copy of the stream does too: a client that keeps its own text would
+            // otherwise see the statements the run re-runs printed twice.
+            const std::lock_guard<std::mutex> lock{mutex_};
+            output_ = interpreter_->output();
+            after.output = joinLines(output_);
+        }
         if (!after.finished && after.reason != "rewind") {
             // The loop pauses with reason `rewind` exactly when it moved, so anything
             // else means the run is at the oldest statement it kept. Saying so is the

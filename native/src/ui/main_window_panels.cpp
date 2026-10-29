@@ -587,6 +587,10 @@ void MainWindow::connectDebugPanel() {
     connect(debug_panel_, &DebugPanel::rewindRequested, this, [this](int steps) {
         if (native_runner_ != nullptr && native_runner_->canRewind()) {
             native_runner_->request_rewind(static_cast<std::size_t>(steps));
+            // The console is a transcript of the session, not of the run, so the
+            // statements a rewind puts back print a second time. Saying where the
+            // repeat starts is what keeps that from reading as a bug.
+            appendOutput(tr("\u2139\ufe0f Back %n statement(s)\n", "", steps));
         }
     });
     connect(debug_panel_, &DebugPanel::dataBreakpointsChanged, this,

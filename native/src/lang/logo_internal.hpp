@@ -82,6 +82,29 @@ public:
     LogoMachine(Interpreter& interpreter, TurtleHost& turtle)
         : interpreter_{interpreter}, turtle_{turtle} {}
 
+    /// Everything about the run that is not the loaded program: where it is, and
+    /// the state a statement can change. The program itself is loaded from the
+    /// source, so it is not carried -- only the position in it.
+    ///
+    /// This is what a snapshot of a Logo run holds, and what a rewind puts back.
+    struct Checkpoint {
+        std::size_t pc = 0;
+        std::map<std::string, std::string> procedures;
+        std::map<std::string, std::vector<std::string>> procedure_params;
+        std::map<std::string, std::string> words;
+        std::map<std::string, std::vector<std::string>> lists;
+        std::optional<double> last_output;
+        std::string pen_mode{"paint"};
+        int font_size = 12;
+        double pen_width = 2.0;
+        bool pen_down = true;
+        TurtlePose pose;
+        MersenneRandom random;
+    };
+
+    [[nodiscard]] Checkpoint capture() const;
+    void apply(const Checkpoint& state);
+
     /// Loads *source* and runs it, streaming each statement's output.
     void run(std::string_view source);
 
@@ -191,6 +214,9 @@ private:
     Interpreter& interpreter_;
     TurtleHost& turtle_;
 
+    /// The statement the run is on. Part of the checkpoint, so a rewind puts the
+    /// run back on the statement it left.
+    std::size_t pc_ = 0;
     /// Statements in execution order, as the loader joined them.
     std::vector<std::string> statements_;
     /// The number each statement reports in a `[line N]` annotation.

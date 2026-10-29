@@ -613,6 +613,29 @@ void test_debug_sessions() {
     TW_CHECK_EQ(again.value(QStringLiteral("line")).toInt(), 10);
     TW_CHECK(!again.value(QStringLiteral("error")).toString().isEmpty());
 
+    // A whole-program language works the same way, because the position travels in
+    // the checkpoint its executor hands to the pause point.
+    QJsonObject logo;
+    logo.insert(QStringLiteral("language"), QStringLiteral("logo"));
+    logo.insert(QStringLiteral("source"),
+                QStringLiteral("MAKE \"A 1\nPRINT :A\nMAKE \"A 2\nPRINT :A\n"));
+    logo.insert(QStringLiteral("breakpoints"), QJsonArray{4});
+    logo.insert(QStringLiteral("history"), 8);
+    const QJsonObject logo_pause =
+        resultOf(server, QStringLiteral("debug.start"), logo).toObject();
+    TW_CHECK_EQ(logo_pause.value(QStringLiteral("line")).toInt(), 4);
+    QJsonObject logo_back;
+    logo_back.insert(QStringLiteral("session"),
+                     logo_pause.value(QStringLiteral("session")).toString());
+    logo_back.insert(QStringLiteral("steps"), 2);
+    const QJsonObject logo_rewound =
+        resultOf(server, QStringLiteral("debug.rewind"), logo_back).toObject();
+    TW_CHECK_EQ(logo_rewound.value(QStringLiteral("reason")).toString(),
+                QStringLiteral("rewind"));
+    TW_CHECK_EQ(logo_rewound.value(QStringLiteral("line")).toInt(), 2);
+    // The print that had already happened is gone with the state that made it.
+    TW_CHECK(logo_rewound.value(QStringLiteral("output")).toString().isEmpty());
+
     // A session asked for none keeps none, and says so rather than looking unchanged.
     QJsonObject no_history;
     no_history.insert(QStringLiteral("session"), session);

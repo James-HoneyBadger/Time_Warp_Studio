@@ -239,6 +239,62 @@ void test_turtle_pose_matches_the_reference_in_three_dimensions() {
     TW_CHECK_NEAR(rolled.project().y, 133.333333333333, 1e-9);
 }
 
+// A Logo run can be walked back like a line-loop one. The position travels with
+// the snapshot because Logo runs its own statement loop: without the checkpoint
+// there would be nothing to put back, and the interpreter would say so rather than
+// moving a run whose inside it cannot reach.
+void test_logo_run_can_be_walked_back() {
+    std::printf("-- debug: logo rewind\n");
+    RecordingHost host;
+    Interpreter interpreter{Language::Logo, host};
+    timewarp::lang::DebugSession session;
+    session.set_breakpoints({3});  // the fourth statement, `PRINT :A`
+    int pauses = 0;
+    int second_line = 0;
+    std::vector<std::string> output_at_the_second_pause;
+    int value_at_the_second_pause = -1;
+    session.on_paused = [&](int line) {
+        ++pauses;
+        if (pauses == 1) {
+            // Back to the statement before the one that set A to 2.
+            session.request_rewind(2);
+            return;
+        }
+        if (pauses == 2) {
+            second_line = line;
+            output_at_the_second_pause = interpreter.output();
+            const auto found = interpreter.variables().find("A");
+            if (found != interpreter.variables().end() && found->second.is_number()) {
+                value_at_the_second_pause = static_cast<int>(found->second.number());
+            }
+        }
+        session.request_continue();
+    };
+    interpreter.set_debug_session(&session);
+    interpreter.set_history(8);
+    interpreter.load_program(
+        "MAKE \"A 1\n"
+        "PRINT :A\n"
+        "MAKE \"A 2\n"
+        "PRINT :A\n");
+    interpreter.run();
+
+    // Three: the breakpoint that stopped the run, the statement the rewind put it
+    // back on, and the same breakpoint again when the run reaches it a second time.
+    TW_CHECK_EQ(pauses, 3);
+    // The statement the rewind chose, before it runs: the print that had already
+    // happened is gone with the state that produced it.
+    TW_CHECK_EQ(second_line, 2);
+    TW_CHECK(output_at_the_second_pause.empty());
+    TW_CHECK_EQ(value_at_the_second_pause, 1);
+    // Running on from there produces the transcript again, in order.
+    TW_CHECK_EQ(interpreter.output().size(), std::size_t{2});
+    if (interpreter.output().size() == 2) {
+        TW_CHECK(interpreter.output().at(0).find('1') != std::string::npos);
+        TW_CHECK(interpreter.output().at(1).find('2') != std::string::npos);
+    }
+}
+
 // ---------------------------------------------------------------------------
 // The seeded generator `RND` and `FRAN` answer with
 // ---------------------------------------------------------------------------
