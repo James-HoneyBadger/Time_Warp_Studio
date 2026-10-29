@@ -462,6 +462,7 @@ measuring the wrong machine.
 | 23.6 ✓ | A run can be walked backwards: `Interpreter::snapshot()`/`restore()` copy a statement's position, bindings, output and the language's own scratch state, `set_history` keeps the last N of them and `rewind` goes back through them; `debug.start` takes `history` and `debug.rewind` returns to a statement with the bindings and output it had. The test is the property a person would check: go back, run on, and the transcript is what it was |
 | 23.7 ✓ | And a person can press it: the Debug tab's **History** depth decides how much a run remembers, **Back** and **Back 10** walk the pause back through it, and both are live exactly when they can move — never at the oldest statement, never for Scheme, which says why. The engine goes as far back as it kept instead of refusing, and never forward, and the panel asks the engine how far back that is before it offers the button |
 | 23.8 ✓ | A language that runs its own loop can be walked back too: the whole-program pause point takes the executor's checkpoint, records it and returns a restored one to adopt, so Logo keeps its position, procedures, words, pen, pose and generator in a snapshot and a rewind puts the run back on an earlier statement. The API's transcript rolls back with it, and the console marks where a re-run begins |
+| 23.9 ✓ | Forth joins the debugger: a pause before each token, with the position, both stacks, the dictionary, the compile state and the text printed so far travelling in a checkpoint — and the 64K data space copied only when a program has actually written to it. A `.fs` breakpoint can fire for the first time, and the run can be walked back through it |
 
 Smaller items belong in one of those releases rather than a release of their own:
 Flatpak, Snap and an arm64 AppImage, and the distribution work described under
@@ -480,8 +481,10 @@ breakpoints, the line, the procedure, the call stack and the frame's bindings.
 The six line-by-line languages (BASIC, FOCAL, PILOT, COMAL, APL, REXX) stop at a
 statement through a `DebugSession` in the shared interpreter loop; the whole-program
 languages stop at their own natural boundary — Logo at a top-level statement,
-Smalltalk at a message send, CHIP-8 before an instruction (the listing line is kept
-per opcode address). Gutter breakpoints are persisted per file and pruned when the
+Smalltalk at a message send, Forth at a token, CHIP-8 before an instruction (the
+listing line is kept per opcode address). Forth was the last to join (23.9): its
+interpreter had no pause point at all, so a breakpoint in a `.fs` file could not
+fire and nothing said so. Gutter breakpoints are persisted per file and pruned when the
 file is gone, and the panel's buttons drive whichever runner is paused. **Watch
 expressions** are evaluated by the same expression engine a program uses, over the
 bindings the pause reported, and **data breakpoints** stop a run when a named
@@ -529,6 +532,14 @@ Scheme, which is offered nothing rather than a control that cannot move. A
 snapshot taken for a statement is not taken twice when a rewind puts the run back
 on it, which is what makes "there is nothing further back" a thing the panel can
 know.
+
+**Forth joined in 23.9**, and it had the opposite problem from Logo: no pause point
+at all, so a breakpoint in a `.fs` file could never fire. A token is now the unit,
+the checkpoint carries both stacks, the dictionary, the compile state and the text
+printed so far, and the 64K data space is copied only when a program has written
+to it. Smalltalk and CHIP-8 are the two still out: Smalltalk's heap is an object
+graph with identity, which a rewind would have to copy without losing, and CHIP-8
+waits until someone debugs a ROM step by step.
 
 **Logo joined them (23.8), and the mechanism is the general one.** A whole-program
 executor keeps its own statement loop, so the interpreter had nowhere to record a

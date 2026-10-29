@@ -31,6 +31,7 @@ int main() {
     test_forth_undefined_word_names_itself_and_its_line();
     test_forth_unclosed_definition_is_reported();
     test_forth_turtle_words_move_and_colour();
+    test_forth_run_can_be_walked_back();
     test_the_reference_palette_is_the_same_table_everywhere();
     test_chip8_program_starts_at_0x200();
     test_chip8_labels_resolve_forward_references();

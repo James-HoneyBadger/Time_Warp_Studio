@@ -797,8 +797,9 @@ void MainWindow::refreshDocumentState() {
     }
     if (debug_panel_ != nullptr) {
         // Every language can stop now: the line-loop languages at a statement,
-        // Logo at a top-level statement, Smalltalk at a message send and CHIP-8
-        // at an instruction. The call stack remains the Scheme machine's own.
+        // Logo at a top-level statement, Smalltalk at a message send, Forth at a
+        // token and CHIP-8 at an instruction. The call stack remains the Scheme
+        // machine's own.
         debug_panel_->setAvailable(true, QString{});
         debug_panel_->setLineNumber(editor->currentLine());
     }

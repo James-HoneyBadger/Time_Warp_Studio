@@ -152,6 +152,50 @@ public:
 
     std::string run(std::string_view source);
 
+    /// One `DO ... LOOP` frame, and one open control structure while a definition
+    /// is being compiled. Both belong to the run rather than to a statement, so
+    /// both travel in a checkpoint.
+    struct LoopFrame {
+        long long index = 0;
+        long long limit = 0;
+    };
+    struct Control {
+        enum class Kind { If, Else, Begin, While, Do } kind = Kind::If;
+        std::size_t index = 0;
+        std::vector<std::size_t> leaves;
+    };
+
+    /// Everything about the run that is not the token list: where it is, the two
+    /// stacks, the dictionary and what has been printed. The program text is
+    /// tokenised once and kept here, so only the position in it travels.
+    ///
+    /// The data space is copied only when a program has written to it -- a `!`,
+    /// `C!` or `+!` -- because 64K per statement is a price a program that never
+    /// pokes should not pay.
+    struct Checkpoint {
+        std::size_t pc = 0;
+        std::vector<long long> stack;
+        std::vector<LoopFrame> loops;
+        std::vector<Control> control;
+        std::map<std::string, std::shared_ptr<Word>> dictionary;
+        std::map<int, std::shared_ptr<Word>> by_id;
+        std::vector<std::string> names;
+        int next_id = 1;
+        std::shared_ptr<Word> current;
+        bool compiling = false;
+        std::string out;
+        std::size_t here = 1;
+        std::vector<std::string> strings;
+        int line = 1;
+        long long steps = 0;
+        bool bye = false;
+        bool has_memory = false;
+        std::vector<std::uint8_t> memory;
+    };
+
+    [[nodiscard]] Checkpoint capture() const;
+    void apply(const Checkpoint& state);
+
 private:
     // -- reading ---------------------------------------------------------
     [[nodiscard]] std::vector<Token> tokenise(std::string_view source) const;
@@ -180,6 +224,14 @@ private:
     void write(const std::string& text) { out_ += text; }
     void write_number(long long value) { out_ += std::to_string(value) + " "; }
 
+    /// The program, tokenised once, and the position in it -- which is what a
+    /// rewind puts back.
+    std::vector<Token> tokens_;
+    std::size_t pc_ = 0;
+    /// Set when a program writes to the data space, so a checkpoint knows whether
+    /// the 64K is worth copying.
+    bool memory_dirty_ = false;
+
     Interpreter& interpreter_;
     TurtleHost& turtle_;
     std::map<std::string, std::shared_ptr<Word>> dictionary_;
@@ -188,20 +240,11 @@ private:
     int next_id_ = 1;
 
     std::vector<long long> stack_;
-    struct LoopFrame {
-        long long index = 0;
-        long long limit = 0;
-    };
     std::vector<LoopFrame> loops_;
     std::string out_;
 
     bool compiling_ = false;
     std::shared_ptr<Word> current_;
-    struct Control {
-        enum class Kind { If, Else, Begin, While, Do } kind = Kind::If;
-        std::size_t index = 0;
-        std::vector<std::size_t> leaves;
-    };
     std::vector<Control> control_;
 
     /// Set by `BYE`: the interpreter stops between words and nothing after it runs.
@@ -687,6 +730,7 @@ void ForthMachine::run_primitive(Primitive primitive, const char* name) {
             const long long value = pop(name);
             memory_[address] = static_cast<std::uint8_t>(value & 0xFF);
             memory_[address + 1] = static_cast<std::uint8_t>((value >> 8) & 0xFF);
+            memory_dirty_ = true;
             return;
         }
         case Primitive::CFetch: {
@@ -698,6 +742,7 @@ void ForthMachine::run_primitive(Primitive primitive, const char* name) {
             const auto address = address_of(pop(name), name);
             const long long value = pop(name);
             memory_[address] = static_cast<std::uint8_t>(value & 0xFF);
+            memory_dirty_ = true;
             return;
         }
         case Primitive::PlusStore: {
@@ -708,6 +753,7 @@ void ForthMachine::run_primitive(Primitive primitive, const char* name) {
             const long long next = current + value;
             memory_[address] = static_cast<std::uint8_t>(next & 0xFF);
             memory_[address + 1] = static_cast<std::uint8_t>((next >> 8) & 0xFF);
+            memory_dirty_ = true;
             return;
         }
         case Primitive::LoopIndex:
@@ -1160,21 +1206,85 @@ void ForthMachine::interpret(const Token& token) {
     execute_word(found);
 }
 
+ForthMachine::Checkpoint ForthMachine::capture() const {
+    Checkpoint state;
+    state.pc = pc_;
+    state.stack = stack_;
+    state.loops = loops_;
+    state.control = control_;
+    state.dictionary = dictionary_;
+    state.by_id = by_id_;
+    state.names = names_;
+    state.next_id = next_id_;
+    state.current = current_;
+    state.compiling = compiling_;
+    state.out = out_;
+    state.here = here_;
+    state.strings = strings_;
+    state.line = line_;
+    state.steps = steps_;
+    state.bye = bye_;
+    state.has_memory = memory_dirty_;
+    if (memory_dirty_) {
+        state.memory = memory_;
+    }
+    return state;
+}
+
+void ForthMachine::apply(const Checkpoint& state) {
+    pc_ = state.pc;
+    stack_ = state.stack;
+    loops_ = state.loops;
+    control_ = state.control;
+    dictionary_ = state.dictionary;
+    by_id_ = state.by_id;
+    names_ = state.names;
+    next_id_ = state.next_id;
+    current_ = state.current;
+    compiling_ = state.compiling;
+    out_ = state.out;
+    here_ = state.here;
+    strings_ = state.strings;
+    line_ = state.line;
+    steps_ = state.steps;
+    bye_ = state.bye;
+    memory_dirty_ = state.has_memory;
+    if (state.has_memory) {
+        memory_ = state.memory;
+    }
+}
+
 std::string ForthMachine::run(std::string_view source) {
-    const std::vector<Token> tokens = tokenise(source);
+    if (tokens_.empty()) {
+        tokens_ = tokenise(source);
+    }
     try {
-        for (std::size_t index = 0; index < tokens.size() && !bye_; ++index) {
-            const Token& token = tokens[index];
+        while (pc_ < tokens_.size() && !bye_) {
+            // The debugger's pause point, and where the position is handed over: a
+            // token is the unit here, which is what a Forth programmer steps through.
+            // A rewind comes back as a checkpoint to adopt, which is how the run
+            // finds itself earlier in the token list with its stacks as they were.
+            const Token& token = tokens_[pc_];
+            const Interpreter::WholeProgramStep step =
+                interpreter_.whole_program_pause(token.line, capture());
+            if (!step.go_on) {
+                break;
+            }
+            if (step.restored.has_value()) {
+                apply(std::any_cast<const Checkpoint&>(*step.restored));
+                continue;
+            }
+            const std::size_t index = pc_;
             const std::string name =
                 token.kind == Token::Kind::Word ? upper(token.text) : std::string{};
             // The defining words take the *next* token as their name, which is why they
             // are read here rather than as ordinary words.
             if (!compiling_ && (name == "VARIABLE" || name == "CONSTANT")) {
-                if (index + 1 >= tokens.size()) {
+                if (index + 1 >= tokens_.size()) {
                     throw ForthError{name + " needs a name"};
                 }
                 Word word;
-                word.name = upper(tokens[index + 1].text);
+                word.name = upper(tokens_[index + 1].text);
                 word.id = next_id_++;
                 if (name == "VARIABLE") {
                     word.kind = Word::Kind::Variable;
@@ -1188,10 +1298,11 @@ std::string ForthMachine::run(std::string_view source) {
                     word.constant = pop("CONSTANT");
                 }
                 define(std::make_shared<Word>(std::move(word)));
-                ++index;
+                pc_ += 2;
                 continue;
             }
             interpret(token);
+            ++pc_;
         }
     } catch (const ForthError& error) {
         // What the program printed before it failed is still printed: a Forth that

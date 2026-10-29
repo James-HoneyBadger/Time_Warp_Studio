@@ -126,6 +126,52 @@ void test_forth_unclosed_definition_is_reported() {
     TW_CHECK(forth_text(run).find("never closed") != std::string::npos);
 }
 
+// A Forth run can be paused and walked back like a line-loop one. A token is the
+// unit, which is what a Forth programmer steps through, and the position, both
+// stacks, the dictionary and the text printed so far travel in the checkpoint.
+void test_forth_run_can_be_walked_back() {
+    std::printf("-- debug: forth rewind\n");
+    RecordingHost host;
+    Interpreter interpreter{Language::Forth, host};
+    timewarp::lang::DebugSession session;
+    session.set_breakpoints({1});  // source line 2, the token `3`
+    int pauses = 0;
+    int first_line = 0;
+    int second_line = 0;
+    bool second_was_a_rewind = false;
+    session.on_paused = [&](int line) {
+        ++pauses;
+        if (pauses == 1) {
+            first_line = line;
+            // Back to the first token, so the whole program runs again from there.
+            session.request_rewind(3);
+            return;
+        }
+        if (pauses == 2) {
+            second_line = line;
+            second_was_a_rewind = session.paused_for_rewind();
+        }
+        session.request_continue();
+    };
+    interpreter.set_debug_session(&session);
+    interpreter.set_history(16);
+    interpreter.load_program(
+        "1 2 + .\n"
+        "3 4 + .\n");
+    interpreter.run();
+
+    TW_CHECK_EQ(first_line, 2);
+    TW_CHECK_EQ(second_line, 1);
+    TW_CHECK(second_was_a_rewind);
+    // The breakpoint that stopped the run, the statement the rewind put it back on,
+    // and the same breakpoint again when the re-run reaches it.
+    TW_CHECK_EQ(pauses, 3);
+    // The text printed before the rewind went back with it: without that the
+    // statements run again would append to it and the answer would be `3 3 7 `.
+    const std::string text = forth_text(ForthRun{interpreter.output(), host});
+    TW_CHECK_EQ(text, std::string{"3 7 "});
+}
+
 void test_forth_turtle_words_move_and_colour() {
     const ForthRun run = run_forth("1 SETPC 100 FD 90 RT 100 FD");
     TW_CHECK(!any_error(run.output));

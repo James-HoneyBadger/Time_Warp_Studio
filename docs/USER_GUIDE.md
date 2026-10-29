@@ -465,11 +465,12 @@ which steps through the display list. Because the console records the session
 rather than the run, statements that are re-run print a second time; an `ℹ️ Back 1
 statement(s)` line marks where the repeat starts.
 
-Which languages: all six line-by-line ones (BASIC, FOCAL, PILOT, COMAL, APL, REXX)
-and Logo. Smalltalk, Forth and CHIP-8 stop at their boundaries but cannot be walked
-back yet, so the buttons are dead for them and say why; Scheme is not offered it at
-all, because that machine's state is an arena and a continuation chain rather than
-a value. History costs one copy per statement while it is on; off costs nothing.
+Which languages: all six line-by-line ones (BASIC, FOCAL, PILOT, COMAL, APL, REXX),
+Logo, and Forth — whose unit is a token, and whose 64K data space is only copied
+when a program has written to it. Smalltalk and CHIP-8 stop at their boundaries but
+cannot be walked back yet, so the buttons are dead for them and say why; Scheme is
+not offered it at all, because that machine's state is an arena and a continuation
+chain rather than a value. History costs one copy per statement while it is on; off costs nothing.
 
 ### Watch expressions
 

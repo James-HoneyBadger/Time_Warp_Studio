@@ -2,6 +2,37 @@
 
 <!-- history: all -->
 
+## [23.9.0] - 2026-11-25
+
+Forth joins the debugger, and can be walked back. It was the one language that could
+not stop at all: its interpreter loop had no pause point, so a breakpoint set in a
+`.fs` file never fired and nothing in the UI said why. The loop now pauses before each
+token and hands over a checkpoint, so Forth is both steppable and rewindable.
+
+### Added
+
+- **Forth pauses at a token.** The unit is the token, which is what a Forth programmer
+  steps through; `BYE`, the two defining words and the compile state all still work,
+  and the line reported is the token's own source line.
+- **Forth's checkpoint**: the position in the token list, the data and return stacks,
+  the loop and control frames, the dictionary and its ids, the words created, what has
+  been printed, the compile state, `HERE`, the string table and the step count. The 64K
+  data space is copied **only when a program has written to it** — a `!`, `C!` or `+!` —
+  because 64K per statement is a price a program that never pokes should not pay.
+- **A test that the transcript goes back with it.** `lang_tests` stops a two-line
+  program at its second line, rewinds three tokens and checks that the text printed
+  before the rewind did not survive it: the answer is `3 7 `, and it would be `3 3 7 `
+  if the checkpoint's output were not restored.
+
+### Changed
+
+- **`run()` resumes from the position it is given** rather than starting over, and the
+  token list is tokenised once and kept, so only the position in it travels.
+- **Smalltalk, and CHIP-8 remain out, with the reason written down.** Smalltalk's heap
+  is an object graph with identity — a rewind would have to copy it without losing
+  that identity — so it is not a one-release change; CHIP-8's copy is memory plus
+  registers and waits until someone debugs a ROM step by step.
+
 ## [23.8.0] - 2026-11-18
 
 Logo joins the languages that can be walked back. It runs its own statement loop, so

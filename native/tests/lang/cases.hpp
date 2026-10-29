@@ -24,6 +24,7 @@ void test_forth_string_output_drops_the_delimiter_space();
 void test_forth_bye_stops_the_program();
 void test_forth_undefined_word_names_itself_and_its_line();
 void test_forth_unclosed_definition_is_reported();
+void test_forth_run_can_be_walked_back();
 void test_forth_turtle_words_move_and_colour();
 void test_the_reference_palette_is_the_same_table_everywhere();
 void test_chip8_program_starts_at_0x200();
