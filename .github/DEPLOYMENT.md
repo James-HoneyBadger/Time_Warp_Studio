@@ -132,6 +132,17 @@ and a real image, so either dispatch against a throwaway version or delete both
 afterwards (`gh release delete vX.Y.Z`, and delete the image version in the
 package page).
 
+**Why the arm64 Linux build takes two compiler jobs and not four.** It is the one
+number in the pipeline that is smaller than the runner, and it is there because the
+`20261025` arm64 runner image ends the job when four compilers run at once: exit
+143, the runner's shutdown signal, and every `g++` in `timewarp_ui` `Terminated`
+about four minutes in, on three attempts across three regions. The same commit built
+to a linked `time_warp_ide` in under seven minutes at `--parallel 2` on the same
+image, and the machine was never short of memory (15.9 GB, 1.9 GB in use at the end),
+which leaves the job count as the only variable the workflow controls. x86_64 keeps
+one job per core. If a later image fixes it, the probe to run is the arm64 job at
+`build_jobs: 4`, not a guess.
+
 ## What GitHub shows, and where it lives
 
 Part of this repository's documentation is not in a file: it is the repository

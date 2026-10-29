@@ -93,11 +93,22 @@ jobs:
             # build, but this pipeline does not exercise it yet, and an artifact
             # nobody has run is not one to publish.
             appimage: true
+            # One compiler job per core, which is what an unbounded
+            # `cmake --build` does anyway on this runner.
+            build_jobs: 4
           # `arm64` is GitHub's hosted ARM runner, the same distribution as its
           # x86 sibling, which is what keeps the two builds' Qt versions equal.
           - arch: arm64
             runner: ubuntu-24.04-arm
             appimage: false
+            # Two, not four. On the 20261025 arm64 runner image, four concurrent
+            # compiler jobs end with the runner sending its shutdown signal part
+            # way through `timewarp_ui` -- exit 143 and every compiler
+            # `Terminated` -- and two do not: the same tree built to a linked
+            # `time_warp_ide` in seven minutes. It is not memory (15.9 GB, 1.9 GB
+            # used at the end) and not the tree (x86_64 builds it at four), so
+            # the job count is the one thing this pipeline controls.
+            build_jobs: 2
     runs-on: ${{ matrix.runner }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -119,7 +130,7 @@ jobs:
             echo "::error::Qt6 Widgets was not found, so the UI was skipped."
             exit 1
           fi
-          cmake --build native/build --parallel
+          cmake --build native/build --parallel ${{ matrix.build_jobs }}
 
       - name: Test what is about to ship
         run: |
