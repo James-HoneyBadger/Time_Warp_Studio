@@ -56,6 +56,17 @@ set(CPACK_DEBIAN_PACKAGE_MAINTAINER "James Temple <james@honey-badger.org>")
 set(CPACK_DEBIAN_PACKAGE_SECTION "education")
 set(CPACK_DEBIAN_PACKAGE_DEPENDS
     "libqt6widgets6, libqt6gui6, libqt6core6, qt6-qpa-plugins, libsqlite3-0, zlib1g")
+# The assistant's client links Qt Network, so the IDE links it whenever the Qt it
+# was built against has Network -- which is every release build. A package that
+# named every Qt library except this one installed cleanly and then failed to
+# start with `libQt6Network.so.6: cannot open shared object file`, which is the
+# case the comment above describes. The RPM needs nothing here: it names
+# qt6-qtbase-gui, which requires qt6-qtbase, and that is where Fedora puts
+# libQt6Network.
+if(${TIME_WARP_QT}Network_FOUND)
+    string(APPEND CPACK_DEBIAN_PACKAGE_DEPENDS ", libqt6network6")
+endif()
+
 # Only when this build was made with it: a package that names a library the
 # binary does not link is a needless install, and one that omits a library the
 # binary does link fails to start.

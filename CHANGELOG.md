@@ -65,14 +65,18 @@ carried to the other surface rather than a second mechanism.
 
 ### Fixed
 
-- **The container image was missing the assistant's Qt library.** The IDE now links
-  `timewarp_ai`, which links Qt Network, so `time_warp_ide` needs
-  `libQt6Network.so.6` — and the image's runtime stage named every Qt library it
-  needed except that one. The `ldd` check the Dockerfile ends with is what caught it,
-  as `libQt6Network.so.6 => not found`, before any user's `docker run` could; the
-  runtime stage now installs `libqt6network6`. Without the fix the image that
-  shipped would have failed at start-up on every platform, and the check is why it
-  did not.
+- **The `.deb` and the container image were missing the assistant's Qt library.**
+  The IDE now links `timewarp_ai`, which links Qt Network, so `time_warp_ide` needs
+  `libQt6Network.so.6` — and two of the places that name the libraries it links did
+  not name that one. The image's runtime stage installed every Qt library except it;
+  the Dockerfile's closing `ldd` check caught that, as `libQt6Network.so.6 => not
+  found`, and the stage now installs `libqt6network6`. The `.deb` had the same gap
+  in its `Depends`, which is worse, because a package that under-declares installs
+  cleanly and then fails to start:
+  `packaging.cmake` appends `libqt6network6` when the Qt it was built against had
+  Network, in the same conditional form it already used for Svg and PrintSupport.
+  The `.rpm` needed neither: it names `qt6-qtbase-gui`, which requires
+  `qt6-qtbase`, and that is where Fedora puts `libQt6Network.so.6`.
 
 ## [23.9.0] - 2026-10-29
 
