@@ -70,6 +70,12 @@ LABEL org.opencontainers.image.title="Time Warp Studio" \
 
 # Qt6 brings the platform plugins and the xcb libraries a window needs, and
 # `libqt6sql6-sqlite` is the driver the Database tab opens its connection with.
+# `libqt6network6` is what the assistant's client links -- the IDE carries
+# `timewarp_ai` whenever the Qt it was built against has Network, and a Qt without
+# it is a build with no assistant rather than a smaller one. The `ldd` check below
+# is what named this package: `libQt6Network.so.6 => not found`, once the IDE
+# started linking the library rather than only the `time_warp_ai` tool.
+#
 # `zlib1g` is what classroom bundles are written with. There is no Python: the
 # lesson check and the classroom run in the binary.
 # `alsa-utils` is what `SOUND` and `PLAY` hand their WAV to -- a container with no
@@ -77,7 +83,7 @@ LABEL org.opencontainers.image.title="Time Warp Studio" \
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
         libqt6widgets6 libqt6gui6 libqt6core6 libqt6sql6-sqlite \
-        libqt6printsupport6 libsqlite3-0 zlib1g \
+        libqt6printsupport6 libqt6network6 libsqlite3-0 zlib1g \
         fontconfig fonts-dejavu-core alsa-utils libgl1 \
     && rm -rf /var/lib/apt/lists/*
 

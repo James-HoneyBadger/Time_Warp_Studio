@@ -63,6 +63,17 @@ carried to the other surface rather than a second mechanism.
   checkpoint — its heap is an object graph with identity, and copying it is the next
   release's problem rather than this one's.
 
+### Fixed
+
+- **The container image was missing the assistant's Qt library.** The IDE now links
+  `timewarp_ai`, which links Qt Network, so `time_warp_ide` needs
+  `libQt6Network.so.6` — and the image's runtime stage named every Qt library it
+  needed except that one. The `ldd` check the Dockerfile ends with is what caught it,
+  as `libQt6Network.so.6 => not found`, before any user's `docker run` could; the
+  runtime stage now installs `libqt6network6`. Without the fix the image that
+  shipped would have failed at start-up on every platform, and the check is why it
+  did not.
+
 ## [23.9.0] - 2026-10-29
 
 Forth joins the debugger, and can be walked back. It was the one language that could
