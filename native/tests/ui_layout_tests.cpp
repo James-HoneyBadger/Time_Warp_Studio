@@ -74,6 +74,7 @@ int main(int argc, char** argv) {
     test_assistant_panel_contract();
     test_repl_bar_runs_and_keeps_bindings();
     test_repl_bar_scheme_errors_and_language_switch();
+    test_the_hb2_window_runs_a_listing();
     test_repl_basic_direct_mode();
     test_the_outline_lists_and_jumps();
     test_the_scrubber_appears_only_when_there_is_ink();

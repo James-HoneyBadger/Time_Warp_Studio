@@ -451,6 +451,11 @@ bool Hb2Window::running() const noexcept { return timer_ != nullptr && timer_->i
 void Hb2Window::setListing(const QString& text) { listing_->setPlainText(text); }
 
 void Hb2Window::runCommand(const QString& line) {
+    // The machine's listing is whatever the Program page holds: `RUN` and `SAVE` mean
+    // the thing on screen, so the prompt does not have an older copy of it.
+    if (listing_ != nullptr) {
+        shell_.setSource(listing_->toPlainText().toStdString());
+    }
     transcript_->appendPlainText(QStringLiteral("%1 %2").arg(QString::fromStdString(shell_.prompt()), line));
     const std::vector<std::string> answer = shell_.execute(line.toStdString());
     for (const std::string& row : answer) {

@@ -108,5 +108,6 @@ void test_assistant_panel_contract();
 void test_repl_bar_runs_and_keeps_bindings();
 void test_repl_basic_direct_mode();
 void test_repl_bar_scheme_errors_and_language_switch();
+void test_the_hb2_window_runs_a_listing();
 
 }  // namespace tw::ui_layout

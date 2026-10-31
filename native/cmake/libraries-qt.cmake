@@ -911,6 +911,7 @@ if(TIME_WARP_QT_FOUND)
                 tests/ui_layout_tests.cpp
                 tests/ui_layout_appearance_tests.cpp
                 tests/ui_layout_editor_tests.cpp
+                tests/ui_layout_hb2_tests.cpp
                 tests/ui_layout_menu_tests.cpp
                 tests/ui_layout_panel_tests.cpp
                 tests/ui_layout_run_tests.cpp
