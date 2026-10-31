@@ -36,6 +36,7 @@
 #include "timewarp/hb2/audio.hpp"
 #include "timewarp/hb2/bus.hpp"
 #include "timewarp/hb2/cpu.hpp"
+#include "timewarp/hb2/hbos.hpp"
 #include "timewarp/hb2/peripherals.hpp"
 #include "timewarp/hb2/video.hpp"
 
@@ -59,6 +60,9 @@ enum Service : std::uint16_t {
     kServicePattern = 13,
     kServiceNote = 14,
     kServiceWave = 15,
+    kServiceKey = 16,
+    kServiceKeyStatus = 17,
+    kServiceTask = 18,
 };
 
 class Machine {
@@ -79,6 +83,8 @@ public:
     [[nodiscard]] Uart& uart() noexcept { return uart_; }
     [[nodiscard]] Rom& rom() noexcept { return rom_; }
     [[nodiscard]] Cpu& cpu() noexcept { return cpu_; }
+    [[nodiscard]] Scheduler& scheduler() noexcept { return scheduler_; }
+    [[nodiscard]] Desktop& desktop() noexcept { return desktop_; }
 
     /// Ctrl-Alt-Del: every device to its power-on state, the processor at `entry`.
     void reset(std::uint32_t entry = 0);
@@ -104,6 +110,17 @@ public:
     /// characters in its cells; this is the transcript a harness reads.
     [[nodiscard]] const std::string& console() const noexcept { return console_; }
 
+    // -- HB-OS -------------------------------------------------------------
+    /// Starts a listing as a process with a window, and switches the screen to a
+    /// framebuffer so the desktop has somewhere to compose. Returns the task id, or
+    /// zero when it will not assemble or fit.
+    int spawn(const std::string& name, const std::string& source);
+    /// Stops every process and clears the desktop.
+    void stopAllTasks();
+    /// Clears whichever screen is showing: the text cells in `MODE 0`, the bitmap
+    /// otherwise. `CLS` and a fresh listing both come through here.
+    void resetVideoSurface();
+
     // -- Snapshot ----------------------------------------------------------
     [[nodiscard]] std::uint64_t hash() const;
     [[nodiscard]] std::vector<std::uint8_t> save();
@@ -120,6 +137,11 @@ private:
     Rtc rtc_;
     Uart uart_;
     Cpu cpu_;
+    /// One handler for every processor: the console's and each task's. A process and
+    /// the prompt ask the same machine for the same services.
+    Cpu::InterruptHandler interrupt_handler_;
+    Scheduler scheduler_;
+    Desktop desktop_;
     std::string console_;
     int exit_code_ = 0;
 };

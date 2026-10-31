@@ -47,7 +47,7 @@ No parameters.
 ```json
 {
   "apiVersion": "1.0",
-  "version": "<version, e.g. 26.0.0>",
+  "version": "<version, e.g. 26.1.0>",
   "languages": [{"key":"basic","display":"BASIC","wholeProgram":false}, ...],
   "features": {"repl":true,"sql":true,"projects":true,
                "watchExpressions":true,"dataBreakpoints":true,

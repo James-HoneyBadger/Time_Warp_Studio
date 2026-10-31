@@ -18,9 +18,9 @@ derived rather than remembered.
 
 ## 24.0 is archived, and 25.0 is the current design
 
-**Version 24.0 is archived.** It was the golden release, the last one built for
-Windows and macOS, and it is kept exactly as it was built on its own release page and
-will not change again. Nothing here removes it: an archive is a thing you keep.
+**Version 24.0 is archived.** It was the golden release, and it is kept exactly as it
+was built on its own release page and will not change again. Nothing here removes it:
+an archive is a thing you keep.
 
 **Version 25.0 is the current design,
 *timey wimey wibbly wobbly, time & multiuniverse travel computing*.** The eleven
@@ -795,9 +795,9 @@ a different set of files from a local install. The Qt runtime is the distributio
 which is what the `.deb` and `.rpm` declare as a dependency; the AppImage is the one
 artifact that carries its own.
 
-This is a Linux application. The Windows installer, the Windows 7 rebuild and the
-macOS disk image were 24.0's — the last cross-platform release, and now archived —
-and 25.0 builds and ships for Linux only.
+This is a Linux application, and only a Linux application: the packages above are the
+only artifacts the project builds, tests or ships, and there is no installer for any
+other system.
 
 Still not built: publishing to the **Flathub** repository (the manifest is here and
 CI builds it into a bundle; a Flathub submission is a review process rather than a

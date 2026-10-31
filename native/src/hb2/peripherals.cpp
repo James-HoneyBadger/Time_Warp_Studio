@@ -45,7 +45,44 @@ void Input::setJoystick(int index, std::int8_t x, std::int8_t y, std::uint8_t bu
     registers_[base + 2] = buttons;
 }
 
+void Input::pressKey(std::uint8_t key) {
+    matrix_[key / 8] = static_cast<std::uint8_t>(matrix_[key / 8] | (1U << (key % 8)));
+    // A queue, not a register: two keys typed between polls are two keys, which is
+    // what a prompt needs and what a bit of state cannot express.
+    if (typed_.size() < 64) {
+        typed_.push_back(key);
+    }
+}
+
+void Input::releaseKey(std::uint8_t key) {
+    matrix_[key / 8] = static_cast<std::uint8_t>(matrix_[key / 8] & ~(1U << (key % 8)));
+}
+
+bool Input::keyDown(std::uint8_t key) const {
+    return (matrix_[key / 8] & (1U << (key % 8))) != 0;
+}
+
+bool Input::keyAvailable() const noexcept { return !typed_.empty(); }
+
+std::uint8_t Input::takeKey() const {
+    if (typed_.empty()) {
+        return 0;
+    }
+    const std::uint8_t key = typed_.front();
+    typed_.pop_front();
+    return key;
+}
+
 std::uint8_t Input::read(std::uint32_t offset) const {
+    if (offset == kKeyLast) {
+        return takeKey();
+    }
+    if (offset == kKeyStatus) {
+        return keyAvailable() ? 0x01 : 0x00;
+    }
+    if (offset >= kKeyMatrix && offset < kKeyMatrix + matrix_.size()) {
+        return matrix_[offset - kKeyMatrix];
+    }
     if (offset == kPointerDeltaX) {
         const auto value = static_cast<std::uint8_t>(delta_x_ & 0xFF);
         return value;
@@ -77,6 +114,8 @@ void Input::write(std::uint32_t offset, std::uint8_t value) {
 
 void Input::reset() {
     std::fill(std::begin(registers_), std::end(registers_), std::uint8_t{0});
+    matrix_.fill(0);
+    typed_.clear();
     delta_x_ = 0;
     delta_y_ = 0;
 }

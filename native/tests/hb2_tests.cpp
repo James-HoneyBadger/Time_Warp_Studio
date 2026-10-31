@@ -14,8 +14,17 @@
 #include <vector>
 
 #include "check.hpp"
+#include <filesystem>
+#include <fstream>
+
 #include "timewarp/hb2/asm.hpp"
 #include "timewarp/hb2/audio.hpp"
+#include "timewarp/hb2/dos.hpp"
+#include "timewarp/hb2/font.hpp"
+#include "timewarp/hb2/hbos.hpp"
+#include "timewarp/hb2/modules.hpp"
+#include "timewarp/hb2/monitor.hpp"
+#include "timewarp/hb2/shell.hpp"
 #include "timewarp/hb2/cpu.hpp"
 #include "timewarp/hb2/machine.hpp"
 #include "timewarp/hb2/map.hpp"
@@ -654,6 +663,296 @@ void test_the_demos_run() {
     }
 }
 
+// ---------------------------------------------------------------------------
+// Text on every screen, and the keyboard
+// ---------------------------------------------------------------------------
+
+void test_text_is_drawn_in_bitmap_modes() {
+    announce("text: the ROM font, on every screen");
+    Machine machine;
+    Video& video = machine.video();
+    video.setMode(Video::Mode::Low);
+
+    // 'A' is eight rows of eight pixels; the top row of the glyph is 0x38, so three
+    // pixels at columns 3, 4 and 5 are ink and the corners are not.
+    video.drawChar(10, 20, 'A', 9);
+    TW_CHECK_EQ(video.pixel(12, 20), 9);   // 0x38: bits 2, 3 and 4
+    TW_CHECK_EQ(video.pixel(13, 20), 9);
+    TW_CHECK_EQ(video.pixel(11, 20), 0);
+    TW_CHECK_EQ(video.pixel(10, 20), 0);
+
+    // Lowercase is the capital: the ROM has one case and says so.
+    video.clearBitmap();
+    video.drawChar(0, 0, 'a', 9);
+    TW_CHECK_EQ(video.pixel(3, 0), 9);
+
+    // A string is glyphs eight pixels apart, and a newline is a line down.
+    video.clearBitmap();
+    video.drawText(0, 0, "HI\nOK", 7);
+    TW_CHECK_EQ(video.pixel(0, 0), 7);      // the H's left stem
+    TW_CHECK_EQ(video.pixel(11, 0), 7);     // the I, one glyph on
+    TW_CHECK_EQ(video.pixel(3, 8), 7);      // the O, one line down
+
+    // The console writes at the cursor and advances it, in a bitmap mode as well as
+    // in the text one.
+    video.clearBitmap();
+    video.putChar('A');
+    video.putChar('B');
+    TW_CHECK(video.pixel(3, 0) != 0);
+    TW_CHECK(video.pixel(11, 0) != 0);
+    TW_CHECK_EQ(video.read(Video::kRegisterOffset + Video::kCursorColumn), 2);
+}
+
+void test_the_keyboard_is_read_once() {
+    announce("input: keys are a queue and a matrix");
+    Machine machine;
+    machine.input().pressKey('A');
+    machine.input().pressKey('B');
+    TW_CHECK(machine.input().keyAvailable());
+    TW_CHECK(machine.input().keyDown('A'));
+    TW_CHECK_EQ(machine.bus().read(0x202020), 'A');
+    TW_CHECK_EQ(machine.bus().read(0x202020), 'B');
+    TW_CHECK_EQ(machine.bus().read(0x202020), 0);
+    machine.input().releaseKey('A');
+    TW_CHECK(!machine.input().keyDown('A'));
+
+    // Inside a program: INT 17 says whether a key waits and INT 16 takes it.
+    Machine program;
+    const Assembly assembly = program.load(
+        "        ORG $1000\n"
+        "        INT 17\n"          // R0 = has a key?
+        "        MOV R1, R0\n"
+        "        INT 16\n"          // R0 = the key
+        "        MOV R2, R0\n"
+        "        HALT\n");
+    TW_CHECK(assembly.ok);
+    program.input().pressKey('Z');
+    program.run();
+    TW_CHECK_EQ(program.cpu().registers().r[1], 1);
+    TW_CHECK_EQ(program.cpu().registers().r[2], 'Z');
+}
+
+// ---------------------------------------------------------------------------
+// HB-OS
+// ---------------------------------------------------------------------------
+
+void test_two_processes_both_make_progress() {
+    announce("HB-OS: two processes, one clock");
+    Machine machine;
+    // No ORG: the scheduler places each process, which is what stops the second one
+    // landing on the first.
+    const int first = machine.spawn("A", "loop:   LEA R0, text\n        INT 8\n        JMP loop\ntext:   DB \"A\", 10, 0\n");
+    const int second = machine.spawn("B", "loop:   LEA R0, text\n        INT 8\n        JMP loop\ntext:   DB \"B\", 10, 0\n");
+    TW_CHECK(first != 0);
+    TW_CHECK(second != 0);
+    TW_CHECK_EQ(static_cast<int>(machine.scheduler().size()), 2);
+    machine.runFrames(3);
+
+    const Task* a = machine.scheduler().byId(first);
+    const Task* b = machine.scheduler().byId(second);
+    TW_CHECK(a != nullptr && b != nullptr);
+    if (a == nullptr || b == nullptr) {
+        return;
+    }
+    // Both ran, and both ran several times: a round robin that gave the clock to one
+    // process is the failure this asserts against.
+    TW_CHECK(a->console.size() > 4U);
+    TW_CHECK(b->console.size() > 4U);
+    TW_CHECK(a->console.find('A') != std::string::npos);
+    TW_CHECK(b->console.find('B') != std::string::npos);
+    TW_CHECK_EQ(static_cast<int>(machine.desktop().count()), 2);
+
+    // The desktop is a window system: hit testing follows z order, and clicking a
+    // window raises it.
+    const int at = machine.desktop().topAt(static_cast<int>(a->window.x) + 2,
+                                           static_cast<int>(a->window.y) + 2);
+    TW_CHECK(at == first || at == second);
+    machine.desktop().focus(first);
+    TW_CHECK_EQ(machine.desktop().topAt(a->window.x + 2, a->window.y + 2), first);
+    TW_CHECK(machine.desktop().frameOf(first).w > 0);
+}
+
+void test_a_dying_process_does_not_kill_the_desktop() {
+    announce("HB-OS: a process that faults is named, and the desktop survives");
+    Machine machine;
+    const int good = machine.spawn("GOOD", "        ORG $1000\nloop:   LEA R0, t\n        INT 8\n        JMP loop\nt:      DB \"ok\", 10, 0\n");
+    // An invalid instruction, which is what the ROM is full of: the processor reports
+    // it and the scheduler kills the process.
+    const int bad = machine.spawn("BAD", "        ORG $2000\n        DW $FFFF\n");
+    TW_CHECK(good != 0 && bad != 0);
+    machine.runFrames(4);
+    const Task* dead = machine.scheduler().byId(bad);
+    const Task* alive = machine.scheduler().byId(good);
+    TW_CHECK(dead != nullptr && alive != nullptr);
+    if (dead == nullptr || alive == nullptr) {
+        return;
+    }
+    TW_CHECK(!dead->failure.empty());
+    TW_CHECK(dead->finished);
+    TW_CHECK(alive->console.size() > 2U);
+    TW_CHECK_EQ(static_cast<int>(machine.desktop().count()), 2);
+}
+
+// ---------------------------------------------------------------------------
+// The monitor and the module bay
+// ---------------------------------------------------------------------------
+
+void test_the_monitor_steps_and_breaks() {
+    announce("monitor: disassemble, break, step");
+    Machine machine;
+    const Assembly assembly = machine.load(
+        "        ORG $1000\n"
+        "        MOV R0, #1\n"
+        "        MOV R1, #2\n"
+        "        ADD R0, R1\n"
+        "        HALT\n");
+    TW_CHECK(assembly.ok);
+    Monitor monitor{machine};
+
+    const std::vector<std::string> rows = monitor.disassemble(0x1000, 3);
+    TW_CHECK_EQ(static_cast<int>(rows.size()), 3);
+    TW_CHECK(rows.front().find("MOV R0, #1") != std::string::npos);
+    TW_CHECK(monitor.registers().find("PC=001000") != std::string::npos);
+
+    monitor.setBreakpoint(0x1004);
+    TW_CHECK_EQ(monitor.runToBreakpoint(), std::string{"breakpoint at $001004"});
+    TW_CHECK_EQ(machine.cpu().registers().r[0], 1);
+    monitor.setBreakpoint(0x1004, false);
+    TW_CHECK_EQ(monitor.runToBreakpoint(), std::string{"halted"});
+    TW_CHECK_EQ(machine.cpu().registers().r[0], 3);
+
+    monitor.poke(0x4000, {1, 2, 3});
+    const std::vector<std::uint8_t> bytes = monitor.peek(0x4000, 3);
+    TW_CHECK_EQ(static_cast<int>(bytes.size()), 3);
+    TW_CHECK_EQ(bytes[2], 3);
+}
+
+void test_modules_round_trip() {
+    announce("modules: a script, a binary and an image in the bay");
+    const std::filesystem::path bay =
+        std::filesystem::temp_directory_path() / "hb2-modules-test";
+    std::filesystem::remove_all(bay);
+    Modules modules{bay.string()};
+
+    TW_CHECK(modules.saveScript("greet", {"DIR", "REGS"}));
+    const std::vector<std::uint8_t> code{0x01, 0x02, 0x03};
+    TW_CHECK(modules.saveBinary("blink", code, 0x2000));
+    Machine machine;
+    TW_CHECK(modules.saveImage("state", machine.save()));
+
+    const std::vector<ModuleRow> rows = modules.list();
+    TW_CHECK_EQ(static_cast<int>(rows.size()), 3);
+    if (rows.size() != 3) {
+        std::filesystem::remove_all(bay);
+        return;
+    }
+    TW_CHECK(rows[0].name == "blink" && rows[0].kind == "binary");
+
+    ModuleContent content;
+    TW_CHECK(modules.read("greet", &content));
+    TW_CHECK_EQ(content.kind, std::string{"script"});
+    TW_CHECK_EQ(static_cast<int>(content.script.size()), 2);
+    TW_CHECK(modules.read("blink", &content));
+    TW_CHECK_EQ(content.kind, std::string{"binary"});
+    TW_CHECK_EQ(content.entry, 0x2000U);
+    TW_CHECK_EQ(static_cast<int>(content.binary.size()), 3);
+    TW_CHECK(modules.read("state", &content));
+    TW_CHECK_EQ(content.kind, std::string{"image"});
+    TW_CHECK(!content.image.empty());
+
+    // A module that is not one is refused with a sentence, and nothing is loaded.
+    std::ofstream bogus{bay / "junk.mod"};
+    bogus << "not a module\n";
+    bogus.close();
+    TW_CHECK(!modules.read("junk", &content));
+    TW_CHECK(!modules.lastError().empty());
+    std::filesystem::remove_all(bay);
+}
+
+// ---------------------------------------------------------------------------
+// The disk and the prompt
+// ---------------------------------------------------------------------------
+
+void test_the_disk_has_directories_and_a_sector_count() {
+    announce("HB DOS 2.0: directories, sectors and a round trip");
+    Dos dos;
+    TW_CHECK(dos.format(0));
+    TW_CHECK(dos.mkdir(0, "PROGRAMS"));
+    TW_CHECK(dos.mkdir(0, "PROGRAMS/DEMOS"));
+    TW_CHECK(dos.writeFile(0, "PROGRAMS/HELLO.S",
+                           std::vector<std::uint8_t>{'H', 'I', '\n'}));
+
+    const std::vector<DosRow> rows = dos.list(0, "PROGRAMS");
+    TW_CHECK_EQ(static_cast<int>(rows.size()), 2);
+    TW_CHECK(rows.front().directory);  // directories first
+
+    const DosFree space = dos.free(0);
+    TW_CHECK_EQ(space.sectors, Dos::kFloppySectors);
+    TW_CHECK_EQ(space.used + space.free, space.sectors);
+    TW_CHECK(!space.map.empty());
+
+    // The round trip keeps the tree; the file is where it was.
+    const std::string image = dos.serialise(0);
+    Dos restored;
+    TW_CHECK(restored.deserialise(0, image));
+    const std::vector<std::uint8_t> bytes = restored.readFile(0, "PROGRAMS/HELLO.S");
+    TW_CHECK_EQ(std::string(bytes.begin(), bytes.end()), std::string{"HI\n"});
+
+    // A locked file is refused deletion, and a copy of one is allowed.
+    TW_CHECK(restored.setLocked(0, "PROGRAMS/HELLO.S", true));
+    TW_CHECK(!restored.removeFile(0, "PROGRAMS/HELLO.S"));
+    TW_CHECK_EQ(restored.error(), std::string{"?FILE LOCKED"});
+    TW_CHECK(restored.copy(0, "PROGRAMS/HELLO.S", "HELLO.S"));
+
+    // Copying something that is not there is refused in the machine's voice.
+    TW_CHECK(!restored.copy(0, "NOPE.S", "X.S"));
+    TW_CHECK(!restored.error().empty());
+}
+
+void test_the_prompt_runs_programs_and_the_disk() {
+    announce("the prompt: HELP, DIR, SAVE, LOAD and RUN");
+    Machine machine;
+    Dos dos;
+    Monitor monitor{machine};
+    Modules modules{"/tmp/hb2-shell-bay"};
+    Shell shell{machine};
+    shell.setDos(&dos);
+    shell.setMonitor(&monitor);
+    shell.setModules(&modules);
+    TW_CHECK(dos.format(0));
+
+    const std::vector<std::string> help = shell.execute("HELP");
+    TW_CHECK(help.size() > 8);
+    TW_CHECK(shell.execute("BOGUS").front().find("?WHAT") != std::string::npos);
+
+    // A listing saved to the disk and loaded back is the same listing.
+    shell.setSource("        ORG $1000\n        MOV R0, #7\n        INT 1\n        HALT\n");
+    TW_CHECK(shell.execute("SAVE TEST.S").front().find("saved") != std::string::npos);
+    shell.setSource("");
+    TW_CHECK(shell.execute("LOAD TEST.S").front().find("loaded") != std::string::npos);
+    TW_CHECK(shell.source().find("MOV R0, #7") != std::string::npos);
+
+    // DIR lists it, and RUN assembles, runs and reports the console.
+    const std::vector<std::string> dir = shell.execute("DIR");
+    bool saw = false;
+    for (const std::string& row : dir) {
+        if (row.find("TEST.S") != std::string::npos) {
+            saw = true;
+        }
+    }
+    TW_CHECK(saw);
+
+    const std::vector<std::string> run = shell.execute("RUN");
+    TW_CHECK(!run.empty());
+    TW_CHECK(run.front() == "halted");
+    // INT 1 printed a byte whose value is 7; the machine records it either way.
+    TW_CHECK(!machine.console().empty() || run.size() > 1);
+
+    // The monitor words are reachable from the prompt.
+    TW_CHECK(shell.execute("REGS").front().find("PC=") != std::string::npos);
+    TW_CHECK(shell.execute("DIS").size() > 1);
+}
+
 }  // namespace
 
 int main() {
@@ -678,5 +977,13 @@ int main() {
     test_a_program_prints_and_draws();
     test_a_snapshot_round_trips();
     test_the_demos_run();
+    test_text_is_drawn_in_bitmap_modes();
+    test_the_keyboard_is_read_once();
+    test_two_processes_both_make_progress();
+    test_a_dying_process_does_not_kill_the_desktop();
+    test_the_monitor_steps_and_breaks();
+    test_modules_round_trip();
+    test_the_disk_has_directories_and_a_sector_count();
+    test_the_prompt_runs_programs_and_the_disk();
     return tw::test::summary("hb2");
 }

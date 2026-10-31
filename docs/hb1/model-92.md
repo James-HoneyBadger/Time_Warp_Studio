@@ -6,14 +6,12 @@ validated by the gates in [README_TESTING](../README_TESTING.md). This page was
 written as a **proposal for after 25.0**, so that a future release had a spec to build
 to and a way to prove it was done.
 
-**Status at 26.0.** Five of the eight proposals are built, as the machine now called
-the **HB-2** ([its manual](../hb2/README.md)): 1, the bus and the machine object; 2,
-the video chip; 3, the audio chip; 5, the input devices; and 6, HB-16 with its
-assembler and disassembler. Proposal 5's clock is there and its joysticks are
-registers; `SYS` in BASIC, the monitor and the module bay are not. Proposal 4 (HB DOS
-2.0), 7 (HB-OS and the desktop) and 8 (the bay) remain proposals, and the window the
-proposals describe is not built: the machine runs through
-`time_warp_gates hb` and `hb2_tests`. [The roadmap](../ROADMAP.md) carries the same
+**Status at 26.1.** All eight proposals are built, as the machine now called the
+**HB-2** ([its manual](../hb2/README.md)): the bus and the machine object, the video
+and audio chips, HB DOS 2.0, the input devices, HB-16 with its assembler, disassembler
+and monitor, HB-OS with the desktop, the module bay -- and the window the whole page
+was written to earn. What is left is smaller than a proposal: `SYS` in BASIC, the tape
+drive, and the joysticks' routing through the IDE's gamepad support. [The roadmap](../ROADMAP.md) carries the same
 list, and [the HB-2 manual's status section](../hb2/README.md#what-is-built-and-what-is-not)
 is the page to read before assuming a proposal here is not done.
 

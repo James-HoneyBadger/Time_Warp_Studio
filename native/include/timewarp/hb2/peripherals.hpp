@@ -15,7 +15,9 @@
 
 #pragma once
 
+#include <array>
 #include <cstdint>
+#include <deque>
 #include <string>
 
 #include "timewarp/hb2/device.hpp"
@@ -38,6 +40,13 @@ public:
         kPointerDeltaY = 0x08,
         kJoystickBase = 0x10,
         kJoystickStride = 0x04,
+        /// The next key typed, or zero. Reading it consumes it, which is what a
+        /// program polling the keyboard wants.
+        kKeyLast = 0x20,
+        /// Bit 0: a key is waiting.
+        kKeyStatus = 0x21,
+        /// Which keys are held, one bit a key, 32 bytes.
+        kKeyMatrix = 0x30,
     };
 
     /// Moves the pointer and records the delta the pointer's owner will read.
@@ -47,6 +56,16 @@ public:
     [[nodiscard]] int pointerY() const;
     void setJoystick(int index, std::int8_t x, std::int8_t y, std::uint8_t buttons);
 
+    /// A key pressed, as its ASCII code. It joins the queue the machine reads with
+    /// `INT 16` and shows in the matrix, so a game can hold a key down.
+    void pressKey(std::uint8_t key);
+    void releaseKey(std::uint8_t key);
+    [[nodiscard]] bool keyDown(std::uint8_t key) const;
+    [[nodiscard]] bool keyAvailable() const noexcept;
+    /// The next key typed, or zero. Consuming it is the point: a key read twice is a
+    /// program that acts on one press twice.
+    [[nodiscard]] std::uint8_t takeKey() const;
+
     [[nodiscard]] std::uint8_t read(std::uint32_t offset) const override;
     void write(std::uint32_t offset, std::uint8_t value) override;
     void reset() override;
@@ -55,6 +74,8 @@ private:
     std::uint8_t registers_[0x100]{};
     mutable std::int16_t delta_x_ = 0;
     mutable std::int16_t delta_y_ = 0;
+    mutable std::deque<std::uint8_t> typed_;
+    std::array<std::uint8_t, 32> matrix_{};
 };
 
 /// A real-time clock. Six numbers, advanced by the machine's frame tick.

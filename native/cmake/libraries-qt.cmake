@@ -516,6 +516,9 @@ if(TIME_WARP_QT_FOUND)
         endif()
         # The engines. A player with no interpreter has nothing to play.
         target_link_libraries(timewarp_ui_core PRIVATE timewarp::lang)
+        # The HB-2, which the machine window shows and drives: the machine itself is
+        # Qt-free and the window is the only thing here that knows about pixels.
+        target_link_libraries(timewarp_ui_core PRIVATE timewarp::hb2)
         target_compile_definitions(timewarp_ui_core PRIVATE
             TIME_WARP_VERSION="${TIME_WARP_VERSION}"
         )
@@ -556,6 +559,7 @@ if(TIME_WARP_QT_FOUND)
             src/ui/find_bar.cpp
             src/ui/find_in_files.cpp
             src/ui/gallery.cpp
+            src/ui/hb2_window.cpp
             src/ui/notebook.cpp
             src/ui/notebook_window.cpp
             src/ui/formatter.cpp
@@ -621,6 +625,7 @@ if(TIME_WARP_QT_FOUND)
             include/timewarp/ui/classroom_marker.hpp
             include/timewarp/ui/chip8_screen.hpp
             include/timewarp/ui/chip8_window.hpp
+            include/timewarp/ui/hb2_window.hpp
             include/timewarp/ui/command_palette.hpp
             include/timewarp/ui/command_reference.hpp
             include/timewarp/ui/diff.hpp
@@ -786,10 +791,8 @@ if(TIME_WARP_QT_FOUND)
         #                                              installed build needs no path
         #                                              configuration
         #   share/applications + share/icons           the desktop entry and the
-        #                                              icon, which are the identity a
-        #                                              Linux build has instead of a
-        #                                              `.rc` resource or an `.icns`
-        #                                              bundle
+        #                                              icon: the identity of a Linux
+        #                                              application
         #   share/doc/time-warp-studio                 the guides the help window
         #                                              reads and the licence
         include(GNUInstallDirs)

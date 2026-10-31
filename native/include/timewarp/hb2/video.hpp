@@ -152,8 +152,19 @@ public:
     void putCell(int column, int row, std::uint8_t code);
     [[nodiscard]] std::uint8_t cell(int column, int row) const;
     /// Writes `code` at the cursor and advances it, which is what the machine's
-    /// console service does for every character a program prints.
+    /// console service does for every character a program prints. In `MODE 0` that
+    /// is a text cell; in the bitmap modes it is an 8 x 8 glyph, drawn from the
+    /// machine's own ROM font, so a program prints on any screen it has chosen.
     void putChar(std::uint8_t code);
+    /// One glyph at a pixel position, in the current bitmap mode. Nothing happens in
+    /// `MODE 0`, where a character is a cell rather than a picture.
+    void drawChar(int x, int y, std::uint8_t code, std::uint8_t colour);
+    /// A string of glyphs, eight pixels apart, which is what a window's title bar and
+    /// a program's message both need.
+    void drawText(int x, int y, std::string_view text, std::uint8_t colour);
+    /// How many characters the current mode's screen holds.
+    [[nodiscard]] int textColumns() const;
+    [[nodiscard]] int textRows() const;
     [[nodiscard]] std::string line(int row) const;
     [[nodiscard]] std::vector<std::string> screenText() const;
 

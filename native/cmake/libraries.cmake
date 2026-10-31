@@ -133,8 +133,13 @@ add_library(timewarp_hb2
     src/hb2/bus.cpp
     src/hb2/cpu.cpp
     src/hb2/device.cpp
+    src/hb2/dos.cpp
+    src/hb2/hbos.cpp
     src/hb2/machine.cpp
+    src/hb2/monitor.cpp
+    src/hb2/modules.cpp
     src/hb2/peripherals.cpp
+    src/hb2/shell.cpp
     src/hb2/video.cpp
 )
 add_library(timewarp::hb2 ALIAS timewarp_hb2)

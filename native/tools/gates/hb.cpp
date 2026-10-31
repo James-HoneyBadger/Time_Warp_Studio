@@ -24,7 +24,9 @@
 #include <QFileInfo>
 #include <QStringList>
 
+#include <algorithm>
 #include <cstdio>
+#include <optional>
 #include <string>
 
 namespace timewarp::gates {
@@ -57,6 +59,78 @@ bool drewSomething(Machine& machine) {
     return false;
 }
 
+/// Reads a listing from the checkout.
+std::optional<std::string> readListing(const QString& name) {
+    const QString path = QFileInfo{name}.isAbsolute() ? name : repositoryRoot() + "/" + name;
+    QFile file{path};
+    if (!file.open(QIODevice::ReadOnly)) {
+        return std::nullopt;
+    }
+    return file.readAll().toStdString();
+}
+
+/// HB-OS through the harness: several programs, a scheduler and a desktop. Every task
+/// must have printed something and none may have died -- two programs making progress
+/// at once is the claim, and a picture of one window is not evidence of it.
+int runTasks(const QStringList& tasks, int ticks, bool screen) {
+    if (tasks.isEmpty()) {
+        std::fprintf(stderr, "hb: --tasks needs at least one listing\n");
+        return 2;
+    }
+    Machine machine;
+    for (const QString& name : tasks) {
+        const std::optional<std::string> source = readListing(name);
+        if (!source) {
+            std::fprintf(stderr, "hb: cannot read %s\n", qPrintable(name));
+            return 1;
+        }
+        if (machine.spawn(QFileInfo{name}.completeBaseName().toUpper().toStdString(), *source) == 0) {
+            std::fprintf(stderr, "hb: %s did not start: %s\n", qPrintable(name),
+                         machine.scheduler().lastError().c_str());
+            return 1;
+        }
+    }
+    machine.runFrames(ticks);
+
+    std::fprintf(out(), "HB-OS: %llu frames, %zu processes\n",
+                 static_cast<unsigned long long>(machine.video().frames()),
+                 machine.scheduler().size());
+    bool progress = true;
+    for (const std::string& row : machine.scheduler().status()) {
+        std::fprintf(out(), "  %s\n", row.c_str());
+    }
+    for (const timewarp::hb2::Task& task : machine.scheduler().tasks()) {
+        const std::size_t lines = static_cast<std::size_t>(
+            std::count(task.console.begin(), task.console.end(), '\n'));
+        std::fprintf(out(), "  %s printed %zu line(s)\n", task.name.c_str(), lines);
+        if (lines == 0 && task.failure.empty()) {
+            progress = false;
+        }
+        if (!task.failure.empty()) {
+            progress = false;
+            std::fprintf(stderr, "hb: %s died: %s\n", task.name.c_str(), task.failure.c_str());
+        }
+    }
+    std::fprintf(out(), "  desktop      %zu window(s), pointer at %d,%d\n", machine.desktop().count(),
+                 machine.desktop().pointerX(), machine.desktop().pointerY());
+    std::fprintf(out(), "  framebuffer  %016llX\n",
+                 static_cast<unsigned long long>(machine.video().hash()));
+    if (screen) {
+        std::fprintf(out(), "  screen\n");
+        for (const std::string& row : machine.video().screenText()) {
+            if (row.empty()) {
+                continue;
+            }
+            std::fprintf(out(), "    | %s\n", row.c_str());
+        }
+    }
+    if (!progress) {
+        std::fprintf(stderr, "hb: a process made no progress\n");
+        return 1;
+    }
+    return 0;
+}
+
 void printMap(FILE* out) {
     std::fprintf(out, "%-12s %s\n", "region", "addresses");
     for (const std::string& row : timewarp::hb2::mapListing()) {
@@ -68,15 +142,19 @@ void printMap(FILE* out) {
 
 int runHb(const QStringList& arguments) {
     QString program;
+    QStringList taskList;
     int ticks = 4;
     bool screen = false;
     bool map = false;
+    bool tasks = false;
     for (int index = 0; index < arguments.size(); ++index) {
         const QString& argument = arguments.at(index);
         if (argument == QLatin1String("--screen")) {
             screen = true;
         } else if (argument == QLatin1String("--map")) {
             map = true;
+        } else if (argument == QLatin1String("--tasks")) {
+            tasks = true;
         } else if (argument == QLatin1String("--ticks") && index + 1 < arguments.size()) {
             ticks = arguments.at(++index).toInt();
         } else if (argument.startsWith(QLatin1String("--ticks="))) {
@@ -84,12 +162,18 @@ int runHb(const QStringList& arguments) {
         } else if (argument.startsWith(QLatin1String("--"))) {
             std::fprintf(stderr, "hb: unknown argument %s\n", qPrintable(argument));
             return 2;
+        } else if (tasks) {
+            taskList << argument;
         } else if (program.isEmpty()) {
             program = argument;
         } else {
-            std::fprintf(stderr, "hb: one listing at a time\n");
+            std::fprintf(stderr, "hb: one listing at a time, or --tasks then several\n");
             return 2;
         }
+    }
+
+    if (tasks) {
+        return runTasks(taskList, ticks, screen);
     }
     if (ticks <= 0) {
         ticks = 4;

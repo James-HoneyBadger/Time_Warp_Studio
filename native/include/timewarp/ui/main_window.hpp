@@ -131,6 +131,7 @@ class PlaceholderPanel;
 class ProjectPanel;
 class ReplRunner;
 class ResizableTabWidget;
+class Hb2Window;
 class RetroComputerWindow;
 class Scrubber;
 class SoundPlayer;
@@ -314,6 +315,10 @@ public:
     /// invocation seeds it with the current document and language; later ones
     /// raise the machine as the user left it.
     void openRetroComputer();
+    /// Opens the HB-2, the 1992 machine: a screen, a prompt, a monitor and the
+    /// listing in its own editor. The editor's text comes with it, because that is
+    /// what a person pressing the menu item is looking at.
+    void openHb2();
     /// Shows the guided tour if this installation has not seen it. Called once
     /// from the application's startup path, never from a test's construction.
     void showGuidedTourIfUnseen();
@@ -964,6 +969,7 @@ private:
     /// The HB-1 window. Same lifetime rule as the CHIP-8 machine: it is
     /// parented to the IDE and deletes itself when its own close box is used.
     QPointer<RetroComputerWindow> retro_computer_window_;
+    QPointer<Hb2Window> hb2_window_;
     /// The tour is a child widget through its overlay; the guide itself persists
     /// "seen" in QSettings.
     TourGuide* tour_ = nullptr;

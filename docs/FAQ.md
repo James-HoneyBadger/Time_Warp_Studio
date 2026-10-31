@@ -126,9 +126,9 @@ matching the machine, or run on a physical machine rather than an old VM.
 
 ### Does it run on Windows or macOS?
 
-No. Time Warp Studio is a Linux application. It was cross-platform up to 24.0, and
-those artifacts are still on that release page, but nothing after 24.0 is built or
-tested for either. The [Installation Guide](INSTALLATION.md) has the Linux steps.
+No. Time Warp Studio is a Linux application: it is built, tested and shipped for
+Linux only, and there is no installer, package or supported path for any other
+system. The [Installation Guide](INSTALLATION.md) has the Linux steps.
 
 ---
 

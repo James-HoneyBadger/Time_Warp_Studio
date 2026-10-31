@@ -8,7 +8,7 @@
 
 ## Project Overview
 
-Time Warp Studio is an old-school desktop programming environment built with **C++20 and Qt6** (Qt 5.15 for the Windows 7 build): a unified IDE for eleven interpreters from 1964 to 1980, with turtle graphics, a debugger in every language, and three machines — the HB-1 home computer and a live CHIP-8. A checked lesson curriculum ships for teaching, but the product is framed for retro-computing hobbyists first.
+Time Warp Studio is an old-school desktop programming environment built with **C++20 and Qt6** for Linux: a unified IDE for eleven interpreters from 1964 to 1980, with turtle graphics, a debugger in every language, and three machines — the HB-1 home computer and a live CHIP-8. A checked lesson curriculum ships for teaching, but the product is framed for retro-computing hobbyists first.
 
 **Supported Languages:** BASIC, APL, Logo, PILOT, FOCAL, Scheme, CHIP-8, COMAL, REXX, Smalltalk and Forth.
 
@@ -103,10 +103,8 @@ make -C native run
 **System Requirements**
 
 - Qt6 (Widgets, Core, Gui), CMake 3.20+, a C++20 compiler
-- Qt 5.15 as well if you are building the Windows 7 artifact, which is the only
-  reason the second Qt exists: `-DTIME_WARP_QT5=ON` selects it and
-  `-DTIME_WARP_WIN7=ON` states the Windows 7 API level. Never `#if` on the Qt
-  version at a call site — the two compatibility headers below are the seam.
+- Linux. There is one Qt and one platform: no Windows build, no macOS build and no
+  installer for either, so nothing in the tree may be conditioned on one.
 - No interpreter of any kind. Every language runs in process, and the gates and
   documentation tools are C++ built from this tree; `make tree-check` fails if a
   `.py` comes back, or the config file of a Python tool (`pytest.ini` outlived the

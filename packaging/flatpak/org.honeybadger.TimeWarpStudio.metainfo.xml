@@ -75,6 +75,14 @@
   </keywords>
 
   <releases>
+    <release version="26.1.0" date="2026-10-31">
+      <description>
+        <p>The HB-2 becomes a machine you can use: a window with the machine's screen
+        and keyboard, HB DOS 2.0 with directories and sector accounting, eight
+        processes on a desktop, a monitor, a module bay and a prompt. And the Studio
+        is Linux only, with no build or installer for any other system.</p>
+      </description>
+    </release>
     <release version="26.0.0" date="2026-10-31">
       <description>
         <p>The HB-2: the HB-1's 1992 successor, with a bus that keeps the 1982 map as

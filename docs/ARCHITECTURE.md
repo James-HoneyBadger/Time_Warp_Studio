@@ -1,6 +1,6 @@
 # Architecture Guide
 
-## Time Warp Studio v26.0.0 — System Design and Implementation
+## Time Warp Studio v26.1.0 — System Design and Implementation
 
 > **This page describes the shipping product.** It was rewritten alongside the move
 > to C++20 / Qt6. Earlier revisions documented the PySide6 implementation, which has
@@ -900,10 +900,9 @@ for separately and only by `timewarp_ui`: it enables SVG drawing export, and wit
 that format is absent rather than broken. Nothing outside the canvas Qt adapter, the
 debugger runner and `src/ui/` includes a Qt header.
 
-`TIME_WARP_QT` is `Qt6`. It was a choice between two Qts while the Windows 7 artifact
-existed — Qt 6 requires Windows 10, and 5.15 is the last Qt that runs on 7 SP1 — and the
-variable is kept because every target names `${TIME_WARP_QT}::Widgets` rather than
-`Qt6::Widgets`. `timewarp/core/qt_names.hpp` holds the two Qt spellings used at many call
+`TIME_WARP_QT` is `Qt6`, and the variable is kept because every target names
+`${TIME_WARP_QT}::Widgets` rather than `Qt6::Widgets`: one spelling, one place to
+change it. `timewarp/core/qt_names.hpp` holds the two Qt spellings used at many call
 sites, so a menu entry stays one readable line.
 
 ### The build file

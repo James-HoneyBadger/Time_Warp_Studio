@@ -6,8 +6,14 @@ a processor of its own. It is the machine the [Model 92 proposal](../hb1/model-9
 described, and this page is its owner's manual.
 
 ```bash
+# The machine, in the window: Tools > HB-2 Model 92 (Ctrl+Alt+2)
+./native/build/time_warp_ide --hb2
+
 # Assemble and run a listing, and see what it did
 ./native/build/time_warp_gates hb Examples/hb2/desktop.s --ticks 4 --screen
+
+# Two processes on the desktop, both making progress
+./native/build/time_warp_gates hb --tasks Examples/hb2/task_a.s Examples/hb2/task_b.s --ticks 6
 
 # The memory map, from the one table the bus routes with
 ./native/build/time_warp_gates hb --map
@@ -195,22 +201,69 @@ Six listings in [Examples/hb2](../../Examples/hb2), each gated by `hb2_tests` an
 
 ---
 
+## The window
+
+**Tools > HB-2 Model 92…** (`Ctrl+Alt+2`), or `time_warp_ide --hb2`. Four pages:
+
+| Page | What it is |
+| --- | --- |
+| **Screen** | The glass. It paints the framebuffer the chip composed, through the DAC, in whichever mode the program chose; click it to give the machine the keyboard, and typing reaches `INT 16` |
+| **Prompt** | The machine's words, below. `HELP` lists them |
+| **Monitor** | The registers, a disassembly at the program counter, and Step, Break and Run-to-breakpoint |
+| **Program** | The listing the machine runs: `F9` assembles and runs it, and it can be saved to `A:` |
+
+The frame timer ticks the machine sixty times a second, stops when the program does,
+and hands the four-channel mixer to the Studio's speaker while anything is sounding.
+
+---
+
+## HB DOS 2.0
+
+Two drives: `A:` is a 1.44 MB floppy, `B:` a 40 MB hard disk. Directories, 30-character
+names, timestamps from the machine's own clock, and `read-only`, `hidden` and `locked`
+attributes. Files are charged in 512-byte sectors, a write that does not fit is refused
+rather than truncated, and `FREE` accounts for every sector with none lost or
+double-counted. The image is text with a format number, and a version-1 volume -- an
+HB-1 disk -- reads as a root full of files.
+
+## HB-OS
+
+Eight processes, round-robin on the frame tick, each with its own registers, its own
+console and its own window on the desktop. A process prints into its window; the
+desktop composes windows in z order with a task bar and a pointer. A process that
+faults is killed and named, and the desktop survives it. The clock is the machine's, so
+the same number of ticks produces the same screen.
+
+## The prompt
+
+`HELP` lists everything. The words are the machine's:
+
+| Word | Does |
+| --- | --- |
+| `DIR` `CD` `MKDIR` `RMDIR` | the disk's catalogue and its directories |
+| `TYPE` `DELETE` `COPY` `MOVE` `RENAME` `LOCK` `UNLOCK` | files |
+| `FORMAT` `FREE` `DRIVE` | the volumes and the sector map |
+| `LIST` `NEW` `SAVE` `LOAD` | the listing in the machine's editor, and the disk |
+| `RUN` `SPAWN` `TASKS` `KILL` | one program, a process, and what is running |
+| `REGS` `DIS` `DUMP` `POKE` `STEP` `BREAK` `RUNTO` | the monitor |
+| `MODULE LIST` `MODULE SAVE` `MODULE BOOT` | the bay |
+| `SERIAL` `TIME` `CLS` | the serial port, the clock, the screen |
+
+---
+
 ## What is built, and what is not
 
 Built, with tests: the bus and its one map; the video chip, its three modes, the DAC,
-the blitter and the sprites; the sound chip and the waveform bank; the pointer, the
-clock and the serial port; HB-16, its assembler, its disassembler and its fault
-reporting; the `INT` services; the machine snapshot; and the harness.
+the blitter, the sprites and the ROM font; the sound chip and the waveform bank; the
+pointer, the keyboard, the clock and the serial port; HB-16, its assembler, its
+disassembler and its fault reporting; the `INT` services; HB DOS 2.0; HB-OS and the
+desktop; the monitor; the module bay; the prompt; the machine snapshot; the window; and
+the harness.
 
-**Not yet built**, and named so that no page promises them:
+**Not built**, and named so that no page promises them: `SYS` in BASIC (a language
+program cannot yet call the machine's services), the tape drive and the joysticks'
+routing through the IDE's gamepad support, and the module bay's third kind of module
+booting a *running* machine's processes rather than a fresh one.
 
-- The **window**: the machine has no HB-2 panel in the IDE yet. It runs headless,
-  through `time_warp_gates hb` and its suite. The pixels are real; the glass is not.
-- **HB DOS 2.0**: the two drives, directories and timestamps of proposal 4.
-- **HB-OS**: the round-robin scheduler, and a desktop that runs a process in a
-  window. `desktop.s` draws the desktop; nothing schedules into it yet.
-- **The module bay** (proposal 8) and the **monitor** (proposal 6's third tool): the
-  assembler and disassembler they would be built on are here.
-
-[The proposal](../hb1/model-92.md) is still the specification those four are written
-against, and [the roadmap](../ROADMAP.md) says so.
+[The proposal](../hb1/model-92.md) is the specification all of this was written
+against, and [the roadmap](../ROADMAP.md) says what it cost.

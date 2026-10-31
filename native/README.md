@@ -188,9 +188,9 @@ runner and the widget UI are built; when absent they are skipped and everything
 else — including the queue's own tests — still builds and runs. Nothing outside
 `qt_bridge.*`, `debugger_runner.*` and `ui/` includes a Qt header.
 
-`TIME_WARP_QT` is `Qt6`. It was a choice between Qt 6 and Qt 5.15 while the Windows
-7 artifact existed, and the variable is kept because the module files name
-`${TIME_WARP_QT}::Widgets` in place of `Qt6::Widgets`; there is one answer now.
+`TIME_WARP_QT` is `Qt6`, and it is the only answer: the module files name
+`${TIME_WARP_QT}::Widgets` in place of `Qt6::Widgets`, and the variable stays so that
+spelling exists in one place.
 `include/timewarp/core/qt_names.hpp` holds the two Qt spellings this tree uses at
 many call sites -- `fromUtf8` for the language registry's `string_view`s and
 `keySequence` for the menu shortcuts -- so a menu entry reads as one line.

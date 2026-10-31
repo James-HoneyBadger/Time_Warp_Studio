@@ -81,6 +81,7 @@
 #include "timewarp/ui/preferences.hpp"
 #include "timewarp/ui/profile_report.hpp"
 #include "timewarp/ui/project_panel.hpp"
+#include "timewarp/ui/hb2_window.hpp"
 #include "timewarp/ui/retro_computer.hpp"
 #include "timewarp/ui/repl_runner.hpp"
 #include "timewarp/ui/sql_panel.hpp"
@@ -753,6 +754,29 @@ void MainWindow::openChip8Emulator() {
         return;
     }
     chip8_window_->loadBundledProgram();
+}
+
+void MainWindow::openHb2() {
+    const bool created = hb2_window_ == nullptr;
+    if (created) {
+        auto* window = new Hb2Window{this};
+        // Closing the machine ends it; the QPointer then goes null, so the next
+        // invocation builds a fresh machine rather than raising a dead window.
+        window->setAttribute(Qt::WA_DeleteOnClose);
+        hb2_window_ = window;
+        if (CodeEditor* editor = currentEditor(); editor != nullptr) {
+            const QString text = editor->toPlainText();
+            if (!text.isEmpty()) {
+                hb2_window_->setListing(text);
+            }
+        }
+        // A window that is closed has to be able to open again: `WA_DeleteOnClose`
+        // destroys it, and the QPointer is what says so.
+        connect(window, &QObject::destroyed, this, [this] { hb2_window_ = nullptr; });
+    }
+    hb2_window_->show();
+    hb2_window_->raise();
+    hb2_window_->activateWindow();
 }
 
 void MainWindow::openRetroComputer() {

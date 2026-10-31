@@ -145,6 +145,11 @@ int main(int argc, char* argv[]) {
         QStringLiteral("Run the first file as soon as the window is up.")};
     parser.addOption(runOption);
 
+    const QCommandLineOption hb2Option{
+        QStringLiteral("hb2"),
+        QStringLiteral("Open the HB-2 Model 92: the 1992 machine's screen, prompt, "
+                       "monitor and listing editor.")};
+    parser.addOption(hb2Option);
     const QCommandLineOption computerOption{
         QStringLiteral("computer"),
         QStringLiteral("Open the HB-1 computer, booted into the first "
@@ -314,6 +319,9 @@ int main(int argc, char* argv[]) {
 
     if (parser.isSet(computerOption) || parser.isSet(machineOption)) {
         window.openRetroComputer();
+    }
+    if (parser.isSet(hb2Option)) {
+        window.openHb2();
     }
     if (parser.isSet(machineOption)) {
         const QString image = parser.value(machineOption);

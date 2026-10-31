@@ -398,6 +398,11 @@ void MainWindow::buildMenuBar() {
     add(tools, tr("&HB-1 Computer..."),
         timewarp::core::keySequence(Qt::CTRL | Qt::ALT, Qt::Key_W), [this] { openRetroComputer(); })
         ->setObjectName(QStringLiteral("retroComputerAction"));
+    // The HB-2 sits beside it: same family, thirty years later, and the chord is
+    // beside the HB-1's so an owner of both learns one pattern.
+    add(tools, tr("HB-&2 Model 92..."),
+        timewarp::core::keySequence(Qt::CTRL | Qt::ALT, Qt::Key_2), [this] { openHb2(); })
+        ->setObjectName(QStringLiteral("hb2Action"));
 #ifdef TIME_WARP_HAVE_AI
     tools->addSeparator();
     // The assistant sits beside the machines rather than in a menu of its own: one

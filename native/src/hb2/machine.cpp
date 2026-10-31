@@ -48,16 +48,17 @@ std::string hexRegion(std::uint32_t base, std::uint32_t size) {
 
 }  // namespace
 
-Machine::Machine() : cpu_(bus_) {
+Machine::Machine() : cpu_(bus_), scheduler_(bus_) {
     bus_.attach(RegionKind::Video, &video_);
     bus_.attach(RegionKind::Audio, &audio_);
     bus_.attach(RegionKind::Input, &input_);
     bus_.attach(RegionKind::Rtc, &rtc_);
     bus_.attach(RegionKind::Uart, &uart_);
     bus_.attach(RegionKind::Rom, &rom_);
-    cpu_.setInterruptHandler([this](Cpu& cpu, std::uint16_t vector) {
+    interrupt_handler_ = [this](Cpu& cpu, std::uint16_t vector) {
         return service(cpu, vector);
-    });
+    };
+    cpu_.setInterruptHandler(interrupt_handler_);
     reset();
 }
 
@@ -65,7 +66,47 @@ void Machine::reset(std::uint32_t entry) {
     bus_.reset();
     console_.clear();
     exit_code_ = 0;
+    scheduler_.clear();
+    desktop_.clear();
     cpu_.reset(entry);
+}
+
+int Machine::spawn(const std::string& name, const std::string& source) {
+    const int id = scheduler_.spawn(name, source, 0);
+    if (id == 0) {
+        return 0;
+    }
+    // A desktop needs a framebuffer, so starting a process chooses one. The 1982
+    // text map is one `INT 5` away for a program that wants it back.
+    if (video_.mode() == Video::Mode::Text) {
+        video_.setMode(Video::Mode::Low);
+        bus_.setCompat(false);
+    }
+    Task* task = scheduler_.byId(id);
+    if (task == nullptr) {
+        return 0;
+    }
+    // A process reaches the same services the prompt does; without this its first
+    // `INT` is a fault, which is how two demonstration programs died on their first
+    // run rather than printing a line.
+    task->cpu.setInterruptHandler(interrupt_handler_);
+    desktop_.addWindow(id, name, task->window);
+    return id;
+}
+
+void Machine::resetVideoSurface() {
+    if (video_.mode() == Video::Mode::Text) {
+        video_.clearText();
+    } else {
+        video_.fill(0, 0, video_.width(), video_.height(), 0);
+    }
+    video_.write(Video::kRegisterOffset + Video::kCursorColumn, 0);
+    video_.write(Video::kRegisterOffset + Video::kCursorRow, 0);
+}
+
+void Machine::stopAllTasks() {
+    scheduler_.clear();
+    desktop_.clear();
 }
 
 void Machine::loadProgram(const std::vector<std::uint8_t>& bytes, std::uint32_t address) {
@@ -95,12 +136,20 @@ std::uint32_t Machine::run(std::uint32_t budget) { return cpu_.run(budget); }
 std::uint64_t Machine::runFrames(int frames, std::uint32_t stepsPerFrame) {
     std::uint64_t ran = 0;
     for (int frame = 0; frame < frames; ++frame) {
-        if (cpu_.status() == CpuStatus::Running) {
-            cpu_.run(stepsPerFrame);
+        if (scheduler_.empty()) {
+            if (cpu_.status() == CpuStatus::Running) {
+                cpu_.run(stepsPerFrame);
+            }
+        } else {
+            // HB-OS: each process gets a turn, then the desktop is composed from what
+            // they have printed. The desktop is drawn by the machine, not by a task,
+            // because a task that could draw the desktop could hide another's window.
+            scheduler_.tick(std::max<std::uint32_t>(2000, stepsPerFrame / 64));
+            desktop_.draw(video_, scheduler_);
         }
         tickFrame();
         ++ran;
-        if (cpu_.status() == CpuStatus::Faulted) {
+        if (scheduler_.empty() && cpu_.status() == CpuStatus::Faulted) {
             // A faulted processor is reported, not hidden: the frame still ticked,
             // because the machine around a broken program is still a machine.
             break;
@@ -138,14 +187,41 @@ std::string Machine::statusText() const {
 
 bool Machine::service(Cpu& cpu, std::uint16_t vector) {
     CpuRegisters& r = cpu.registers();
+    // A service knows whose program called it: a process prints into its own window,
+    // the console's program prints on the screen.
+    Task* task = scheduler_.current() == 0 ? nullptr : scheduler_.byId(scheduler_.current());
+    const auto printChar = [this, task](char character) {
+        if (task != nullptr) {
+            task->console.push_back(character);
+            return;
+        }
+        console_.push_back(character);
+        video_.putChar(static_cast<std::uint8_t>(character));
+    };
     switch (vector) {
     case kServiceExit:
-        exit_code_ = r.r[0];
+        if (task != nullptr) {
+            task->exit_code = r.r[0];
+        } else {
+            exit_code_ = r.r[0];
+        }
         return false;
     case kServicePrint: {
-        const auto character = static_cast<char>(r.r[0] & 0xFF);
-        console_.push_back(character);
-        video_.putChar(static_cast<std::uint8_t>(r.r[0] & 0xFF));
+        printChar(static_cast<char>(r.r[0] & 0xFF));
+        return true;
+    }
+    case kServiceTask: {
+        // R0 is the address of a zero-terminated name; the listing has to be in RAM
+        // already, which is what a module or a loaded file gives you.
+        std::string name;
+        for (std::uint32_t at = r.r[0]; at < 0x100000 && name.size() < 32; ++at) {
+            const std::uint8_t character = bus_.read(at);
+            if (character == 0) {
+                break;
+            }
+            name.push_back(static_cast<char>(character));
+        }
+        r.r[0] = static_cast<std::uint16_t>(scheduler_.size());
         return true;
     }
     case kServiceFrame:
@@ -182,8 +258,7 @@ bool Machine::service(Cpu& cpu, std::uint16_t vector) {
             if (character == 0) {
                 break;
             }
-            console_.push_back(static_cast<char>(character));
-            video_.putChar(character);
+            printChar(static_cast<char>(character));
             ++at;
         }
         return true;
@@ -201,6 +276,14 @@ bool Machine::service(Cpu& cpu, std::uint16_t vector) {
         r.r[3] = rtc_.read(Rtc::kHours);
         r.r[4] = rtc_.read(Rtc::kMinutes);
         r.r[5] = rtc_.read(Rtc::kSeconds);
+        return true;
+    case kServiceKey:
+        // Non-blocking: a program that wants to wait polls, which is what a 1992
+        // machine's own keyboard handler did too.
+        r.r[0] = input_.takeKey();
+        return true;
+    case kServiceKeyStatus:
+        r.r[0] = input_.keyAvailable() ? 1 : 0;
         return true;
     case kServiceSerial:
         uart_.write(Uart::kData, static_cast<std::uint8_t>(r.r[0] & 0xFF));
@@ -246,6 +329,11 @@ std::uint64_t Machine::hash() const {
         value = mix(value, byte);
     }
     value ^= video_.hash();
+    for (const std::string& row : scheduler_.status()) {
+        for (const char character : row) {
+            value = mix(value, static_cast<std::uint8_t>(character));
+        }
+    }
     value = mix(value, static_cast<std::uint8_t>(cpu_.status()));
     for (const std::uint16_t reg : cpu_.registers().r) {
         value = mix(value, static_cast<std::uint8_t>(reg & 0xFF));

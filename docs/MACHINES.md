@@ -13,7 +13,7 @@ with a Run button:
 - the **[HB-2](hb2/README.md)** — the HB-1's 1992 successor, built from
   [the Model 92 proposal](hb1/model-92.md): a bus, a 640 × 480 framebuffer and a
   blitter, four channels of sampled audio, hardware sprites, and HB-16, a processor
-  of the machine's own. It runs headless today, through the harness and its suite.
+  of the machine's own, with a desktop, a disk of its own and a prompt.
 
 All three are real programs. The first two run the same engines as the editor, and
 the HB-2 runs its own instruction set. None is a screenshot, a theme, or a video of a

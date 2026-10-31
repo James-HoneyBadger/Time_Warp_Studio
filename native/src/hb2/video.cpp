@@ -2,7 +2,10 @@
 
 #include "timewarp/hb2/video.hpp"
 
+#include "timewarp/hb2/font.hpp"
+
 #include <algorithm>
+#include <string_view>
 #include <cstddef>
 #include <cstring>
 
@@ -141,6 +144,45 @@ std::uint8_t Video::cell(int column, int row) const {
 }
 
 void Video::putChar(std::uint8_t code) {
+    if (mode() != Mode::Text) {
+        // A bitmap screen has no cells to write, so the console draws with the
+        // machine's own font: the same call, the same cursor, a different surface.
+        const int columns = std::max(1, textColumns());
+        if (code == '\n') {
+            registers_[kCursorColumn] = 0;
+            ++registers_[kCursorRow];
+        } else if (code == '\r') {
+            registers_[kCursorColumn] = 0;
+        } else {
+            drawChar(registers_[kCursorColumn] * kGlyphWidth, registers_[kCursorRow] * kGlyphHeight,
+                     code, registers_[kInk]);
+            if (++registers_[kCursorColumn] >= columns) {
+                registers_[kCursorColumn] = 0;
+                ++registers_[kCursorRow];
+            }
+        }
+        const int rows = std::max(1, textRows());
+        while (registers_[kCursorRow] >= rows) {
+            // Scrolling a bitmap is moving bytes up by one glyph: the rows the top
+            // one loses are the ones the bottom gains, and it is the same movement
+            // the text screen does with its cells.
+            const int height = this->height();
+            const int width = this->width();
+            for (int y = 0; y + kGlyphHeight < height; ++y) {
+                for (int x = 0; x < width; ++x) {
+                    putIndex(x, y, static_cast<std::uint8_t>(pixelIndex(x, y + kGlyphHeight)));
+                }
+            }
+            for (int y = height - kGlyphHeight; y < height; ++y) {
+                for (int x = 0; x < width; ++x) {
+                    putIndex(x, y, 0);
+                }
+            }
+            --registers_[kCursorRow];
+        }
+        return;
+    }
+
     if (code == '\n') {
         registers_[kCursorColumn] = 0;
         ++registers_[kCursorRow];
@@ -164,6 +206,58 @@ void Video::putChar(std::uint8_t code) {
         std::fill(attributes_.end() - kTextColumns, attributes_.end(), std::uint8_t{0x07});
         --registers_[kCursorRow];
     }
+}
+
+void Video::drawChar(int x, int y, std::uint8_t code, std::uint8_t colour) {
+    if (mode() == Mode::Text) {
+        return;
+    }
+    const std::array<std::uint8_t, kGlyphHeight>& glyph = glyphFor(code);
+    for (int row = 0; row < kGlyphHeight; ++row) {
+        const std::uint8_t bits = glyph[static_cast<std::size_t>(row)];
+        for (int column = 0; column < kGlyphWidth; ++column) {
+            if ((bits & (0x80U >> column)) != 0) {
+                putIndex(x + column, y + row, colour);
+            }
+        }
+    }
+}
+
+void Video::drawText(int x, int y, std::string_view text, std::uint8_t colour) {
+    int pen = x;
+    for (const char character : text) {
+        if (character == '\n') {
+            pen = x;
+            y += kGlyphHeight;
+            continue;
+        }
+        drawChar(pen, y, static_cast<std::uint8_t>(static_cast<unsigned char>(character)), colour);
+        pen += kGlyphWidth;
+    }
+}
+
+int Video::textColumns() const {
+    switch (mode()) {
+    case Mode::Low:
+        return kLowWidth / kGlyphWidth;
+    case Mode::High:
+        return kHighWidth / kGlyphWidth;
+    case Mode::Text:
+        break;
+    }
+    return kTextColumns;
+}
+
+int Video::textRows() const {
+    switch (mode()) {
+    case Mode::Low:
+        return kLowHeight / kGlyphHeight;
+    case Mode::High:
+        return kHighHeight / kGlyphHeight;
+    case Mode::Text:
+        break;
+    }
+    return kTextRows;
 }
 
 std::string Video::line(int row) const {

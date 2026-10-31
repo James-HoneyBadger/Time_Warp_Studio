@@ -2,6 +2,53 @@
 
 <!-- history: all -->
 
+## [26.1.0] - 2026-10-31
+
+**The HB-2 is a machine you can sit in front of.** 26.0.0 shipped it headless: a bus, a
+chip set, a processor and a harness, with no window and no disk. This release finishes
+the machine and removes the last of the other platforms' installation paths.
+
+### Added
+
+- **An HB-2 window.** Tools > **HB-2 Model 92…** (`Ctrl+Alt+2`), or `time_warp_ide
+  --hb2`: the glass, the keyboard, the prompt, the monitor and the machine's own
+  listing editor. The screen paints the framebuffer the chip composed -- the 1982 text
+  cells or either bitmap mode -- through the DAC, and the keyboard is the machine's key
+  device, so a program reads it with `INT 16` exactly as the manual says.
+- **Text on every screen.** The machine's ROM font draws an 8 x 8 glyph in the bitmap
+  modes, so `INT 1` and `INT 8` print on any screen a program has chosen, not only on
+  the 1982 text map.
+- **HB DOS 2.0.** Two drives (a 1.44 MB floppy and a 40 MB hard disk), directories,
+  timestamps, read-only, hidden and lock attributes, `COPY`, `MOVE`, `RENAME` and a
+  `FREE` sector map that accounts for every sector, and a versioned image that reads a
+  version-1 volume as a flat root.
+- **HB-OS.** Eight processes on the machine's own 60 Hz clock, round-robin, each with
+  its own registers, console and window; a desktop with z-order, hit testing, focus, a
+  task bar and a pointer; and a process that faults is killed and named while the
+  desktop survives it. `time_warp_gates hb --tasks a.s b.s --ticks 6` is the proof that
+  two programs both make progress.
+- **A monitor.** Disassemble, dump memory, poke, set a breakpoint, step and run to a
+  breakpoint, in text the prompt and the Monitor page both show.
+- **The module bay.** Script, binary and image modules in a directory, listed by
+  `MODULE`, saved from the prompt and booted into the machine; a malformed module is
+  refused with a sentence.
+- **The prompt.** `HELP`, `DIR`, `CD`, `MKDIR`, `RMDIR`, `TYPE`, `DELETE`, `COPY`,
+  `MOVE`, `RENAME`, `LOCK`, `FORMAT`, `FREE`, `LIST`, `NEW`, `SAVE`, `LOAD`, `RUN`,
+  `SPAWN`, `TASKS`, `KILL`, `REGS`, `DIS`, `DUMP`, `POKE`, `STEP`, `BREAK`, `RUNTO`,
+  `MODULE`, `SERIAL`, `TIME` and `CLS`.
+- **Sound you can hear.** The four-channel mixer is handed to the Studio's own speaker
+  as PCM, in half-second buffers while anything is sounding.
+- **Three more demonstration programs**: two HB-OS processes and a starter listing in
+  the window.
+
+### Changed
+
+- **The Studio is Linux only, and says so.** The stale instructions for building a
+  Windows 7 artifact with a second Qt, the Windows version-resource scaffolding in the
+  version file and the platform prose that still described those builds are gone; the
+  README, the support page, the FAQ, the roadmap and the architecture guide now state
+  one platform and one Qt.
+
 ## [26.0.0] - 2026-10-31
 
 **The HB-2 exists.** The

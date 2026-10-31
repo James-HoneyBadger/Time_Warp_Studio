@@ -9,7 +9,7 @@ complete computers inside it.*
 [![Machines](https://img.shields.io/badge/machines-2-purple)](docs/MACHINES.md)
 [![Platform](https://img.shields.io/badge/platform-Linux-green)](docs/INSTALLATION.md)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/Version-26.0.0-orange)](https://github.com/James-HoneyBadger/Time_Warp_Studio)
+[![Version](https://img.shields.io/badge/Version-26.1.0-orange)](https://github.com/James-HoneyBadger/Time_Warp_Studio)
 
 Time Warp Studio is a desktop programming environment for people who like old
 computers. It is the one the 1980s promised and never quite delivered: a full IDE,
@@ -49,10 +49,11 @@ people teaching with it, though nothing in the application assumes a classroom.
 
 The third is the **HB-2**, the HB-1's 1992 successor: a bus, a framebuffer with three
 video modes, four channels of sampled audio, hardware sprites and a processor of its
-own, with the 1982 memory map kept whole as `MODE 0`. It runs headless today -- six
-demonstration listings, `time_warp_gates hb` and a suite -- and its window is the next
-proposal. Manuals: [HB-2](docs/hb2/README.md) · [instruction set](docs/hb2/instruction-set.md)
-· [the proposal](docs/hb1/model-92.md).
+own, with the 1982 memory map kept whole as `MODE 0`. It has a window of its own --
+**Tools > HB-2 Model 92…** (`Ctrl+Alt+2`) -- with a screen, a prompt, a monitor and a
+listing editor; HB DOS 2.0 with directories and a sector map; eight processes on a
+desktop; and a module bay. Manuals: [HB-2](docs/hb2/README.md) ·
+[instruction set](docs/hb2/instruction-set.md) · [the proposal](docs/hb1/model-92.md).
 
 What you can do with them:
 
@@ -118,9 +119,9 @@ gate that proves it runs on each push. The feature set is not frozen: a release 
 here takes fixes and features alike, and each one arrives with the test and the book
 that make it true.
 
-**Version 24.0 is archived.** It was the golden release — the last one built for
-Windows and macOS — and it is kept exactly as it was built, on its own release page,
-never to change again. The design did not stop with it: the Terminal tab is a real
+**Version 24.0 is archived.** It was the golden release, and it is kept exactly as
+it was built, on its own release page, never to change again. The design did not stop
+with it: the Terminal tab is a real
 pseudo-terminal, the assistant has three historical voices, a run that finishes
 behind you can announce itself on the desktop, the CHIP-8 opens on an original
 five-page tour and can fetch twelve CC0 homebrew programs with one button, and there
@@ -137,9 +138,9 @@ overhaul it would take to get there.
 You do not need a compiler. Every [release](https://github.com/James-HoneyBadger/Time_Warp_Studio/releases/latest)
 carries a ready-built Linux application, with the Qt runtime inside it.
 
-**Time Warp Studio is a Linux application.** It was cross-platform until 24.0, and
-the Windows and macOS builds of that release remain on the release page as they were;
-25.0 builds and ships for Linux only.
+**Time Warp Studio is a Linux application.** Every artifact this project builds,
+tests and ships is for Linux: there is no Windows build, no macOS build and no
+installer for either. The [Installation Guide](docs/INSTALLATION.md) has the steps.
 
 | You have | Take | Then |
 | --- | --- | --- |

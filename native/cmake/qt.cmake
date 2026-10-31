@@ -15,10 +15,8 @@
 # Qt 6
 # ---------------------------------------------------------------------------
 # The rest of the build names it `${TIME_WARP_QT}::Widgets` rather than
-# `Qt6::Widgets`. That spelling was once a choice between Qt 6 and Qt 5.15, which
-# existed only to build the Windows 7 artifact; with that artifact retired there is
-# one answer, and the variable is kept so the target names in the module files stay
-# readable beside the source lists.
+# `Qt6::Widgets`: the variable keeps one spelling for the Qt target names in the
+# module files, so a rename would be one edit rather than thirty.
 find_package(Qt6 QUIET COMPONENTS Core)
 set(TIME_WARP_QT Qt6)
 set(TIME_WARP_QT_FOUND "${${TIME_WARP_QT}_FOUND}")

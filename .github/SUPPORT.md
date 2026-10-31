@@ -38,12 +38,11 @@ one I would type:
 
 ## What is supported
 
-**Platforms.** Linux, and only Linux. The 26 suites run under GCC on Ubuntu 24.04
+**Platforms.** Linux, and only Linux. The 27 suites run under GCC on Ubuntu 24.04
 on every change, and a tagged release ships `.deb`, `.rpm`, tarball and AppImage
-packages for x86_64 and arm64. Time Warp Studio was cross-platform until 24.0; the
-Windows and macOS builds of that release remain on the release page as they were,
-and are not maintained. A report about either is out of scope unless it is about
-the 24.0 artifacts specifically.
+packages for x86_64 and arm64. There is no Windows build and no macOS build, and a
+report about either is out of scope: the project has no way to build, run or test
+one.
 
 **Your distribution.** The releases are built and tested on Ubuntu 24.04. The
 `.deb` and `.rpm` name the distribution's Qt 6 and SQLite, so a distribution with

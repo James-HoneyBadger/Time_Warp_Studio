@@ -89,7 +89,8 @@ hb-check: gates-built
 			echo "$$quiet"; exit 1; }; \
 		echo "  $$demo: ok"; \
 	done
-	@echo "hb: 6 demonstration programs ran and drew"
+	@$(GATES) hb --tasks Examples/hb2/task_a.s Examples/hb2/task_b.s --ticks 6 >/dev/null
+	@echo "hb: 6 demonstration programs ran and drew, and two processes made progress"
 
 # The curriculum, checked by the same library the Lessons panel asks: every
 # worked answer passes its checkpoint and every starter fails it. Needs the build,
