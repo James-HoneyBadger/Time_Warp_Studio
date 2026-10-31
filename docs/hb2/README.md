@@ -180,6 +180,13 @@ immediate, the arguments are registers, and the table is small on purpose.
 | 13 | Load a sprite pattern | `R0` pattern, `R1` the address of its thirty-two bytes in RAM |
 | 14 | Play a note | `R0` channel, `R1` waveform, `R2` period, `R3` volume |
 | 15 | Write one waveform sample | `R0` slot, `R1` index, `R2` the sample |
+| 16 | Read a key | `R0` = the next code from the queue, or zero when the queue is empty |
+| 17 | Key status | `R0` the code; `R0` = 1 while it is held, which is what a game reads |
+| 18 | Start a process | `R0` the address of a zero-terminated name; `R0` = the process count |
+| 20 | Record a tape file | `R0` name, `R1` data, `R2` length; `R0` = 1 when it was recorded |
+| 21 | Play a tape file | `R0` name, `R1` the destination; `R0` = the length, or zero |
+| 22 | Rewind the tape | |
+| 23 | Play the next tape file | `R1` the destination; `R0` = the length, or zero |
 
 An unknown vector is a fault that names the vector. No vector is a silent no-op.
 
@@ -187,7 +194,7 @@ An unknown vector is a fault that names the vector. No vector is a silent no-op.
 
 ## The demonstrations
 
-Six listings in [Examples/hb2](../../Examples/hb2), each gated by `hb2_tests` and by
+Eight listings in [Examples/hb2](../../Examples/hb2), each gated by `hb2_tests` and by
 `make hb-check`: a program that runs and leaves the screen as it found it fails both.
 
 | Program | What it shows |
@@ -198,6 +205,8 @@ Six listings in [Examples/hb2](../../Examples/hb2), each gated by `hb2_tests` an
 | [`hello.s`](../../Examples/hb2/hello.s) | The 1982 text map written by hand, and the 1992 print call |
 | [`chord.s`](../../Examples/hb2/chord.s) | Four channels, a waveform the program writes, and a meter |
 | [`desktop.s`](../../Examples/hb2/desktop.s) | Overlapping windows and a task bar: what a framebuffer is for |
+| [`tape.s`](../../Examples/hb2/tape.s) | A file recorded, the head rewound and the file played back and printed |
+| [`task_a.s`](../../Examples/hb2/task_a.s), [`task_b.s`](../../Examples/hb2/task_b.s) | Two processes that never halt, run together with `time_warp_gates hb --tasks`: the scheduler is seen to switch between them |
 
 ---
 
@@ -207,10 +216,10 @@ Six listings in [Examples/hb2](../../Examples/hb2), each gated by `hb2_tests` an
 
 | Page | What it is |
 | --- | --- |
-| **Screen** | The glass. It paints the framebuffer the chip composed, through the DAC, in whichever mode the program chose; click it to give the machine the keyboard, and typing reaches `INT 16` |
+| **Screen** | The glass. It paints the framebuffer the chip composed, through the DAC, in whichever mode the program chose; click it to give the machine the keyboard, and typing reaches `INT 16`. A gamepad the Studio can see is polled every frame into the joystick registers, so `STICK` and `STRIG` answer with what is in the hand |
 | **Prompt** | The machine's words, below. `HELP` lists them |
 | **Monitor** | The registers, a disassembly at the program counter, and Step, Break and Run-to-breakpoint |
-| **Program** | The listing the machine runs: `F9` assembles and runs it, and it can be saved to `A:` |
+| **Program** | The listing the machine runs, and the **ROM socket** above it: `HB-16 ASSEMBLER` or one of the nine languages. `Run` assembles and runs a listing, or runs it through the engine in the socket, and it can be saved to `A:` |
 
 The frame timer ticks the machine sixty times a second, stops when the program does,
 and hands the four-channel mixer to the Studio's speaker while anything is sounding.
@@ -225,6 +234,57 @@ attributes. Files are charged in 512-byte sectors, a write that does not fit is 
 rather than truncated, and `FREE` accounts for every sector with none lost or
 double-counted. The image is text with a format number, and a version-1 volume -- an
 HB-1 disk -- reads as a root full of files.
+
+The window keeps the machine: `disk0.img` and `tape.img` are written under the data
+directory (`~/.time_warp/hb2`, moved by `TIME_WARP_DATA_DIR`) when the window closes and
+every thirty seconds while it is open, and the module bay is `modules/` beside them. A
+machine you typed at is the same machine next time.
+
+## The cassette
+
+A disk is a tree you can see; a cassette is a position. The machine keeps both, and
+[`tape.hpp`](../../native/include/timewarp/hb2/tape.hpp) is the second: an ordered list
+of named files, each with a length and a sixteen-bit checksum, and a head that only
+moves forward. `CLOAD` reads from where the head is, so a file that has already gone by
+answers `?PASSED` and the head does not helpfully rewind itself — that is what `REWIND`
+is for. Recording is append-only, and a name already on the tape is `?NAME IN USE`,
+because a physical cassette has no index to rewrite.
+
+A byte that rotted on the tape is `?CHECKSUM`, refused rather than loaded. The image is
+text — `HBTAPE 1`, then one `FILE name length checksum` line and its bytes in hex — so a
+cassette is something a person can read, copy and put in a repository. The prompt's
+`TAPE` lists it with the head's position, `CSAVE` records the listing, `CLOAD` plays one
+back, and `INT 20`-`23` are the same four operations from machine code.
+
+## The ROM socket
+
+The HB-1's socket held eleven languages. The HB-2's holds the same idea with a processor
+underneath it: **nine** of the editor's engines — BASIC, APL, Logo, PILOT, FOCAL, COMAL,
+REXX, Smalltalk and Forth — run on the machine's own hardware through
+[`rom.hpp`](../../native/include/timewarp/hb2/rom.hpp). Scheme is its own machine and
+CHIP-8 is a different computer with its own window, so neither is a ROM here.
+
+Selecting a language is `ROM BASIC` at the prompt or the **ROM socket** selector on the
+Program page, and `RUN` then runs the listing through that engine with the machine's bus
+attached. That is the whole difference between a program in a tab and a program on a
+computer:
+
+```basic
+10 POKE 1048576, 5      : REM the first pixel of the framebuffer, in MODE 1
+20 LOCATE 0, 0 : PRINT "HELLO FROM BASIC"
+30 SYS 4096             : REM run the HB-16 code already at $001000
+```
+
+`POKE` and `PEEK` reach the machine's whole address space — derived from the map, so
+`POKE 1048576` is video memory and not an error about sixteen bits — and a write the
+machine refuses says so. `SYS` runs HB-16 from an address the program computed, stopping
+when the code halts, and returns what it printed in the order it printed it.
+
+`STICK(n)` and `STRIG(n)` read the machine's joystick registers whenever a program is on
+the machine — axes `0` and `1` as `0`-`255` centred at `128`, buttons `2` and `3` at full
+scale — so a game needs no `JOYINIT`: the pad is in the machine, not in a host device
+that has to be opened. The window feeds those registers from the Studio's gamepad when
+one is present, so a real controller moves a 1992 program.
 
 ## HB-OS
 
@@ -246,6 +306,8 @@ the same number of ticks produces the same screen.
 | `LIST` `NEW` `SAVE` `LOAD` | the listing in the machine's editor, and the disk |
 | `RUN` `SPAWN` `TASKS` `KILL` | one program, a process, and what is running |
 | `REGS` `DIS` `DUMP` `POKE` `STEP` `BREAK` `RUNTO` | the monitor |
+| `ROM` `ROM BASIC` | the socket: what is in it, and what to put in it |
+| `TAPE` `CSAVE` `CLOAD` `REWIND` `FORWARD` | the cassette: what is on it, and the head |
 | `MODULE LIST` `MODULE SAVE` `MODULE BOOT` | the bay |
 | `SERIAL` `TIME` `CLS` | the serial port, the clock, the screen |
 
@@ -256,14 +318,13 @@ the same number of ticks produces the same screen.
 Built, with tests: the bus and its one map; the video chip, its three modes, the DAC,
 the blitter, the sprites and the ROM font; the sound chip and the waveform bank; the
 pointer, the keyboard, the clock and the serial port; HB-16, its assembler, its
-disassembler and its fault reporting; the `INT` services; HB DOS 2.0; HB-OS and the
-desktop; the monitor; the module bay; the prompt; the machine snapshot; the window; and
-the harness.
+disassembler and its fault reporting; the `INT` services, the tape's four among them; the
+ROM socket and the nine languages it runs, `SYS` included; the cassette; HB DOS 2.0;
+HB-OS and the desktop; the monitor; the module bay; the prompt; the machine snapshot; the
+window, with the socket selector and the gamepad; and the harness.
 
-**Not built**, and named so that no page promises them: `SYS` in BASIC (a language
-program cannot yet call the machine's services), the tape drive and the joysticks'
-routing through the IDE's gamepad support, and the module bay's third kind of module
-booting a *running* machine's processes rather than a fresh one.
+**Not built**, and named so that no page promises it: the module bay's third kind of
+module -- one that boots a *running* machine's processes rather than a fresh machine.
 
 [The proposal](../hb1/model-92.md) is the specification all of this was written
 against, and [the roadmap](../ROADMAP.md) says what it cost.

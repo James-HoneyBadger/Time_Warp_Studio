@@ -2,6 +2,8 @@
 
 #include "timewarp/hb2/shell.hpp"
 
+#include "timewarp/hb2/rom.hpp"
+
 #include <algorithm>
 #include <cctype>
 #include <cstdio>
@@ -89,6 +91,10 @@ std::vector<std::string> Shell::words() {
         "DUMP [addr]           memory                    POKE <addr> <byte>...",
         "STEP                  one instruction           BREAK <addr>   a breakpoint",
         "RUNTO                 run to a breakpoint",
+        "ROM [name]            the socket: HB16, or one of the nine engines",
+        "TAPE                  the cassette and where the head is",
+        "CSAVE <name>          record the listing      CLOAD <name>  play it back",
+        "REWIND                put the head at the start    FORWARD  play past a file",
         "MODULE [list|save <n>|boot <n>]  the module bay",
         "SERIAL <text>         write the serial port     TIME           the machine's clock",
         "CLS                   clear the screen",
@@ -229,6 +235,14 @@ std::vector<std::string> Shell::execute(std::string_view line) {
     }
     if (verb == "RUNTO" && monitor_ != nullptr) {
         return {monitor_->runToBreakpoint()};
+    }
+
+    if (verb == "ROM") {
+        return romWords(args);
+    }
+    if (verb == "TAPE" || verb == "CSAVE" || verb == "CLOAD" || verb == "REWIND" ||
+        verb == "FORWARD") {
+        return tapeWords(verb, args);
     }
 
     if (verb == "MODULE" && modules_ != nullptr) {
@@ -419,6 +433,92 @@ std::vector<std::string> Shell::diskWords(const std::string& verb,
     return {"?WHAT: " + verb};
 }
 
+std::string Shell::romName() const {
+    if (machine_.romIsAssembler()) {
+        return "HB16";
+    }
+    return std::string{lang::display_name(machine_.romLanguage())};
+}
+
+std::vector<std::string> Shell::romWords(const std::vector<std::string>& args) {
+    if (args.empty()) {
+        std::vector<std::string> rows;
+        rows.push_back("socket: " + romName());
+        std::string line = "  HB16";
+        for (const lang::Language language : NativeRom::languages()) {
+            line += "  " + std::string{lang::display_name(language)};
+        }
+        rows.push_back(line);
+        return rows;
+    }
+    const std::string wanted = upper(args[0]);
+    if (wanted == "HB16" || wanted == "ASSEMBLER") {
+        machine_.setRomAssembler();
+        return {"socket: HB16 (the assembler)"};
+    }
+    for (const lang::Language language : NativeRom::languages()) {
+        if (upper(lang::display_name(language)) == wanted || upper(lang::key(language)) == wanted) {
+            machine_.setRomLanguage(language);
+            // A language prints on the screen, so the screen has to be one it can
+            // print on: MODE 0 is the text map, and it is what a language ROM expects.
+            if (machine_.video().mode() != Video::Mode::Text) {
+                machine_.video().setMode(Video::Mode::Text);
+                machine_.bus().setCompat(true);
+            }
+            return {"socket: " + std::string{lang::display_name(language)}};
+        }
+    }
+    return {"?ROM: no such language -- ROM lists them"};
+}
+
+std::vector<std::string> Shell::tapeWords(const std::string& verb,
+                                          const std::vector<std::string>& args) {
+    std::vector<std::string> out;
+    Tape& tape = machine_.tape();
+    if (verb == "TAPE") {
+        out.push_back("cassette at position " + std::to_string(tape.position()) + " of " +
+                      std::to_string(tape.size()));
+        const std::vector<std::string> rows = tape.catalog();
+        out.insert(out.end(), rows.begin(), rows.end());
+        return out;
+    }
+    if (verb == "REWIND") {
+        tape.rewind();
+        return {"rewound: position 0 of " + std::to_string(tape.size())};
+    }
+    if (verb == "FORWARD") {
+        if (!tape.forward()) {
+            return {tape.error()};
+        }
+        return {"position " + std::to_string(tape.position()) + " of " + std::to_string(tape.size())};
+    }
+    if (verb == "CSAVE") {
+        const std::string name = args.empty() ? "UNTITLED" : args[0];
+        const std::vector<std::uint8_t> bytes(source_.begin(), source_.end());
+        if (!tape.record(name, bytes)) {
+            return {tape.error()};
+        }
+        return {"recorded " + name + " (" + std::to_string(bytes.size()) + " bytes) at " +
+                std::to_string(tape.size())};
+    }
+    // CLOAD
+    const std::string name = args.empty() ? std::string{} : args[0];
+    std::vector<std::uint8_t> bytes;
+    if (name.empty()) {
+        std::string echoed;
+        if (!tape.loadNext(&bytes, &echoed)) {
+            return {tape.error()};
+        }
+        source_ = std::string(bytes.begin(), bytes.end());
+        return {"loaded " + echoed + " (" + std::to_string(bytes.size()) + " bytes)"};
+    }
+    if (!tape.load(name, &bytes)) {
+        return {tape.error()};
+    }
+    source_ = std::string(bytes.begin(), bytes.end());
+    return {"loaded " + name + " (" + std::to_string(bytes.size()) + " bytes)"};
+}
+
 std::vector<std::string> Shell::runListing(const std::string& file, bool as_task) {
     std::vector<std::string> out;
     std::string listing = source_;
@@ -434,6 +534,20 @@ std::vector<std::string> Shell::runListing(const std::string& file, bool as_task
     }
     if (listing.empty()) {
         return {"nothing to run: the listing is empty"};
+    }
+    if (!machine_.romIsAssembler() && !as_task) {
+        // A language ROM: the same engine the editor runs, over this machine's bus, so
+        // POKE, LOCATE, COLOR and SYS reach the hardware.
+        const std::string printed = machine_.runRom(listing);
+        std::istringstream lines{printed};
+        std::string row;
+        while (std::getline(lines, row)) {
+            out.push_back(row);
+        }
+        if (out.empty()) {
+            out.push_back(romName() + " finished");
+        }
+        return out;
     }
     if (as_task) {
         const int id = machine_.spawn(file.empty() ? "TASK" : file, listing);

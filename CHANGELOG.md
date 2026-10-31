@@ -2,6 +2,70 @@
 
 <!-- history: all -->
 
+## [27.0.0] - 2026-11-07
+
+**The HB-2's own gaps are closed: a language on its hardware, a cassette, a joystick.**
+26.1.0 shipped the window and the manual, and the manual's status section named three
+things it did not have. This release builds them, and fixes the assembler defect that
+building them exposed.
+
+### Added
+
+- **The ROM socket.** Nine of the editor's engines -- BASIC, APL, Logo, PILOT, FOCAL,
+  COMAL, REXX, Smalltalk and Forth -- run on the HB-2's own bus, chosen with the
+  **ROM socket** selector on the Program page or `ROM BASIC` at the prompt. Scheme is
+  its own machine and CHIP-8 is a different computer, so neither is a ROM here. On the
+  socket, `POKE` writes video memory, `LOCATE`/`COLOR`/`CLS` reach the chip and `RUN`
+  goes through the engine that is in it.
+- **`SYS` in BASIC.** `SYS address` calls HB-16 from a program's computed address, stops
+  when the code halts, and returns what it printed in the order it printed it. The
+  statement is an ordinary statement and the machine code is ordinary machine code: the
+  seam is `Interpreter::MachineBus`, which the HB-1 already used.
+- **A cassette.** A second device beside HB DOS 2.0, with the property a disk cannot
+  have: the head only goes forward. `TAPE`, `CSAVE`, `CLOAD`, `REWIND` and `FORWARD` at
+  the prompt, `INT 20`-`23` from machine code, `?PASSED` for a file that has gone by,
+  `?CHECKSUM` for a byte that rotted, and an `HBTAPE 1` text image a person can read.
+- **The machine keeps what you typed at it.** The disk, the cassette and the module bay
+  live under the data directory (`~/.time_warp/hb2`, moved by `TIME_WARP_DATA_DIR`),
+  written when the window closes and every thirty seconds while it is open, and read
+  back at power-on. Before this a session's `SAVE` was gone when the window shut.
+- **A joystick on the machine.** The window polls the Studio's gamepad into the
+  machine's joystick registers every frame, so `STICK(n)` and `STRIG(n)` answer with what
+  is in the hand -- and answer without `JOYINIT`, because the stick is in the machine
+  rather than in a host device that has to be opened.
+
+### Changed
+
+- **`POKE` and `PEEK` reach the machine's whole address space.** The range comes from
+  the map instead of a constant, so `POKE 1048576, 5` is the first pixel of the
+  framebuffer on the HB-2 and is still an error at 65536 on a 16-bit machine. `PEEK(n)`
+  as a function reads the machine's memory, the same byte `PEEK n` reports.
+- **The assembler's entry point is its first instruction**, and its image base is the
+  lowest byte it places. A listing may put a message above its code and still run the
+  code; `Assembly::entry` says where the processor starts.
+
+### Fixed
+
+- **An `ORG` below the image base padded by four gigabytes.** The subtraction wrapped,
+  so any listing with two `ORG` directives in the wrong order asked for a four-gigabyte
+  buffer -- a hang, or an out-of-memory kill, for a two-line mistake. The image is now
+  indexed by address rather than by the order of the lines.
+- **The image base was the *last* `ORG`, not the entry point.** A listing whose data
+  came first started the processor in the data, which is how the tape's own test found
+  it.
+- **`STICK`/`STRIG` ignored a machine's joystick until `JOYINIT`.** The registers were
+  there, the answers were zero, and the comment claimed the opposite.
+- **`RUN` at the prompt used the shell's copy of the listing** rather than the machine's
+  editor, so a program edited and then run could run the previous one.
+
+### Documentation
+
+- [The HB-2 manual](docs/hb2/README.md) gains the cassette, the ROM socket and the two
+  services its table was missing, and loses the three gaps from its status section;
+  [the user guide](docs/USER_GUIDE.md) gains the HB-2 window beside the other two
+  machines; [the proposal](docs/hb1/model-92.md) records the status, and
+  [the roadmap](docs/ROADMAP.md) no longer calls the machine headless.
+
 ## [26.1.0] - 2026-10-31
 
 **The HB-2 is a machine you can sit in front of.** 26.0.0 shipped it headless: a bus, a

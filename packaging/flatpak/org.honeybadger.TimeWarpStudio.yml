@@ -15,7 +15,7 @@
 #
 #   - type: git
 #     url: https://github.com/James-HoneyBadger/Time_Warp_Studio.git
-#     tag: v26.1.0
+#     tag: v27.0.0
 id: org.honeybadger.TimeWarpStudio
 runtime: org.kde.Platform
 runtime-version: '6.8'

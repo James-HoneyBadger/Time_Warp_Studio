@@ -15,6 +15,8 @@
 // window, and the order they run in is `ui_layout/cases.hpp`.
 
 #include "timewarp/ui/command_reference.hpp"
+
+#include <QDir>
 #include "ui_layout/cases.hpp"
 #include "ui_layout/support.hpp"
 
@@ -24,6 +26,11 @@ int main(int argc, char** argv) {
     // Set before QApplication exists, or Qt tries to open a real display.
     qputenv("QT_QPA_PLATFORM", "offscreen");
     QApplication app{argc, argv};
+    // The HB-2 keeps its disk and cassette under the application's data directory, so
+    // point that at a scratch folder rather than a real machine's.
+    const QString data_dir = QDir::tempPath() + QStringLiteral("/timewarp-ui-layout-tests");
+    QDir{data_dir}.removeRecursively();
+    qputenv("TIME_WARP_DATA_DIR", data_dir.toUtf8());
     // Isolate QSettings from the developer's real configuration.
     QCoreApplication::setOrganizationName(QStringLiteral("TimeWarpTests"));
     QCoreApplication::setApplicationName(QStringLiteral("UiLayoutTests"));

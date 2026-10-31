@@ -38,6 +38,8 @@
 #include "timewarp/hb2/cpu.hpp"
 #include "timewarp/hb2/hbos.hpp"
 #include "timewarp/hb2/peripherals.hpp"
+#include "timewarp/hb2/tape.hpp"
+#include "timewarp/lang/language.hpp"
 #include "timewarp/hb2/video.hpp"
 
 namespace timewarp::hb2 {
@@ -63,6 +65,10 @@ enum Service : std::uint16_t {
     kServiceKey = 16,
     kServiceKeyStatus = 17,
     kServiceTask = 18,
+    kServiceTapeRecord = 20,
+    kServiceTapeLoad = 21,
+    kServiceTapeRewind = 22,
+    kServiceTapeNext = 23,
 };
 
 class Machine {
@@ -81,6 +87,7 @@ public:
     [[nodiscard]] Input& input() noexcept { return input_; }
     [[nodiscard]] Rtc& rtc() noexcept { return rtc_; }
     [[nodiscard]] Uart& uart() noexcept { return uart_; }
+    [[nodiscard]] Tape& tape() noexcept { return tape_; }
     [[nodiscard]] Rom& rom() noexcept { return rom_; }
     [[nodiscard]] Cpu& cpu() noexcept { return cpu_; }
     [[nodiscard]] Scheduler& scheduler() noexcept { return scheduler_; }
@@ -121,6 +128,22 @@ public:
     /// otherwise. `CLS` and a fresh listing both come through here.
     void resetVideoSurface();
 
+    // -- The ROM socket ----------------------------------------------------
+    /// Which language the socket holds. The machine boots with the assembler, because
+    /// HB-16 needs no interpreter; `ROM BASIC` (or the window's selector) swaps in one
+    /// of the nine engines, and then a program's `POKE`s reach this machine's bus.
+    void setRomLanguage(lang::Language language) noexcept {
+        rom_language_ = language;
+        rom_assembler_ = false;
+    }
+    /// The socket back to HB-16, which is what it holds at power-on.
+    void setRomAssembler() noexcept { rom_assembler_ = true; }
+    [[nodiscard]] lang::Language romLanguage() const noexcept { return rom_language_; }
+    [[nodiscard]] bool romIsAssembler() const noexcept { return rom_assembler_; }
+    /// Runs `source` on the current ROM: the assembler, or a native engine with this
+    /// machine underneath it. Returns what the program printed.
+    std::string runRom(const std::string& source);
+
     // -- Snapshot ----------------------------------------------------------
     [[nodiscard]] std::uint64_t hash() const;
     [[nodiscard]] std::vector<std::uint8_t> save();
@@ -136,6 +159,9 @@ private:
     Input input_;
     Rtc rtc_;
     Uart uart_;
+    Tape tape_;
+    lang::Language rom_language_ = lang::Language::Basic;
+    bool rom_assembler_ = true;
     Cpu cpu_;
     /// One handler for every processor: the console's and each task's. A process and
     /// the prompt ask the same machine for the same services.

@@ -321,8 +321,12 @@ std::string Machine::poke(const std::string& args) {
     try {
         const auto address = static_cast<long>(eval(address_text));
         const auto value = static_cast<long>(eval(value_text));
-        if (address < 0 || address > 65535) {
-            return "❌ POKE address must be 0-65535\n";
+        // The range is the machine's: a processor with sixteen address lines takes
+        // 0-65535, and the HB-2's 1 MiB takes 0-1048575. Without a machine it is the
+        // language's own map, which has always been 16 bits.
+        const long limit = static_cast<long>(interpreter_.machine_address_limit()) - 1;
+        if (address < 0 || address > limit) {
+            return "❌ POKE address must be 0-" + std::to_string(limit) + "\n";
         }
         if (value < 0 || value > 255) {
             return "❌ POKE value must be 0-255\n";
@@ -350,8 +354,10 @@ std::string Machine::peek(const std::string& args) {
     // cell it computed.
     try {
         const auto address = static_cast<long>(eval(trim(args)));
-        if (address < 0 || address > 65535) {
-            return "❌ PEEK address must be 0-65535: got " + std::to_string(address) + "\n";
+        const long limit = static_cast<long>(interpreter_.machine_address_limit()) - 1;
+        if (address < 0 || address > limit) {
+            return "❌ PEEK address must be 0-" + std::to_string(limit) + ": got " +
+                   std::to_string(address) + "\n";
         }
         const int value = interpreter_.machine_attached()
                               ? static_cast<int>(

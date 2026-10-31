@@ -81,7 +81,8 @@ int Scheduler::spawn(const std::string& name, const std::string& source, std::ui
     // own arrangement, not something a program has to compute.
     const int slot = static_cast<int>(tasks_.size());
     const Rect frame{8 + slot * 12, 8 + slot * 10, 150, 88};
-    tasks_.emplace_back(next_id_, name, bus_, load_at, frame);
+    tasks_.emplace_back(next_id_, name, bus_, assembly.entry != 0 ? assembly.entry : load_at,
+                        frame);
     tasks_.back().load_at = load_at;
     tasks_.back().load_bytes = static_cast<std::uint32_t>(assembly.bytes.size());
     next_address_ = std::max(next_address_, load_at + kTaskBytes);

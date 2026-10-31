@@ -6,14 +6,16 @@ validated by the gates in [README_TESTING](../README_TESTING.md). This page was
 written as a **proposal for after 25.0**, so that a future release had a spec to build
 to and a way to prove it was done.
 
-**Status at 26.1.** All eight proposals are built, as the machine now called the
+**Status at 27.0.** All eight proposals are built, as the machine now called the
 **HB-2** ([its manual](../hb2/README.md)): the bus and the machine object, the video
 and audio chips, HB DOS 2.0, the input devices, HB-16 with its assembler, disassembler
 and monitor, HB-OS with the desktop, the module bay -- and the window the whole page
-was written to earn. What is left is smaller than a proposal: `SYS` in BASIC, the tape
-drive, and the joysticks' routing through the IDE's gamepad support. [The roadmap](../ROADMAP.md) carries the same
-list, and [the HB-2 manual's status section](../hb2/README.md#what-is-built-and-what-is-not)
-is the page to read before assuming a proposal here is not done.
+was written to earn. The last three gaps closed with them: `SYS` in BASIC runs HB-16
+from a program's computed address, the cassette is a device with its own words and its
+own four services, and the joystick registers are fed by the IDE's gamepad so `STICK`
+answers on the machine. [The roadmap](../ROADMAP.md) carries the same list, and
+[the HB-2 manual's status section](../hb2/README.md#what-is-built-and-what-is-not) is
+the page to read before assuming a proposal here is not done.
 
 Where [enhancements](enhancements.md) proposes what a 1982 machine left undone, this
 page proposes the machine the same company would have shipped ten years later. It is

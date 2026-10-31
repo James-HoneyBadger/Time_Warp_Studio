@@ -442,6 +442,29 @@ keypad. The complete reference is in
 [assembler](chip8/assembly.md) and the
 [instruction set](chip8/instruction-set.md).
 
+### The HB-2
+
+The third machine is the **[HB-2](hb2/README.md)**, the HB-1's 1992 successor: its own
+processor (HB-16), a 640 x 480 framebuffer with a blitter and sprites, four channels of
+sampled audio, and the 1982 memory map kept whole as `MODE 0`. Tools >
+**HB-2 Model 92…** (`Ctrl+Alt+2`, or `./run.sh --hb2`) opens it:
+
+- **Screen** — the glass, in whichever mode the program chose; click it for the
+  keyboard, and a gamepad the Studio can see is polled into the machine's joystick
+  registers every frame.
+- **Prompt** — the machine's own words (`HELP` lists them): the disk, the cassette
+  (`TAPE`, `CSAVE`, `CLOAD`, `REWIND`), the monitor, the module bay, the ROM socket
+  (`ROM BASIC`) and `RUN`.
+- **Monitor** — registers, a disassembly at the program counter, Step, Break and
+  Run-to-breakpoint.
+- **Program** — the listing, and the **ROM socket** above it. `HB-16 ASSEMBLER` runs
+  the listing as machine code; choosing a language runs it through that engine with the
+  machine's bus attached, so `POKE` writes video memory, `LOCATE`/`COLOR` reach the
+  chip, `SYS` calls HB-16 code, and `STICK` reads the machine's joystick.
+
+The complete reference is [the HB-2 manual](hb2/README.md) and
+[the HB-16 instruction set](hb2/instruction-set.md).
+
 ---
 
 ## 5. Debugging

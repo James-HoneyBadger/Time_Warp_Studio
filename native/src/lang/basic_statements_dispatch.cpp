@@ -459,6 +459,22 @@ std::string Machine::execute_statement(std::string_view command) {
     if (starts_with(cmd, "IN ")) {
         return in_port(strip_comment(tail(text, 3)));
     }
+    if (starts_with(cmd, "SYS ")) {
+        // `SYS address` runs machine code on the machine's own processor. On the HB-2
+        // that is HB-16: the program declares its own budget, and what the code prints
+        // comes back as output, in order with the PRINTs around it.
+        const std::string argument = strip_comment(trim(tail(text, 4)));
+        if (argument.empty()) {
+            return "\u274C SYS needs an address\n";
+        }
+        if (!interpreter_.machine_can_sys()) {
+            return "\u274C SYS needs a machine with a processor attached\n";
+        }
+        const double value = eval(argument);
+        const auto address = static_cast<int>(value);
+        const std::string printed = interpreter_.machine_sys(address);
+        return printed.empty() ? std::string{} : printed;
+    }
     if (starts_with(cmd, "SHELL ")) {
         return shell(strip_comment(tail(text, 6)));
     }

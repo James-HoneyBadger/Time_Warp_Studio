@@ -1,6 +1,6 @@
 # Architecture Guide
 
-## Time Warp Studio v26.1.0 — System Design and Implementation
+## Time Warp Studio v27.0.0 — System Design and Implementation
 
 > **This page describes the shipping product.** It was rewritten alongside the move
 > to C++20 / Qt6. Earlier revisions documented the PySide6 implementation, which has
@@ -326,12 +326,12 @@ touches it.
 
 ### The machines
 
-Both machines are documented as machines, not as features: [MACHINES.md](MACHINES.md)
-is the premise, the [HB-1 books](hb1/README.md) and the
-[CHIP-8 books](chip8/README.md) are the manuals, and
+The three machines are documented as machines, not as features:
+[MACHINES.md](MACHINES.md) is the premise, the [HB-1 books](hb1/README.md), the
+[CHIP-8 books](chip8/README.md) and the [HB-2 books](hb2/README.md) are the manuals, and
 [Inside the HB-1](hb1/inside.md) is the engineer's companion to this section. The
-short version: they are not skins. Each owns its clock, its input and its
-storage, and both draw through the same queue as the editor.
+short version: they are not skins. Each owns its clock, its input and its storage, and
+each draws through the same queue as the editor.
 
 ### The CHIP-8 machine
 
@@ -410,6 +410,50 @@ line is inserted into the editor in numeric order and a bare number deletes it. 
 selected ROM, which keeps bindings between entries. `RUN` stops that session and
 starts a `NativeRunner`, the same engine the editor's Run uses, so the two cannot
 both draw into the tube.
+
+### The HB-2
+
+The HB-2 is the one machine built as a library first: `timewarp_hb2`
+(`native/src/hb2/`, no Qt, no widgets) holds the bus, the devices, the processor and
+its tools, the operating system, the disk and the cassette, and the window is a view
+over it. That is why the machine can be assembled, run and inspected by
+`time_warp_gates hb` on a machine with no display, and why `hb2_tests` drives it
+without a `QApplication`.
+
+The memory map is one table. `native/include/timewarp/hb2/devices.inc` holds a row per
+region -- base, size, owning device, where in that device's own space the window
+starts, and whether the row exists only in `MODE 0` -- and `map.hpp` compiles it into
+the array the bus routes with, the address space `POKE` may reach, and the page the
+manual prints. A new device page is a row, not a second switch.
+
+Devices implement `Device`: `read`, `write`, `tick`, `reset`. The video chip owns the
+1982 text cells and both bitmap modes, the DAC, the blitter, the sprites and the ROM
+font the bitmap modes print with; the audio chip owns four PCM channels with envelopes
+and the waveform bank, plus the 1982 latch as channel zero; the input device owns the
+pointer, the key matrix and queue, and the two joysticks. `Machine` composes them, runs
+the 60 Hz frame, dispatches `INT` through one handler that every processor shares, and
+answers `statusText()` for a harness.
+
+`Cpu` is HB-16: a 16-bit processor with eight registers, six addressing modes and a
+cycle table carried as data so the manual's timing page and the machine cannot disagree.
+`assemble`, `disassemble` and `Cpu` are three readers of one instruction encoding, which
+is why assemble-disassemble-assemble is asserted to be the same bytes. An `Assembly`
+separates the image's base (`origin`, the lowest byte placed) from the `entry` the
+processor starts at (the first instruction placed), so a listing may put a message above
+its code.
+
+The seam back to the languages is the one the HB-1 already used: `Interpreter::MachineBus`
+is a set of callbacks -- `peek`, `poke`, cursor, ink and paper, clear, write text, `sys`,
+`stick` and `strig`, and the address range `POKE` may reach -- and `NativeRom` in
+`hb2/rom.cpp` implements them over the bus. Nine of the eleven engines therefore run *on*
+the machine with no change to the engines themselves: `POKE 1048576, 5` is a pixel
+because that address is the framebuffer, and `SYS 4096` runs HB-16 because the callback
+that answers it resets the machine's processor. Scheme is its own machine and CHIP-8 is
+a different computer, so neither is a ROM.
+
+HB-OS is a scheduler over the same bus: eight tasks, round-robin on the frame tick, each
+with its own registers, console and window, and a fault in one is that task's fault. The
+desktop composes the windows and the task bar from what they printed.
 
 ### The guided tour
 
@@ -1023,7 +1067,7 @@ coming from the Python application starts from this build's defaults.
   under the cursor, Ctrl+F1 the filterable keyword inspector, and Shift+F1 the
   function-key reference. The guided tour and its one-time coach marks are built,
   and re-armable from Settings.
-- **Themes and fonts are in**: 33 schemes, applied through the palette plus a
+- **Themes and fonts are in**: 35 schemes, applied through the palette plus a
   theme block, and the editor's font, size and tab width are user settings.
 - **Printing and the code/session/lesson exports are in.** File > Print Code and
   File > Print Drawing go through Qt6::PrintSupport, which is optional: a build

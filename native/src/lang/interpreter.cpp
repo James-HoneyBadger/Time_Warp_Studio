@@ -655,6 +655,18 @@ void Interpreter::machine_clear_screen() {
     }
 }
 
+bool Interpreter::machine_strig(int index) {
+    return machine_bus_.strig ? machine_bus_.strig(index) : false;
+}
+
+int Interpreter::machine_stick(int index) {
+    return machine_bus_.stick ? machine_bus_.stick(index) : 0;
+}
+
+std::string Interpreter::machine_sys(int address) {
+    return machine_bus_.sys ? machine_bus_.sys(address) : std::string{};
+}
+
 void Interpreter::machine_write_text(const std::string& line) {
     if (machine_bus_.write_text) {
         machine_bus_.write_text(line);

@@ -9,6 +9,7 @@
 // say, that a chord is the same bytes twice, and that a program assembled,
 // disassembled and assembled again is the same bytes.
 
+#include <algorithm>
 #include <cstdio>
 #include <string>
 #include <vector>
@@ -24,7 +25,9 @@
 #include "timewarp/hb2/hbos.hpp"
 #include "timewarp/hb2/modules.hpp"
 #include "timewarp/hb2/monitor.hpp"
+#include "timewarp/hb2/rom.hpp"
 #include "timewarp/hb2/shell.hpp"
+#include "timewarp/hb2/tape.hpp"
 #include "timewarp/hb2/cpu.hpp"
 #include "timewarp/hb2/machine.hpp"
 #include "timewarp/hb2/map.hpp"
@@ -604,6 +607,7 @@ void test_the_demos_run() {
         "hello",
         "chord",
         "desktop",
+        "tape",
     };
     for (const std::string& name : demos) {
         const std::string path = std::string{HB2_EXAMPLES} + "/" + name + ".s";
@@ -953,6 +957,270 @@ void test_the_prompt_runs_programs_and_the_disk() {
     TW_CHECK(shell.execute("DIS").size() > 1);
 }
 
+
+void test_the_cassette_is_a_position() {
+    announce("the cassette: record, catalog, load, ?PASSED and the image");
+    Tape tape;
+    TW_CHECK(tape.record("hello", {'H', 'I'}));
+    TW_CHECK(tape.record("SECOND", {'B', 'Y', 'E'}));
+    TW_CHECK_EQ(static_cast<int>(tape.size()), 2);
+    TW_CHECK_EQ(static_cast<int>(tape.position()), 0);
+    TW_CHECK_EQ(static_cast<int>(tape.catalog().size()), 2);
+    TW_CHECK(tape.catalog().front().find("HELLO") != std::string::npos);
+
+    // A tape has no index to rewrite, so the same name twice is refused.
+    TW_CHECK(!tape.record("HELLO", {'X'}));
+    TW_CHECK_EQ(tape.error(), std::string{"?NAME IN USE"});
+
+    std::vector<std::uint8_t> bytes;
+    TW_CHECK(tape.load("SECOND", &bytes));
+    TW_CHECK_EQ(std::string(bytes.begin(), bytes.end()), std::string{"BYE"});
+    TW_CHECK_EQ(static_cast<int>(tape.position()), 2);
+
+    // The head only goes forward: what has gone by answers with the counter.
+    TW_CHECK(!tape.load("HELLO", &bytes));
+    TW_CHECK_EQ(tape.error().rfind("?PASSED", 0), std::size_t{0});
+    TW_CHECK(!tape.forward());
+    TW_CHECK_EQ(tape.error(), std::string{"?END OF TAPE"});
+
+    tape.rewind();
+    TW_CHECK(tape.loadNext(&bytes, nullptr));
+    TW_CHECK_EQ(std::string(bytes.begin(), bytes.end()), std::string{"HI"});
+
+    // The header is the sum of the bytes, which is what a 1982 loader checked.
+    TW_CHECK_EQ(Tape::checksumOf({'H', 'I'}), static_cast<std::uint16_t>(145));
+
+    // A cassette is an image a person can read and put in a repository.
+    const std::string image = tape.serialise();
+    TW_CHECK(image.rfind("HBTAPE 1", 0) == 0);
+    Tape restored;
+    TW_CHECK(restored.deserialise(image));
+    TW_CHECK_EQ(static_cast<int>(restored.size()), 2);
+    TW_CHECK_EQ(static_cast<int>(restored.position()), 0);
+    std::vector<std::uint8_t> again;
+    TW_CHECK(restored.load("SECOND", &again));
+    TW_CHECK_EQ(std::string(again.begin(), again.end()), std::string{"BYE"});
+
+    // A byte that rotted on the tape is ?CHECKSUM, not a file of rubbish.
+    Tape damaged;
+    TW_CHECK(damaged.deserialise("HBTAPE 1\nFILE BAD 2 1\n4849\n"));
+    TW_CHECK(!damaged.load("BAD", &again));
+    TW_CHECK_EQ(damaged.error(), std::string{"?CHECKSUM"});
+    TW_CHECK(!Tape{}.deserialise("HELLO\n"));
+}
+
+void test_the_socket_runs_a_language() {
+    announce("the ROM socket: a language over the machine's own bus");
+    Machine machine;
+    TW_CHECK(machine.romIsAssembler());
+    TW_CHECK_EQ(static_cast<int>(NativeRom::languages().size()), 9);
+
+    machine.setRomLanguage(timewarp::lang::Language::Basic);
+    TW_CHECK(!machine.romIsAssembler());
+    TW_CHECK(machine.romLanguage() == timewarp::lang::Language::Basic);
+
+    // MODE 0 is the text map, so a language's PRINT lands in cells.
+    const std::string printed = machine.runRom("10 PRINT \"HI\"\n20 PRINT 2+3\n");
+    TW_CHECK(printed.find("HI") != std::string::npos);
+    TW_CHECK(printed.find('5') != std::string::npos);
+    TW_CHECK(machine.video().line(0).find("HI") != std::string::npos);
+
+    // A framebuffer, and the engine's POKE reaches the video chip: one byte is one
+    // pixel in MODE 1, at `$100000` because that is where the map says vram is.
+    machine.video().setMode(Video::Mode::Low);
+    machine.bus().setCompat(false);
+    machine.runRom("10 POKE 1048576,5\n");
+    TW_CHECK_EQ(machine.video().pixel(0, 0), 5);
+    TW_CHECK_EQ(machine.video().pixel(1, 0), 0);
+    // And the same byte reads back through the function form of PEEK.
+    TW_CHECK(machine.runRom("10 PRINT PEEK(1048576)\n").find('5') != std::string::npos);
+    // Past the end of the machine's RAM is refused, because there is nothing there.
+    TW_CHECK(machine.runRom("10 POKE 4194304,1\n").find("POKE") != std::string::npos);
+
+    // LOGO through the same socket draws on the same canvas.
+    machine.setRomLanguage(timewarp::lang::Language::Logo);
+    machine.video().setMode(Video::Mode::Text);
+    machine.bus().setCompat(true);
+    machine.resetVideoSurface();
+    machine.runRom("PRINT \"LOGO\"");
+    TW_CHECK(machine.video().line(0).find("LOGO") != std::string::npos);
+
+    // The socket is nine languages and the assembler; Scheme and CHIP-8 are machines
+    // of their own, and a socket asked for one says so rather than half-running it.
+    const std::vector<timewarp::lang::Language> socket = NativeRom::languages();
+    TW_CHECK(std::find(socket.begin(), socket.end(), timewarp::lang::Language::Chip8) ==
+             socket.end());
+    TW_CHECK(std::find(socket.begin(), socket.end(), timewarp::lang::Language::Scheme) ==
+             socket.end());
+}
+
+void test_sys_runs_machine_code() {
+    announce("SYS: machine code called from a language");
+    Machine machine;
+    const Assembly assembly = machine.load(
+        "        ORG $2000\n"
+        "        MOV R0, #65\n"
+        "        INT 1\n"
+        "        MOV R0, #66\n"
+        "        INT 1\n"
+        "        HALT\n");
+    TW_CHECK(assembly.ok);
+
+    machine.setRomLanguage(timewarp::lang::Language::Basic);
+    // The address is read by the evaluator, so a program can compute it.
+    const std::string printed = machine.runRom("10 SYS 8192\n");
+    TW_CHECK(printed.find("AB") != std::string::npos);
+
+    // Twice is twice: the second call is not the first one's output again.
+    const std::string twice =
+        machine.runRom("10 SYS 8192\n20 SYS 8192\n");
+    TW_CHECK(twice.find("AB") != std::string::npos);
+    TW_CHECK(twice.rfind("AB") != twice.find("AB"));
+
+    // Code that is not machine code faults, and the fault is reported.
+    const std::string bad = machine.runRom("10 SYS 1048575\n");
+    TW_CHECK(bad.find("?SYS") == std::string::npos);  // inside RAM, so it runs
+    TW_CHECK(!machine.runRom("10 SYS -1\n").empty());
+}
+
+void test_the_tape_has_services() {
+    announce("the tape's services: record, load, rewind and next");
+    Machine machine;
+    // Record "HI" under INT 20, then load it back under INT 21 after a rewind.
+    const Assembly assembly = machine.load(
+        "        ORG $4000\n"
+        "        DB \"HI\", 0\n"      // the name INT 20 reads, at $4000
+        "        ORG $3000\n"            // the code, below the data, which is the entry
+        "        LEA R0, $4000\n"
+        "        LEA R1, $4100\n"
+        "        MOV R2, #2\n"
+        "        INT 20\n"               // record the name with the bytes at $4100
+        "        LEA R0, $4000\n"
+        "        LEA R1, $4200\n"
+        "        INT 21\n"               // load it to $4200, length in R0
+        "        INT 22\n"               // rewind
+        "        LEA R1, $4300\n"
+        "        INT 23\n"               // next file to $4300
+        "        HALT\n"
+        "        ORG $4100\n"
+        "        DB \"HI\"\n");
+    TW_CHECK(assembly.ok);
+    TW_CHECK_EQ(static_cast<int>(assembly.origin), 0x3000);
+    machine.run(100000);
+
+    TW_CHECK_EQ(static_cast<int>(machine.tape().size()), 1);
+    TW_CHECK(machine.tape().catalog().front().find("HI") != std::string::npos);
+    TW_CHECK_EQ(machine.bus().read(0x4200), static_cast<std::uint8_t>('H'));
+    TW_CHECK_EQ(machine.bus().read(0x4201), static_cast<std::uint8_t>('I'));
+    TW_CHECK_EQ(machine.bus().read(0x4301), static_cast<std::uint8_t>('I'));
+}
+
+void test_the_joystick_reaches_stick() {
+    announce("the joystick: the pad a program reads with STICK and STRIG");
+    Machine machine;
+    machine.setRomLanguage(timewarp::lang::Language::Basic);
+    machine.input().setJoystick(0, 127, -128, 0x01);
+
+    const std::string printed =
+        machine.runRom("10 PRINT STICK(0); STICK(1); STICK(2); STRIG(0); STRIG(1)\n");
+    // Full right, full up, the first button down and the second up: no `JOYINIT`,
+    // because this stick is in the machine rather than in the host.
+    TW_CHECK(printed.find("255 0 255 1 0") != std::string::npos);
+
+    machine.input().setJoystick(0, 0, 0, 0);
+    TW_CHECK(machine.runRom("10 PRINT STICK(0)\n").find("128") != std::string::npos);
+}
+
+void test_the_prompt_has_a_socket_and_a_tape() {
+    announce("the prompt: ROM, CSAVE, CLOAD and TAPE");
+    Machine machine;
+    Dos dos;
+    Monitor monitor{machine};
+    Shell shell{machine};
+    shell.setDos(&dos);
+    shell.setMonitor(&monitor);
+    TW_CHECK(dos.format(0));
+
+    TW_CHECK(shell.romName() == "HB16");
+    TW_CHECK(shell.execute("ROM").front().find("HB16") != std::string::npos);
+    TW_CHECK(shell.execute("ROM BOGUS").front().rfind("?ROM", 0) == 0);
+
+    // A language in the socket, a program typed in, and RUN prints.
+    const std::vector<std::string> rom = shell.execute("ROM BASIC");
+    TW_CHECK(rom.front().find("BASIC") != std::string::npos);
+    TW_CHECK(shell.romName() == "BASIC");
+    shell.setSource("10 PRINT \"ON THE MACHINE\"\n");
+    bool saw = false;
+    for (const std::string& row : shell.execute("RUN")) {
+        if (row.find("ON THE MACHINE") != std::string::npos) {
+            saw = true;
+        }
+    }
+    TW_CHECK(saw);
+
+    // A cassette is not a disk: CSAVE appends, CLOAD plays from the head.
+    TW_CHECK(shell.execute("CSAVE FIRST").front().find("recorded FIRST") != std::string::npos);
+    shell.setSource("10 PRINT \"ALTERED\"\n");
+    TW_CHECK(shell.execute("CSAVE SECOND").front().find("recorded SECOND") != std::string::npos);
+    TW_CHECK(shell.execute("TAPE").front().find("position 0 of 2") != std::string::npos);
+    TW_CHECK(shell.execute("CLOAD FIRST").front().find("loaded FIRST") != std::string::npos);
+    TW_CHECK(shell.source().find("ON THE MACHINE") != std::string::npos);
+    TW_CHECK(shell.execute("CLOAD FIRST").front().rfind("?PASSED", 0) == 0);
+    TW_CHECK(shell.execute("REWIND").front().find("rewound") != std::string::npos);
+    TW_CHECK(shell.execute("CLOAD").front().find("loaded") != std::string::npos);
+
+    // And back to the assembler.
+    TW_CHECK(shell.execute("ROM HB16").front().find("HB16") != std::string::npos);
+    TW_CHECK(machine.romIsAssembler());
+}
+
+
+void test_a_listing_may_put_data_above_its_code() {
+    announce("the assembler: two ORGs, an entry point and no four-gigabyte pad");
+    Machine machine;
+    const Assembly assembly = machine.load(
+        "        ORG $5000\n"
+        "        DB \"HB-2\", 0\n"
+        "        ORG $4000\n"
+        "        MOV R0, #1\n"
+        "        HALT\n");
+    TW_CHECK(assembly.ok);
+    // The entry point is the lowest address a byte lands at, which is the code: it
+    // used to be the last ORG, so a listing with a message above its code started in
+    // the message.
+    TW_CHECK_EQ(static_cast<std::int64_t>(assembly.origin), 0x4000);
+    TW_CHECK_EQ(static_cast<std::int64_t>(assembly.entry), 0x4000);
+    TW_CHECK_EQ(static_cast<int>(assembly.bytes.size()), 0x1005);
+    TW_CHECK_EQ(machine.bus().read(0x5000), static_cast<std::uint8_t>('H'));
+    TW_CHECK_EQ(machine.bus().read(0x5004), static_cast<std::uint8_t>(0));
+    TW_CHECK_EQ(machine.cpu().registers().pc, static_cast<std::uint16_t>(0x4000));
+
+    // An ORG below the image's base is laid out by address rather than by line order,
+    // and the processor still starts at the first instruction. A backwards ORG used to
+    // pad by four gigabytes: the subtraction wrapped.
+    Machine other;
+    const Assembly backwards = other.load(
+        "        ORG $4000\n"
+        "        MOV R0, #1\n"
+        "        ORG $1000\n"
+        "        HALT\n");
+    TW_CHECK(backwards.ok);
+    TW_CHECK_EQ(static_cast<std::int64_t>(backwards.origin), 0x1000);
+    TW_CHECK_EQ(static_cast<std::int64_t>(backwards.entry), 0x4000);
+    TW_CHECK_EQ(other.cpu().registers().pc, static_cast<std::uint16_t>(0x4000));
+
+    // DS reserves space, so it sets the entry point when it comes first.
+    const Assembly reserved = other.load(
+        "        ORG $6000\n"
+        "        DS 4\n"
+        "        MOV R0, #2\n"
+        "        HALT\n");
+    TW_CHECK(reserved.ok);
+    TW_CHECK_EQ(static_cast<std::int64_t>(reserved.origin), 0x6000);
+    TW_CHECK_EQ(static_cast<std::int64_t>(reserved.entry), 0x6004);
+    TW_CHECK_EQ(static_cast<int>(reserved.bytes.size()), 10);  // 4 reserved, MOV, HALT
+}
+
 }  // namespace
 
 int main() {
@@ -985,5 +1253,12 @@ int main() {
     test_modules_round_trip();
     test_the_disk_has_directories_and_a_sector_count();
     test_the_prompt_runs_programs_and_the_disk();
+    test_the_cassette_is_a_position();
+    test_the_socket_runs_a_language();
+    test_sys_runs_machine_code();
+    test_the_tape_has_services();
+    test_the_joystick_reaches_stick();
+    test_the_prompt_has_a_socket_and_a_tape();
+    test_a_listing_may_put_data_above_its_code();
     return tw::test::summary("hb2");
 }

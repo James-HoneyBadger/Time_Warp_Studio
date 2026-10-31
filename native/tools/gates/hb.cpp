@@ -219,7 +219,8 @@ int runHb(const QStringList& arguments) {
     const bool drew = drewSomething(machine);
 
     std::fprintf(out(), "%s\n", qPrintable(QFileInfo{program}.fileName()));
-    std::fprintf(out(), "  origin       $%06X, %zu bytes\n", assembly.origin, assembly.bytes.size());
+    std::fprintf(out(), "  origin       $%06X, %zu bytes, entry $%06X\n", assembly.origin,
+                 assembly.bytes.size(), assembly.entry);
     std::fprintf(out(), "  status       %s\n", machine.statusText().c_str());
     std::fprintf(out(), "  registers    R0=%04X R1=%04X R2=%04X R3=%04X\n",
                  machine.cpu().registers().r[0], machine.cpu().registers().r[1],

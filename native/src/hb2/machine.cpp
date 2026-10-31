@@ -2,6 +2,8 @@
 
 #include "timewarp/hb2/machine.hpp"
 
+#include "timewarp/hb2/rom.hpp"
+
 #include <algorithm>
 #include <array>
 #include <cstring>
@@ -71,6 +73,25 @@ void Machine::reset(std::uint32_t entry) {
     cpu_.reset(entry);
 }
 
+std::string Machine::runRom(const std::string& source) {
+    if (rom_assembler_) {
+        const Assembly assembly = load(source);
+        if (!assembly.ok) {
+            std::string text = "?ASSEMBLY FAILED\n";
+            for (const std::string& error : assembly.errors) {
+                text += "  " + error + "\n";
+            }
+            return text;
+        }
+        run(2000000);
+        std::string text = statusText() + "\n";
+        text += console();
+        return text;
+    }
+    NativeRom rom{*this, rom_language_};
+    return rom.run(source);
+}
+
 int Machine::spawn(const std::string& name, const std::string& source) {
     const int id = scheduler_.spawn(name, source, 0);
     if (id == 0) {
@@ -128,6 +149,11 @@ Assembly Machine::load(const std::string& source, std::uint32_t origin) {
         return assembly;
     }
     loadProgram(assembly.bytes, assembly.origin);
+    if (assembly.entry != assembly.origin) {
+        // The image begins at the lowest byte and the processor begins at the first
+        // instruction, so a listing with data above its code runs the code.
+        cpu_.reset(assembly.entry);
+    }
     return assembly;
 }
 
@@ -208,6 +234,58 @@ bool Machine::service(Cpu& cpu, std::uint16_t vector) {
         return false;
     case kServicePrint: {
         printChar(static_cast<char>(r.r[0] & 0xFF));
+        return true;
+    }
+    case kServiceTapeRecord: {
+        // R0 is the address of a zero-terminated name, R1 the data, R2 its length.
+        std::string name;
+        for (std::uint32_t at = r.r[0]; at < Bus::kRamSize && name.size() < Tape::kNameLimit; ++at) {
+            const std::uint8_t character = bus_.read(at);
+            if (character == 0) {
+                break;
+            }
+            name.push_back(static_cast<char>(character));
+        }
+        std::vector<std::uint8_t> bytes;
+        for (std::uint32_t index = 0; index < r.r[2]; ++index) {
+            bytes.push_back(bus_.read(r.r[1] + index));
+        }
+        r.r[0] = tape_.record(name, bytes) ? 1 : 0;
+        return true;
+    }
+    case kServiceTapeLoad: {
+        std::string name;
+        for (std::uint32_t at = r.r[0]; at < Bus::kRamSize && name.size() < Tape::kNameLimit; ++at) {
+            const std::uint8_t character = bus_.read(at);
+            if (character == 0) {
+                break;
+            }
+            name.push_back(static_cast<char>(character));
+        }
+        std::vector<std::uint8_t> bytes;
+        if (!tape_.load(name, &bytes) || bytes.size() > 0xFFFF) {
+            r.r[0] = 0;
+            return true;
+        }
+        for (std::size_t index = 0; index < bytes.size(); ++index) {
+            bus_.write(r.r[1] + static_cast<std::uint32_t>(index), bytes[index]);
+        }
+        r.r[0] = static_cast<std::uint16_t>(bytes.size());
+        return true;
+    }
+    case kServiceTapeRewind:
+        tape_.rewind();
+        return true;
+    case kServiceTapeNext: {
+        std::vector<std::uint8_t> bytes;
+        if (!tape_.loadNext(&bytes, nullptr) || bytes.size() > 0xFFFF) {
+            r.r[0] = 0;
+            return true;
+        }
+        for (std::size_t index = 0; index < bytes.size(); ++index) {
+            bus_.write(r.r[1] + static_cast<std::uint32_t>(index), bytes[index]);
+        }
+        r.r[0] = static_cast<std::uint16_t>(bytes.size());
         return true;
     }
     case kServiceTask: {

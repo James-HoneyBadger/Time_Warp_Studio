@@ -9,7 +9,7 @@ complete computers inside it.*
 [![Machines](https://img.shields.io/badge/machines-2-purple)](docs/MACHINES.md)
 [![Platform](https://img.shields.io/badge/platform-Linux-green)](docs/INSTALLATION.md)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/Version-26.1.0-orange)](https://github.com/James-HoneyBadger/Time_Warp_Studio)
+[![Version](https://img.shields.io/badge/Version-27.0.0-orange)](https://github.com/James-HoneyBadger/Time_Warp_Studio)
 
 Time Warp Studio is a desktop programming environment for people who like old
 computers. It is the one the 1980s promised and never quite delivered: a full IDE,
@@ -51,8 +51,9 @@ The third is the **HB-2**, the HB-1's 1992 successor: a bus, a framebuffer with 
 video modes, four channels of sampled audio, hardware sprites and a processor of its
 own, with the 1982 memory map kept whole as `MODE 0`. It has a window of its own --
 **Tools > HB-2 Model 92…** (`Ctrl+Alt+2`) -- with a screen, a prompt, a monitor and a
-listing editor; HB DOS 2.0 with directories and a sector map; eight processes on a
-desktop; and a module bay. Manuals: [HB-2](docs/hb2/README.md) ·
+listing editor; a ROM socket that runs nine of the languages on the machine's own bus,
+so a BASIC `POKE` writes a pixel and `SYS` calls HB-16; HB DOS 2.0 with directories and
+a sector map, and a cassette beside it; eight processes on a desktop; and a module bay. Manuals: [HB-2](docs/hb2/README.md) ·
 [instruction set](docs/hb2/instruction-set.md) · [the proposal](docs/hb1/model-92.md).
 
 What you can do with them:

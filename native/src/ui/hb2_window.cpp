@@ -2,9 +2,16 @@
 
 #include "timewarp/ui/hb2_window.hpp"
 
+#include "timewarp/ui/app_paths.hpp"
+
+#include "timewarp/hb2/rom.hpp"
+#include "timewarp/io/gamepad.hpp"
+
 #include <QAction>
 #include <QApplication>
 #include <QCloseEvent>
+#include <QFile>
+#include <QComboBox>
 #include <QFont>
 #include <QFontDatabase>
 #include <QHBoxLayout>
@@ -17,7 +24,6 @@
 #include <QPlainTextEdit>
 #include <QPushButton>
 #include <QScrollBar>
-#include <QSettings>
 #include <QSplitter>
 #include <QStatusBar>
 #include <QTabWidget>
@@ -263,24 +269,22 @@ void Hb2Screen::focusOutEvent(QFocusEvent* event) {
 // ---------------------------------------------------------------------------
 
 Hb2Window::Hb2Window(QWidget* parent)
-    : QMainWindow(parent),
-      monitor_(machine_),
-      modules_(QStringLiteral("modules").toStdString()),
-      shell_(machine_) {
+    : QMainWindow(parent), monitor_(machine_), shell_(machine_) {
     setObjectName(QStringLiteral("hb2Window"));
     setWindowTitle(tr("\U0001F5A5 HB-2 Model 92"));
     resize(880, 640);
 
+    // The machine keeps its disk, its cassette and its bay beside the Studio's other
+    // user data, so what was typed at it is there next time.
+    const QString home = timewarp::ui::dataDirFor(QStringLiteral("hb2"));
+    if (!home.isEmpty()) {
+        modules_.setDirectory((home + QStringLiteral("/modules")).toStdString());
+    }
+
     shell_.setDos(&dos_);
     shell_.setMonitor(&monitor_);
     shell_.setModules(&modules_);
-    if (dos_.format(0)) {
-        // A machine arrives with a formatted system disk and nothing on it, which is
-        // what a new computer was.
-        dos_.writeFile(0, "README.TXT",
-                       std::vector<std::uint8_t>{'H', 'B', '-', '2', ' ', 'M', 'O', 'D', 'E', 'L',
-                                                 ' ', '9', '2', '\n'});
-    }
+    loadState();
 
     buildUi();
 
@@ -289,9 +293,68 @@ Hb2Window::Hb2Window(QWidget* parent)
     timer_->setInterval(16);
     connect(timer_, &QTimer::timeout, this, [this] { tickOnce(); });
     timer_->start();
+
+    // A program that saves to `A:` and is then left running is still a program that
+    // saved; the disk is written out periodically rather than only on the way out.
+    autosave_ = new QTimer{this};
+    autosave_->setInterval(30000);
+    connect(autosave_, &QTimer::timeout, this, [this] { saveState(); });
+    autosave_->start();
 }
 
 Hb2Window::~Hb2Window() = default;
+
+void Hb2Window::closeEvent(QCloseEvent* event) {
+    saveState();
+    QMainWindow::closeEvent(event);
+}
+
+void Hb2Window::loadState() {
+    const QString home = timewarp::ui::dataDirFor(QStringLiteral("hb2"));
+    if (home.isEmpty()) {
+        dos_.format(0);
+        return;
+    }
+    bool restored = false;
+    // Both drives, because `B:` is a hard disk somebody will fill and a machine that
+    // kept only `A:` would lose it without saying so.
+    for (int drive = 0; drive < 2; ++drive) {
+        QFile file{home + QStringLiteral("/disk%1.img").arg(drive)};
+        if (file.open(QIODevice::ReadOnly | QIODevice::Text)) {
+            const bool ok = dos_.deserialise(drive, file.readAll().toStdString());
+            restored = restored || (drive == 0 && ok);
+        }
+    }
+    const QString tape = home + QStringLiteral("/tape.img");
+    QFile tape_file{tape};
+    if (tape_file.open(QIODevice::ReadOnly | QIODevice::Text)) {
+        machine_.tape().deserialise(tape_file.readAll().toStdString());
+    }
+    if (!restored && dos_.format(0)) {
+        // A machine arrives with a formatted system disk and nothing on it, which is
+        // what a new computer was.
+        dos_.writeFile(0, "README.TXT",
+                       std::vector<std::uint8_t>{'H', 'B', '-', '2', ' ', 'M', 'O', 'D', 'E', 'L',
+                                                 ' ', '9', '2', '\n'});
+    }
+}
+
+void Hb2Window::saveState() {
+    const QString home = timewarp::ui::dataDirFor(QStringLiteral("hb2"));
+    if (home.isEmpty()) {
+        return;
+    }
+    const auto write = [&home](const QString& leaf, const std::string& image) {
+        QFile file{home + QLatin1Char('/') + leaf};
+        if (file.open(QIODevice::WriteOnly | QIODevice::Text | QIODevice::Truncate)) {
+            file.write(image.data(), static_cast<qint64>(image.size()));
+        }
+    };
+    for (int drive = 0; drive < 2; ++drive) {
+        write(QStringLiteral("disk%1.img").arg(drive), dos_.serialise(drive));
+    }
+    write(QStringLiteral("tape.img"), machine_.tape().serialise());
+}
 
 void Hb2Window::buildUi() {
     auto* tabs = new QTabWidget{this};
@@ -365,13 +428,41 @@ void Hb2Window::buildUi() {
     // -- the listing --------------------------------------------------------
     auto* program_page = new QWidget{tabs};
     auto* program_layout = new QVBoxLayout{program_page};
+    auto* rom_row = new QHBoxLayout;
+    rom_row->addWidget(new QLabel{tr("ROM socket:"), program_page});
+    rom_combo_ = new QComboBox{program_page};
+    rom_combo_->setObjectName(QStringLiteral("hb2Rom"));
+    rom_combo_->addItem(tr("HB-16 ASSEMBLER"));
+    for (const timewarp::lang::Language language : timewarp::hb2::NativeRom::languages()) {
+        rom_combo_->addItem(QString::fromUtf8(timewarp::lang::display_name(language).data()));
+    }
+    connect(rom_combo_, &QComboBox::currentIndexChanged, this, [this](int index) {
+        if (index <= 0) {
+            machine_.setRomAssembler();
+        } else {
+            const std::vector<timewarp::lang::Language> socket =
+                timewarp::hb2::NativeRom::languages();
+            const auto which = static_cast<std::size_t>(index - 1);
+            if (which < socket.size()) {
+                machine_.setRomLanguage(socket[which]);
+                // A language prints, so the screen has to be the one it prints on.
+                machine_.video().setMode(timewarp::hb2::Video::Mode::Text);
+                machine_.bus().setCompat(true);
+                screen_->refresh();
+            }
+        }
+        refreshStatus();
+    });
+    rom_row->addWidget(rom_combo_);
+    rom_row->addStretch(1);
+    program_layout->addLayout(rom_row);
     listing_ = new QPlainTextEdit{program_page};
     listing_->setObjectName(QStringLiteral("hb2Listing"));
     listing_->setFont(QFontDatabase::systemFont(QFontDatabase::FixedFont));
     listing_->setPlainText(QString::fromUtf8(kStarterListing));
     program_layout->addWidget(listing_, 1);
     auto* program_buttons = new QHBoxLayout;
-    auto* run_button = new QPushButton{tr("Assemble and run"), program_page};
+    auto* run_button = new QPushButton{tr("Run"), program_page};
     connect(run_button, &QPushButton::clicked, this, [this] {
         shell_.setSource(listing_->toPlainText().toStdString());
         runCommand(QStringLiteral("RUN"));
@@ -466,6 +557,20 @@ void Hb2Window::runCommand(const QString& line) {
 }
 
 void Hb2Window::tickOnce() {
+    // A pad the window can see is the pad the machine reads, so `STICK` and the
+    // input registers answer with what is in the hand rather than an emulated zero.
+    if (timewarp::io::Gamepad::instance().available()) {
+        const auto axis = [](int index) {
+            return static_cast<std::int8_t>(timewarp::io::Gamepad::instance().axis(index) - 128);
+        };
+        std::uint8_t buttons = 0;
+        for (int i = 0; i < 8; ++i) {
+            if (timewarp::io::Gamepad::instance().button(i)) {
+                buttons |= static_cast<std::uint8_t>(1U << i);
+            }
+        }
+        machine_.input().setJoystick(0, axis(0), axis(1), buttons);
+    }
     machine_.runFrames(1, 20000);
     screen_->refresh();
     mixAudio();
@@ -510,6 +615,7 @@ void Hb2Window::refreshStatus() {
     if (!machine_.scheduler().empty()) {
         text += tr("  tasks %1").arg(machine_.scheduler().size());
     }
+    text += tr("  ROM %1").arg(QString::fromStdString(shell_.romName()));
     status_->setText(text);
 }
 

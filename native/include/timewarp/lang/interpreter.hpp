@@ -395,6 +395,18 @@ public:
         /// the program said it; a queued callback to the GUI would print it later,
         /// after a program that pokes the screen had already overwritten the cells.
         std::function<void(const std::string& line)> write_text;
+        /// Machine code, run on the machine's own processor from `address`, returning
+        /// what it printed. `SYS` is the one statement that needs a processor rather
+        /// than an address space, and the HB-2 is the machine that has one.
+        std::function<std::string(int address)> sys;
+        /// The machine's joystick registers, which are the ones a 1992 program reads.
+        /// Absent on a machine with no joystick, and then `STICK`/`STRIG` answer 0.
+        std::function<int(int index)> stick;
+        std::function<bool(int index)> strig;
+        /// The highest address `POKE`/`PEEK` may reach: 65536 on a machine whose
+        /// processor has sixteen address lines, the top of its map on the HB-2. Zero
+        /// means the language's own map, which is the editor and the parity gates.
+        int address_limit = 0;
     };
     void set_machine_bus(MachineBus bus) { machine_bus_ = std::move(bus); }
     [[nodiscard]] bool machine_attached() const noexcept {
@@ -413,6 +425,24 @@ public:
     /// Sends one output line to the machine, if there is one. The caller still emits
     /// through `output_callback_`: this is the screen, that is the console.
     void machine_write_text(const std::string& line);
+    /// Whether the machine has a processor a program can call.
+    [[nodiscard]] bool machine_can_sys() const noexcept {
+        return static_cast<bool>(machine_bus_.sys);
+    }
+    /// Runs machine code at `address` and returns what it printed. Empty when the
+    /// machine has no processor.
+    std::string machine_sys(int address);
+    /// Whether the machine has joysticks attached at all, which is what tells `STICK`
+    /// to read the machine rather than the host's gamepad.
+    [[nodiscard]] bool machine_has_joystick() const noexcept {
+        return static_cast<bool>(machine_bus_.stick);
+    }
+    [[nodiscard]] int machine_stick(int index);
+    /// The machine's address space, or 65536 when no machine is attached.
+    [[nodiscard]] int machine_address_limit() const noexcept {
+        return machine_bus_.address_limit > 0 ? machine_bus_.address_limit : 65536;
+    }
+    [[nodiscard]] bool machine_strig(int index);
 
     /// The directory a program's relative file names are confined to.
     ///

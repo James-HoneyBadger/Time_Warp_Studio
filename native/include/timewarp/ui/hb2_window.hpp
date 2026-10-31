@@ -29,6 +29,7 @@
 #include "timewarp/hb2/monitor.hpp"
 #include "timewarp/hb2/shell.hpp"
 
+class QComboBox;
 class QLabel;
 class QLineEdit;
 class QPlainTextEdit;
@@ -99,8 +100,16 @@ public:
     /// Advances the machine one frame and repaints, which is what the timer does.
     void tickOnce();
 
+protected:
+    void closeEvent(QCloseEvent* event) override;
+
 private:
     void buildUi();
+    /// Writes the disk, the cassette and the bay under the data directory, and reads
+    /// them back at power-on: a machine you typed at should be the same machine next
+    /// time, which is what the HB-1 already promises.
+    void loadState();
+    void saveState();
     void refreshStatus();
     void refreshMonitor();
     void mixAudio();
@@ -115,12 +124,12 @@ private:
     QPlainTextEdit* transcript_ = nullptr;
     QLineEdit* entry_ = nullptr;
     QPlainTextEdit* listing_ = nullptr;
+    QComboBox* rom_combo_ = nullptr;
     QPlainTextEdit* monitor_view_ = nullptr;
     QLabel* status_ = nullptr;
     QLabel* mode_label_ = nullptr;
     QTimer* timer_ = nullptr;
     SoundPlayer* sound_ = nullptr;
-    QTemporaryDir* bay_dir_ = nullptr;
     QTimer* autosave_ = nullptr;
     std::vector<std::uint8_t> pcm_;
 };

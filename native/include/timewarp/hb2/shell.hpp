@@ -48,6 +48,10 @@ public:
     /// an unknown word says what `HELP` would.
     std::vector<std::string> execute(std::string_view line);
 
+    /// The ROM socket's current language, as `ROM` reports it: `HB16` for the
+    /// assembler, or a language's display name.
+    [[nodiscard]] std::string romName() const;
+
     /// The words, one a line, for `HELP` and for the window's hint.
     [[nodiscard]] static std::vector<std::string> words();
 
@@ -56,6 +60,8 @@ public:
 private:
     std::vector<std::string> diskWords(const std::string& verb, const std::vector<std::string>& args);
     std::vector<std::string> runListing(const std::string& file, bool as_task);
+    std::vector<std::string> romWords(const std::vector<std::string>& args);
+    std::vector<std::string> tapeWords(const std::string& verb, const std::vector<std::string>& args);
     [[nodiscard]] bool requireDisk(std::vector<std::string>* out) const;
 
     Machine& machine_;

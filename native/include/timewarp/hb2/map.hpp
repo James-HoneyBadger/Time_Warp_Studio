@@ -63,4 +63,17 @@ inline constexpr std::array<Region, 12> kRegions{{
     return nullptr;
 }
 
+/// One past the highest address any device answers on, which is the whole address
+/// space a program may POKE: RAM, the framebuffer and the devices above it. Derived
+/// from the table, so a new device page extends it without a second number to edit.
+[[nodiscard]] inline std::uint32_t addressSpaceSize() noexcept {
+    std::uint32_t top = 0;
+    for (const Region& region : kRegions) {
+        if (region.end() > top) {
+            top = region.end();
+        }
+    }
+    return top;
+}
+
 }  // namespace timewarp::hb2

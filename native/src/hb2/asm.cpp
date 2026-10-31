@@ -708,7 +708,28 @@ Assembly assemble(std::string_view source, std::uint32_t defaultOrigin) {
     // Pass one: addresses. Instruction sizes depend on the mode, and the mode on the
     // syntax, never on a value -- which is what lets a label be used before it is
     // defined.
+    // `origin` is the lowest address a byte lands at -- the image's base -- and `entry`
+    // is where the first instruction lands, which is where the processor starts. A
+    // listing that puts its message above its code therefore still begins at the code.
+    // The origin used to be the *last* `ORG` seen, which made the entry point the data
+    // block of any program with two.
     std::uint32_t address = defaultOrigin;
+    std::uint32_t lowest = defaultOrigin;
+    std::uint32_t entry = 0;
+    bool placed = false;
+    bool entry_placed = false;
+    // Data lowers the image base; an instruction is also the entry point, once.
+    const auto note = [&lowest, &placed](std::uint32_t at) {
+        lowest = placed ? std::min(lowest, at) : at;
+        placed = true;
+    };
+    const auto noteInstruction = [&note, &entry, &entry_placed](std::uint32_t at) {
+        note(at);
+        if (!entry_placed) {
+            entry = at;
+            entry_placed = true;
+        }
+    };
     for (std::size_t index = 0; index < lines.size(); ++index) {
         const ParsedLine parsed = parseLine(lines[index]);
         if (!parsed.label.empty() && parsed.mnemonic != "EQU") {
@@ -727,13 +748,11 @@ Assembly assemble(std::string_view source, std::uint32_t defaultOrigin) {
                 result.errors.push_back("ORG needs an address");
             } else {
                 address = static_cast<std::uint32_t>(*value);
-                if (result.bytes.empty()) {
-                    result.origin = address;
-                }
             }
             continue;
         }
         if (parsed.mnemonic == "DB" || parsed.mnemonic == "DW") {
+            note(address);
             for (const std::string& operand : parsed.operands) {
                 if (parsed.mnemonic == "DB" && operand.size() >= 2 && operand.front() == '"' &&
                     operand.back() == '"') {
@@ -747,7 +766,11 @@ Assembly assemble(std::string_view source, std::uint32_t defaultOrigin) {
         if (parsed.mnemonic == "DS") {
             Expr expr{parsed.operands.empty() ? "" : parsed.operands[0], symbols, false};
             const std::optional<std::int64_t> value = expr.value();
-            address += static_cast<std::uint32_t>(value.value_or(0));
+            const auto reserved = static_cast<std::uint32_t>(value.value_or(0));
+            if (reserved != 0) {
+                note(address);
+            }
+            address += reserved;
             continue;
         }
         if (parsed.mnemonic == "EQU") {
@@ -760,16 +783,25 @@ Assembly assemble(std::string_view source, std::uint32_t defaultOrigin) {
             result.errors.push_back("line " + std::to_string(index + 1) + ": " + error);
             continue;
         }
+        noteInstruction(address);
         address += static_cast<std::uint32_t>(instructionBytes(probe.mode));
     }
+    if (placed) {
+        result.origin = lowest;
+    }
+    result.entry = entry_placed ? entry : result.origin;
 
-    // Pass two: bytes.
+    // Pass two: bytes. The image is indexed by address, not by the order of the lines,
+    // so a listing may put a message above its code and still assemble to one block.
     address = result.origin;
     std::vector<std::uint8_t> out;
-    const auto padTo = [&out](std::uint32_t target) {
-        while (out.size() < target) {
-            out.push_back(0);
+    const auto put = [&out, &address, &result](std::uint8_t byte) {
+        const std::size_t offset = address - result.origin;
+        if (out.size() <= offset) {
+            out.resize(offset + 1, 0);
         }
+        out[offset] = byte;
+        ++address;
     };
     for (std::size_t index = 0; index < lines.size(); ++index) {
         const ParsedLine parsed = parseLine(lines[index]);
@@ -781,7 +813,13 @@ Assembly assemble(std::string_view source, std::uint32_t defaultOrigin) {
             const std::optional<std::int64_t> value = expr.value();
             if (value) {
                 address = static_cast<std::uint32_t>(*value);
-                padTo(address - result.origin);
+                // Padding is forward only: an `ORG` below where the program began used
+                // to wrap the subtraction and ask for four gigabytes of zeroes.
+                if (address < result.origin) {
+                    result.errors.push_back("line " + std::to_string(index + 1) +
+                                            ": ORG goes back below the program's origin");
+                    address = result.origin;
+                }
             }
             continue;
         }
@@ -792,7 +830,7 @@ Assembly assemble(std::string_view source, std::uint32_t defaultOrigin) {
                     // A string is the bytes it spells: `DB "HB-2", 0` is how a
                     // listing holds a message without a character a comma.
                     for (std::size_t at = 1; at + 1 < operand.size(); ++at) {
-                        out.push_back(static_cast<std::uint8_t>(operand[at]));
+                        put(static_cast<std::uint8_t>(operand[at]));
                     }
                     continue;
                 }
@@ -803,10 +841,10 @@ Assembly assemble(std::string_view source, std::uint32_t defaultOrigin) {
                     continue;
                 }
                 if (parsed.mnemonic == "DB") {
-                    out.push_back(static_cast<std::uint8_t>(*value & 0xFF));
+                    put(static_cast<std::uint8_t>(*value & 0xFF));
                 } else {
-                    out.push_back(static_cast<std::uint8_t>(*value & 0xFF));
-                    out.push_back(static_cast<std::uint8_t>((*value >> 8) & 0xFF));
+                    put(static_cast<std::uint8_t>(*value & 0xFF));
+                    put(static_cast<std::uint8_t>((*value >> 8) & 0xFF));
                 }
             }
             continue;
@@ -815,7 +853,7 @@ Assembly assemble(std::string_view source, std::uint32_t defaultOrigin) {
             Expr expr{parsed.operands.empty() ? "" : parsed.operands[0], symbols, true};
             const std::optional<std::int64_t> value = expr.value();
             for (std::int64_t pad = 0; pad < value.value_or(0); ++pad) {
-                out.push_back(0);
+                put(0);
             }
             continue;
         }
@@ -825,7 +863,11 @@ Assembly assemble(std::string_view source, std::uint32_t defaultOrigin) {
             result.errors.push_back("line " + std::to_string(index + 1) + ": " + error);
             continue;
         }
-        writeInstruction(instruction, static_cast<std::uint32_t>(result.origin + out.size()), out);
+        std::vector<std::uint8_t> encoded;
+        writeInstruction(instruction, address, encoded);
+        for (const std::uint8_t byte : encoded) {
+            put(byte);
+        }
     }
 
     result.bytes = std::move(out);

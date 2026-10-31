@@ -813,8 +813,11 @@ void ForthMachine::run_primitive(Primitive primitive, const char* name) {
             // so a poke and a peek always agree instead of the write vanishing.
             const long long address = pop(name);
             const long long value = pop(name);
-            if (address < 0 || address > 0xFFFF) {
-                throw ForthError{"POKE address must be 0-65535"};
+            // A machine's address space is the machine's; this program's own is 64K.
+            const long long limit =
+                interpreter_.machine_attached() ? interpreter_.machine_address_limit() - 1 : 0xFFFF;
+            if (address < 0 || address > limit) {
+                throw ForthError{"POKE address must be 0-" + std::to_string(limit)};
             }
             if (value < 0 || value > 255) {
                 throw ForthError{"POKE value must be 0-255"};
@@ -832,8 +835,10 @@ void ForthMachine::run_primitive(Primitive primitive, const char* name) {
         }
         case Primitive::Peek: {
             const long long address = pop(name);
-            if (address < 0 || address > 0xFFFF) {
-                throw ForthError{"PEEK address must be 0-65535"};
+            const long long limit =
+                interpreter_.machine_attached() ? interpreter_.machine_address_limit() - 1 : 0xFFFF;
+            if (address < 0 || address > limit) {
+                throw ForthError{"PEEK address must be 0-" + std::to_string(limit)};
             }
             push(interpreter_.machine_attached()
                      ? static_cast<long long>(

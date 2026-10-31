@@ -140,7 +140,11 @@ void writeInstruction(const Instruction& instruction, std::uint32_t address,
 /// What `assemble` made of a listing.
 struct Assembly {
     bool ok = false;
+    /// The lowest address a byte lands at: where `bytes` begins.
     std::uint32_t origin = 0;
+    /// Where the first instruction lands, which is where the processor starts. A
+    /// listing may put a message above its code, and then this is not `origin`.
+    std::uint32_t entry = 0;
     std::vector<std::uint8_t> bytes;
     std::vector<std::string> errors;
 };

@@ -80,17 +80,17 @@ check-built:
 golden-check: gates-built
 	@$(GATES) golden --all
 
-# The HB-2's six demonstration listings, through the machine's own harness. A listing
+# The HB-2's seven demonstration listings, through the machine's own harness. A listing
 # that assembles, runs and leaves the screen as it found it fails here, because a
 # machine that runs and draws nothing is the bug this tree treats as the bug.
 hb-check: gates-built
-	@set -e; for demo in palette blitter sprite hello chord desktop; do \
+	@set -e; for demo in palette blitter sprite hello chord desktop tape; do \
 		quiet=$$($(GATES) hb Examples/hb2/$$demo.s --ticks 4 --quiet 2>&1) || { \
 			echo "$$quiet"; exit 1; }; \
 		echo "  $$demo: ok"; \
 	done
 	@$(GATES) hb --tasks Examples/hb2/task_a.s Examples/hb2/task_b.s --ticks 6 >/dev/null
-	@echo "hb: 6 demonstration programs ran and drew, and two processes made progress"
+	@echo "hb: 7 demonstration programs ran and drew, and two processes made progress"
 
 # The curriculum, checked by the same library the Lessons panel asks: every
 # worked answer passes its checkpoint and every starter fails it. Needs the build,

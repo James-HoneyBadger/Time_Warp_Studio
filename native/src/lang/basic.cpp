@@ -236,6 +236,13 @@ std::optional<expr::UserFunction> Machine::user_function(std::string_view raw_na
     if (name == "PEEK") {
         return expr::UserFunction{1, [this](std::span<const double> arguments) {
                                       const int address = static_cast<int>(arguments[0]);
+                                      // On a machine, `PEEK(n)` reads the machine's memory
+                                      // -- the same byte `PEEK n` reports -- because a
+                                      // program that draws with `POKE` has to be able to
+                                      // read back what it wrote.
+                                      if (interpreter_.machine_attached()) {
+                                          return static_cast<double>(interpreter_.machine_peek(address));
+                                      }
                                       const auto found = state_.memory.find(address);
                                       return found == state_.memory.end()
                                                  ? 0.0
@@ -258,11 +265,21 @@ std::optional<expr::UserFunction> Machine::user_function(std::string_view raw_na
         // written for a machine without one already expects.
         const bool stick = name == "STICK";
         return expr::UserFunction{1, [this, stick](std::span<const double> arguments) {
+                                      const int index = static_cast<int>(arguments[0]);
+                                      // A machine's own joystick registers win when the
+                                      // program is running on the machine: that is the
+                                      // stick a 1992 program reads, it is plugged in
+                                      // before the program starts, and it needs no
+                                      // `JOYINIT` -- the host's gamepad is the one that
+                                      // has to be opened, and it is the fallback.
+                                      if (interpreter_.machine_has_joystick()) {
+                                          return stick ? static_cast<double>(interpreter_.machine_stick(index))
+                                                       : (interpreter_.machine_strig(index) ? 1.0 : 0.0);
+                                      }
                                       if (!state_.joystick_initialised) {
                                           return 0.0;
                                       }
                                       auto& pad = timewarp::io::Gamepad::instance();
-                                      const int index = static_cast<int>(arguments[0]);
                                       return stick
                                                  ? static_cast<double>(pad.axis(index))
                                                  : (pad.button(index) ? 1.0 : 0.0);
