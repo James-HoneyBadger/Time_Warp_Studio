@@ -7,9 +7,15 @@
 // eleven built-in ROMs stay exactly where they are while the socket becomes something
 // a user can fill. A module is a file in a bay directory, and there are three kinds:
 //
-//   script  a list of prompt lines, replayed as though they had been typed;
-//   binary  HB-16 code with a header saying where it loads;
-//   image   a saved machine, restored whole.
+//   script   a list of prompt lines, replayed as though they had been typed;
+//   binary   HB-16 code with a header saying where it loads;
+//   image    a saved machine, restored whole;
+//   package  named listings that start as processes on the machine as it is running.
+//
+// The first three replace what the machine is doing; a package joins it. That is the
+// difference between a cartridge and system software: `MODULE BOOT` of a package adds
+// its programs to the desktop without clearing the screen, resetting the processor or
+// stopping anything already resident.
 //
 // The bay is a plain format -- a header line and then lines -- so a module is
 // something a person can read, diff and put in a repository, which is the same
@@ -30,6 +36,12 @@ struct ModuleRow {
     std::size_t bytes = 0;
 };
 
+/// One named listing in a package.
+struct ModuleProgram {
+    std::string name;
+    std::string source;
+};
+
 /// What a module file contains.
 struct ModuleContent {
     std::string kind;
@@ -37,6 +49,7 @@ struct ModuleContent {
     std::vector<std::string> script;
     std::vector<std::uint8_t> binary;
     std::vector<std::uint8_t> image;
+    std::vector<ModuleProgram> programs;
 };
 
 class Modules {
@@ -57,6 +70,10 @@ public:
     bool saveBinary(const std::string& name, const std::vector<std::uint8_t>& bytes,
                     std::uint32_t entry = 0x001000);
     bool saveImage(const std::string& name, const std::vector<std::uint8_t>& image);
+    /// A package: the listings to start as processes, each with its name. Written as
+    /// `PROGRAM <name> <lines>` and that many lines, so a listing may say anything,
+    /// `PROGRAM` included.
+    bool savePackage(const std::string& name, const std::vector<ModuleProgram>& programs);
 
     /// Reads one module. A malformed one is refused with a sentence and leaves the
     /// machine alone -- the caller has not touched it yet.

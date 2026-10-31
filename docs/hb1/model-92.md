@@ -10,10 +10,13 @@ to and a way to prove it was done.
 **HB-2** ([its manual](../hb2/README.md)): the bus and the machine object, the video
 and audio chips, HB DOS 2.0, the input devices, HB-16 with its assembler, disassembler
 and monitor, HB-OS with the desktop, the module bay -- and the window the whole page
-was written to earn. The last three gaps closed with them: `SYS` in BASIC runs HB-16
-from a program's computed address, the cassette is a device with its own words and its
-own four services, and the joystick registers are fed by the IDE's gamepad so `STICK`
-answers on the machine. [The roadmap](../ROADMAP.md) carries the same list, and
+was written to earn. The gaps the first draft left closed with them: `SYS` in BASIC runs
+HB-16 from a program's computed address, the cassette is a device with its own words and
+its own four services, the joystick registers are fed by the IDE's gamepad so `STICK`
+answers on the machine, and the module bay's fourth kind -- a package of processes --
+boots onto a machine as it stands rather than replacing it. The desktop runs eight
+processes at a time, which is what the specification table below asks for: the eleven of
+the slogan are the eleven languages, not eleven windows on a 320-pixel screen. [The roadmap](../ROADMAP.md) carries the same list, and
 [the HB-2 manual's status section](../hb2/README.md#what-is-built-and-what-is-not) is
 the page to read before assuming a proposal here is not done.
 

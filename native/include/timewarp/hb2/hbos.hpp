@@ -50,6 +50,10 @@ struct Task {
     std::string name;
     Cpu cpu;
     Rect window;
+    /// The listing it was started from, kept so a running machine can be packaged and
+    /// the same processes started again -- `MODULE PACK` is this string, not a picture
+    /// of the registers.
+    std::string source;
     /// Where the program was loaded, so a second one cannot be loaded over it.
     std::uint32_t load_at = 0;
     std::uint32_t load_bytes = 0;

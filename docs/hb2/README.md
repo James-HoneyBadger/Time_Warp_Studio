@@ -294,6 +294,31 @@ desktop composes windows in z order with a task bar and a pointer. A process tha
 faults is killed and named, and the desktop survives it. The clock is the machine's, so
 the same number of ticks produces the same screen.
 
+## The module bay
+
+The 1982 socket was a fixed list, and the bay is what replaced it: a directory of `.mod`
+files, listed by `MODULE` and booted by `MODULE BOOT`. Four kinds, each a header line and
+then lines a person can read:
+
+| Kind | Holds | Booting it |
+| --- | --- | --- |
+| `script` | prompt lines | types them, in order |
+| `binary` | HB-16 code, and where it loads | loads and runs it |
+| `image` | a saved machine | restores it whole |
+| `package` | named listings | starts them as processes |
+
+The first three replace what the machine is doing. A package joins it. `MODULE PACK KIT`
+takes the listing of everything currently running, under the names it is running under,
+and writes them as a package; `MODULE BOOT KIT` starts them again **on the machine as it
+stands** -- nothing is cleared, the processor is not reset and nothing resident is
+stopped. Booting a package onto a desktop that already holds two programs leaves four
+running. A program in a package that does not fit is refused by name and the rest still
+start.
+
+The file is `HBMOD 1 package`, then `PROGRAM <name> <line count>` and that many lines for
+each program, then `END`. The count is why a listing may say anything -- `PROGRAM`
+included -- and why a package comes back line for line.
+
 ## The prompt
 
 `HELP` lists everything. The words are the machine's:
@@ -308,7 +333,7 @@ the same number of ticks produces the same screen.
 | `REGS` `DIS` `DUMP` `POKE` `STEP` `BREAK` `RUNTO` | the monitor |
 | `ROM` `ROM BASIC` | the socket: what is in it, and what to put in it |
 | `TAPE` `CSAVE` `CLOAD` `REWIND` `FORWARD` | the cassette: what is on it, and the head |
-| `MODULE LIST` `MODULE SAVE` `MODULE BOOT` | the bay |
+| `MODULE LIST` `MODULE SAVE` `MODULE PACK` `MODULE BOOT` | the bay: what is in it, a script, what is running, and booting one |
 | `SERIAL` `TIME` `CLS` | the serial port, the clock, the screen |
 
 ---
@@ -320,11 +345,11 @@ the blitter, the sprites and the ROM font; the sound chip and the waveform bank;
 pointer, the keyboard, the clock and the serial port; HB-16, its assembler, its
 disassembler and its fault reporting; the `INT` services, the tape's four among them; the
 ROM socket and the nine languages it runs, `SYS` included; the cassette; HB DOS 2.0;
-HB-OS and the desktop; the monitor; the module bay; the prompt; the machine snapshot; the
+HB-OS and the desktop; the monitor; the module bay and its four kinds, the package one
+starting processes onto a machine as it stands; the prompt; the machine snapshot; the
 window, with the socket selector and the gamepad; and the harness.
 
-**Not built**, and named so that no page promises it: the module bay's third kind of
-module -- one that boots a *running* machine's processes rather than a fresh machine.
+Nothing on this page is promised and missing.
 
 [The proposal](../hb1/model-92.md) is the specification all of this was written
 against, and [the roadmap](../ROADMAP.md) says what it cost.

@@ -1221,6 +1221,84 @@ void test_a_listing_may_put_data_above_its_code() {
     TW_CHECK_EQ(static_cast<int>(reserved.bytes.size()), 10);  // 4 reserved, MOV, HALT
 }
 
+
+void test_a_package_boots_onto_the_running_machine() {
+    announce("the module bay: a package of processes, started onto a machine as it is");
+    const std::filesystem::path bay =
+        std::filesystem::temp_directory_path() / "hb2-package-test";
+    std::filesystem::remove_all(bay);
+    Modules modules{bay.string()};
+
+    // The primitive: two named listings in, the same two out.
+    const std::vector<ModuleProgram> programs{
+        {"CLOCK", "        MOV R0, #65\nloop:   INT 1\n        JMP loop\n"},
+        {"COUNTER", "        MOV R2, #$FFFF\nwait:   DEC R2\n        JNZ wait\n"},
+    };
+    TW_CHECK(modules.savePackage("KIT", programs));
+    ModuleContent content;
+    TW_CHECK(modules.read("KIT", &content));
+    TW_CHECK_EQ(content.kind, std::string{"package"});
+    TW_CHECK_EQ(static_cast<int>(content.programs.size()), 2);
+    if (content.programs.size() == 2) {
+        TW_CHECK_EQ(content.programs[0].name, std::string{"CLOCK"});
+        // A listing says what it said: the body comes back line for line, so a
+        // program that is packaged and booted runs the same instructions.
+        TW_CHECK(content.programs[1].source.find("DEC R2") != std::string::npos);
+        TW_CHECK(content.programs[1].source.find("JNZ wait") != std::string::npos);
+    }
+    // The bay lists it as what it is.
+    const std::vector<ModuleRow> rows = modules.list();
+    TW_CHECK_EQ(static_cast<int>(rows.size()), 1);
+    if (!rows.empty()) {
+        TW_CHECK_EQ(rows.front().kind, std::string{"package"});
+    }
+
+    // And through the prompt: two processes, packed, stopped, and started again onto a
+    // machine that is already holding something in RAM.
+    Machine machine;
+    Dos dos;
+    Monitor monitor{machine};
+    Shell shell{machine};
+    shell.setDos(&dos);
+    shell.setMonitor(&monitor);
+    shell.setModules(&modules);
+    TW_CHECK(dos.format(0));
+
+    machine.bus().write(0x30000, 0x5A);              // a marker nothing may clear
+    shell.setSource("        MOV R0, #66\nloop:   INT 1\n        JMP loop\n");
+    TW_CHECK(shell.execute("SPAWN").front().find("as a process") != std::string::npos);
+    shell.setSource("        MOV R0, #67\nloop2:  INT 1\n        JMP loop2\n");
+    TW_CHECK(shell.execute("SPAWN").front().find("as a process") != std::string::npos);
+    TW_CHECK_EQ(static_cast<int>(machine.scheduler().size()), 2);
+
+    const std::vector<std::string> packed = shell.execute("MODULE PACK KIT");
+    TW_CHECK(packed.front().find("2 program(s)") != std::string::npos);
+
+    // Booting joins the desktop rather than replacing it: the two processes already
+    // running are still running afterwards.
+    TW_CHECK_EQ(static_cast<int>(shell.execute("MODULE BOOT KIT").size()), 2);
+    TW_CHECK_EQ(static_cast<int>(machine.scheduler().size()), 4);
+
+    TW_CHECK(shell.execute("KILL").front().find("stopped") != std::string::npos);
+    TW_CHECK(machine.scheduler().empty());
+
+    const std::vector<std::string> booted = shell.execute("MODULE BOOT KIT");
+    TW_CHECK_EQ(static_cast<int>(booted.size()), 2);
+    TW_CHECK_EQ(static_cast<int>(machine.scheduler().size()), 2);
+    // Booted, not reset: the marker is where it was, and the screen did not go back to
+    // the 1982 text map on the way.
+    TW_CHECK_EQ(machine.bus().read(0x30000), static_cast<std::uint8_t>(0x5A));
+    TW_CHECK(machine.video().mode() == Video::Mode::Low);
+    for (const Task& task : machine.scheduler().tasks()) {
+        TW_CHECK(!task.source.empty());
+    }
+
+    // A package with nothing in it is refused rather than written.
+    TW_CHECK(!modules.savePackage("EMPTY", {}));
+    TW_CHECK(!modules.lastError().empty());
+    std::filesystem::remove_all(bay);
+}
+
 }  // namespace
 
 int main() {
@@ -1260,5 +1338,6 @@ int main() {
     test_the_joystick_reaches_stick();
     test_the_prompt_has_a_socket_and_a_tape();
     test_a_listing_may_put_data_above_its_code();
+    test_a_package_boots_onto_the_running_machine();
     return tw::test::summary("hb2");
 }

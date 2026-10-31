@@ -149,6 +149,38 @@ bool Modules::saveImage(const std::string& name, const std::vector<std::uint8_t>
     return true;
 }
 
+bool Modules::savePackage(const std::string& name, const std::vector<ModuleProgram>& programs) {
+    if (programs.empty()) {
+        error_ = "?NOTHING TO PACK: no processes are running";
+        return false;
+    }
+    std::error_code error;
+    std::filesystem::create_directories(directory_, error);
+    std::ofstream stream{pathFor(name), std::ios::binary | std::ios::trunc};
+    if (!stream) {
+        error_ = "?CANNOT WRITE " + baseName(name);
+        return false;
+    }
+    stream << kMagic << " package\n";
+    for (const ModuleProgram& program : programs) {
+        std::istringstream lines{program.source};
+        std::vector<std::string> body;
+        std::string line;
+        while (std::getline(lines, line)) {
+            if (!line.empty()) {
+                body.push_back(line);
+            }
+        }
+        stream << "PROGRAM " << program.name << ' ' << body.size() << "\n";
+        for (const std::string& row : body) {
+            stream << row << "\n";
+        }
+    }
+    stream << "END\n";
+    error_.clear();
+    return true;
+}
+
 bool Modules::read(const std::string& name, ModuleContent* content) {
     error_.clear();
     std::ifstream stream{pathFor(name), std::ios::binary};
@@ -186,6 +218,36 @@ bool Modules::read(const std::string& name, ModuleContent* content) {
         std::string payload;
         std::getline(stream, payload);
         if (!readHex(payload, &parsed.image)) {
+            error_ = "?MODULE DAMAGED";
+            return false;
+        }
+    } else if (parsed.kind == "package") {
+        std::string line;
+        while (std::getline(stream, line)) {
+            if (line == "END") {
+                break;
+            }
+            std::istringstream header_words{line};
+            std::string keyword;
+            ModuleProgram program;
+            std::size_t count = 0;
+            header_words >> keyword >> program.name >> count;
+            if (keyword != "PROGRAM" || program.name.empty()) {
+                error_ = "?MODULE DAMAGED";
+                return false;
+            }
+            for (std::size_t index = 0; index < count; ++index) {
+                std::string body;
+                if (!std::getline(stream, body)) {
+                    error_ = "?MODULE DAMAGED";
+                    return false;
+                }
+                program.source += body;
+                program.source.push_back('\n');
+            }
+            parsed.programs.push_back(std::move(program));
+        }
+        if (parsed.programs.empty()) {
             error_ = "?MODULE DAMAGED";
             return false;
         }

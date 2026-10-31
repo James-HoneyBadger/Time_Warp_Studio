@@ -2,7 +2,7 @@
 //
 // The HB-2's window: the machine, its prompt, its monitor and its screen.
 //
-// The machine underneath has its own suite (`hb2_tests`, 346 checks, no Qt at all).
+// The machine underneath has its own suite (`hb2_tests`, 372 checks, no Qt at all).
 // What is worth asserting here is the window's own contract: that it opens with the
 // four pages a machine window has, that the prompt's words reach the machine and come
 // back as lines, that a listing assembled from the editor runs and halts, and that the

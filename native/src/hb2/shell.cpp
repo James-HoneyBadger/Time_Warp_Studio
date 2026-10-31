@@ -95,7 +95,7 @@ std::vector<std::string> Shell::words() {
         "TAPE                  the cassette and where the head is",
         "CSAVE <name>          record the listing      CLOAD <name>  play it back",
         "REWIND                put the head at the start    FORWARD  play past a file",
-        "MODULE [list|save <n>|boot <n>]  the module bay",
+        "MODULE [list|save <n>|pack <n>|boot <n>]  the module bay",
         "SERIAL <text>         write the serial port     TIME           the machine's clock",
         "CLS                   clear the screen",
     };
@@ -272,6 +272,22 @@ std::vector<std::string> Shell::execute(std::string_view line) {
             }
             return {"saved module " + args[1]};
         }
+        if (action == "PACK" && args.size() >= 2) {
+            // A package is what is running, taken down as the listings it was started
+            // from: a picture of registers would be a machine frozen mid-instruction,
+            // and what a person wants to keep is the programs.
+            std::vector<ModuleProgram> programs;
+            for (const Task& task : machine_.scheduler().tasks()) {
+                ModuleProgram program;
+                program.name = task.name;
+                program.source = task.source;
+                programs.push_back(std::move(program));
+            }
+            if (!modules_->savePackage(args[1], programs)) {
+                return {modules_->lastError()};
+            }
+            return {"packed " + std::to_string(programs.size()) + " program(s) into " + args[1]};
+        }
         if (action == "BOOT" && args.size() >= 2) {
             ModuleContent content;
             if (!modules_->read(args[1], &content)) {
@@ -295,8 +311,26 @@ std::vector<std::string> Shell::execute(std::string_view line) {
                                                              : "?IMAGE REFUSED");
                 return out;
             }
+            if (content.kind == "package") {
+                // Onto the machine as it stands: nothing is cleared, nothing resident is
+                // stopped, and a program that does not fit is refused by name.
+                for (const ModuleProgram& program : content.programs) {
+                    const int id = machine_.spawn(program.name, program.source);
+                    if (id != 0) {
+                        out.push_back("started " + program.name + " as process " +
+                                      std::to_string(id));
+                        continue;
+                    }
+                    std::string why = machine_.scheduler().lastError();
+                    if (!why.empty() && why.front() == '?') {
+                        why = why.substr(1);
+                    }
+                    out.push_back("? " + program.name + ": " + why);
+                }
+                return out;
+            }
         }
-        return {"MODULE list | save <name> | boot <name>"};
+        return {"MODULE list | save <name> | pack <name> | boot <name>"};
     }
 
     out.push_back("?WHAT: " + verb + " -- HELP lists the words");
@@ -550,7 +584,9 @@ std::vector<std::string> Shell::runListing(const std::string& file, bool as_task
         return out;
     }
     if (as_task) {
-        const int id = machine_.spawn(file.empty() ? "TASK" : file, listing);
+        const int id = machine_.spawn(
+            file.empty() ? "TASK" + std::to_string(machine_.scheduler().size() + 1) : file,
+            listing);
         if (id == 0) {
             return {machine_.scheduler().lastError()};
         }

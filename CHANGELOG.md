@@ -25,6 +25,11 @@ building them exposed.
   have: the head only goes forward. `TAPE`, `CSAVE`, `CLOAD`, `REWIND` and `FORWARD` at
   the prompt, `INT 20`-`23` from machine code, `?PASSED` for a file that has gone by,
   `?CHECKSUM` for a byte that rotted, and an `HBTAPE 1` text image a person can read.
+- **A package module.** `MODULE PACK <name>` writes the listing of everything running as
+  a `package` module, and `MODULE BOOT` starts those programs again *onto* the machine as
+  it stands: the screen, RAM and everything already resident are left alone. It is the
+  one kind of module that joins a running system instead of replacing it -- the module
+  bay's last unimplemented kind, which the manual had named and not promised.
 - **The machine keeps what you typed at it.** The disk, the cassette and the module bay
   live under the data directory (`~/.time_warp/hb2`, moved by `TIME_WARP_DATA_DIR`),
   written when the window closes and every thirty seconds while it is open, and read
