@@ -1,10 +1,10 @@
 # Time Warp Studio — Documentation Index
 
 Time Warp Studio is an old-school desktop programming environment: eleven
-interpreters from 1964 to 1980, a full IDE and turtle canvas — and two complete
+interpreters from 1964 to 1980, a full IDE and turtle canvas — and three complete
 machines inside it: the [HB-1](hb1/README.md) home computer from a parallel 1982, the
 [CHIP-8](chip8/README.md) virtual machine, and the [HB-2](hb2/README.md), the 1992
-successor to the HB-1, which runs headless through `time_warp_gates hb`.
+successor to the HB-1, with its own processor and a window of its own.
 This page is the map.
 
 > **New here?** Build and run it from the [README](../README.md), then try
@@ -17,21 +17,21 @@ This page is the map.
 
 | Document | What it covers |
 | --- | --- |
-| [MACHINES.md](MACHINES.md) | Why there are two, what they share, and the parallel-universe premise item by item |
+| [MACHINES.md](MACHINES.md) | Why there are three, what they share, and the parallel-universe premise item by item |
 | [hb1/README.md](hb1/README.md) | **HB-1 Owner's Manual** — front panel, first boot, everyday operation, persistence, limits |
 | [hb1/roms.md](hb1/roms.md) | The ROM library: all eleven languages as cartridges, with prompts, direct mode and examples |
 | [hb1/hb-dos.md](hb1/hb-dos.md) | **HB DOS 1.0** — every word, the catalogue, the errors, the image format |
 | [hb1/config.md](hb1/config.md) | CONFIG: every setting, the phosphors, the glass, where it is stored |
 | [hb1/bbs.md](hb1/bbs.md) | **WARP BOARD** — the machine's modem, the bulletins, posting, and where the board is kept |
 | [hb1/inside.md](hb1/inside.md) | Inside the HB-1: how a keystroke becomes ink |
-| [hb2/README.md](hb2/README.md) | **HB-2 Manual** — the bus and its map, the video chip, the sound chip, the peripherals and the `INT` services |
+| [hb2/README.md](hb2/README.md) | **HB-2 Manual** — the bus and its map, the video chip, the sound chip, the peripherals, the `INT` services, the ROM socket, the disk, the cassette and the module bay |
 | [hb2/instruction-set.md](hb2/instruction-set.md) | **HB-16** — the encoding, every opcode with its cycles, and the assembler's syntax |
 | [chip8/README.md](chip8/README.md) | **CHIP-8 Machine Manual** — the two ways to run, the window, keys, debugging, sound, limits |
 | [chip8/assembly.md](chip8/assembly.md) | The assembler: listings, labels, directives, errors, worked programs |
 | [chip8/instruction-set.md](chip8/instruction-set.md) | Every opcode as implemented, the 1977 quirks, timing, a full disassembly |
-| [hb1/enhancements.md](hb1/enhancements.md) | Proposals for the HB-1 after the 25.0 release: a tape drive, a monitor, sprites, DOS 1.1 |
+| [hb1/enhancements.md](hb1/enhancements.md) | Open proposals for the HB-1, written after 25.0: a tape drive, a monitor, sprites, DOS 1.1 |
 | [hb1/model-92.md](hb1/model-92.md) | **The Model 92** — the same company's 1992 computer: a bus, a video chip, four-channel audio, DOS 2.0, HB-16 and a desktop |
-| [chip8/enhancements.md](chip8/enhancements.md) | Proposals for the CHIP-8 after the 25.0 release: breakpoints in the window, a trace, state files, a library manifest |
+| [chip8/enhancements.md](chip8/enhancements.md) | Open proposals for the CHIP-8, written after 25.0: breakpoints in the window, a trace, state files, a library manifest |
 
 ---
 

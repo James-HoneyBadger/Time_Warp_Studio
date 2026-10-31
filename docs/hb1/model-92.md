@@ -1,10 +1,11 @@
 # The HB-1 Model 92
 
-Time Warp Studio 25.0 is the current release — 24.0, the golden one, is archived —
-and the machine described in [the owner's manual](README.md) is finished and
-validated by the gates in [README_TESTING](../README_TESTING.md). This page was
-written as a **proposal for after 25.0**, so that a future release had a spec to build
-to and a way to prove it was done.
+Time Warp Studio 25.0 was the current release when this page was written — 24.0, the
+golden one, is archived — and the machine described in
+[the owner's manual](README.md) is finished and validated by the gates in
+[README_TESTING](../README_TESTING.md). This page is the **proposal for after 25.0**
+that the HB-2 was built from, kept as it was written so that a reader can compare the
+specification with the machine and see what it cost.
 
 **Status at 27.0.** All eight proposals are built, as the machine now called the
 **HB-2** ([its manual](../hb2/README.md)): the bus and the machine object, the video

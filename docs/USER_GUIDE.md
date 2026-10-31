@@ -453,8 +453,9 @@ sampled audio, and the 1982 memory map kept whole as `MODE 0`. Tools >
   keyboard, and a gamepad the Studio can see is polled into the machine's joystick
   registers every frame.
 - **Prompt** — the machine's own words (`HELP` lists them): the disk, the cassette
-  (`TAPE`, `CSAVE`, `CLOAD`, `REWIND`), the monitor, the module bay, the ROM socket
-  (`ROM BASIC`) and `RUN`.
+  (`TAPE`, `CSAVE`, `CLOAD`, `REWIND`), the monitor, the module bay (`MODULE PACK`
+  writes what is running as a package, `MODULE BOOT` starts one onto the desktop), the
+  ROM socket (`ROM BASIC`) and `RUN`.
 - **Monitor** — registers, a disassembly at the program counter, Step, Break and
   Run-to-breakpoint.
 - **Program** — the listing, and the **ROM socket** above it. `HB-16 ASSEMBLER` runs
@@ -574,8 +575,8 @@ SQL forms by language:
 
 The shared `SQL` statement works in BASIC, FOCAL, PILOT, COMAL, REXX and APL.
 Logo uses `SQL SELECT ...` as a command; Scheme uses `(sql "...")`; Smalltalk uses
-`SQL run: '...'`. CHIP-8 has no SQL form, because a bytecode program has no strings
-to carry a statement.
+`SQL run: '...'`. Two languages have no SQL form: CHIP-8, whose bytecode has no
+strings to carry a statement, and Forth.
 
 SQLite is a build/runtime dependency of the Qt application. The compiled programs
 produced by `twc` link it too and accept `--db FILE`.
@@ -683,8 +684,10 @@ It is off until you set it up, and nothing is sent until you press a button.
 - The key may come from `TIME_WARP_AI_API_KEY` instead of a store, and **Keep the key
   on this machine** unticked leaves it nowhere at all. A stored key goes in the
   system keyring where the build found one, and in the settings file otherwise.
-- Both machines have the same assistant in a dialog: the HB-1's 🤖 button and the
-  CHIP-8's **🤖 Assistant…** ask about the program that machine is holding.
+- The HB-1 and the CHIP-8 each have the same assistant in a dialog -- the HB-1's 🤖
+  button and the CHIP-8's **🤖 Assistant…** -- and it asks about the program that
+  machine is holding. The HB-2 has no assistant of its own; ask about its listing
+  from the editor.
 
 `./native/build/time_warp_ai` is the same assistant from a shell — `check`,
 `explain`, `fix`, `write` and the rest. [AI.md](AI.md) is the manual: what is sent,

@@ -16,25 +16,26 @@ derived rather than remembered.
 
 ---
 
-## 24.0 is archived, and 25.0 is the current design
+## 24.0 is archived, and 27.0 is the current design
 
 **Version 24.0 is archived.** It was the golden release, and it is kept exactly as it
 was built on its own release page and will not change again. Nothing here removes it:
 an archive is a thing you keep.
 
-**Version 25.0 is the current design,
-*timey wimey wibbly wobbly, time & multiuniverse travel computing*.** The eleven
-languages, the IDE, the machines, the curriculum and the documentation set are
-complete, and the gates in [README_TESTING.md](README_TESTING.md) prove it on every
-push. The feature set is **not frozen**: a release after this one takes fixes and
-features alike, and each arrives with the test that proves it.
+**Version 27.0 is the current design.** The eleven languages, the IDE, three machines,
+the curriculum and the documentation set are complete, and the gates in
+[README_TESTING.md](README_TESTING.md) prove it on every push. The feature set is
+**not frozen**: a release after this one takes fixes and features alike, and each
+arrives with the test that proves it. What 25.0, 26.0, 26.1 and 27.0 each added is in
+[the ladder](#the-ladder) below and in the [changelog](../CHANGELOG.md).
 
-What comes after is written down rather than wished for:
+The Model 92 -- [the same company's 1992 computer](hb1/model-92.md) -- was written here
+as a proposal and is now the **HB-2** that ships. What comes after is written down
+rather than wished for:
 
 | For | Proposal |
 | --- | --- |
 | The HB-1 | [hb1/enhancements.md](hb1/enhancements.md) — a tape drive, a monitor and `SYS`, programmable function keys, sprites, RAM size, HB DOS 1.1, autoboot |
-| The HB-1, in 1992 | [hb1/model-92.md](hb1/model-92.md) — the overhaul: a bus and a device map, a video chip, four-channel audio, HB DOS 2.0, input devices, HB-16 with an assembler and a monitor, a module bay with four kinds of module, and a desktop running eight processes at a time |
 | The CHIP-8 | [chip8/enhancements.md](chip8/enhancements.md) — breakpoints in the window, an instruction trace, memory watch, state files, a library manifest, the rest of the SuperChip subset |
 
 Each proposal states what it is, why the machine wants it in period terms, and what
@@ -50,7 +51,7 @@ a memory of a conversation.
 | Shell | Documents and tabs, menus, toolbars, status bar, settings persistence, the last session's files restored at launch |
 | Editor | Line-number gutter, current-line highlight, per-language syntax colouring, find/replace, find in files, go-to-line, tab stops, fonts, error squiggles with gutter markers, completion, auto-indent, Format Code, minimap, outline |
 | Projects | `.twproject` files, named groups, files and folders added to a project, drag-and-drop grouping, missing-file reporting, recent projects and session restore |
-| REPL | A persistent session per language under the editor; Scheme keeps definitions and echoes values, the line-loop languages and Logo keep bindings, while Smalltalk, CHIP-8 and Forth run each entry as a whole program |
+| REPL | A persistent session per language under the editor; Scheme keeps definitions and echoes values, the line-loop languages and Logo keep bindings (Logo's variables survive an entry, its procedures do not), while Smalltalk, CHIP-8 and Forth carry nothing from one entry to the next |
 | Console | Streaming output, interpreter errors in their own tab, clickable line links (`[12]`, `❌ [line 30]`, `at line 30:`) that go to the line the program numbers, an errors-only filter, and **File > Save Output As…** |
 | Canvas | Live drawing, zoom, pan, grid, auto-fit, turtle marker, scrubber playback, animated GIF recording, raster and SVG export, the pose strip and the command log, and a fixed-coordinate screen mode (`SCREEN`) with sprites, pixel read-back and a game example; in screen mode the wheel zooms the screen about the pointer and a click reads back the pixel under it |
 | Display | 35 themes, high contrast, A+ text sizes (100/125/150%), focus mode, CRT settings, four Monitor presets |
@@ -70,7 +71,7 @@ a memory of a conversation.
 | Database | A SQLite-backed Database tab, the shared `SQL` statement in nine languages, scripts, tables and schema; compiled programs link SQLite |
 | Automation | JSON-RPC over stdin/stdout (`language.run`, `repl.*`, `debug.*`, `sql.*`, `project.*`, `watch.evaluate`) and the `twc` terminal compiler |
 | Packaging | `make install`; tagged releases build `.deb`, `.rpm`, AppImage, tarball and container artifacts for Linux |
-| Quality gates | 26 CTest suites in 4 build configurations, on Linux; the frozen-corpus gate over 671 programs (479 language, 192 Scheme); 566 command rows run as programs and through the REPL; 94 example programs through the smoke gate; and the documentation gates (links, claims, version, Markdown lint) |
+| Quality gates | 27 CTest suites in 4 build configurations, on Linux; the frozen-corpus gate over 671 programs (479 language, 192 Scheme); 566 command rows run as programs and through the REPL; 94 example programs through the smoke gate; and the documentation gates (links, claims, version, Markdown lint) |
 
 ---
 
@@ -487,6 +488,12 @@ measuring the wrong machine.
 | 23.8 ✓ | A language that runs its own loop can be walked back too: the whole-program pause point takes the executor's checkpoint, records it and returns a restored one to adopt, so Logo keeps its position, procedures, words, pen, pose and generator in a snapshot and a rewind puts the run back on an earlier statement. The API's transcript rolls back with it, and the console marks where a re-run begins |
 | 23.9 ✓ | Forth joins the debugger: a pause before each token, with the position, both stacks, the dictionary, the compile state and the text printed so far travelling in a checkpoint — and the 64K data space copied only when a program has actually written to it. A `.fs` breakpoint can fire for the first time, and the run can be walked back through it |
 | 24.0 ✓ | CHIP-8 can be walked back too: the checkpoint is the machine's whole state — registers, memory, timers, RPL flags, the frame count, the instruction's slot within the frame and the framebuffer — taken before each instruction and only when a history was asked for, and a rewind repaints the restored screen so the pause shows the pixels the instruction it returned to was drawn on. The test is the drawing rather than a transcript, because a CHIP-8 program prints nothing: an interrupted run that rewinds and replays leaves the same pixels, in the same order, as the run nobody touched |
+
+| 25.0 ✓ | The IDE finishes and 24.0 becomes an archive: a real pseudo-terminal, three historical voices for the assistant, a run that can announce itself on the desktop, a five-page CHIP-8 tour, twelve CC0 homebrew programs fetched by one button, and a Flatpak that carries its own Qt |
+| 25.0.1–25.0.3 ✓ | Twelve programs to learn the machines from (six CHIP-8, six HB-1) with a gate that runs each one on a real machine; `SOUND` handed to the player's own thread; typing in the terminal no longer able to freeze the window; and the tab context menu, Close Other Tabs, Duplicate Tab and the split pane's bookkeeping |
+| 26.0.0 ✓ | The HB-2, from [Model 92](hb1/model-92.md): a bus whose map is one table, a video chip with three modes and a blitter, four channels of sampled audio, the peripherals, HB-16 with its assembler, disassembler and monitor, `INT` services, HB DOS 2.0, HB-OS with a desktop, a module bay, a prompt, a snapshot, and `time_warp_gates hb` with six demonstration programs |
+| 26.1.0 ✓ | The HB-2 becomes a machine you can use: a window with the screen, the prompt, the monitor and a listing page; text through a ROM font on every video mode; HB DOS 2.0 with directories and a sector map; eight processes on a desktop; a monitor; the module bay; the prompt; PCM playback; and the Studio is Linux only, with no installer for any other system |
+| 27.0.0 ✓ | The HB-2's own gaps close: nine of the engines run on its bus through a ROM socket (`SYS` calls HB-16, `POKE` writes video memory, `STICK` reads the machine's joystick), a cassette with `INT 20`–`23`, the joystick fed from the IDE's gamepad, the module bay's fourth kind (a package of processes booted onto a running machine), and the assembler no longer able to turn a two-`ORG` listing into a four-gigabyte allocation |
 
 Smaller items belong in one of those releases rather than a release of their own:
 Snap and an arm64 AppImage, and the distribution work described under

@@ -332,7 +332,7 @@ jobs:
             ${{ env.ALIAS_IMAGE_NAME }}:latest
           labels: |
             org.opencontainers.image.title=Time Warp Studio
-            org.opencontainers.image.description=An old-school programming environment: eleven languages, an IDE, an HB-1 home computer and a live CHIP-8
+            org.opencontainers.image.description=An old-school programming environment: eleven languages, an IDE, and three machines -- the HB-1 home computer, a live CHIP-8 and the HB-2 of 1992
             org.opencontainers.image.version=${{ needs.verify.outputs.version }}
             org.opencontainers.image.licenses=MIT
             org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}

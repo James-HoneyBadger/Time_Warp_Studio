@@ -14,9 +14,9 @@ body:
         Thanks for taking the time to report this.
 
         **Before you file:** [docs/ROADMAP.md](https://github.com/James-HoneyBadger/Time_Warp_Studio/blob/main/docs/ROADMAP.md)
-        lists what is deliberately not built yet — themes, find/replace, auto-completion
-        and the debugger panels. A missing feature from that list is a feature request,
-        not a regression.
+        lists what is deliberately not built — a web build, Snap, an arm64 AppImage,
+        calling one language from another — and the proposals that are still open. A
+        missing feature from those lists is a feature request, not a regression.
 
   - type: textarea
     id: what-happened

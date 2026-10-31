@@ -94,8 +94,9 @@ int main(int argc, char* argv[]) {
     parser.setApplicationDescription(
         QStringLiteral("Time Warp Studio \u2014 an old-school programming "
                        "environment for BASIC, APL, Logo, PILOT, FOCAL, Scheme, "
-                       "CHIP-8, COMAL, REXX, Smalltalk and Forth, with the HB-1 "
-                       "home computer and a live CHIP-8 inside it."));
+                       "CHIP-8, COMAL, REXX, Smalltalk and Forth, with three "
+                       "machines inside it: the HB-1 home computer, a live CHIP-8 "
+                       "and the HB-2 of 1992."));
     parser.addHelpOption();
     parser.addVersionOption();
 

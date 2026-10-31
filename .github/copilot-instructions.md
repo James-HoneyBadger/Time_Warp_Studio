@@ -8,7 +8,7 @@
 
 ## Project Overview
 
-Time Warp Studio is an old-school desktop programming environment built with **C++20 and Qt6** for Linux: a unified IDE for eleven interpreters from 1964 to 1980, with turtle graphics, a debugger in every language, and three machines — the HB-1 home computer and a live CHIP-8. A checked lesson curriculum ships for teaching, but the product is framed for retro-computing hobbyists first.
+Time Warp Studio is an old-school desktop programming environment built with **C++20 and Qt6** for Linux: a unified IDE for eleven interpreters from 1964 to 1980, with turtle graphics, a debugger in every language, and three machines — the HB-1 home computer, a live CHIP-8 and the HB-2 of 1992. A checked lesson curriculum ships for teaching, but the product is framed for retro-computing hobbyists first.
 
 **Supported Languages:** BASIC, APL, Logo, PILOT, FOCAL, Scheme, CHIP-8, COMAL, REXX, Smalltalk and Forth.
 

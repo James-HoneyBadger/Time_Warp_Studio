@@ -12,7 +12,7 @@ contact_links:
     about: "Index of every guide: installation, the language reference, tutorials, lessons and architecture."
   - name: Is it already known?
     url: https://github.com/James-HoneyBadger/Time_Warp_Studio/blob/main/docs/ROADMAP.md
-    about: What is deliberately not built yet. Themes, find/replace, auto-completion and the debugger panels are on this list.
+    about: What is deliberately not built, and the proposals that are still open -- a web build, Snap, an arm64 AppImage, calling one language from another.
   - name: Install, build and run
     url: https://github.com/James-HoneyBadger/Time_Warp_Studio/blob/main/docs/INSTALLATION.md
     about: Requirements, building from source, and what a troubleshooting failure usually means.

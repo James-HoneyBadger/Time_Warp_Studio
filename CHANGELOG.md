@@ -65,6 +65,21 @@ building them exposed.
 
 ### Documentation
 
+- **A whole-set accuracy pass**, because sixteen months of features had outrun the
+  prose: the front page said two machines and its table had two columns, the index said
+  "two ... which runs headless", the roadmap still called 25.0 the current design and
+  listed the Model 92 as future work, and `docs/hb1/model-92.md` was framed as a
+  proposal for a release that had shipped. Corrected with it: six stale counts
+  (`26 suites` twice, `24 suites` in the porting plan's history, `four bundled` CHIP-8
+  programs where the tree has eighteen, `35 themes` in one place where the table has 35,
+  `two machines` in nine places), the SQL paragraph that called CHIP-8 the only language
+  without a `SQL` form (Forth has none either), the REPL paragraph that gave a false
+  mechanism for the three languages that keep nothing, the About box and `--help` text
+  that named two machines, the bug-report form and `SUPPORT.md` that called shipped
+  features unbuilt (themes, find/replace, completion, the player, Flatpak), the AppStream
+  description software centres show, the container image's description, and a
+  `make engine-test` a contributor was told was not optional -- that target has not
+  existed since the Python engine was deleted.
 - [The HB-2 manual](docs/hb2/README.md) gains the cassette, the ROM socket and the two
   services its table was missing, and loses the three gaps from its status section;
   [the user guide](docs/USER_GUIDE.md) gains the HB-2 window beside the other two

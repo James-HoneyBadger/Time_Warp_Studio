@@ -120,8 +120,8 @@ A query prints its columns, rows and row count; an insert or update prints how
 many rows changed; an error prints the database's own message. The database
 manager and the running program share one connection, so a table created at the
 prompt is visible to the next `SQL` statement without reopening anything.
-CHIP-8 is the one language without a `SQL` form: a bytecode program has no
-strings to carry a statement.
+Two of the eleven have no `SQL` form: CHIP-8 is a bytecode machine with no strings to
+carry a statement, and Forth has no word for it.
 
 ---
 

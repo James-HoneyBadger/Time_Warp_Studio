@@ -35,10 +35,11 @@ three machines. It is a C++20 / Qt 6 application for Linux, and all eleven
 languages run in C++ inside it. There is no Python in the tree at all: the product,
 its tests, its gates and its documentation checks are one language.
 
-So the product is **one GUI process**. The only child process is the optional
-embedded terminal, which is a shell the user asked for;
-that channel is JSON lines, one message per line — program text going in and a
-stream of JSON messages coming back.
+So the product is **one GUI process**. Two things it can start as children, both
+optional and both asked for: the embedded terminal, which is a shell the user turned on
+in Settings; and the audio player (`pw-play`, `paplay`, `aplay`, `ffplay` or `play`),
+which is handed a WAV whenever anything sounds. That channel is JSON lines, one message
+per line — program text going in and a stream of JSON messages coming back.
 
 ### The moving parts
 

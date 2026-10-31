@@ -33,7 +33,8 @@ interpreters from 1964–1980 in one IDE, with an integrated turtle graphics can
 an output console and a debugger that works in every one of them.
 
 It also carries three machines: the **HB-1**, a 1982 home computer from a
-parallel universe, and the **CHIP-8**, the 1977 virtual machine. Both are real
+parallel universe, the **CHIP-8**, the 1977 virtual machine, and the **HB-2**, the
+same company's 1992 workstation with a processor of its own. All three are real
 programs you can type at, debug and save to — see
 [the machines](MACHINES.md).
 
@@ -164,16 +165,17 @@ same pages are in `docs/` in the repository. Start with the
 [user guide](USER_GUIDE.md) for the IDE and the
 [language guide](LANGUAGE_GUIDE.md) for commands.
 
-### Where are the HB-1 and CHIP-8 manuals?
+### Where are the machine manuals?
 
 The machine books are in this folder, and Help → Documentation lists them:
 
-- [the machines](MACHINES.md) — why there are two, and what they share;
+- [the machines](MACHINES.md) — why there are three, and what they share;
 - [HB-1 Owner's Manual](hb1/README.md), [ROMs](hb1/roms.md),
   [HB DOS](hb1/hb-dos.md), [CONFIG](hb1/config.md),
   [Inside the HB-1](hb1/inside.md);
 - [CHIP-8 Machine Manual](chip8/README.md), [the assembler](chip8/assembly.md),
-  [the instruction set](chip8/instruction-set.md).
+  [the instruction set](chip8/instruction-set.md);
+- [HB-2 Manual](hb2/README.md) and [the HB-16 instruction set](hb2/instruction-set.md).
 
 ### How do I see all keyboard shortcuts?
 
@@ -309,6 +311,18 @@ browses a folder you own — the Studio ships no third-party ROMs.
 Start with [the CHIP-8 machine manual](chip8/README.md), then
 [the assembler](chip8/assembly.md) and
 [the instruction set](chip8/instruction-set.md).
+
+### Is there a 1992 machine?
+
+Yes. **Tools → HB-2 Model 92** (`Ctrl+Alt+2`, or `./run.sh --hb2`) opens the HB-1's
+successor: a 640 × 480 framebuffer with a blitter and sixteen sprites, four channels of
+sampled audio, a keyboard, a joystick and a clock, and HB-16 — a processor of its own,
+with an assembler, a disassembler and a monitor. Its ROM socket holds nine of the
+editor's languages as well as the assembler, so a BASIC `POKE` writes a pixel, `SYS`
+runs machine code and `STICK` reads the machine's joystick; HB DOS 2.0 has two drives
+with directories, there is a cassette beside it, eight processes share a desktop, and a
+module bay holds scripts, binaries, machine images and packages of running programs.
+Start with [the HB-2 manual](hb2/README.md) and [the instruction set](hb2/instruction-set.md).
 
 ### Why does my program run forever?
 

@@ -15,8 +15,8 @@ with a Run button:
   blitter, four channels of sampled audio, hardware sprites, and HB-16, a processor
   of the machine's own, with a desktop, a disk of its own and a prompt.
 
-All three are real programs. The first two run the same engines as the editor, and
-the HB-2 runs its own instruction set. None is a screenshot, a theme, or a video of a
+All three are real programs. The HB-1 and the CHIP-8 run the editor's own engines, and
+the HB-2 runs nine of them on its own bus as well as an instruction set of its own. None is a screenshot, a theme, or a video of a
 computer: the two home computers are places you can type at, break and come back to,
 and the HB-2 is a machine you can disassemble.
 
@@ -62,7 +62,7 @@ missing is the cruelty.
 Anachronism on purpose, item by item. The left column is what a 1982 learner
 would recognise; the right is what is actually running.
 
-| Period thing | What is really there | Why both |
+| Period thing | What is really there | Why it is there |
 | --- | --- | --- |
 | `*** HB-1 ***` and `(C) 1982 HB SYSTEMS` | The same native engines the IDE runs, in process, no Python | The banner sets the stakes; the engine removes the crashes |
 | 512 sectors of 256 bytes | One JSON image under `~/.time_warp/disks` | Sector accounting teaches that storage is finite; JSON means a teacher can copy the disk |
@@ -88,41 +88,47 @@ examples:
 
 ## The machines at a glance
 
-| | HB-1 | CHIP-8 |
-| --- | --- | --- |
-| What it is | A complete home computer: CRT, prompt, ROM socket, editor, canvas, disk | A virtual machine: 4K of memory, sixteen registers, sixteen keys |
-| Year, in its universe | 1982 | 1977 |
-| Screen | TEXT / SPLIT / GRAPHICS sharing one CRT | 64×32 monochrome, or 128×64 in SuperChip hi-res |
-| Languages | All eleven, one ROM at a time | One: CHIP-8 opcodes |
-| Storage | HB DOS 1.0, 512 sectors, one volume | Your own files; the ROM library browses a folder you choose |
-| Interaction | A prompt with history, BASIC direct mode, F9 to run | A keypad, 60 frames a second, Run/Step/Reset |
-| Where it lives | Tools > **HB-1 Computer…** (`Ctrl+Alt+W`), or `./run.sh --computer` | Tools > **CHIP-8 Emulator…** (`Ctrl+Shift+M`) |
-| Manual | [HB-1 Owner's Manual](hb1/README.md) | [CHIP-8 Machine Manual](chip8/README.md) |
-| Teaches | That a computer is a system: memory, storage, languages, a screen | That a computer is a machine: fetch, decode, execute, 4K at a time |
+| | HB-1 | CHIP-8 | HB-2 |
+| --- | --- | --- | --- |
+| What it is | A complete home computer: CRT, prompt, ROM socket, editor, canvas, disk | A virtual machine: 4K of memory, sixteen registers, sixteen keys | A 1992 workstation: a bus, a framebuffer, four channels of sampled audio, a desktop |
+| Year, in its universe | 1982 | 1977 | 1992 |
+| Screen | TEXT / SPLIT / GRAPHICS sharing one CRT | 64×32 monochrome, or 128×64 in SuperChip hi-res | 80×25 text, 320×200×256 and 640×480×16, with the 1982 map as `MODE 0` |
+| Languages | All eleven, one ROM at a time | One: CHIP-8 opcodes | HB-16 machine code, plus nine of the editor's engines on the ROM socket |
+| Storage | HB DOS 1.0, 512 sectors, one volume | Your own files; the ROM library browses a folder you choose | HB DOS 2.0 with two drives, directories and a sector map, and a cassette |
+| Interaction | A prompt with history, BASIC direct mode, F9 to run | A keypad, 60 frames a second, Run/Step/Reset | A prompt, a monitor, a screen and a listing page; eight processes on a desktop |
+| Where it lives | Tools > **HB-1 Computer…** (`Ctrl+Alt+W`), or `./run.sh --computer` | Tools > **CHIP-8 Emulator…** (`Ctrl+Shift+M`) | Tools > **HB-2 Model 92…** (`Ctrl+Alt+2`), or `./run.sh --hb2` |
+| Manual | [HB-1 Owner's Manual](hb1/README.md) | [CHIP-8 Machine Manual](chip8/README.md) | [HB-2 Manual](hb2/README.md) and [HB-16](hb2/instruction-set.md) |
+| Teaches | That a computer is a system: memory, storage, languages, a screen | That a computer is a machine: fetch, decode, execute, 4K at a time | That a system is a set of programs: a bus, a processor, an operating system and a desk to put them on |
 
 They are deliberately different kinds of thing. The HB-1 is a place to live; the
-CHIP-8 is a thing to take apart. Together they bracket the era the Studio is
-named for: the chip that made a computer out of almost nothing, and the home
-computer that made a computer out of a chip.
+CHIP-8 is a thing to take apart; the HB-2 is what the same company shipped ten years
+later, and what that decade asked of it. Together they bracket the era the Studio is
+named for: the chip that made a computer out of almost nothing, the home computer that
+made a computer out of a chip, and the workstation that made it run several programs
+at once.
 
 ---
 
 ## What they share
 
-Neither machine is a special case inside the application:
+None of the three is a special case inside the application:
 
-- both draw through the same `CanvasCommandQueue` the editor drains into the
-  turtle canvas;
-- both run programs on the same native engines — `timewarp_lang` for the
-  line-by-line languages, `timewarp_scheme` for Scheme, and the CHIP-8 assembler
-  and machine that the editor's whole-program Run uses;
-- both use `NativeRunner` for a run that finishes and `ReplRunner` for a session
-  that does not, which is why a program can never start inside a previous
+- the HB-1 and the CHIP-8 draw through the same `CanvasCommandQueue` the editor
+  drains into the turtle canvas, and the HB-2 composes its own framebuffer from the
+  same kind of command the machine's `INT` services leave behind;
+- all three run programs on the same native engines — `timewarp_lang` for the
+  line-by-line languages, `timewarp_scheme` for Scheme, and the CHIP-8 assembler and
+  machine that the editor's whole-program Run uses. The HB-2's ROM socket puts nine of
+  those engines on the machine's own bus through `Interpreter::MachineBus`, so a
+  language program's `POKE` reaches the machine rather than a map beside it;
+- the two home computers use `NativeRunner` for a run that finishes and `ReplRunner`
+  for a session that does not, which is why a program can never start inside a previous
   command's variables;
-- both are driven, in tests, through the same public surface a user touches:
-  `submitCommand()`, `runProgram()`, `emulator()->step()`, `disk()`.
+- all three are driven, in tests, through the same public surface a user touches:
+  `submitCommand()`, `runProgram()`, `emulator()->step()`, `disk()` — and, on the
+  HB-2, `runRom()`, `spawn()` and `scheduler()`.
 
-Both machines are native and neither involves a second interpreter. What the
+All three are native and none involves a second interpreter. What the
 parity gate compares against is a recorded corpus, not a live engine — see
 [ARCHITECTURE.md](ARCHITECTURE.md) and [README_TESTING.md](README_TESTING.md).
 

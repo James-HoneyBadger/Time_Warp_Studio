@@ -17,7 +17,7 @@ cmake --build native/build -j
 ctest --test-dir native/build --output-on-failure
 ```
 
-There are 26 suites, one binary each, named for what they cover:
+There are 27 suites, one binary each, named for what they cover:
 
 `lexer_tests`, `evaluator_tests`, `scheme_tests`, `lang_tests` (the native
 executors and the shared interpreter loop), `canvas_queue_tests`,
@@ -26,9 +26,10 @@ executors and the shared interpreter loop), `canvas_queue_tests`,
 `syntax_highlighter_tests`, `audio_tests`, `media_tests`, `player_tests`,
 `lessons_tests`, `classroom_tests`, `editor_services_tests`,
 `help_browser_tests`, `chip8_emulator_tests` (the live machine and its window),
-`retro_computer_tests` (the HB-1), `project_tests`, `sql_tests`, `cli_tests`,
-`api_tests` and `ai_tests` (the assistant's configuration, prompts and exchange,
-against a transport of the test's own rather than a network).
+`retro_computer_tests` (the HB-1), `hb2_tests` (the HB-2's bus, chip set, processor,
+disk, cassette and module bay, with no Qt at all), `project_tests`, `sql_tests`,
+`cli_tests`, `api_tests` and `ai_tests` (the assistant's configuration, prompts and
+exchange, against a transport of the test's own rather than a network).
 
 Other build trees, all of which must stay green:
 
@@ -127,6 +128,29 @@ not.
 A tampered or stale entry is a failure, not a skip: each entry carries a SHA-256 of
 its program, so editing an example without re-recording is reported as a corpus
 problem rather than as a mismatch in the engine.
+
+## The machines' own harnesses
+
+A machine gets a harness of its own, because a language gate cannot see a machine: it
+runs the *engines*, and a machine that is wired to them wrongly runs "successfully" and
+paints nothing. `time_warp_gates hb` is the HB-2's; the HB-1 has
+`retro_computer_tests`, which loads every `Examples/hb1` program into a real machine and
+requires ink in the tube or shapes on the canvas (`POKE 32768` on the engine alone
+lands in a map nothing paints, which is why the smoke gate cannot say it); and the
+CHIP-8's own window has its bundled-program case, with the eighteen listings covered as
+CHIP-8 programs by the smoke gate.
+
+```bash
+make hb-check                                   # the seven HB-2 demos, and two processes
+./native/build/time_warp_gates hb Examples/hb2/desktop.s --ticks 4 --screen
+./native/build/time_warp_gates hb --map         # the bus's one table
+./native/build/time_warp_gates hb --tasks Examples/hb2/task_a.s Examples/hb2/task_b.s --ticks 6
+```
+
+Each demo must halt without faulting *and* leave ink, and the two task listings must
+both make progress on the scheduler -- a program that runs and draws nothing is the
+failure this gate exists for. `hb2_tests` runs the same listings again with no Qt at
+all, so a broken demo fails the suite as well as the harness.
 
 ## Curriculum and documentation gates
 

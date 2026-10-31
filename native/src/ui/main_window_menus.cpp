@@ -619,10 +619,11 @@ void MainWindow::buildMenuBar() {
                "computing.</i>"
                "<p>An old-school programming environment for eleven languages: BASIC, "
                "APL, Logo, PILOT, FOCAL, Scheme, CHIP-8, COMAL, REXX, Smalltalk and "
-               "Forth, with an integrated turtle graphics canvas — and two complete "
-               "machines inside it: the HB-1 home computer and a live CHIP-8."
-               "<p>Everything runs on this machine: no account, no network call and "
-               "no telemetry.")
+               "Forth, with an integrated turtle graphics canvas — and three complete "
+               "machines inside it: the HB-1 home computer, a live CHIP-8 and the HB-2 "
+               "of 1992."
+               "<p>Everything runs on this machine: no account, no telemetry, and "
+               "nothing sent unless you ask it to fetch something.")
                 .arg(timewarp::ui::version()));
     });
     add(help, tr("About &Qt"), {}, [this] { QMessageBox::aboutQt(this); });

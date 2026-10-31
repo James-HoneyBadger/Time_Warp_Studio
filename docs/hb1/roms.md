@@ -66,8 +66,9 @@ lines:
 `PRINT X` works, in whatever spelling the language uses. Scheme additionally
 keeps definitions and echoes the value of an expression.
 
-**Smalltalk, CHIP-8 and Forth** — each submission is a whole program, so state resets
-between lines. A Forth definition spans as many lines as it likes, so the prompt
+**Smalltalk, CHIP-8 and Forth** — each submission is a whole program and nothing is
+carried between lines (Logo is whole-program too, and keeps its variables while its
+procedure definitions do not survive an entry). A Forth definition spans as many lines as it likes, so the prompt
 takes the whole entry as one program and the dictionary it built goes with it. That is the languages' own nature, not a limitation of the
 machine: a Smalltalk workspace is rebuilt per submission, and a CHIP-8 listing is
 assembled and run to completion.

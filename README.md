@@ -6,7 +6,7 @@ complete computers inside it.*
 *Timey wimey wibbly wobbly, time & multiuniverse travel computing.*
 
 [![Languages](https://img.shields.io/badge/languages-11-blue)](#eleven-interpreters-one-per-era)
-[![Machines](https://img.shields.io/badge/machines-2-purple)](docs/MACHINES.md)
+[![Machines](https://img.shields.io/badge/machines-3-purple)](docs/MACHINES.md)
 [![Platform](https://img.shields.io/badge/platform-Linux-green)](docs/INSTALLATION.md)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Version](https://img.shields.io/badge/Version-27.0.0-orange)](https://github.com/James-HoneyBadger/Time_Warp_Studio)
@@ -14,15 +14,18 @@ complete computers inside it.*
 Time Warp Studio is a desktop programming environment for people who like old
 computers. It is the one the 1980s promised and never quite delivered: a full IDE,
 eleven interpreters spanning 1964 to 1980, a turtle canvas, and a debugger that
-works in every one of them. Two complete machines are built into it as well.
+works in every one of them. Three complete machines are built into it as well.
 
 The **HB-1** is a bespoke 1982 home computer from a parallel universe. It has one
 CRT, a prompt, a ROM socket that accepts any of the eleven languages, and **HB DOS
 1.0** on a 512-sector disk. The **CHIP-8** is the 1977 virtual machine that made a
 computer out of four kilobytes: live at 60 Hz, with a keypad, an assembler and a
-register inspector. Both are working machines rather than a theme applied to an
-editor, so you can boot them, type at them, break a program on them, save it to
-their disk and find it there tomorrow.
+register inspector. The **HB-2** is a 1992 workstation built from the same
+company's next decade: a bus, a framebuffer with a blitter, four channels of sampled
+audio, hardware sprites and a processor of its own, with eight programs on a desktop.
+All three are working machines rather than a theme applied to an editor, so you can
+boot them, type at them, break a program on them, save it to their disk and find it
+there tomorrow.
 
 The premise behind the HB-1 is a system where the design sense of the next forty
 years arrived in time for the 8-bit boom. Its constraints are period ones — a
@@ -37,24 +40,15 @@ people teaching with it, though nothing in the application assumes a classroom.
 
 ## Three machines, one Studio
 
-| | **HB-1** | **CHIP-8** |
-| --- | --- | --- |
-| What it is | A complete home computer: CRT, prompt, eleven-language ROM socket, real editor, turtle canvas, disk | A complete virtual machine: 4 KB of memory, sixteen registers, a 64×32 screen, sixteen keys |
-| When it belongs | 1982, where one machine shipped eleven language ROMs | 1977, where the machine was written in software and ran everywhere |
-| Storage | **HB DOS 1.0** — 512 sectors of 256 bytes, a catalogue, lock bits, a two-step `INIT`, and a printer (`LLIST`/`LPRINT`) that leaves a page | Your own folder of listings and ROMs, browsed by a library dialog |
-| Debugging on the machine | `LIST`, `VERIFY`, and one `UNDO` after `NEW` | **Rewind**: thirty seconds of state, a quarter second at a time |
-| Telephone | A modem: `DIAL` into **WARP BOARD**, read the bulletins, post one, hang up | — |
-| Run it | Tools > **HB-1 Computer…** (`Ctrl+Alt+W`) or `./run.sh --computer` | Tools > **CHIP-8 Emulator…** (`Ctrl+Shift+M`) |
-| Read it | [Owner's Manual](docs/hb1/README.md) · [ROMs](docs/hb1/roms.md) · [HB DOS](docs/hb1/hb-dos.md) · [WARP BOARD](docs/hb1/bbs.md) · [CONFIG](docs/hb1/config.md) · [Inside](docs/hb1/inside.md) | [Machine Manual](docs/chip8/README.md) · [Assembler](docs/chip8/assembly.md) · [Instruction set](docs/chip8/instruction-set.md) |
-
-The third is the **HB-2**, the HB-1's 1992 successor: a bus, a framebuffer with three
-video modes, four channels of sampled audio, hardware sprites and a processor of its
-own, with the 1982 memory map kept whole as `MODE 0`. It has a window of its own --
-**Tools > HB-2 Model 92…** (`Ctrl+Alt+2`) -- with a screen, a prompt, a monitor and a
-listing editor; a ROM socket that runs nine of the languages on the machine's own bus,
-so a BASIC `POKE` writes a pixel and `SYS` calls HB-16; HB DOS 2.0 with directories and
-a sector map, and a cassette beside it; eight processes on a desktop; and a module bay. Manuals: [HB-2](docs/hb2/README.md) ·
-[instruction set](docs/hb2/instruction-set.md) · [the proposal](docs/hb1/model-92.md).
+| | **HB-1** | **CHIP-8** | **HB-2** |
+| --- | --- | --- | --- |
+| What it is | A complete home computer: CRT, prompt, eleven-language ROM socket, real editor, turtle canvas, disk | A complete virtual machine: 4 KB of memory, sixteen registers, a 64×32 screen, sixteen keys | A complete 1992 workstation: a bus, three video modes, a blitter, sixteen sprites, four channels of sampled audio, HB-16 and a desktop |
+| When it belongs | 1982, where one machine shipped eleven language ROMs | 1977, where the machine was written in software and ran everywhere | 1992, where a computer ran several programs at once, each in its own window |
+| Storage | **HB DOS 1.0** — 512 sectors of 256 bytes, a catalogue, lock bits, a two-step `INIT`, and a printer (`LLIST`/`LPRINT`) that leaves a page | Your own folder of listings and ROMs, browsed by a library dialog | **HB DOS 2.0** — two drives, directories, timestamps and a sector map — and a cassette beside it |
+| Debugging on the machine | `LIST`, `VERIFY`, and one `UNDO` after `NEW` | **Rewind**: thirty seconds of state, a quarter second at a time | The monitor: disassemble, dump, poke, break and step, plus eight processes that each keep their own registers and window |
+| Telephone | A modem: `DIAL` into **WARP BOARD**, read the bulletins, post one, hang up | — | A serial port, which is what a 1992 machine had instead |
+| Run it | Tools > **HB-1 Computer…** (`Ctrl+Alt+W`) or `./run.sh --computer` | Tools > **CHIP-8 Emulator…** (`Ctrl+Shift+M`) | Tools > **HB-2 Model 92…** (`Ctrl+Alt+2`) or `./run.sh --hb2` |
+| Read it | [Owner's Manual](docs/hb1/README.md) · [ROMs](docs/hb1/roms.md) · [HB DOS](docs/hb1/hb-dos.md) · [WARP BOARD](docs/hb1/bbs.md) · [CONFIG](docs/hb1/config.md) · [Inside](docs/hb1/inside.md) | [Machine Manual](docs/chip8/README.md) · [Assembler](docs/chip8/assembly.md) · [Instruction set](docs/chip8/instruction-set.md) | [HB-2 Manual](docs/hb2/README.md) · [Instruction set](docs/hb2/instruction-set.md) · [the proposal](docs/hb1/model-92.md) |
 
 What you can do with them:
 
@@ -65,6 +59,11 @@ What you can do with them:
   catalogue, 30-character names, a per-file lock bit and a two-step `INIT`. The
   image is a single JSON file under `~/.time_warp/disks`, so you can read it, copy
   it, put it in git or hand a friend the same disk.
+- **Sit at a 1992 machine.** `Ctrl+Alt+2` opens the HB-2: its screen, its prompt, its
+  monitor and its own listing editor. Move the ROM socket to BASIC and a `POKE` writes
+  a pixel, because the engine is running on the machine's bus rather than beside it;
+  `SYS` calls HB-16; `CSAVE` records a program to the cassette; and `MODULE PACK`
+  writes what is running as a package you can boot onto the desktop later.
 - **Write CHIP-8 the way it was written.** Assemble a listing in the editor or in
   the CHIP-8 window, load your own ROMs from a folder you point it at, then
   single-step one instruction at a time and watch `V0`–`VF` change.
@@ -88,13 +87,15 @@ you had:
   `V0`. There are no quirk switches: one machine, one manual, with every
   divergence from other emulators stated in
   [the instruction set](docs/chip8/instruction-set.md).
-- **The disk is a file.** HB DOS images are JSON under `~/.time_warp/disks`, so
-  you can read them, diff them and keep them in a repository. The sector
-  arithmetic is real: a program that will not fit is refused, never truncated.
+- **The disk is a file.** The HB-1's HB DOS 1.0 images are JSON under
+  `~/.time_warp/disks`; the HB-2 keeps its two drives and its cassette as text under
+  `~/.time_warp/hb2`. Either way you can read them, diff them and keep them in a
+  repository. The sector arithmetic is real: a program that will not fit is refused,
+  never truncated.
 - **Your ROMs, not ours.** The Studio ships no third-party CHIP-8 ROMs, because
   most of the ones in circulation are somebody's copyright. The ROM library
-  browses a folder you own, and the four bundled programs are listings you can
-  read and edit.
+  browses a folder you own, and the eighteen bundled programs in
+  [`Examples/chip8/`](Examples/chip8) are listings you can read and edit.
 - **The whole look, not a filter.** There are 35 IDE themes — C64, Apple II, ZX
   Spectrum, CGA, Amiga, NeXTSTEP, Borland and the two Windows schemes — plus four
   machine phosphors and CRT glass you can tune from off to heavy. Choosing amber
@@ -110,29 +111,35 @@ you had:
 
 ---
 
----
+## 27.0: a third machine, and the software for it
 
-## 25.0: timey wimey wibbly wobbly, time & multiuniverse travel computing
+**Version 27.0 is the current design.** The eleven languages, the IDE, three working
+machines, the curriculum and every book in this repository are complete, and every gate
+that proves it runs on each push. The feature set is not frozen: a release from here
+takes fixes and features alike, and each one arrives with the test and the book that
+make it true.
 
-**Version 25.0 is the current design.** The eleven languages, the IDE, the two
-machines, the curriculum and every book in this repository are complete, and every
-gate that proves it runs on each push. The feature set is not frozen: a release from
-here takes fixes and features alike, and each one arrives with the test and the book
-that make it true.
+**The releases behind it.** 26.0 built the HB-2 headless -- a bus, a chip set, HB-16 and
+a harness with six programs to look at. 26.1 gave it a window, HB DOS 2.0 with
+directories and a sector map, eight processes on a desktop, a monitor, a module bay and
+a prompt. 27.0 moved nine of the engines onto the machine's own bus through a ROM
+socket, so a BASIC `POKE` writes video memory and `SYS` calls HB-16; added the cassette;
+wired the joystick; and closed the module bay's last kind.
 
-**Version 24.0 is archived.** It was the golden release, and it is kept exactly as
-it was built, on its own release page, never to change again. The design did not stop
-with it: the Terminal tab is a real
-pseudo-terminal, the assistant has three historical voices, a run that finishes
-behind you can announce itself on the desktop, the CHIP-8 opens on an original
-five-page tour and can fetch twelve CC0 homebrew programs with one button, and there
-is a Flatpak that carries its own Qt.
+**Version 25.0 was the release that finished the IDE.** The Terminal tab is a real
+pseudo-terminal, the assistant has three historical voices, a run that finishes behind
+you can announce itself on the desktop, the CHIP-8 opens on an original five-page tour
+and can fetch twelve CC0 homebrew programs with one button, and the Flatpak carries its
+own Qt.
 
-What comes next is written down with the proof each item would need, rather than left
-as a wish: [the HB-1 proposals](docs/hb1/enhancements.md),
-[the CHIP-8 proposals](docs/chip8/enhancements.md), and
-[the Model 92](docs/hb1/model-92.md) — the same company's 1992 computer, and the
-overhaul it would take to get there.
+**Version 24.0 is archived.** It was the golden release, kept exactly as it was built on
+its own release page, never to change again.
+
+What comes next is written down with the proof each item would need, rather than left as
+a wish: [the HB-1 proposals](docs/hb1/enhancements.md) and
+[the CHIP-8 proposals](docs/chip8/enhancements.md). The
+[Model 92](docs/hb1/model-92.md) is no longer one of them -- the same company's 1992
+computer is the HB-2 that ships.
 
 ## Install it
 
@@ -234,7 +241,7 @@ exercised by the command matrix.
 - **Two panes** — **Split Editor Right** (`Ctrl+\`) shows two documents side by side; **Run Both Panes** (`Ctrl+Alt+B`) runs both headless and reports time, turtle calls and each program's own output in one table — a comparison, not a race
 - **Output console** — program output as it is produced, with interpreter errors in their own tab
 - **Run controls** — Run (F9) and Stop, with a status bar showing language, cursor position and execution state
-- **REPL bar** — the line under the editor runs a command in the current document's language. BASIC, FOCAL, PILOT, COMAL, REXX, APL, Logo and Scheme keep bindings between commands (`LET X = 5` then `PRINT X`); Scheme also keeps definitions and echoes expression values. In BASIC, `?` is shorthand for `PRINT`, a numbered line is stored in the editor as a program line, and `RUN`, `LIST` and `NEW` work as direct-mode commands. Smalltalk, CHIP-8 and Forth run each submission as a whole program, so their state resets
+- **REPL bar** — the line under the editor runs a command in the current document's language. BASIC, FOCAL, PILOT, COMAL, REXX, APL, Logo and Scheme keep bindings between commands (`LET X = 5` then `PRINT X`); Scheme also keeps definitions and echoes expression values. In BASIC, `?` is shorthand for `PRINT`, a numbered line is stored in the editor as a program line, and `RUN`, `LIST` and `NEW` work as direct-mode commands. Smalltalk, CHIP-8 and Forth carry nothing from one submission to the next, and Logo keeps variables but not procedure definitions.
 - **Debugging, in all eleven languages** — gutter breakpoints and a 🐞 **Debug** panel (Continue, Pause, Step In/Over/Out, Stop) plus Debug/Continue/Trace on the toolbar. A run can stop at a statement, at a Logo top-level statement, at a Smalltalk message send or before a CHIP-8 instruction. Scheme runs on an explicit-stack machine, so it shows its own call stack and the paused frame's bindings, with values typed by the machine rather than guessed from their printed form; for a native run the Variables panel shows the bindings the pause stopped in. **Watch expressions** evaluate arithmetic over the paused bindings, and **data breakpoints** stop when a named variable changes value
 - **Inspection** — a 🔍 **Variables** panel listing every binding with its type and value, filtered by name, and a ⚡ **Telemetry** HUD showing what the run cost and did: steps used, engine time, steps per second, last line, recursion depth, call stack, output lines, drawing commands, BASIC's memory window, and — beside the engine's own counters — the IDE's wall clock and the ink that actually reached the canvas
 - **Projects** — a 🗂 **Projects** dock groups programs into named groups without moving them on disk. Create or open a `.twproject`, add files, a whole folder (its programs are grouped by subfolder), and groups, drag a file between groups, and the project reopens with the session; missing files are marked rather than forgotten
@@ -243,7 +250,7 @@ exercised by the command matrix.
 - **Printing and export** — File > Print Code (Ctrl+P) sends the program to a printer as the same A4 page the PDF export writes, and File > Print Drawing sends the drawing scaled to fit the page; both entries appear only in a build with the PrintSupport module. The program also exports as PDF, the program, output and drawing as one HTML page, and **File > Export Audio as WAV…** writes what the run sounded — every `SOUND` and `PLAY` the engines synthesised, in the order the program asked for them — which is one file a machine with no audio player can still keep; a lesson session exports as Markdown or PDF
 - **Profiling** — View > Profile Run times every statement of a line-by-line program and ends with a report of line, hits, time and share, longest first. It is off at every launch because timing costs
 - **Presentation and access** — 35 themes including the retro CRT sets and the Windows 2000 and Windows 7 schemes, a High Contrast variant of whichever is active, 100/125/150% text sizes, focus mode, CRT settings with four monitor presets, and **Presentation Mode** (`Shift+F11`, `Esc` to leave) for showing the screen to a room
-- **AI assistant (opt-in)** — the 🤖 **Assistant** tab explains a program, finds what is wrong with it, comments it, translates it or writes a new one, through the service you configure in **Tools > AI Settings…** (`Ctrl+Shift+A` opens the page). OpenAI, DeepSeek, Anthropic, OpenRouter, or Ollama and LM Studio on this machine; answers stream in token by token and **Stop** ends one half written; **Insert** puts the answer into the editor and nothing runs until you press F9. **Ask About the Last Error** starts from what the run said, a suggested next line can appear while you type (off unless ticked), a conversation can be kept between sessions, and the same page opens from the HB-1 and the CHIP-8. A stored key goes in the platform's own store where there is one. [The manual](docs/AI.md) says exactly what leaves the machine.
+- **AI assistant (opt-in)** — the 🤖 **Assistant** tab explains a program, finds what is wrong with it, comments it, translates it or writes a new one, through the service you configure in **Tools > AI Settings…**, with **Ctrl+Shift+A** raising the page. OpenAI, DeepSeek, Anthropic, OpenRouter, or Ollama and LM Studio on this machine; answers stream in token by token and **Stop** ends one half written; **Insert** puts the answer into the editor and nothing runs until you press F9. **Ask About the Last Error** starts from what the run said, a suggested next line can appear while you type (off unless ticked), a conversation can be kept between sessions, and the same page opens from the HB-1 and the CHIP-8. A stored key goes in the platform's own store where there is one. [The manual](docs/AI.md) says exactly what leaves the machine.
 - **Terminal (opt-in)** — Settings > Workspace adds a 💻 Terminal tab that runs commands through your own shell, starting in the current document's folder. It is off by default, stopped and removed in presentation and player modes, and is a command line rather than a terminal emulator: no prompts, no job control, no full-screen programs
 - **Automation** — `./api` speaks the JSON-RPC API on stdin/stdout: run a program, keep a REPL session, start and step a debug session, query SQL, edit a project including folder import, and evaluate watches. See [docs/API.md](docs/API.md)
 - **Terminal tools** — `./run.sh` builds if needed and launches the IDE; `./twc program.bas -o program` compiles a program into a standalone executable that embeds the interpreter, writes its drawing as SVG, and takes `--db FILE` when the program uses SQL
@@ -315,8 +322,8 @@ See [docs/lessons/](docs/lessons/README.md) for the student and teacher guides.
 - **Error hints**, which offer a syntax suggestion beside an interpreter's error
   message.
 - **Eleven language tutorials**, one per language, under `docs/tutorials/`.
-- **The machine manuals**: the HB-1's six books and the CHIP-8's three, with
-  [the machines](docs/MACHINES.md) introducing them.
+- **The machine manuals**: the HB-1's six books, the CHIP-8's three and the HB-2's
+  two, with [the machines](docs/MACHINES.md) introducing them.
 
 ---
 
@@ -331,9 +338,9 @@ have drifted apart.
 
 ```text
 An old-school programming environment: eleven interpreters from 1964-1980, a full
-IDE, a debugger in every language and turtle graphics -- plus three machines,
-the HB-1 home computer of 1982 with its own disk OS, and a live CHIP-8 with an
-assembler and register inspector.
+IDE, a debugger in every language and turtle graphics -- plus three machines: the
+HB-1 home computer of 1982 with its own disk OS, a live CHIP-8 with an assembler
+and register inspector, and the HB-2, a 1992 workstation with its own processor.
 ```
 
 ### Topics
@@ -364,7 +371,8 @@ forth
 
 | Goal | Start here |
 | ---- | ---------- |
-| Type at a 1982 computer that never existed | [the HB-1 Owner's Manual](docs/hb1/README.md), [HB DOS](docs/hb1/hb-dos.md), and the premise behind both machines in [MACHINES.md](docs/MACHINES.md) |
+| Type at a 1982 computer that never existed | [the HB-1 Owner's Manual](docs/hb1/README.md), [HB DOS](docs/hb1/hb-dos.md), and the premise behind all three machines in [MACHINES.md](docs/MACHINES.md) |
+| Write for a 1992 machine of the same company | [the HB-2 Manual](docs/hb2/README.md) and [the HB-16 instruction set](docs/hb2/instruction-set.md) |
 | Write or run CHIP-8 | [the CHIP-8 manuals](docs/chip8/README.md), [the assembler](docs/chip8/assembly.md), [the instruction set](docs/chip8/instruction-set.md) |
 | Explore the eleven languages | [`docs/LANGUAGE_GUIDE.md`](docs/LANGUAGE_GUIDE.md) and [`docs/tutorials/`](docs/tutorials/) |
 | Use the editor, debugger, projects, SQL or the API | [`docs/USER_GUIDE.md`](docs/USER_GUIDE.md) |

@@ -122,8 +122,8 @@ the IDE and opens in player mode. The full guide is [USER_GUIDE.md](USER_GUIDE.m
 ## 4. Verify the build
 
 ```bash
-ctest --test-dir native/build --output-on-failure   # 26 suites
-make smoke                                          # all 94 examples
+ctest --test-dir native/build --output-on-failure   # 27 suites
+make smoke                                          # the 94 examples it runs
 make command-matrix                                 # every command-table row
 make repl-matrix                                    # every row through the REPL
 ./native/build/time_warp_teach validate             # every lesson solution
@@ -235,9 +235,9 @@ cmake --install native/build --prefix /usr
 `cpack` builds the same tree into the packages from here (`cpack -G DEB`, and
 `-G RPM` where `rpmbuild` is installed); see §8.
 
-`PLAY`, `SOUND` and the two machines' beeps write a WAV and hand it to a
-command-line player: `paplay` or `aplay` (or `ffplay`/`play`). With none of them
-installed, those commands report that playback is unavailable rather than
+`PLAY`, `SOUND` and the machines' beeps write a WAV and hand it to a command-line
+player: `pw-play` first (PipeWire), then `paplay`, `aplay`, `ffplay` or `play`. With
+none of them installed, those commands report that playback is unavailable rather than
 pretending to make a sound.
 
 ### 8. A release without building anything

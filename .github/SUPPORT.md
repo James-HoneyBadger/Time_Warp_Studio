@@ -25,9 +25,9 @@ one I would type:
 - **[docs/INSTALLATION.md](../docs/INSTALLATION.md)** — requirements, building
   from source, and what a failure at each step usually means.
 - **[docs/ROADMAP.md](../docs/ROADMAP.md)** — what is deliberately not built
-  yet. A dedicated player target, an automatic update check and Flatpak/Snap are
-  on this list. A missing feature from it is not a bug, and reporting one as a
-  regression costs a round trip.
+  yet. A Flathub submission, Snap, an arm64 AppImage and calling one language from
+  another are on this list. A missing feature from it is not a bug, and reporting one
+  as a regression costs a round trip.
 - **[docs/USER_GUIDE.md](../docs/USER_GUIDE.md)** — the IDE manual: projects, the
   REPL, debugging, SQL, terminal tools and the API.
 - **[docs/FAQ.md](../docs/FAQ.md)** — the questions that come up most.
@@ -73,12 +73,12 @@ build and launch from a checkout.
 ## What is not
 
 - **Every package format.** A tagged release builds a `.deb`, an `.rpm`, a
-  tarball, an AppImage (x86_64) and a container image, and
-  `make -C native install` produces the same tree locally. Flatpak, Snap and an
-  arm64 AppImage are not made.
-- **A player executable.** `--compile` writes a copy of the IDE with the authoring
-  UI hidden; a small `time_warp_player` that opens a program is queued work without a
-  date.
+  tarball, an AppImage (x86_64), a `.flatpak` bundle and a container image, and
+  `make -C native install` produces the same tree locally. Snap and an arm64 AppImage
+  are not made.
+- **A player for another platform.** `--compile` writes a real `time_warp_player` with
+  the program inside it -- a window, the drawing, the output and three keys, not an
+  editor with its docks hidden -- but it is a Linux binary and links the system Qt 6.
 - **Keeping your programs working across versions.** The languages are
   reimplementations of languages older than most of the people using them, so
   their semantics are stable — but Time Warp Studio's own file formats, settings

@@ -137,7 +137,7 @@ The gates and the documentation tools are built the same way — `make smoke` an
 # Build and run the IDE
 make -C native run
 
-# The 26 C++ suites
+# The 27 C++ suites
 make test
 ```
 
@@ -198,21 +198,22 @@ detect-secrets scan --baseline .secrets.baseline
 
 The harnesses are `time_warp_gates`, one binary built with the product: `smoke`
 runs every example, `commands` runs every row of the command table, `repl` runs the
-same rows through the API, and `golden` compares the ports with the frozen
-corpora. The rows are data in `native/share/command_rows.json`, and the inventory
+same rows through the API, `golden` compares the ports with the frozen corpora, and
+`hb` assembles an HB-2 listing, runs the machine and shows what it printed and drew. The rows are data in `native/share/command_rows.json`, and the inventory
 that measures their coverage reads the executors' own sources
 (`native/tools/gates/inventory.cpp`).
 
 The documentation gates are `time_warp_docs` (`native/tools/docs`, one small
-project with no Qt): `links`, `claims` and `version`. `time_warp_icon` writes the
+project with no Qt): `links`, `claims`, `version` and `md`, the Markdown lint. `time_warp_icon` writes the
 packaged icons. None of them is part of the product, and nothing installed contains
 them — there is no Python in the tree at all, which `make tree-check` enforces.
 
 Two things in the application are not executors and break just as easily: the lesson
 curriculum (`native/share/lessons.json`) and the teacher's side
-(`classroom.cpp`). A checkpoint is checked by *running* the learner's
-program, so an executor change can fail a lesson without touching the lesson —
-which is why `make engine-test` is not optional here.
+(`classroom.cpp`). A checkpoint is checked by *running* the learner's program, so an
+executor change can fail a lesson without touching the lesson -- which is why
+`make teach-check` is part of `make test-all` rather than something a contributor
+remembers to run.
 
 ```bash
 make lint        # the build, which is warning-free by construction
@@ -436,7 +437,8 @@ project uses, and every fix is expected to arrive with one.
 - `docs/LANGUAGE_GUIDE.md` - If language syntax
 - `docs/hb1/` - If the HB-1's words, disk, settings or screen change
 - `docs/chip8/` - If the assembler, an opcode or the emulator window changes
-- `docs/MACHINES.md` - If either machine, or what they share, changes
+- `docs/hb2/` - If the bus, a device, a service, the disk, the cassette, the ROM socket or the module bay changes
+- `docs/MACHINES.md` - If any machine, or what they share, changes
 - `docs/ROADMAP.md` - If a planned item lands or is deferred
 - `native/README.md` - If the Qt application's design or behaviour changes
 
