@@ -222,6 +222,49 @@ void test_on_timer_fires_the_handler_while_the_program_runs() {
 
 // `MID$(` contains `$(`, which an array read used to claim first: every string
 // function spelled with a `$` returned an empty field.
+
+// A `CALL` to a name that is not a subroutine reported "Subroutine not found" --
+// except that the lookup put a `functions` iterator into the variable holding a
+// `subs` one and compared it against the other map's `end()`. Comparing iterators
+// from different containers is undefined behaviour, and when the comparison came out
+// false the code dereferenced `end()` and crashed the whole application. A CHIP-8
+// listing run as BASIC reaches it with seven `CALL`s to names no subroutine has.
+//
+// The property a person would check is the message, so that is what is asserted --
+// and the run completing at all, which is the part that used to be a segfault.
+void test_basic_call_to_a_missing_subroutine_reports() {
+    const BasicRun missing = run_basic(
+        "10 CALL nosuchsub\n"
+        "20 CALL anotherone\n"
+        "30 CALL third(1, 2)\n"
+        "40 PRINT \"still here\"\n");
+    TW_CHECK(contains(missing.output, "Subroutine not found: NOSUCHSUB"));
+    TW_CHECK(contains(missing.output, "Subroutine not found: ANOTHERONE"));
+    TW_CHECK(contains(missing.output, "Subroutine not found: THIRD"));
+    TW_CHECK(contains(missing.output, "still here"));
+
+    // And a `CALL` that does name one still works, both kinds: a `SUB` and a
+    // `FUNCTION` are found by the same lookup, and the argument arrives.
+    const BasicRun found = run_basic(
+        "10 CALL GREET\n"
+        "20 CALL SHOW(7)\n"
+        "30 PRINT DOUBLE(21)\n"
+        "40 END\n"
+        "50 SUB GREET\n"
+        "60 PRINT \"the subroutine ran\"\n"
+        "70 END SUB\n"
+        "80 SUB SHOW(n)\n"
+        "90 PRINT \"n is\"; n\n"
+        "100 END SUB\n"
+        "110 FUNCTION DOUBLE(n)\n"
+        "120 DOUBLE = n * 2\n"
+        "130 END FUNCTION\n");
+    TW_CHECK(!any_error(found.output));
+    TW_CHECK(contains(found.output, "the subroutine ran"));
+    TW_CHECK(contains(found.output, "n is"));
+    TW_CHECK(contains(found.output, "42"));
+}
+
 void test_basic_dollar_string_functions_are_calls_not_array_reads() {
     const BasicRun run = run_basic("PRINT MID$(\"HELLO\", 1, 3)\nPRINT LEFT$(\"HELLO\", 2)");
     TW_CHECK_EQ(run.output.at(0), std::string{"HEL"});

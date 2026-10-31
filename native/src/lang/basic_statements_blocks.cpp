@@ -193,15 +193,19 @@ std::string Machine::call(const std::string& args) {
         name = upper(header);
     }
 
-    bool is_function = false;
-    auto definition = state_.subs.find(name);
-    if (definition == state_.subs.end()) {
-        definition = state_.functions.find(name);
-        is_function = true;
-    }
-    if (definition == state_.functions.end() && definition == state_.subs.end()) {
+    // Two maps, so two lookups and one answer. This used to assign a
+    // `functions` iterator into the variable that held a `subs` one and compare it
+    // against the other map's `end()`: comparing iterators from different
+    // containers is undefined behaviour, and when it did not compare equal the code
+    // went on to dereference `end()` and crashed. A CHIP-8 listing run as BASIC --
+    // seven `CALL`s to names that are not subroutines -- was enough to reach it.
+    const auto sub = state_.subs.find(name);
+    const auto function = state_.functions.find(name);
+    if (sub == state_.subs.end() && function == state_.functions.end()) {
         return "❌ Subroutine not found: " + name + "\n";
     }
+    const bool is_function = sub == state_.subs.end();
+    const Definition& definition = is_function ? function->second : sub->second;
 
     std::vector<Value> evaluated;
     for (const std::string& argument : arguments) {
@@ -215,8 +219,8 @@ std::string Machine::call(const std::string& args) {
     CallFrame frame;
     frame.return_line = interpreter_.current_line;
     frame.function_name = is_function ? name : std::string{};
-    for (std::size_t index = 0; index < definition->second.parameters.size(); ++index) {
-        const std::string& parameter = definition->second.parameters[index];
+    for (std::size_t index = 0; index < definition.parameters.size(); ++index) {
+        const std::string& parameter = definition.parameters[index];
         const auto existing = interpreter_.variables().find(parameter);
         frame.saved.emplace_back(parameter, existing == interpreter_.variables().end()
                                                  ? std::nullopt
@@ -229,7 +233,7 @@ std::string Machine::call(const std::string& args) {
     }
     state_.calls.push_back(std::move(frame));
     interpreter_.push_call_frame(name, interpreter_.display_line());
-    interpreter_.jump_to(definition->second.start);
+    interpreter_.jump_to(definition.start);
     return {};
 }
 
