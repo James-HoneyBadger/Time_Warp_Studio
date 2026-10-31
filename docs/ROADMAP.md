@@ -29,6 +29,7 @@ What comes after is written down rather than wished for:
 | For | Proposal |
 | --- | --- |
 | The HB-1 | [hb1/enhancements.md](hb1/enhancements.md) — a tape drive, a monitor and `SYS`, programmable function keys, sprites, RAM size, HB DOS 1.1, autoboot |
+| The HB-1, in 1992 | [hb1/model-92.md](hb1/model-92.md) — the overhaul: a bus and a device map, a video chip, four-channel audio, HB DOS 2.0, input devices, HB-16 with an assembler and a monitor, a module bay, and a desktop running eleven processes |
 | The CHIP-8 | [chip8/enhancements.md](chip8/enhancements.md) — breakpoints in the window, an instruction trace, memory watch, state files, a library manifest, the rest of the SuperChip subset |
 
 Each proposal states what it is, why the machine wants it in period terms, and what
