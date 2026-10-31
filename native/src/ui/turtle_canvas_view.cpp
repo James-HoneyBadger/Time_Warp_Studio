@@ -3,7 +3,6 @@
 // The view: the world window, the fit, zoom, the grid, and the events that change
 // them.
 
-#include "timewarp/core/qt_gui_compat.hpp"
 #include "timewarp/ui/turtle_canvas.hpp"
 
 #include "turtle_canvas_internal.hpp"
@@ -178,7 +177,7 @@ void TurtleCanvas::wheelEvent(QWheelEvent* event) {
     if (steps == 0) {
         return;
     }
-    const QPointF cursor = timewarp::core::eventPosition(event);
+    const QPointF cursor = event->position();
 
     if (framebufferActive()) {
         // A screen zooms in its own coordinates. The anchor is the screen pixel
@@ -232,7 +231,7 @@ void TurtleCanvas::mousePressEvent(QMouseEvent* event) {
         return;
     }
     dragging_ = true;
-    drag_from_ = timewarp::core::eventPosition(event);
+    drag_from_ = event->position();
     if (framebufferActive()) {
         // A click on a screen is a question -- "what colour is this pixel?" --
         // and the answer is cheap enough to give before the drag begins.
@@ -252,8 +251,8 @@ void TurtleCanvas::mouseMoveEvent(QMouseEvent* event) {
         QWidget::mouseMoveEvent(event);
         return;
     }
-    pan_pixels_ += timewarp::core::eventPosition(event) - drag_from_;
-    drag_from_ = timewarp::core::eventPosition(event);
+    pan_pixels_ += event->position() - drag_from_;
+    drag_from_ = event->position();
     update();
     event->accept();
 }

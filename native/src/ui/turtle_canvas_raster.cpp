@@ -3,7 +3,6 @@
 // Screen mode: the framebuffer a `SCREEN` statement allocates, and the commands that
 // write pixels into it.
 
-#include "timewarp/core/qt_compat.hpp"
 #include "timewarp/ui/turtle_canvas.hpp"
 
 #include "turtle_canvas_internal.hpp"

@@ -2,7 +2,6 @@
 
 #include "timewarp/ui/panels.hpp"
 
-#include "timewarp/core/qt_compat.hpp"
 
 #include <QComboBox>
 #include <QHBoxLayout>

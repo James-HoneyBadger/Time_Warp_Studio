@@ -22,14 +22,6 @@ namespace {
 /// The two build trees the Makefile produces, in the order they are tried.
 constexpr const char* kBuildTrees[] = {"build", "build-debug"};
 
-QString withExecutableSuffix(const QString& path) {
-#ifdef Q_OS_WIN
-    return path + QStringLiteral(".exe");
-#else
-    return path;
-#endif
-}
-
 }  // namespace
 
 QString repositoryRoot() {
@@ -65,8 +57,8 @@ std::optional<QString> locateBinary(const QString& name) {
     }
     const QString root = repositoryRoot();
     for (const char* tree : kBuildTrees) {
-        const QString path = withExecutableSuffix(
-            QDir{root}.filePath(QStringLiteral("native/%1/%2").arg(QLatin1String{tree}, name)));
+        const QString path =
+            QDir{root}.filePath(QStringLiteral("native/%1/%2").arg(QLatin1String{tree}, name));
         const QFileInfo candidate{path};
         if (candidate.isFile()) {
             return QDir::cleanPath(candidate.absoluteFilePath());

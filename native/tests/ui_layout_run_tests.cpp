@@ -283,13 +283,9 @@ void test_standalone_payload() {
     TW_CHECK_EQ(carried.source, QStringLiteral("PRINT \"HELLO\"\n"));
 
     // The artifact is executable, or the thing a learner is told to double-click
-    // cannot be. Windows has no execute bit -- a file runs because of its
-    // extension, and setPermissions there can only toggle read-only -- so the
-    // promise is checkable on the POSIX builds, which is where it is made.
-#ifndef Q_OS_WIN
+    // cannot be.
     QFile::Permissions permissions = QFile::permissions(artifact);
     TW_CHECK(permissions.testFlag(QFile::ExeOwner));
-#endif
 
     // Overwriting needs to be asked for, and a file that is not a program is
     // refused before anything is written.
@@ -465,26 +461,6 @@ void test_profile_report_lists_the_measurements() {
     TW_CHECK_EQ(dialog.hitsAt(0), std::uint64_t{10});
 }
 
-
-void test_windows_sound_command_line() {
-    announce("windows sound command line");
-    // Windows has no `aplay` on PATH, so the player is PowerShell and a .NET
-    // class, and the file path goes inside a script rather than after an
-    // argument. A path is not a safe thing to paste into a script -- a user
-    // called O'Brien has an apostrophe in it -- so the quoting is the part
-    // worth pinning, and it can be checked from Linux.
-    const QString plain =
-        timewarp::ui::SoundPlayer::powerShellCommand(QStringLiteral("C:/Temp/tone.wav"));
-    TW_CHECK(plain.contains(QStringLiteral("'C:/Temp/tone.wav'")));
-    TW_CHECK(plain.startsWith(QStringLiteral("(New-Object Media.SoundPlayer ")));
-    TW_CHECK(plain.endsWith(QStringLiteral(".PlaySync()")));
-
-    // The doubled quote is PowerShell's escape, and it must not close the string.
-    const QString quoted = timewarp::ui::SoundPlayer::powerShellCommand(
-        QStringLiteral("C:/Users/O'Brien/AppData/Local/Temp/tone.wav"));
-    TW_CHECK(quoted.contains(QStringLiteral("'C:/Users/O''Brien/")));
-    TW_CHECK_EQ(quoted.count(QLatin1Char{'\''}), 4);  // open, doubled pair, close
-}
 
 // ---------------------------------------------------------------------------
 // Persistence: the part a user notices only when it is missing

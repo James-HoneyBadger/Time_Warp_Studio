@@ -1,7 +1,5 @@
 // SPDX-License-Identifier: MIT
 
-#include "timewarp/core/qt_gui_compat.hpp"
-#include "timewarp/core/qt_compat.hpp"
 #include "timewarp/ui/resizable_tab_widget.hpp"
 
 #include <algorithm>
@@ -68,7 +66,7 @@ void ResizableTabWidget::enableEnhancedTabBar() {
 
 void ResizableTabWidget::mousePressEvent(QMouseEvent* event) {
     if (event->button() == Qt::MiddleButton) {
-        const int index = tabBar()->tabAt(timewarp::core::eventPosition(event).toPoint());
+        const int index = tabBar()->tabAt(event->position().toPoint());
         if (index >= 0) {
             emit closeRequested(index);
             // Consumed: the base class would otherwise start a drag from the

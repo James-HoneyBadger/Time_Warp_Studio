@@ -29,8 +29,7 @@
 #include <cstring>
 #include <string>
 
-#if !defined(TIME_WARP_FORCE_CHARCONV_FALLBACK) && defined(__cpp_lib_to_chars) && \
-    !defined(__APPLE__)
+#if !defined(TIME_WARP_FORCE_CHARCONV_FALLBACK) && defined(__cpp_lib_to_chars)
 #define TIME_WARP_HAVE_FLOAT_CHARCONV 1
 #else
 #define TIME_WARP_HAVE_FLOAT_CHARCONV 0

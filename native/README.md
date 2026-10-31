@@ -122,10 +122,6 @@ cmake -S native -B native/build -DCMAKE_BUILD_TYPE=Release
 cmake --build native/build -j
 ctest --test-dir native/build --output-on-failure
 
-# The Windows 7 configuration: Qt 5.15, and the Windows 7 API level
-cmake -S native -B native/build5 -DCMAKE_BUILD_TYPE=Release \
-    -DTIME_WARP_QT5=ON -DTIME_WARP_WIN7=ON
-
 # The parity gate: the ports against the corpora recorded from the reference
 make golden-check
 
@@ -187,16 +183,12 @@ runner and the widget UI are built; when absent they are skipped and everything
 else — including the queue's own tests — still builds and runs. Nothing outside
 `qt_bridge.*`, `debugger_runner.*` and `ui/` includes a Qt header.
 
-`TIME_WARP_QT` is `Qt6`, or `Qt5` when the build is configured with
-`-DTIME_WARP_QT5=ON`. That option exists for the Windows 7 artifact: Qt 6 requires
-Windows 10, and Qt 5.15 is the last release that runs on 7 SP1. The two versions
-differ in a handful of names and in whether `QList` and `QVector` are one type;
-those differences live in `include/timewarp/core/qt_compat.hpp` and
-`qt_gui_compat.hpp` rather than in an `#if` at each call site. `-DTIME_WARP_WIN7=ON`
-sets `WINVER` and `_WIN32_WINNT` to 6.01, so a call into a newer Windows API is a
-compile error rather than a missing entry point on the target machine. Both are off
-by default, and `native.yml` builds and tests the Qt 5 configuration on every push
-so it cannot quietly rot.
+`TIME_WARP_QT` is `Qt6`. It was a choice between Qt 6 and Qt 5.15 while the Windows
+7 artifact existed, and the variable is kept because the module files name
+`${TIME_WARP_QT}::Widgets` in place of `Qt6::Widgets`; there is one answer now.
+`include/timewarp/core/qt_names.hpp` holds the two Qt spellings this tree uses at
+many call sites -- `fromUtf8` for the language registry's `string_view`s and
+`keySequence` for the menu shortcuts -- so a menu entry reads as one line.
 
 `Svg` is a second, optional component that only `timewarp_ui` asks for: it makes
 `TurtleCanvas::exportDrawing` able to write `.svg` with `QSvgGenerator`. A build
@@ -209,8 +201,8 @@ not add those entries. The page composition itself is in `export.cpp` and takes 
 `QPagedPaintDevice`, so it needs no printing header and the tests drive it with a
 `QPdfWriter`.
 
-The build is dependency-free: a C++20 compiler (GCC 11+, Clang 14+, MSVC 19.30+)
-and CMake 3.20+. Everything compiles clean under
+The build is dependency-free: a C++20 compiler (GCC 11+ or Clang 14+) and
+CMake 3.20+. Everything compiles clean under
 `-Wall -Wextra -Wpedantic -Wshadow -Wcast-qual -Wuseless-cast -Wlogical-op
 -Wnull-dereference -Werror` unless `-DTIME_WARP_EXPR_WERROR=OFF` is passed.
 
@@ -1107,7 +1099,7 @@ page next to a 60x40 page must still report a 100x100 minimum.
 | **The CRT overlay tracks its own target** | The Python resizes it from `MainWindow.resizeEvent` via `overlay.parent().rect()`, which silently stops working if the overlay is ever reparented. It installs an event filter on the widget it covers instead, so `MainWindow::resizeEvent` is gone entirely. |
 | **Menus delegate** | `create_menus` is ~600 lines in one method. This defines the menu skeleton and their mnemonics; the action catalogue belongs to the feature that owns it. |
 | **Widgets are named** | `saveState()` silently skips an unnamed toolbar or dock, the stylesheet scopes by name, and the tests locate nodes by name. Naming is a precondition for two of those, not a nicety. |
-| **Standard key sequences** | `QKeySequence::New/Open/Save` instead of literal `Ctrl+N`, so the same code produces `Cmd+N` on macOS. The tooltip keeps the Linux spelling. |
+| **Standard key sequences** | `QKeySequence::New/Open/Save` instead of literal `Ctrl+N`, so the key follows the desktop's own convention. The tooltip keeps the spelling the menu shows. |
 
 ### Verification
 

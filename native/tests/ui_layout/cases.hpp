@@ -92,7 +92,6 @@ void test_crt_overlay_tracks_its_target();
 void test_crt_settings_reach_the_overlay();
 void test_screen_presets_pair_a_theme_with_its_crt_values();
 void test_immediate_mode_panel_contract();
-void test_windows_sound_command_line();
 void test_splitter_positions_survive_a_restart();
 void test_left_column_gets_the_larger_share_on_growth();
 void test_project_panel_shows_groups_and_files();

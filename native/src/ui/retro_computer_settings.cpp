@@ -33,7 +33,6 @@
 
 #include "timewarp/canvas/command_queue.hpp"
 #include "timewarp/canvas/qt_bridge.hpp"
-#include "timewarp/core/qt_gui_compat.hpp"
 #ifdef TIME_WARP_HAVE_AI
 #include "timewarp/ai/prompt.hpp"
 #include "timewarp/ui/assistant_dialog.hpp"

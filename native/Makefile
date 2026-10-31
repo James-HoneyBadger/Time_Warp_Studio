@@ -62,14 +62,8 @@ JOBS        ?= $(shell nproc 2>/dev/null || echo 4)
 # installs under stage/ instead, which is what a distro package wants.
 PREFIX      ?= /usr/local
 
-# The IDE. `make run` launches this, `make screenshot` renders it. On macOS the
-# build produces a bundle, so the executable is the one inside it. It is quoted
-# everywhere it is used, because the bundle's name has spaces in it.
-ifeq ($(shell uname -s),Darwin)
-APP         ?= $(BUILD_DIR)/Time Warp Studio.app/Contents/MacOS/Time Warp Studio
-else
+# The IDE. `make run` launches this, `make screenshot` renders it.
 APP         ?= $(BUILD_DIR)/time_warp_ide
-endif
 
 SCREENSHOT      ?= $(BUILD_DIR)/layout.png
 SCREENSHOT_SIZE ?= 1400x900
@@ -273,8 +267,7 @@ help: ## Show this help
 
 install: build ## Install to PREFIX (DESTDIR=stage to stage a package)
 	@DESTDIR=$(DESTDIR) $(CMAKE) --install $(BUILD_DIR) --prefix $(PREFIX)
-	@echo "Installed to $(DESTDIR)$(PREFIX): time_warp_ide is in $(PREFIX)/bin,"
-	@echo "or in 'Time Warp Studio.app' at the top of that prefix on macOS."
+	@echo "Installed to $(DESTDIR)$(PREFIX): time_warp_ide is in $(PREFIX)/bin."
 
 # CMake has no uninstall target by design, so this uses the manifest the last
 # install wrote. It removes the files and leaves directories in place, which is

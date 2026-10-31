@@ -44,6 +44,8 @@ public:
     [[nodiscard]] EditorSettings settings() const;
     /// Whether the embedded terminal is ticked.
     [[nodiscard]] bool terminalEnabled() const;
+    /// Whether a run finishing in the background is announced.
+    [[nodiscard]] bool notificationsOnFinish() const;
 
     /// The preview editor, so a test can assert that a change reaches it.
     [[nodiscard]] CodeEditor* preview() const noexcept { return preview_; }
@@ -60,6 +62,9 @@ signals:
     /// same reason: the tab is either there or not, and Cancel should not leave
     /// a tab the dialog says is off.
     void terminalToggled(bool on);
+    /// The finish notification was switched on or off. Immediate in the same way,
+    /// and for the same reason.
+    void notifyToggled(bool on);
 
 private:
     void buildUi(const EditorSettings& settings);
@@ -85,6 +90,7 @@ private:
     QCheckBox* minimap_ = nullptr;
     QCheckBox* autosave_ = nullptr;
     QCheckBox* terminal_ = nullptr;
+    QCheckBox* notify_ = nullptr;
     QSpinBox* autosave_seconds_ = nullptr;
     CodeEditor* preview_ = nullptr;
 };

@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 
-#include "timewarp/core/qt_gui_compat.hpp"
+#include "timewarp/core/qt_names.hpp"
 #include "timewarp/ui/chip8_window.hpp"
 
 #include "timewarp/ui/chip8_library.hpp"

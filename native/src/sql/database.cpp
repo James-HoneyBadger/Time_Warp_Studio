@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: MIT
 
-#include "timewarp/core/qt_compat.hpp"
 #include "timewarp/sql/database.hpp"
 
 #include <QByteArray>
@@ -43,13 +42,13 @@ QString renderRows(const QueryResult& result) {
     QList<int> widths;
     widths.reserve(result.columns.size());
     for (const QString& column : result.columns) {
-        widths.append(std::min(timewarp::core::intLength(column.size()), kColumnCap));
+        widths.append(std::min(static_cast<int>(column.size()), kColumnCap));
     }
     for (const QStringList& row : result.rows) {
         for (int column = 0; column < widths.size() && column < row.size(); ++column) {
             widths[column] =
                 std::max(widths.at(column),
-                         std::min(timewarp::core::intLength(row.at(column).size()), kColumnCap));
+                         std::min(static_cast<int>(row.at(column).size()), kColumnCap));
         }
     }
 

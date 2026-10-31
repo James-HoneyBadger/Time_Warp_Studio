@@ -6,7 +6,7 @@
 // `-std=c++20` defines `__STRICT_ANSI__`, and glibc then keeps `popen` out of
 // <cstdio> unless a feature-test macro asks for it. Doing it here rather than in a
 // header is what keeps the definition ahead of every include.
-#if !defined(_WIN32) && !defined(_POSIX_C_SOURCE)
+#if !defined(_POSIX_C_SOURCE)
 #define _POSIX_C_SOURCE 200809L
 #endif
 
@@ -18,13 +18,8 @@
 namespace docs {
 namespace {
 
-#if defined(_WIN32)
-std::FILE* open_pipe(const char* command) { return _popen(command, "r"); }
-int close_pipe(std::FILE* pipe) { return _pclose(pipe); }
-#else
 std::FILE* open_pipe(const char* command) { return popen(command, "r"); }
 int close_pipe(std::FILE* pipe) { return pclose(pipe); }
-#endif
 
 }  // namespace
 

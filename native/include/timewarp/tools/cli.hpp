@@ -41,11 +41,7 @@
 #include <utility>
 #include <vector>
 
-#if defined(_WIN32)
-#include <io.h>
-#else
 #include <unistd.h>
-#endif
 
 namespace timewarp::cli {
 
@@ -331,17 +327,10 @@ inline int dispatch(const Invocation& invocation, std::string_view synopsis,
 
 namespace detail {
 
-#if defined(_WIN32)
-[[nodiscard]] inline int duplicate_fd(int fd) { return _dup(fd); }
-inline int restore_fd(int from, int to) { return _dup2(from, to); }
-[[nodiscard]] inline int descriptor_of(FILE* stream) { return _fileno(stream); }
-inline int close_fd(int fd) { return _close(fd); }
-#else
 [[nodiscard]] inline int duplicate_fd(int fd) { return ::dup(fd); }
 inline int restore_fd(int from, int to) { return ::dup2(from, to); }
 [[nodiscard]] inline int descriptor_of(FILE* stream) { return ::fileno(stream); }
 inline int close_fd(int fd) { return ::close(fd); }
-#endif
 
 }  // namespace detail
 

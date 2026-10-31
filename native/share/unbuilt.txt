@@ -13,10 +13,8 @@
 # earlier, and nothing was watching.
 #
 # One row: feature | evidence path | pages, comma-separated. `#` starts a comment.
-Flatpak | packaging/flatpak | README.md, docs/ROADMAP.md
 Snap | packaging/snap | README.md, docs/ROADMAP.md
 arm64 AppImage | packaging/linux/appimage-arm64 | docs/ROADMAP.md
-code-signed | .github/workflows/sign.yml | README.md, docs/ROADMAP.md
 update check | native/src/ui/updater.cpp | README.md
 static build | native/cmake/static.cmake | docs/ROADMAP.md
 distro repository | .github/workflows/publish.yml | docs/ROADMAP.md

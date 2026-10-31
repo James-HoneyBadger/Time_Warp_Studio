@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: MIT
 
-#include "timewarp/core/qt_compat.hpp"
 #include "timewarp/ui/sound_player.hpp"
 
 #include <QDir>
@@ -21,26 +20,17 @@ namespace {
 struct Candidate {
     const char* program;
     const char* arguments;
-    AudioSink sink;
 };
 
 constexpr Candidate kCandidates[] = {
-    {"paplay", "", AudioSink::PathArgument},
-    {"aplay", "-q", AudioSink::PathArgument},
-    {"afplay", "", AudioSink::PathArgument},  // macOS's own player
-    {"ffplay", "-nodisp -autoexit -loglevel quiet", AudioSink::PathArgument},
-    {"play", "-q", AudioSink::PathArgument},
-    // Windows has no equivalent on PATH, but it has PowerShell and a .NET class
-    // that plays a WAV. `PlaySync` blocks, which is what the other players do
-    // too, and killing the process is what stops it.
-    {"powershell.exe", "-NoProfile -NonInteractive -WindowStyle Hidden -Command",
-     AudioSink::PowerShell},
-    {"powershell", "-NoProfile -NonInteractive -WindowStyle Hidden -Command",
-     AudioSink::PowerShell},
+    {"paplay", ""},
+    {"aplay", "-q"},
+    {"ffplay", "-nodisp -autoexit -loglevel quiet"},
+    {"play", "-q"},
 };
 
 /// The first player on the PATH, or an empty string.
-[[nodiscard]] QString findPlayer(QString* arguments, AudioSink* sink) {
+[[nodiscard]] QString findPlayer(QString* arguments) {
     for (const Candidate& candidate : kCandidates) {
         const QString path = QStandardPaths::findExecutable(
             QString::fromLatin1(candidate.program));
@@ -49,9 +39,6 @@ constexpr Candidate kCandidates[] = {
         }
         if (arguments != nullptr) {
             *arguments = QString::fromLatin1(candidate.arguments);
-        }
-        if (sink != nullptr) {
-            *sink = candidate.sink;
         }
         return path;
     }
@@ -62,7 +49,7 @@ constexpr Candidate kCandidates[] = {
 
 SoundPlayer::SoundPlayer(QObject* parent) : QObject(parent) {
     QString arguments;
-    program_ = findPlayer(&arguments, &sink_);
+    program_ = findPlayer(&arguments);
     arguments_ = arguments.split(QLatin1Char(' '), Qt::SkipEmptyParts);
     process_ = new QProcess{this};
     // The player exits on its own when the file ends. Its output is not the
@@ -72,14 +59,6 @@ SoundPlayer::SoundPlayer(QObject* parent) : QObject(parent) {
 
 SoundPlayer::~SoundPlayer() { stop(); }
 
-QString SoundPlayer::powerShellCommand(const QString& path) {
-    // PowerShell's single-quoted string is literal apart from a doubled quote,
-    // so `O'Brien` becomes `O''Brien` and the whole path stays one token.
-    QString escaped = path;
-    escaped.replace(QLatin1Char{'\''}, QStringLiteral("''"));
-    return QStringLiteral("(New-Object Media.SoundPlayer '%1').PlaySync()").arg(escaped);
-}
-
 QByteArray SoundPlayer::wavFor(const std::vector<timewarp::audio::Tone>& tones) {
     return wavBytes(timewarp::audio::render(tones));
 }
@@ -88,7 +67,7 @@ QByteArray SoundPlayer::recordedWav() const { return wavFor(recorded_); }
 
 QByteArray SoundPlayer::wavBytes(const std::vector<std::int16_t>& pcm) {
     const std::string bytes = timewarp::audio::wav(pcm, timewarp::audio::kDefaultSampleRate);
-    return QByteArray{bytes.data(), timewarp::core::intLength(bytes.size())};
+    return QByteArray{bytes.data(), static_cast<int>(bytes.size())};
 }
 
 void SoundPlayer::note(double frequency, int milliseconds,
@@ -136,11 +115,7 @@ void SoundPlayer::start(const QByteArray& wav) {
     file.close();
 
     QStringList arguments = arguments_;
-    if (sink_ == AudioSink::PowerShell) {
-        arguments << powerShellCommand(current_file_);
-    } else {
-        arguments << current_file_;
-    }
+    arguments << current_file_;
     process_->start(program_, arguments);
 }
 

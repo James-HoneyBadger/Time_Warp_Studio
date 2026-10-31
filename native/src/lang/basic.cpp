@@ -30,11 +30,7 @@ namespace {
 std::tm local_now() {
     const std::time_t now = std::time(nullptr);
     std::tm parts{};
-#ifdef _WIN32
-    localtime_s(&parts, &now);
-#else
     localtime_r(&now, &parts);
-#endif
     return parts;
 }
 

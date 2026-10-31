@@ -407,16 +407,11 @@ void test_the_conversation_store() {
         TW_CHECK_EQ(loaded.at(0).content, QStringLiteral("10 PRINT \"HI\""));
         TW_CHECK_EQ(loaded.at(1).role, QStringLiteral("assistant"));
     }
-    // The program text is the user's: nobody else on the machine reads it. Windows
-    // has no POSIX bits -- `setPermissions` writes an ACL and `permissions()` reports
-    // the emulated ones, with the group and other bits set whatever the ACL says --
-    // so only the owner bit means anything there.
+    // The program text is the user's: nobody else on the machine reads it.
     const QFile::Permissions permissions = QFile::permissions(store.path());
     TW_CHECK(permissions.testFlag(QFile::ReadOwner));
-#ifndef Q_OS_WIN
     TW_CHECK(!permissions.testFlag(QFile::ReadGroup));
     TW_CHECK(!permissions.testFlag(QFile::ReadOther));
-#endif
 
     // A long session keeps its newest turns and no more: twelve, the same number the
     // panel sends, so the file never holds a program nothing would use.
@@ -566,6 +561,7 @@ void test_system_prompt_names_the_languages() {
     TW_CHECK(system.contains(QStringLiteral("REPEAT")));
     TW_CHECK(system.contains(QStringLiteral("fenced block")));
 }
+
 
 void test_prompt_explain_carries_the_program() {
     announce("prompt: explain sends the program once");

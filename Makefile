@@ -90,7 +90,7 @@ teach-check:
 # and the documentation checks -- including the Markdown lint, which is a gate in
 # CI and was the one check a local `test-all` did not run.
 test-all: test smoke command-matrix repl-matrix teach-check golden-check doc-links \
-          doc-claims lint-md tree-check registry-check structure-check qt5-check
+          doc-claims lint-md tree-check registry-check structure-check
 
 # Warnings are errors in every target, so a lint pass is the build passing. Kept as
 # a target because `make lint` is what a contributor types and because the guides
@@ -123,9 +123,6 @@ registry-check: gates-built
 
 structure-check: gates-built
 	@$(GATES) structure
-
-qt5-check: gates-built
-	@$(GATES) qt5
 
 tree-check: gates-built
 	@$(GATES) tree

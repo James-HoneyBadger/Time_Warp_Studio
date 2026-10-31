@@ -558,20 +558,11 @@ void test_the_terminal_runs_commands_when_enabled() {
         TW_CHECK(waitFor([terminal] { return terminal->output().contains(QStringLiteral("hi")); }));
 
         // The shell follows the document, so a build command names the right
-        // folder without the user typing a path. `pwd` is the POSIX way to ask
-        // and `cd` is cmd.exe's; Windows also folds a path's case, so the
-        // comparison ignores it there and everywhere below.
-        // The shell prints the folder the way it was given it -- backslashes on
-        // Windows, and the logical path rather than the resolved one on macOS,
-        // where /var is a symlink to /private/var -- so this is the absolute path
-        // in the platform's separators, compared without case.
+        // folder without the user typing a path. `pwd` is how a POSIX shell is
+        // asked.
         const QString folder =
             QDir::toNativeSeparators(QFileInfo{dir.path()}.absoluteFilePath());
-#ifdef Q_OS_WIN
-        terminal->runCommand(QStringLiteral("cd"));
-#else
         terminal->runCommand(QStringLiteral("pwd"));
-#endif
         TW_CHECK(waitFor([terminal, folder] {
             return terminal->output().contains(folder, Qt::CaseInsensitive);
         }));

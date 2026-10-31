@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: MIT
 
-#include "timewarp/core/qt_gui_compat.hpp"
 #include "timewarp/ui/project_panel.hpp"
 
 #include <QAbstractItemView>
@@ -89,7 +88,7 @@ protected:
 
     void dropEvent(QDropEvent* event) override {
         if (handler_) {
-            handler_(itemAt(timewarp::core::eventPosition(event).toPoint()), event);
+            handler_(itemAt(event->position().toPoint()), event);
         }
         if (!event->isAccepted()) {
             event->ignore();

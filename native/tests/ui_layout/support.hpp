@@ -67,11 +67,11 @@
 #include <QVBoxLayout>
 #include <QWidgetAction>
 
-#include "timewarp/core/qt_gui_compat.hpp"
 #include "check.hpp"
 #include "temp_dir.hpp"
 #include "timewarp/canvas/command.hpp"
 #include "timewarp/canvas/command_queue.hpp"
+#include "timewarp/core/qt_names.hpp"
 #ifdef TIME_WARP_HAVE_AI
 #include "timewarp/ui/ai_panel.hpp"
 #include "timewarp/ui/ai_settings.hpp"

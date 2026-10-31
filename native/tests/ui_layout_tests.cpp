@@ -139,7 +139,6 @@ int main(int argc, char** argv) {
     test_screen_presets_pair_a_theme_with_its_crt_values();
     test_immediate_mode_panel_contract();
 
-    test_windows_sound_command_line();
     test_splitter_positions_survive_a_restart();
     test_left_column_gets_the_larger_share_on_growth();
     return tw::test::summary("ui_layout");

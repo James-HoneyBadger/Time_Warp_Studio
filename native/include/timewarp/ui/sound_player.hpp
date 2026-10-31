@@ -47,11 +47,6 @@ namespace timewarp::ui {
 /// How a player is told which file to play. Public because the member that
 /// records it has to be typed, and a bare int for two values is the kind of
 /// thing that becomes a third by accident.
-enum class AudioSink {
-    PathArgument,  ///< the path is appended as the last argument
-    PowerShell,    ///< the path goes inside a script (Windows)
-};
-
 class SoundPlayer final : public QObject {
     Q_OBJECT
 
@@ -90,17 +85,12 @@ public:
     [[nodiscard]] static QByteArray wavFor(const std::vector<timewarp::audio::Tone>& tones);
     /// The WAV bytes for samples already mixed. Public for the same reason.
     [[nodiscard]] static QByteArray wavBytes(const std::vector<std::int16_t>& pcm);
-    /// The script `powershell.exe -Command` plays `path` with. Public because
-    /// the quoting is the part that breaks on a path with an apostrophe in it
-    /// (`C:\Users\O'Brien\...`), and a test on Linux can still check that.
-    [[nodiscard]] static QString powerShellCommand(const QString& path);
 
 private:
     void start(const QByteArray& wav);
 
     QString program_;
     QStringList arguments_;
-    AudioSink sink_ = AudioSink::PathArgument;
     QProcess* process_ = nullptr;
     /// What is sounding, which is more than the file being played: a new note
     /// is summed with the voices already in it.

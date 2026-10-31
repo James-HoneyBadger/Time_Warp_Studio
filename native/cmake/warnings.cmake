@@ -6,15 +6,8 @@
 # warnings-as-errors switch. That policy used to be written out at each of the 49
 # targets -- six lines each, and an edit to the policy was 49 edits, which is the
 # kind of change that stops being made. It is a function now.
-#
-# MSVC is excluded from the GCC/Clang names and given `/W4` instead, so a target asks
-# for "the warnings" and does not have to know who is compiling it.
 
 function(timewarp_enable_warnings target)
-    if(MSVC)
-        target_compile_options(${target} PRIVATE /W4)
-        return()
-    endif()
     target_compile_options(${target} PRIVATE -Wall -Wextra -Wpedantic -Wshadow)
     # `TIME_WARP_EXPR_WERROR` is the historical name -- the expression library grew the
     # flag first -- and it still decides whether a warning stops a build. Renaming it

@@ -15,12 +15,12 @@
 # Packages
 # ---------------------------------------------------------------------------
 #
-# `cpack` in the build directory writes the artifact each platform installs
-# with: a `.deb` (and `-G RPM` an `.rpm` where `rpmbuild` is installed), a NSIS
-# `.exe` installer and a `.zip` on Windows, and a `.dmg` on macOS. `release.yml`
-# builds all of them from a tag, and builds the AppImage beside them with
-# `linuxdeploy` -- the Qt bundling an AppImage needs is a tool rather than a CPack
-# generator.
+# `cpack` in the build directory writes the artifact a Linux system installs with:
+# a `.deb` (and `-G RPM` an `.rpm` where `rpmbuild` is installed). `release.yml`
+# builds both from a tag, and builds the AppImage beside them with `linuxdeploy` --
+# the Qt bundling an AppImage needs is a tool rather than a CPack generator. There
+# is no installer to generate here: a Linux package manager owns the files, which
+# is what the `.deb` and `.rpm` are for.
 #
 # The Linux packages install into `/usr`, not into the build's prefix: a `.deb`
 # that puts a binary in `/usr/local/bin` is a `.deb` whose files no package
@@ -117,75 +117,9 @@ set(CPACK_RPM_PACKAGE_RELEASE "1")
 # the one pinned above.
 set(CPACK_RPM_FILE_NAME "RPM-DEFAULT")
 
-if(WIN32)
-    # NSIS is the installer, and the ZIP beside it is the portable answer for
-    # somebody who would rather not run one. `CPACK_PACKAGE_FILE_NAME` is set
-    # rather than derived: on Windows the default carries `win64` or `win32`
-    # from the host, which is right today and would quietly stop being right on
-    # a different runner.
-    set(CPACK_GENERATOR "NSIS;ZIP")
-    if(CMAKE_SIZEOF_VOID_P EQUAL 8)
-        set(_time_warp_platform_tag "win64")
-    else()
-        set(_time_warp_platform_tag "win32")
-    endif()
-    # Two installers can exist for one architecture, so which Windows they want
-    # is in the name rather than only in the release notes.
-    if(TIME_WARP_WIN7)
-        string(APPEND _time_warp_platform_tag "-win7")
-    endif()
-    set(CPACK_PACKAGE_FILE_NAME
-        "time-warp-studio-${TIME_WARP_PACKAGE_VERSION}-${_time_warp_platform_tag}")
-
-    set(CPACK_PACKAGE_INSTALL_DIRECTORY "Time Warp Studio")
-    set(CPACK_NSIS_DISPLAY_NAME "Time Warp Studio")
-    set(CPACK_NSIS_PACKAGE_NAME "Time Warp Studio")
-    set(CPACK_NSIS_INSTALL_ROOT "$PROGRAMFILES64")
-    # Forward slashes, deliberately. These two values are written into
-    # `CPackConfig.cmake` as CMake strings without being re-escaped, so a native
-    # Windows path is a parse error the moment it contains a `\a` or a `\t` --
-    # which is exactly what a checkout under `D:\a\...` produces, and how the
-    # first release attempt died with "Invalid character escape '\a'". NSIS
-    # accepts both separators, so nothing is lost by the CMake-shaped path.
-    file(TO_CMAKE_PATH
-        "${CMAKE_CURRENT_SOURCE_DIR}/../packaging/windows/time-warp-studio.ico"
-        _time_warp_nsis_icon)
-    set(CPACK_NSIS_MUI_ICON "${_time_warp_nsis_icon}")
-    set(CPACK_NSIS_INSTALLED_ICON_NAME "bin/time_warp_ide.exe")
-    # One Start Menu entry and one desktop shortcut, both named after the
-    # application rather than after the executable.
-    set(CPACK_PACKAGE_EXECUTABLES "time_warp_ide" "Time Warp Studio")
-    set(CPACK_CREATE_DESKTOP_LINKS "time_warp_ide")
-    set(CPACK_NSIS_ENABLE_UNINSTALL_BEFORE_INSTALL ON)
-    set(CPACK_NSIS_MODIFY_PATH OFF)
-    # A URL in the Add/Remove Programs entry, and the same page the Linux
-    # packages name.
-    set(CPACK_NSIS_URL_INFO_ABOUT
-        "https://github.com/James-HoneyBadger/Time_Warp_Studio")
-elseif(APPLE)
-    # DragNDrop is CPack's .dmg generator: it puts the installed bundle and an
-    # /Applications symlink on one disk image, which is the shape a Mac user
-    # expects to drag from.
-    set(CPACK_GENERATOR "DragNDrop")
-    set(CPACK_PACKAGE_FILE_NAME
-        "Time_Warp_Studio-${TIME_WARP_PACKAGE_VERSION}-macOS-universal")
-    set(CPACK_DMG_VOLUME_NAME "Time Warp Studio")
-    set(CPACK_DMG_FORMAT "UDZO")
-    set(CPACK_DMG_DISABLE_APPLICATIONS_SYMLINK OFF)
-    # CPack 3.22 and older -- and any project whose policy level predates
-    # CMP0133, which is this one -- put CPACK_RESOURCE_FILE_LICENSE on the image
-    # as an agreement hdiutil shows before the volume mounts. That is a dialog
-    # between a user and a MIT licence they receive in full inside the bundle,
-    # and it breaks every non-interactive mount: `hdiutil attach` prints the
-    # agreement and then cancels when there is no terminal to accept it, and
-    # `-acceptlicense`, its one escape, no longer exists. The deb, rpm and
-    # installer generators still read the license from CPACK_RESOURCE_FILE_LICENSE.
-    set(CPACK_DMG_SLA_USE_RESOURCE_FILE_LICENSE OFF)
-    set(CPACK_PACKAGING_INSTALL_PREFIX "/")
-else()
-    # DEB only by default: `rpmbuild` is not installed everywhere, and a
-    # generator that fails makes `cpack` fail for somebody who only wanted the deb.
-    set(CPACK_GENERATOR "DEB")
-endif()
+# DEB only by default: `rpmbuild` is not installed everywhere, and a generator that
+# fails makes `cpack` fail for somebody who only wanted the deb. `release.yml` asks
+# for the RPM explicitly with `-G RPM`, on a runner where it has installed rpmbuild.
+set(CPACK_GENERATOR "DEB")
 
 include(CPack)

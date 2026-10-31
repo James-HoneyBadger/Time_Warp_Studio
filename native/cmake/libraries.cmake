@@ -29,16 +29,12 @@ target_include_directories(timewarp_expr
 
 target_compile_features(timewarp_expr PUBLIC cxx_std_20)
 
-if(MSVC)
-    target_compile_options(timewarp_expr PRIVATE /W4 /permissive-)
-else()
-    target_compile_options(timewarp_expr PRIVATE
-        -Wall -Wextra -Wpedantic -Wshadow -Wcast-qual ${TIME_WARP_GNU_WARNING_FLAGS}
-        ${TIME_WARP_NULL_DEREFERENCE}
-    )
-    if(TIME_WARP_EXPR_WERROR)
-        target_compile_options(timewarp_expr PRIVATE -Werror)
-    endif()
+target_compile_options(timewarp_expr PRIVATE
+    -Wall -Wextra -Wpedantic -Wshadow -Wcast-qual ${TIME_WARP_GNU_WARNING_FLAGS}
+    ${TIME_WARP_NULL_DEREFERENCE}
+)
+if(TIME_WARP_EXPR_WERROR)
+    target_compile_options(timewarp_expr PRIVATE -Werror)
 endif()
 
 # ---------------------------------------------------------------------------
@@ -94,16 +90,12 @@ target_include_directories(timewarp_scheme
 
 target_compile_features(timewarp_scheme PUBLIC cxx_std_20)
 
-if(MSVC)
-    target_compile_options(timewarp_scheme PRIVATE /W4 /permissive-)
-else()
-    target_compile_options(timewarp_scheme PRIVATE
-        -Wall -Wextra -Wpedantic -Wshadow -Wcast-qual ${TIME_WARP_GNU_WARNING_FLAGS}
-        ${TIME_WARP_NULL_DEREFERENCE}
-    )
-    if(TIME_WARP_EXPR_WERROR)
-        target_compile_options(timewarp_scheme PRIVATE -Werror)
-    endif()
+target_compile_options(timewarp_scheme PRIVATE
+    -Wall -Wextra -Wpedantic -Wshadow -Wcast-qual ${TIME_WARP_GNU_WARNING_FLAGS}
+    ${TIME_WARP_NULL_DEREFERENCE}
+)
+if(TIME_WARP_EXPR_WERROR)
+    target_compile_options(timewarp_scheme PRIVATE -Werror)
 endif()
 
 if(TIME_WARP_EXPR_BUILD_TESTS)
@@ -158,16 +150,14 @@ target_include_directories(timewarp_io
 )
 target_compile_features(timewarp_io PUBLIC cxx_std_20)
 timewarp_enable_warnings(timewarp_io)
-if(NOT MSVC)
-    # The two flags the rest of the engine needs and the warnings function cannot
-    # know about: `-ffp-contract=off` because a fused multiply-add moves a vertex by
-    # 6e-17 and the drawings are compared with the reference, and the GCC-only
-    # warnings that Clang rejects.
-    target_compile_options(timewarp_audio PRIVATE ${TIME_WARP_GNU_WARNING_FLAGS}
-        ${TIME_WARP_NULL_DEREFERENCE} -ffp-contract=off)
-    target_compile_options(timewarp_io PRIVATE ${TIME_WARP_GNU_WARNING_FLAGS}
-        ${TIME_WARP_NULL_DEREFERENCE})
-endif()
+# The two flags the rest of the engine needs and the warnings function cannot know
+# about: `-ffp-contract=off` because a fused multiply-add moves a vertex by 6e-17
+# and the drawings are compared with the reference, and the GCC-only warnings that
+# Clang rejects.
+target_compile_options(timewarp_audio PRIVATE ${TIME_WARP_GNU_WARNING_FLAGS}
+    ${TIME_WARP_NULL_DEREFERENCE} -ffp-contract=off)
+target_compile_options(timewarp_io PRIVATE ${TIME_WARP_GNU_WARNING_FLAGS}
+    ${TIME_WARP_NULL_DEREFERENCE})
 
 # ---------------------------------------------------------------------------
 # The language core, and one object library per language
@@ -266,17 +256,13 @@ foreach(objects IN LISTS TIME_WARP_LANGUAGE_OBJECTS)
     target_compile_features(${objects} PUBLIC cxx_std_20)
     target_link_libraries(${objects} PUBLIC timewarp::expr timewarp::audio timewarp::io)
     timewarp_enable_warnings(${objects})
-    if(MSVC)
-        target_compile_options(${objects} PRIVATE /permissive- /fp:precise)
-    else()
-        target_compile_options(${objects} PRIVATE ${TIME_WARP_GNU_WARNING_FLAGS}
-            ${TIME_WARP_NULL_DEREFERENCE}
-            # No fused multiply-add. The reference rounds every multiplication and
-            # addition separately; contracting `start + i*step` into one fma changes
-            # the last bits of a shape's vertices, and a vertex 6e-17 away from where
-            # the reference puts it is a different drawing.
-            -ffp-contract=off)
-    endif()
+    target_compile_options(${objects} PRIVATE ${TIME_WARP_GNU_WARNING_FLAGS}
+        ${TIME_WARP_NULL_DEREFERENCE}
+        # No fused multiply-add. The reference rounds every multiplication and
+        # addition separately; contracting `start + i*step` into one fma changes
+        # the last bits of a shape's vertices, and a vertex 6e-17 away from where
+        # the reference puts it is a different drawing.
+        -ffp-contract=off)
 endforeach()
 
 # The library itself is the union of those objects: one link target for everything
@@ -369,16 +355,12 @@ target_include_directories(timewarp_canvas
 target_compile_features(timewarp_canvas PUBLIC cxx_std_20)
 target_link_libraries(timewarp_canvas PUBLIC Threads::Threads)
 
-if(MSVC)
-    target_compile_options(timewarp_canvas PRIVATE /W4 /permissive-)
-else()
-    target_compile_options(timewarp_canvas PRIVATE
-        -Wall -Wextra -Wpedantic -Wshadow -Wcast-qual ${TIME_WARP_GNU_WARNING_FLAGS}
-        ${TIME_WARP_NULL_DEREFERENCE}
-    )
-    if(TIME_WARP_EXPR_WERROR)
-        target_compile_options(timewarp_canvas PRIVATE -Werror)
-    endif()
+target_compile_options(timewarp_canvas PRIVATE
+    -Wall -Wextra -Wpedantic -Wshadow -Wcast-qual ${TIME_WARP_GNU_WARNING_FLAGS}
+    ${TIME_WARP_NULL_DEREFERENCE}
+)
+if(TIME_WARP_EXPR_WERROR)
+    target_compile_options(timewarp_canvas PRIVATE -Werror)
 endif()
 
 if(TIME_WARP_EXPR_BUILD_TESTS)

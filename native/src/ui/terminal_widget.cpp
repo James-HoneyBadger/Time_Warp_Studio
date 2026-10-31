@@ -18,31 +18,21 @@ namespace timewarp::ui {
 namespace {
 
 /// The shell to run. `$SHELL` is what a person expects "terminal" to mean; the
-/// fallbacks are for a desktop session that does not set it (a service, a
-/// container) and for Windows, which has no `/bin/sh`.
+/// fallback is for a desktop session that does not set it (a service, a container).
 [[nodiscard]] QString shellProgram() {
-#ifdef Q_OS_WIN
-    const QString shell = qEnvironmentVariable("COMSPEC", QStringLiteral("cmd.exe"));
-#else
     QString shell = qEnvironmentVariable("SHELL");
     if (shell.isEmpty() || !QFileInfo{shell}.isExecutable()) {
         shell = QStringLiteral("/bin/sh");
     }
-#endif
     return shell;
 }
 
 /// A `cd` the shell will run. Quoted, because a document can live in a folder
-/// whose name contains a space -- and on Windows, `/d` so a different drive is
-/// not silently ignored.
+/// whose name contains a space.
 [[nodiscard]] QString cdCommand(const QString& directory) {
-#ifdef Q_OS_WIN
-    return QStringLiteral("cd /d \"%1\"").arg(QString{directory}.replace('"', QStringLiteral("\"\"")));
-#else
     QString quoted = directory;
     quoted.replace(QLatin1Char('\''), QStringLiteral("'\\''"));
     return QStringLiteral("cd -- '%1'").arg(quoted);
-#endif
 }
 
 }  // namespace

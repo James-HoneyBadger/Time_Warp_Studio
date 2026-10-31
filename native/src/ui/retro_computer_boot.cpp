@@ -33,7 +33,6 @@
 
 #include "timewarp/canvas/command_queue.hpp"
 #include "timewarp/canvas/qt_bridge.hpp"
-#include "timewarp/core/qt_gui_compat.hpp"
 #include "timewarp/ui/code_editor.hpp"
 #include "timewarp/ui/native_runner.hpp"
 #include "timewarp/ui/panels.hpp"

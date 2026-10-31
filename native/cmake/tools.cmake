@@ -53,7 +53,6 @@ add_executable(time_warp_gates
     tools/gates/tree.cpp
     tools/gates/registry.cpp
     tools/gates/structure.cpp
-    tools/gates/qt5.cpp
 )
 # The gates read `timewarp/lang/registry.hpp` for the language table -- the header is
 # a constexpr table with no library behind it, so this is an include path, not a link.
@@ -70,8 +69,8 @@ timewarp_enable_warnings(time_warp_gates)
 # The icon generator
 # ---------------------------------------------------------------------------
 #
-# `time_warp_icon` draws the application icon and writes the three committed
-# assets the packages carry -- `packaging/{linux,windows,macos}/time-warp-studio.*`.
+# `time_warp_icon` draws the application icon and writes the committed asset the
+# package carries -- `packaging/linux/time-warp-studio.png`.
 # It replaced `Scripts/generate_icon.py`, and it is the one tool here that links
 # no Qt at all: its only dependency is zlib, for the CRC-32 and the deflate stream
 # a PNG is made of. `--check` compares what it would write with what is on disk so

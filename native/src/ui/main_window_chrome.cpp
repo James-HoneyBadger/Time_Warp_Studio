@@ -2,7 +2,7 @@
 
 #include "main_window_internal.hpp"
 
-#include "timewarp/core/qt_gui_compat.hpp"
+#include "timewarp/core/qt_names.hpp"
 #include "timewarp/ui/main_window.hpp"
 
 #include "timewarp/lang/executor.hpp"

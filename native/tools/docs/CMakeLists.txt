@@ -36,11 +36,6 @@ endif()
 option(TIME_WARP_DOCS_WERROR "Treat compiler warnings as errors" ON)
 
 # The sources are UTF-8 because the messages carry the project's emoji prefixes.
-# MSVC reads them in the system code page without this, which turns every prefix
-# into a question mark (and warns C4819 on the way).
-if(MSVC)
-    add_compile_options($<$<COMPILE_LANGUAGE:CXX>:/utf-8>)
-endif()
 
 add_executable(time_warp_docs
     src/main.cpp
@@ -63,18 +58,9 @@ add_executable(time_warp_docs
 target_include_directories(time_warp_docs PRIVATE src ${CMAKE_CURRENT_SOURCE_DIR}/../../include)
 target_compile_features(time_warp_docs PRIVATE cxx_std_20)
 
-if(MSVC)
-    # /W4 is the closest MSVC has to the warning set below; /permissive- turns off
-    # the pre-standard name lookup the rest of the tree does not rely on either.
-    target_compile_options(time_warp_docs PRIVATE /W4 /permissive-)
-    if(TIME_WARP_DOCS_WERROR)
-        target_compile_options(time_warp_docs PRIVATE /WX)
-    endif()
-else()
-    target_compile_options(time_warp_docs PRIVATE
-        -Wall -Wextra -Wpedantic -Wshadow -Wcast-qual
-    )
-    if(TIME_WARP_DOCS_WERROR)
-        target_compile_options(time_warp_docs PRIVATE -Werror)
-    endif()
+target_compile_options(time_warp_docs PRIVATE
+    -Wall -Wextra -Wpedantic -Wshadow -Wcast-qual
+)
+if(TIME_WARP_DOCS_WERROR)
+    target_compile_options(time_warp_docs PRIVATE -Werror)
 endif()

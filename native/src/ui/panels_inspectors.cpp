@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: MIT
 
 #include "timewarp/ui/panels.hpp"
-
-#include "timewarp/core/qt_compat.hpp"
+#include "timewarp/core/qt_names.hpp"
 
 #include <cmath>
 

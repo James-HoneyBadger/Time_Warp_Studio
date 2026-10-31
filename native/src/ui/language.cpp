@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 
-#include "timewarp/core/qt_compat.hpp"
 #include "timewarp/ui/language.hpp"
 
+#include "timewarp/core/qt_names.hpp"
 #include "timewarp/lang/registry.hpp"
 
 #include <array>

@@ -32,15 +32,11 @@ if(TIME_WARP_QT_FOUND)
     target_link_libraries(timewarp_canvas_qt PUBLIC timewarp::canvas ${TIME_WARP_QT}::Core)
     set_target_properties(timewarp_canvas_qt PROPERTIES AUTOMOC ON)
 
-    if(MSVC)
-        target_compile_options(timewarp_canvas_qt PRIVATE /W4 /permissive-)
-    else()
-        target_compile_options(timewarp_canvas_qt PRIVATE
-            -Wall -Wextra -Wpedantic -Wshadow
-        )
-        if(TIME_WARP_EXPR_WERROR)
-            target_compile_options(timewarp_canvas_qt PRIVATE -Werror)
-        endif()
+    target_compile_options(timewarp_canvas_qt PRIVATE
+        -Wall -Wextra -Wpedantic -Wshadow
+    )
+    if(TIME_WARP_EXPR_WERROR)
+        target_compile_options(timewarp_canvas_qt PRIVATE -Werror)
     endif()
 
     if(TIME_WARP_EXPR_BUILD_TESTS)
@@ -90,15 +86,11 @@ if(TIME_WARP_QT_FOUND)
     target_link_libraries(timewarp_debugger PUBLIC timewarp::scheme ${TIME_WARP_QT}::Core)
     set_target_properties(timewarp_debugger PROPERTIES AUTOMOC ON)
 
-    if(MSVC)
-        target_compile_options(timewarp_debugger PRIVATE /W4 /permissive-)
-    else()
-        target_compile_options(timewarp_debugger PRIVATE
-            -Wall -Wextra -Wpedantic -Wshadow
-        )
-        if(TIME_WARP_EXPR_WERROR)
-            target_compile_options(timewarp_debugger PRIVATE -Werror)
-        endif()
+    target_compile_options(timewarp_debugger PRIVATE
+        -Wall -Wextra -Wpedantic -Wshadow
+    )
+    if(TIME_WARP_EXPR_WERROR)
+        target_compile_options(timewarp_debugger PRIVATE -Werror)
     endif()
 
     if(TIME_WARP_EXPR_BUILD_TESTS)
@@ -145,16 +137,12 @@ if(TIME_WARP_QT_FOUND)
     target_compile_features(timewarp_sql PUBLIC cxx_std_20)
     target_link_libraries(timewarp_sql PUBLIC ${TIME_WARP_QT}::Core ${TIME_WARP_SQLITE_TARGET})
 
-    if(MSVC)
-        target_compile_options(timewarp_sql PRIVATE /W4 /permissive-)
-    else()
-        target_compile_options(timewarp_sql PRIVATE
-            -Wall -Wextra -Wpedantic -Wshadow -Wcast-qual ${TIME_WARP_GNU_WARNING_FLAGS}
-            ${TIME_WARP_NULL_DEREFERENCE}
-        )
-        if(TIME_WARP_EXPR_WERROR)
-            target_compile_options(timewarp_sql PRIVATE -Werror)
-        endif()
+    target_compile_options(timewarp_sql PRIVATE
+        -Wall -Wextra -Wpedantic -Wshadow -Wcast-qual ${TIME_WARP_GNU_WARNING_FLAGS}
+        ${TIME_WARP_NULL_DEREFERENCE}
+    )
+    if(TIME_WARP_EXPR_WERROR)
+        target_compile_options(timewarp_sql PRIVATE -Werror)
     endif()
 
     if(TIME_WARP_EXPR_BUILD_TESTS)
@@ -187,16 +175,12 @@ if(TIME_WARP_QT_FOUND)
     target_compile_features(timewarp_project PUBLIC cxx_std_20)
     target_link_libraries(timewarp_project PUBLIC ${TIME_WARP_QT}::Core)
 
-    if(MSVC)
-        target_compile_options(timewarp_project PRIVATE /W4 /permissive-)
-    else()
-        target_compile_options(timewarp_project PRIVATE
-            -Wall -Wextra -Wpedantic -Wshadow -Wcast-qual ${TIME_WARP_GNU_WARNING_FLAGS}
-            ${TIME_WARP_NULL_DEREFERENCE}
-        )
-        if(TIME_WARP_EXPR_WERROR)
-            target_compile_options(timewarp_project PRIVATE -Werror)
-        endif()
+    target_compile_options(timewarp_project PRIVATE
+        -Wall -Wextra -Wpedantic -Wshadow -Wcast-qual ${TIME_WARP_GNU_WARNING_FLAGS}
+        ${TIME_WARP_NULL_DEREFERENCE}
+    )
+    if(TIME_WARP_EXPR_WERROR)
+        target_compile_options(timewarp_project PRIVATE -Werror)
     endif()
 
     if(TIME_WARP_EXPR_BUILD_TESTS)
@@ -251,39 +235,27 @@ if(TIME_WARP_QT_FOUND)
             ${TIME_WARP_QT}::Core ${TIME_WARP_QT}::Network)
         set_target_properties(timewarp_ai PROPERTIES AUTOMOC ON)
 
-        # The key's home on this platform, when it has one. Each is optional: a
-        # build with none of them keeps the key in the settings file as it always
-        # did, and `TIME_WARP_AI_KEYRING=file` refuses the system store on any
-        # platform.
-        if(WIN32)
-            target_link_libraries(timewarp_ai PRIVATE advapi32)
-        elseif(APPLE)
-            target_link_libraries(timewarp_ai PRIVATE "-framework Security"
-                "-framework CoreFoundation")
+        # The key's home, when the machine has one. It is optional: a build with no
+        # libsecret keeps the key in the settings file as it always did, and
+        # `TIME_WARP_AI_KEYRING=file` refuses the system store either way.
+        find_package(PkgConfig QUIET)
+        if(PkgConfig_FOUND)
+            pkg_check_modules(LIBSECRET IMPORTED_TARGET libsecret-1)
+        endif()
+        if(LIBSECRET_FOUND)
+            target_link_libraries(timewarp_ai PRIVATE PkgConfig::LIBSECRET)
+            target_compile_definitions(timewarp_ai PRIVATE TIME_WARP_HAVE_LIBSECRET=1)
+            message(STATUS "libsecret found: the assistant key goes in the system keyring")
         else()
-            find_package(PkgConfig QUIET)
-            if(PkgConfig_FOUND)
-                pkg_check_modules(LIBSECRET IMPORTED_TARGET libsecret-1)
-            endif()
-            if(LIBSECRET_FOUND)
-                target_link_libraries(timewarp_ai PRIVATE PkgConfig::LIBSECRET)
-                target_compile_definitions(timewarp_ai PRIVATE TIME_WARP_HAVE_LIBSECRET=1)
-                message(STATUS "libsecret found: the assistant key goes in the system keyring")
-            else()
-                message(STATUS "libsecret not found: the assistant key stays in the settings file")
-            endif()
+            message(STATUS "libsecret not found: the assistant key stays in the settings file")
         endif()
 
-        if(MSVC)
-            target_compile_options(timewarp_ai PRIVATE /W4 /permissive-)
-        else()
-            target_compile_options(timewarp_ai PRIVATE
-                -Wall -Wextra -Wpedantic -Wshadow -Wcast-qual ${TIME_WARP_GNU_WARNING_FLAGS}
-                ${TIME_WARP_NULL_DEREFERENCE}
-            )
-            if(TIME_WARP_EXPR_WERROR)
-                target_compile_options(timewarp_ai PRIVATE -Werror)
-            endif()
+        target_compile_options(timewarp_ai PRIVATE
+            -Wall -Wextra -Wpedantic -Wshadow -Wcast-qual ${TIME_WARP_GNU_WARNING_FLAGS}
+            ${TIME_WARP_NULL_DEREFERENCE}
+        )
+        if(TIME_WARP_EXPR_WERROR)
+            target_compile_options(timewarp_ai PRIVATE -Werror)
         endif()
 
         # The same assistant from a shell, for a script and for a person who wants
@@ -340,16 +312,12 @@ if(TIME_WARP_QT_FOUND)
         PUBLIC ${TIME_WARP_QT}::Core timewarp::lang timewarp::scheme ZLIB::ZLIB
     )
 
-    if(MSVC)
-        target_compile_options(timewarp_lessons PRIVATE /W4 /permissive-)
-    else()
-        target_compile_options(timewarp_lessons PRIVATE
-            -Wall -Wextra -Wpedantic -Wshadow -Wcast-qual ${TIME_WARP_GNU_WARNING_FLAGS}
-            ${TIME_WARP_NULL_DEREFERENCE}
-        )
-        if(TIME_WARP_EXPR_WERROR)
-            target_compile_options(timewarp_lessons PRIVATE -Werror)
-        endif()
+    target_compile_options(timewarp_lessons PRIVATE
+        -Wall -Wextra -Wpedantic -Wshadow -Wcast-qual ${TIME_WARP_GNU_WARNING_FLAGS}
+        ${TIME_WARP_NULL_DEREFERENCE}
+    )
+    if(TIME_WARP_EXPR_WERROR)
+        target_compile_options(timewarp_lessons PRIVATE -Werror)
     endif()
 
     if(TIME_WARP_EXPR_BUILD_TESTS)
@@ -430,16 +398,12 @@ if(TIME_WARP_QT_FOUND AND TARGET timewarp::sql)
     target_compile_definitions(timewarp_api PRIVATE
         TIME_WARP_VERSION="${TIME_WARP_API_VERSION}"
     )
-    if(MSVC)
-        target_compile_options(timewarp_api PRIVATE /W4 /permissive-)
-    else()
-        target_compile_options(timewarp_api PRIVATE
-            -Wall -Wextra -Wpedantic -Wshadow -Wcast-qual ${TIME_WARP_GNU_WARNING_FLAGS}
-            ${TIME_WARP_NULL_DEREFERENCE}
-        )
-        if(TIME_WARP_EXPR_WERROR)
-            target_compile_options(timewarp_api PRIVATE -Werror)
-        endif()
+    target_compile_options(timewarp_api PRIVATE
+        -Wall -Wextra -Wpedantic -Wshadow -Wcast-qual ${TIME_WARP_GNU_WARNING_FLAGS}
+        ${TIME_WARP_NULL_DEREFERENCE}
+    )
+    if(TIME_WARP_EXPR_WERROR)
+        target_compile_options(timewarp_api PRIVATE -Werror)
     endif()
 
     add_executable(time_warp_api tools/time_warp_api.cpp)
@@ -549,16 +513,12 @@ if(TIME_WARP_QT_FOUND)
             target_compile_definitions(timewarp_ui_core PUBLIC TIME_WARP_HAVE_SVG=1)
         endif()
         set_target_properties(timewarp_ui_core PROPERTIES AUTOMOC ON)
-        if(MSVC)
-            target_compile_options(timewarp_ui_core PRIVATE /W4 /permissive-)
-        else()
-            target_compile_options(timewarp_ui_core PRIVATE
-                -Wall -Wextra -Wpedantic -Wshadow -Wcast-qual ${TIME_WARP_GNU_WARNING_FLAGS}
-                ${TIME_WARP_NULL_DEREFERENCE}
-            )
-            if(TIME_WARP_EXPR_WERROR)
-                target_compile_options(timewarp_ui_core PRIVATE -Werror)
-            endif()
+        target_compile_options(timewarp_ui_core PRIVATE
+            -Wall -Wextra -Wpedantic -Wshadow -Wcast-qual ${TIME_WARP_GNU_WARNING_FLAGS}
+            ${TIME_WARP_NULL_DEREFERENCE}
+        )
+        if(TIME_WARP_EXPR_WERROR)
+            target_compile_options(timewarp_ui_core PRIVATE -Werror)
         endif()
 
         add_library(timewarp_ui
@@ -750,129 +710,35 @@ if(TIME_WARP_QT_FOUND)
             target_compile_definitions(timewarp_ui PUBLIC TIME_WARP_HAVE_AI=1)
         endif()
 
-        if(MSVC)
-            target_compile_options(timewarp_ui PRIVATE /W4 /permissive-)
-        else()
-            target_compile_options(timewarp_ui PRIVATE
-                -Wall -Wextra -Wpedantic -Wshadow -Wcast-qual ${TIME_WARP_GNU_WARNING_FLAGS}
-                ${TIME_WARP_NULL_DEREFERENCE}
-            )
-            if(TIME_WARP_EXPR_WERROR)
-                target_compile_options(timewarp_ui PRIVATE -Werror)
-            endif()
+        target_compile_options(timewarp_ui PRIVATE
+            -Wall -Wextra -Wpedantic -Wshadow -Wcast-qual ${TIME_WARP_GNU_WARNING_FLAGS}
+            ${TIME_WARP_NULL_DEREFERENCE}
+        )
+        if(TIME_WARP_EXPR_WERROR)
+            target_compile_options(timewarp_ui PRIVATE -Werror)
         endif()
 
         # ---- the player, not the workshop ---------------------------------
         # One program, the canvas it draws on and the output it prints. It links
         # `timewarp::ui_core` rather than `timewarp::ui`, so an artifact compiled
         # for a friend carries the showing and not the authoring.
-        if(WIN32)
-            add_executable(time_warp_player WIN32 tools/player.cpp)
-        elseif(APPLE)
-            add_executable(time_warp_player MACOSX_BUNDLE tools/player.cpp)
-        else()
-            add_executable(time_warp_player tools/player.cpp)
-        endif()
+        add_executable(time_warp_player tools/player.cpp)
         target_link_libraries(time_warp_player PRIVATE timewarp::ui_core)
         # The version string is a definition rather than a header constant, so a
         # target that prints it has to carry it: `--version` would otherwise be the
         # one place in the product with no number in it.
         target_compile_definitions(time_warp_player PRIVATE
             TIME_WARP_VERSION="${TIME_WARP_VERSION}")
-        if(TARGET ${TIME_WARP_QT}::WinMain)
-            target_link_libraries(time_warp_player PRIVATE ${TIME_WARP_QT}::WinMain)
-        endif()
         timewarp_enable_warnings(time_warp_player)
 
         # The application, not a harness: it shows the window, opens the files it
         # is given, and can render itself to a PNG for the layout checks.
-        #
-        # On Windows it is a GUI-subsystem executable -- there is no console
-        # window beside the IDE -- and `main()` attaches to the parent console
-        # when one started it, so `--version` and `--help` still print when run
-        # from a prompt. On macOS it is a .app bundle, because that is what a
-        # Finder window, a Dock icon and a drag-installed DMG all require.
-        if(WIN32)
-            add_executable(time_warp_ide WIN32 tools/time_warp_ide.cpp)
-        elseif(APPLE)
-            add_executable(time_warp_ide MACOSX_BUNDLE tools/time_warp_ide.cpp)
-        else()
-            add_executable(time_warp_ide tools/time_warp_ide.cpp)
-        endif()
+        add_executable(time_warp_ide tools/time_warp_ide.cpp)
         target_link_libraries(time_warp_ide PRIVATE timewarp::ui)
-        # Qt 5 provides the WinMain that a WIN32-subsystem executable needs to
-        # reach `main`; Qt 6 folded it into Qt6::EntryPoint and links it itself.
-        if(TARGET ${TIME_WARP_QT}::WinMain)
-            target_link_libraries(time_warp_ide PRIVATE ${TIME_WARP_QT}::WinMain)
-        endif()
         timewarp_enable_warnings(time_warp_ide)
 
-        # ---- platform identity --------------------------------------------
-        # The icon and the version are what make an executable look like a
-        # product in Explorer and in the Finder; both come from the same VERSION
-        # file the window title uses.
-        if(WIN32)
-            file(TO_CMAKE_PATH
-                "${CMAKE_CURRENT_SOURCE_DIR}/../packaging/windows/time-warp-studio.ico"
-                TIME_WARP_ICON_ICO)
-            configure_file(
-                "${CMAKE_CURRENT_SOURCE_DIR}/../packaging/windows/time-warp-studio.rc.in"
-                "${CMAKE_CURRENT_BINARY_DIR}/time-warp-studio.rc"
-                @ONLY)
-            target_sources(time_warp_ide PRIVATE
-                "${CMAKE_CURRENT_BINARY_DIR}/time-warp-studio.rc")
-            # The resource compiler resolves the icon relative to the .rc file,
-            # and the path has to be Windows-shaped for it either way.
-            set_source_files_properties(
-                "${CMAKE_CURRENT_BINARY_DIR}/time-warp-studio.rc"
-                PROPERTIES OBJECT_DEPENDS "${TIME_WARP_ICON_ICO}")
-        elseif(APPLE)
-            # The bundle is what Finder shows, so it carries the product's name
-            # rather than the target's.
-            set(TIME_WARP_BUNDLE_NAME "Time Warp Studio")
-            set(TIME_WARP_BUNDLE_EXECUTABLE "${TIME_WARP_BUNDLE_NAME}")
-            # The plist is configured here rather than through CMake's
-            # MACOSX_BUNDLE_* substitution, because it needs keys those
-            # properties do not reach: the minimum macOS, the high-resolution
-            # flag and the category. A plist that is already complete is still
-            # a valid MACOSX_BUNDLE_INFO_PLIST template -- there is simply
-            # nothing left in it to substitute.
-            configure_file(
-                "${CMAKE_CURRENT_SOURCE_DIR}/../packaging/macos/Info.plist.in"
-                "${CMAKE_CURRENT_BINARY_DIR}/Info.plist"
-                @ONLY)
-            set_target_properties(time_warp_ide PROPERTIES
-                OUTPUT_NAME "${TIME_WARP_BUNDLE_NAME}"
-                MACOSX_BUNDLE_BUNDLE_NAME "${TIME_WARP_BUNDLE_NAME}"
-                MACOSX_BUNDLE_GUI_IDENTIFIER "org.honey-badger.timewarpstudio"
-                MACOSX_BUNDLE_BUNDLE_VERSION "${TIME_WARP_VERSION}"
-                MACOSX_BUNDLE_SHORT_VERSION_STRING "${TIME_WARP_VERSION}"
-                MACOSX_BUNDLE_INFO_STRING
-                    "Time Warp Studio ${TIME_WARP_PACKAGE_VERSION}: an old-school programming environment"
-                MACOSX_BUNDLE_COPYRIGHT "MIT licensed. James Temple."
-                MACOSX_BUNDLE_ICON_FILE "time-warp-studio.icns"
-                MACOSX_BUNDLE_INFO_PLIST
-                    "${CMAKE_CURRENT_BINARY_DIR}/Info.plist")
-            # The bundle's frameworks live in Contents/Frameworks, and the
-            # dependencies name them through `@rpath`. Without this the install
-            # step strips the build tree's rpath and leaves
-            # `@rpath/QtSvg.framework/...` pointing at nothing, which is a dyld
-            # abort the moment the staged bundle is run: macdeployqt copies the
-            # frameworks in but rewrites only what it can resolve.
-            set_target_properties(time_warp_ide PROPERTIES
-                INSTALL_RPATH "@executable_path/../Frameworks")
-            # A bundle resource rather than an installed file: CMake copies it
-            # into Contents/Resources as part of the build, so the .app in the
-            # build tree is as complete as the one on the disk image.
-            target_sources(time_warp_ide PRIVATE
-                "${CMAKE_CURRENT_SOURCE_DIR}/../packaging/macos/time-warp-studio.icns")
-            set_source_files_properties(
-                "${CMAKE_CURRENT_SOURCE_DIR}/../packaging/macos/time-warp-studio.icns"
-                PROPERTIES MACOSX_PACKAGE_LOCATION "Resources")
-        endif()
-
         # ---- install ------------------------------------------------------
-        # Three things have to arrive together for an installed tree to work:
+        # Four things have to arrive together for an installed tree to work:
         #   bin/time_warp_ide                         the application
         #   share/time-warp-studio/                    the examples, the lesson
         #                                              curriculum and the snippet
@@ -884,22 +750,17 @@ if(TIME_WARP_QT_FOUND)
         #                                              relative to the binary), so an
         #                                              installed build needs no path
         #                                              configuration
-        #   share/applications + share/icons           the desktop entry
-        #
-        # A macOS bundle is self-contained instead: the same payload lives under
-        # Contents/Resources/share, which is the second place those three look when
-        # they are inside a .app. Installing it anywhere else would leave a user who
-        # dragged the app to /Applications with no examples and no help.
+        #   share/applications + share/icons           the desktop entry and the
+        #                                              icon, which are the identity a
+        #                                              Linux build has instead of a
+        #                                              `.rc` resource or an `.icns`
+        #                                              bundle
+        #   share/doc/time-warp-studio                 the guides the help window
+        #                                              reads and the licence
         include(GNUInstallDirs)
-        if(APPLE)
-            set(TIME_WARP_SHARE_DIR
-                "${TIME_WARP_BUNDLE_NAME}.app/Contents/Resources/share")
-            install(TARGETS time_warp_ide BUNDLE DESTINATION .)
-        else()
-            set(TIME_WARP_SHARE_DIR "${CMAKE_INSTALL_DATADIR}")
-            install(TARGETS time_warp_ide
-                    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
-        endif()
+        set(TIME_WARP_SHARE_DIR "${CMAKE_INSTALL_DATADIR}")
+        install(TARGETS time_warp_ide
+                RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
         # The teacher's and the learner's commands, beside the IDE. A package that
         # shipped only the window would make "the panel and the tool agree" a
         # claim about a checkout.
@@ -917,12 +778,8 @@ if(TIME_WARP_QT_FOUND)
         # an artifact is a copy of whichever of the two it finds, and a package
         # without it would compile programs into copies of the whole IDE.
         if(TARGET time_warp_player)
-            if(APPLE)
-                install(TARGETS time_warp_player BUNDLE DESTINATION .)
-            else()
-                install(TARGETS time_warp_player
-                        RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
-            endif()
+            install(TARGETS time_warp_player
+                    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
         endif()
         # The gates and their data are deliberately not installed: they are
         # development tooling, in the checkout, and no part of the product. A
@@ -962,16 +819,14 @@ if(TIME_WARP_QT_FOUND)
             FILES ${CMAKE_CURRENT_SOURCE_DIR}/../LICENSE
             DESTINATION ${TIME_WARP_SHARE_DIR}/doc/time-warp-studio
         )
-        if(NOT APPLE)
-            install(
-                FILES ${CMAKE_CURRENT_SOURCE_DIR}/../packaging/linux/time-warp-studio.desktop
-                DESTINATION ${CMAKE_INSTALL_DATADIR}/applications
-            )
-            install(
-                FILES ${CMAKE_CURRENT_SOURCE_DIR}/../packaging/linux/time-warp-studio.png
-                DESTINATION ${CMAKE_INSTALL_DATADIR}/icons/hicolor/256x256/apps
-            )
-        endif()
+        install(
+            FILES ${CMAKE_CURRENT_SOURCE_DIR}/../packaging/linux/time-warp-studio.desktop
+            DESTINATION ${CMAKE_INSTALL_DATADIR}/applications
+        )
+        install(
+            FILES ${CMAKE_CURRENT_SOURCE_DIR}/../packaging/linux/time-warp-studio.png
+            DESTINATION ${CMAKE_INSTALL_DATADIR}/icons/hicolor/256x256/apps
+        )
         # The example programs travel with the install tree rather than beside
         # the tarball, because a package has no second place to put them and a
         # fresh install that opens onto an empty window is a poor first
@@ -985,76 +840,13 @@ if(TIME_WARP_QT_FOUND)
             PATTERN "__pycache__" EXCLUDE
         )
 
-        # ---- Qt deployment ------------------------------------------------
-        # A packaged application is useless on a machine that has no Qt, so the
-        # Qt tools copy the libraries and platform plugins beside the binary as
-        # part of the install. Doing it here rather than in the release script
-        # means `make install` on a development machine produces the same tree
-        # that CPack packages -- a package that differs from a local install is
-        # a package nobody tested.
-        if(TARGET ${TIME_WARP_QT}::qmake)
-            get_target_property(_time_warp_qmake ${TIME_WARP_QT}::qmake IMPORTED_LOCATION)
-            get_filename_component(_time_warp_qt_bin "${_time_warp_qmake}" DIRECTORY)
-        endif()
-        if(WIN32)
-            find_program(TIME_WARP_WINDEPLOYQT
-                NAMES windeployqt
-                HINTS "${_time_warp_qt_bin}"
-            )
-            if(TIME_WARP_WINDEPLOYQT)
-                # `--no-opengl-sw` leaves out the software OpenGL fallback (about
-                # 30 MB) that a raster-rendered widget application never loads.
-                install(CODE "
-                    execute_process(
-                        COMMAND \"${TIME_WARP_WINDEPLOYQT}\"
-                            --no-translations --no-system-d3d-compiler
-                            --no-opengl-sw
-                            \"\$ENV{DESTDIR}\${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_BINDIR}/time_warp_ide.exe\"
-                        RESULT_VARIABLE _time_warp_deploy_result)
-                    if(NOT _time_warp_deploy_result EQUAL 0)
-                        message(FATAL_ERROR
-                            \"windeployqt failed (\${_time_warp_deploy_result}); the installed tree would not run without Qt installed\")
-                    endif()
-                ")
-            else()
-                message(WARNING
-                    "windeployqt was not found: the installed tree and the packages will need Qt installed separately")
-            endif()
-        elseif(APPLE)
-            find_program(TIME_WARP_MACDEPLOYQT
-                NAMES macdeployqt
-                HINTS "${_time_warp_qt_bin}"
-            )
-            if(TIME_WARP_MACDEPLOYQT)
-                # An unsigned bundle is refused outright on Apple silicon, and
-                # `-` is the ad-hoc signature that makes a locally built or
-                # downloaded-and-unquarantined application start. It is not a
-                # Developer ID signature: Gatekeeper still asks about a bundle
-                # that arrived over the network until somebody right-clicks Open.
-                install(CODE "
-                    execute_process(
-                        COMMAND \"${TIME_WARP_MACDEPLOYQT}\"
-                            \"\$ENV{DESTDIR}\${CMAKE_INSTALL_PREFIX}/${TIME_WARP_BUNDLE_NAME}.app\"
-                            -always-overwrite
-                        RESULT_VARIABLE _time_warp_deploy_result)
-                    if(NOT _time_warp_deploy_result EQUAL 0)
-                        message(FATAL_ERROR
-                            \"macdeployqt failed (\${_time_warp_deploy_result}); the bundle would not run without Qt installed\")
-                    endif()
-                    execute_process(
-                        COMMAND /usr/bin/codesign --force --deep --sign -
-                            \"\$ENV{DESTDIR}\${CMAKE_INSTALL_PREFIX}/${TIME_WARP_BUNDLE_NAME}.app\"
-                        RESULT_VARIABLE _time_warp_sign_result)
-                    if(NOT _time_warp_sign_result EQUAL 0)
-                        message(FATAL_ERROR
-                            \"codesign failed (\${_time_warp_sign_result}); the bundle would be killed at launch on Apple silicon\")
-                    endif()
-                ")
-            else()
-                message(WARNING
-                    "macdeployqt was not found: the bundle will need Qt installed separately")
-            endif()
-        endif()
+        # ---- Qt on the machine --------------------------------------------
+        # Nothing is bundled here, and that is the Linux answer rather than an
+        # omission: the `.deb` and the `.rpm` name the distribution's Qt 6 as a
+        # dependency (see `packaging.cmake`), and the AppImage carries its own Qt
+        # because `linuxdeploy` collects it. There is no `windeployqt`-shaped tool
+        # to run at install time, and an installed tree that also carried a second
+        # copy of Qt would be the one that loads the wrong libraries.
 
         if(TIME_WARP_EXPR_BUILD_TESTS)
             # The player, spawned as a process: a compiled program is only "sent

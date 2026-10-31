@@ -240,7 +240,7 @@ void MainWindow::requestLessonProgress() {
                 break;
         }
         row.checkpoint = lessons_->current_index(lesson.id);
-        row.checkpoints = timewarp::core::intLength(lesson.checkpoints.size());
+        row.checkpoints = static_cast<int>(lesson.checkpoints.size());
         row.hintsUsed = lessons_->hints_used(lesson.id);
         rows.append(row);
     }
@@ -350,7 +350,7 @@ void MainWindow::requestLessonHint(const QString& lesson, int checkpoint) {
     // progress file is what makes "hint 2 of 3" survive closing the window.
     const int already = lessons_->hints_used(found->id);
     const std::string text = lessons_->hint(found->id, checkpoint, already);
-    const int total = timewarp::core::intLength(
+    const int total = static_cast<int>(
         found->checkpoints[static_cast<std::size_t>(checkpoint)].hints.size());
     lesson_panel_->setHint(QString::fromStdString(text),
                            std::min(already + 1, std::max(1, total)), total);
@@ -363,7 +363,7 @@ void MainWindow::requestLessonSolution(const QString& lesson, int checkpoint) {
     const timewarp::lessons::Lesson* found =
         timewarp::lessons::find_lesson(lessons_->lessons(), lesson.toStdString());
     if (found == nullptr || checkpoint < 0 ||
-        checkpoint >= timewarp::core::intLength(found->checkpoints.size())) {
+        checkpoint >= static_cast<int>(found->checkpoints.size())) {
         return;
     }
     lesson_panel_->setSolution(QString::fromStdString(

@@ -1,10 +1,8 @@
 // SPDX-License-Identifier: MIT
 //
-// Draws the application icon and writes it in the three formats the packages use:
+// Draws the application icon and writes it in the one format the package uses:
 //
 //   packaging/linux/time-warp-studio.png     the desktop entry's icon
-//   packaging/windows/time-warp-studio.ico   16/24/32/48/64/128/256
-//   packaging/macos/time-warp-studio.icns    16..512
 //
 // This is the C++ successor to `Scripts/generate_icon.py`, and it draws the same
 // design from the same geometry: a dark field, ten concentric rings (one per
@@ -19,12 +17,12 @@
 // deliberately does not link Qt -- this is a command-line generator, not a part of
 // the IDE.
 //
-// The three files it writes are committed, so it is held to byte equality with
-// them: `--check` regenerates in memory, compares against what is on disk and exits
-// 1 if a committed icon is stale. That is what keeps a release diff readable
-// rather than carrying silent icon churn.
+// The file it writes is committed, so it is held to byte equality with it:
+// `--check` regenerates in memory, compares against what is on disk and exits 1 if
+// the committed icon is stale. That is what keeps a release diff readable rather
+// than carrying silent icon churn.
 //
-//   time_warp_icon                  write the three icons under the checkout
+//   time_warp_icon                  write the icon under the checkout
 //   time_warp_icon --root DIR       write them under DIR instead
 //   time_warp_icon --check          compare, write nothing, exit 1 if stale
 //
@@ -67,7 +65,7 @@ constexpr std::array<double, 4> kSquareBox{100.0, 100.0, 156.0, 156.0};
 constexpr double kDesignSize = 256.0;
 
 /// The size the desktop entry's icon is drawn at.
-constexpr int kLinuxSize = 256;
+constexpr int kIconSize = 256;
 
 struct Ring {
     double radius;
@@ -169,18 +167,6 @@ void appendBig32(Bytes& out, std::uint32_t value) {
     appendByte(out, static_cast<std::uint8_t>(value & 0xFFU));
 }
 
-void appendLittle16(Bytes& out, std::uint16_t value) {
-    appendByte(out, static_cast<std::uint8_t>(value & 0xFFU));
-    appendByte(out, static_cast<std::uint8_t>((value >> 8) & 0xFFU));
-}
-
-void appendLittle32(Bytes& out, std::uint32_t value) {
-    appendByte(out, static_cast<std::uint8_t>(value & 0xFFU));
-    appendByte(out, static_cast<std::uint8_t>((value >> 8) & 0xFFU));
-    appendByte(out, static_cast<std::uint8_t>((value >> 16) & 0xFFU));
-    appendByte(out, static_cast<std::uint8_t>((value >> 24) & 0xFFU));
-}
-
 /// Deflate at level 9, the level the Python this replaced asked `zlib.compress`
 /// for. `compress2` is the same call underneath, with the same window, memory
 /// level and strategy, so the stream -- and the file -- is the same stream.
@@ -244,152 +230,19 @@ void appendChunk(Bytes& out, std::string_view tag, const Bytes& payload) {
     return out;
 }
 
-/// One 32-bit DIB icon image, the form every Windows icon loader reads. The small
-/// sizes are carried this way rather than as PNGs because the icon also goes to
-/// NSIS, which reads the installer's icon itself and does not decode
-/// PNG-compressed entries.
-[[nodiscard]] Bytes encodeDib(const Bytes& pixels, int size) {
-    const std::uint32_t stride = static_cast<std::uint32_t>(size) * 4U;
-    Bytes header;
-    appendLittle32(header, 40);
-    appendLittle32(header, static_cast<std::uint32_t>(size));
-    // The DIB's height covers the colour image *and* the AND mask.
-    appendLittle32(header, static_cast<std::uint32_t>(size * 2));
-    appendLittle16(header, 1);
-    appendLittle16(header, 32);
-    appendLittle32(header, 0);
-    appendLittle32(header, stride * static_cast<std::uint32_t>(size));
-    appendLittle32(header, 0);
-    appendLittle32(header, 0);
-    appendLittle32(header, 0);
-    appendLittle32(header, 0);
-
-    Bytes body;
-    body.reserve(static_cast<std::size_t>(stride) * static_cast<std::size_t>(size));
-    for (int y = size - 1; y >= 0; --y) {  // bottom-up
-        const std::size_t row = static_cast<std::size_t>(y) * stride;
-        for (int x = 0; x < size; ++x) {
-            const std::size_t offset = row + static_cast<std::size_t>(x) * 4U;
-            body.push_back(pixels[offset + 2]);
-            body.push_back(pixels[offset + 1]);
-            body.push_back(pixels[offset]);
-            body.push_back(pixels[offset + 3]);
-        }
-    }
-
-    // The AND mask: one bit a pixel, all zero because the alpha channel is what
-    // decides transparency. Rows are padded to four bytes.
-    const std::size_t maskStride = ((static_cast<std::size_t>(size) + 31U) / 32U) * 4U;
-    body.insert(body.end(), maskStride * static_cast<std::size_t>(size), 0);
-
-    header.insert(header.end(), body.begin(), body.end());
-    return header;
-}
-
-struct Rendered {
-    int size = 0;
-    Bytes pixels;
-    Bytes png;
-};
-
 struct IconFile {
     fs::path relative;
     Bytes contents;
 };
 
-constexpr std::array<int, 8> kRenderedSizes{16, 24, 32, 48, 64, 128, 256, 512};
-// The .ico keeps 24 for the Windows small-icon list and the rest for Explorer.
-// 512 is not an ICO size -- the directory entry cannot name it -- so it goes to
-// the .icns only.
-constexpr std::array<int, 7> kIcoSizes{16, 24, 32, 48, 64, 128, 256};
-// The .icns wants 512 as the Retina 256; 24/48/64 are ICO-only sizes.
-constexpr std::array<int, 6> kIcnsSizes{16, 32, 64, 128, 256, 512};
-
-[[nodiscard]] const Rendered& renderedImage(const std::vector<Rendered>& images, int size) {
-    const auto found = std::find_if(images.begin(), images.end(),
-                                    [size](const Rendered& image) { return image.size == size; });
-    return *found;
-}
-
-/// One entry per size; every one is a PNG, which macOS has accepted since 10.7.
-[[nodiscard]] std::string_view icnsType(int size) {
-    const auto found = std::find(kIcnsSizes.begin(), kIcnsSizes.end(), size);
-    const std::size_t index = static_cast<std::size_t>(found - kIcnsSizes.begin());
-    static constexpr std::array<std::string_view, 6> kTags{"icp4", "icp5", "icp6",
-                                                           "ic07", "ic08", "ic09"};
-    return kTags[index];
-}
-
-[[nodiscard]] Bytes encodeIco(const std::vector<Rendered>& images) {
-    std::vector<Bytes> payloads;
-    payloads.reserve(kIcoSizes.size());
-    for (const int size : kIcoSizes) {
-        const Rendered& image = renderedImage(images, size);
-        payloads.push_back(size >= 128 ? image.png : encodeDib(image.pixels, size));
-    }
-
-    Bytes out;
-    appendLittle16(out, 0);
-    appendLittle16(out, 1);
-    appendLittle16(out, static_cast<std::uint16_t>(kIcoSizes.size()));
-    std::uint32_t offset = static_cast<std::uint32_t>(6U + 16U * kIcoSizes.size());
-    for (std::size_t index = 0; index < kIcoSizes.size(); ++index) {
-        const int size = kIcoSizes[index];
-        const Bytes& payload = payloads[index];
-        // 256 is written as 0: a directory entry's width and height are bytes.
-        appendByte(out, static_cast<std::uint8_t>(size < 256 ? size : 0));
-        appendByte(out, static_cast<std::uint8_t>(size < 256 ? size : 0));
-        appendByte(out, 0);
-        appendByte(out, 0);
-        appendLittle16(out, 1);
-        appendLittle16(out, 32);
-        appendLittle32(out, static_cast<std::uint32_t>(payload.size()));
-        appendLittle32(out, offset);
-        offset += static_cast<std::uint32_t>(payload.size());
-    }
-    for (const Bytes& payload : payloads) {
-        out.insert(out.end(), payload.begin(), payload.end());
-    }
-    return out;
-}
-
-[[nodiscard]] Bytes encodeIcns(const std::vector<Rendered>& images) {
-    Bytes body;
-    for (const int size : kIcnsSizes) {
-        const std::string_view tag = icnsType(size);
-        const Bytes& data = renderedImage(images, size).png;
-        body.insert(body.end(), tag.begin(), tag.end());
-        appendBig32(body, static_cast<std::uint32_t>(data.size() + 8U));
-        body.insert(body.end(), data.begin(), data.end());
-    }
-
-    Bytes out{'i', 'c', 'n', 's'};
-    appendBig32(out, static_cast<std::uint32_t>(body.size() + 8U));
-    out.insert(out.end(), body.begin(), body.end());
-    return out;
-}
-
 [[nodiscard]] std::optional<std::vector<IconFile>> buildIcons(std::string& error) {
-    std::vector<Rendered> images;
-    images.reserve(kRenderedSizes.size());
-    for (const int size : kRenderedSizes) {
-        Rendered image;
-        image.size = size;
-        image.pixels = render(size);
-        const std::optional<Bytes> png = encodePng(image.pixels, size);
-        if (!png) {
-            error = "zlib could not compress the " + std::to_string(size) + "-pixel image";
-            return std::nullopt;
-        }
-        image.png = *png;
-        images.push_back(std::move(image));
+    const std::optional<Bytes> png = encodePng(render(kIconSize), kIconSize);
+    if (!png) {
+        error = "zlib could not compress the " + std::to_string(kIconSize) + "-pixel image";
+        return std::nullopt;
     }
-
     std::vector<IconFile> files;
-    files.push_back({fs::path{"packaging"} / "linux" / "time-warp-studio.png",
-                     renderedImage(images, kLinuxSize).png});
-    files.push_back({fs::path{"packaging"} / "windows" / "time-warp-studio.ico", encodeIco(images)});
-    files.push_back({fs::path{"packaging"} / "macos" / "time-warp-studio.icns", encodeIcns(images)});
+    files.push_back({fs::path{"packaging"} / "linux" / "time-warp-studio.png", *png});
     return files;
 }
 
@@ -475,7 +328,7 @@ constexpr std::string_view kUsage{
     "               any is stale or missing\n"
     "\n"
     "With no --root the checkout is found from the executable's own location, so a\n"
-    "build tree anywhere still writes the icons the packages carry.\n"};
+    "build tree anywhere still writes the icon the package carries.\n"};
 
 }  // namespace
 

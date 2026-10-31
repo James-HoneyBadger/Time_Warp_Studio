@@ -16,11 +16,9 @@
 #include <string>
 #include <vector>
 
-#if defined(__unix__) || defined(__APPLE__)
 #include <cstdlib>
 #include <fcntl.h>
 #include <unistd.h>
-#endif
 
 #include "check.hpp"
 #include "timewarp/audio/music.hpp"
@@ -192,13 +190,8 @@ void test_port_policy() {
     TW_CHECK(policy.allows("/dev/lp0"));
     TW_CHECK(policy.allows("/dev/parport0"));
     // The pseudo-terminals the tests use, and which a program may open because
-    // they belong to the user running it. Linux numbers them under `/dev/pts`;
-    // macOS names the slave of the pair `/dev/ttys3`, which is why both are here.
+    // they belong to the user running it.
     TW_CHECK(policy.allows("/dev/pts/3"));
-    TW_CHECK(policy.allows("/dev/ttys003"));
-    // A USB serial adapter on a Mac is a call-out device, and its call-in twin.
-    TW_CHECK(policy.allows("/dev/cu.usbserial-1420"));
-    TW_CHECK(policy.allows("/dev/tty.usbserial-1420"));
 
     // Everything else is refused, including the ways round the rule.
     TW_CHECK(!policy.allows("/dev/mem"));
@@ -211,10 +204,7 @@ void test_port_policy() {
     // The prefix list must not be read as allowing the controlling terminal, or
     // the disk the system runs from.
     TW_CHECK(!policy.allows("/dev/tty"));
-    TW_CHECK(!policy.allows("/dev/cua0"));
 }
-
-#if defined(__unix__) || defined(__APPLE__)
 
 /// A pseudo-terminal pair, which is a real serial device with the other end in
 /// the test's hand.
@@ -320,17 +310,6 @@ void test_ports_refuse_unsafe_paths() {
     TW_CHECK(!parallel.open("/etc/passwd", &error));
     TW_CHECK(!parallel.is_open());
 }
-
-#else
-
-void test_serial_over_a_pseudo_terminal() {
-    announce("serial port (unsupported platform)");
-    TW_CHECK(!timewarp::io::ports_supported());
-}
-
-void test_ports_refuse_unsafe_paths() { announce("ports refuse unsafe paths"); }
-
-#endif
 
 }  // namespace
 

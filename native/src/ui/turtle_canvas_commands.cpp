@@ -4,7 +4,6 @@
 // the display list. The display list, not the pixels, is what the log, the scrubber
 // and an export read.
 
-#include "timewarp/core/qt_compat.hpp"
 #include "timewarp/ui/turtle_canvas.hpp"
 
 #include "turtle_canvas_internal.hpp"

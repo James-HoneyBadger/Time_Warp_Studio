@@ -1,7 +1,5 @@
 // SPDX-License-Identifier: MIT
 
-#include "timewarp/core/qt_gui_compat.hpp"
-#include "timewarp/core/qt_compat.hpp"
 #include "timewarp/ui/code_editor.hpp"
 
 #include <algorithm>
@@ -115,7 +113,7 @@ void LineNumberArea::paintEvent(QPaintEvent* event) { editor_->paintLineNumbers(
 
 void LineNumberArea::mousePressEvent(QMouseEvent* event) {
     if (event->button() == Qt::LeftButton) {
-        editor_->toggleBreakpoint(editor_->lineAt(static_cast<int>(timewarp::core::eventPosition(event).y())));
+        editor_->toggleBreakpoint(editor_->lineAt(static_cast<int>(event->position().y())));
         event->accept();
         return;
     }
@@ -1160,7 +1158,7 @@ void CodeEditor::mousePressEvent(QMouseEvent* event) {
         // Qt 6 spells this `position()`, Qt 5 `localPos()`; the seam header holds the
         // difference so this call site does not.
         addCursorAt(
-            cursorForPosition(timewarp::core::eventPosition(event).toPoint()).position());
+            cursorForPosition(event->position().toPoint()).position());
         event->accept();
         return;
     }

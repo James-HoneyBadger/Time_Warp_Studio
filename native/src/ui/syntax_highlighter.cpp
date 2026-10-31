@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: MIT
 
-#include "timewarp/core/qt_compat.hpp"
 #include "timewarp/ui/syntax_highlighter.hpp"
 
 #include <cstddef>

@@ -18,7 +18,6 @@
 #include <QString>
 #include <QStringList>
 
-#include "timewarp/core/qt_compat.hpp"
 
 namespace timewarp::ui {
 
@@ -48,7 +47,7 @@ struct LessonSummary {
     QList<LessonCheckpoint> checkpoints;
 
     [[nodiscard]] int checkpointCount() const {
-        return timewarp::core::intLength(checkpoints.size());
+        return static_cast<int>(checkpoints.size());
     }
 };
 

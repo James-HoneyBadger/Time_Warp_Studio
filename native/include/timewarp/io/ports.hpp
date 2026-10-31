@@ -114,8 +114,4 @@ private:
 /// The baud rates a program may ask for, largest first, for the error message.
 [[nodiscard]] std::vector<int> supported_bauds();
 
-/// Whether this build has port support at all. False on a platform with no POSIX
-/// device nodes, where every `open` explains itself rather than pretending.
-[[nodiscard]] bool ports_supported();
-
 }  // namespace timewarp::io

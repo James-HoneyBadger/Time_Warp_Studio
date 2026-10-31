@@ -273,6 +273,9 @@ needs an interpreter: if a guide names a `python3` command it is out of date, an
 - **Qt shell**: `native/src/ui/main_window_*.cpp` — documents, tabs, menus, status bar,
   a file per section, over `main_window_internal.hpp`
 - **TurtleCanvas**: `native/src/ui/turtle_canvas_*.cpp` — the display list and the painter
+- **Terminal**: `native/src/ui/terminal_widget.cpp` over `pty_session.cpp` (a real
+  pseudo-terminal) and `terminal_text.cpp` (escapes stripped, `\r` applied); opt-in
+  in Settings and absent in presentation and player modes
 - **CodeEditor**: `native/src/ui/code_editor.cpp` — gutter, current line, tab stops,
   syntax colouring and the search that `FindBar` drives
 - **Language table**: `native/src/ui/language.cpp` — names, settings keys, extensions
@@ -309,7 +312,10 @@ needs an interpreter: if a guide names a `python3` command it is out of date, an
   `TIME_WARP_AI_API_KEY` before the settings file and is stripped from every
   message by `redact()`. A build with no Qt Network has no assistant at all, which
   is what `TIME_WARP_HAVE_AI` gates in `main_window_panels.cpp` and the Tools menu.
-  `docs/AI.md` is the manual.
+  `docs/AI.md` is the manual. **Voices** (`ai/persona`) are no persona, 1974's
+  lecturer, 1984's bedroom programmer or 2026's machine: each is appended to the
+  same standing rules, and every one of them says the voice is not licence to
+  invent a command.
 - **The run report**: `native/tools/check.cpp` (`time_warp_check`) — one program through
   the native engines, with what it printed and what it drew. This is what the example
   and command harnesses drive, and what a person at a terminal can ask.
@@ -333,17 +339,16 @@ The Qt application: Qt6 (Widgets, Core, Gui), CMake 3.20+, a C++20 compiler.
 `Svg` and `PrintSupport` are optional components: they enable SVG drawing export and
 the two Print entries, and the build hides those features when they are absent.
 
-Qt 5.15 is the second Qt, and it is not optional in the sense the others are: it
-builds the Windows 7 artifact, because Qt 6 requires Windows 10 and 5.15 is the last
-Qt that runs on 7 SP1. One tree serves both — every `Qt6::` reference in
-`native/CMakeLists.txt` is `${TIME_WARP_QT}::` — and the names that moved between the
-versions live in `native/include/timewarp/core/qt_compat.hpp` (`intLength`,
-`fromUtf8`) and `qt_gui_compat.hpp` (`eventPosition`, `keySequence`). `native.yml`
-builds and tests that configuration on every push.
+There is one Qt: 6. The Windows and macOS ports, and the Qt 5.15 configuration that
+existed to build the Windows 7 artifact, were removed after 24.0 for a Linux-only
+target. The build still spells Qt `${TIME_WARP_QT}::` in the module files, and
+`native/include/timewarp/core/qt_names.hpp` holds the two spellings used at many
+call sites (`fromUtf8` for the registry's `string_view`s, `keySequence` for the
+menu shortcuts).
 
-The harness scripts in `native/tools/` (needed by the gates, not by a Run): Python
-3.10+, standard library only. `make lint` wants ruff. Neither is needed to build or
-run the application.
+Nothing in this tree needs an interpreter. The harnesses are C++ tools built from
+`native/`: `time_warp_gates`, `time_warp_teach`, `time_warp_docs`, and the
+`time_warp_*` commands beside them.
 
 The removed PySide6 application's dependencies are no longer installed or referenced.
 

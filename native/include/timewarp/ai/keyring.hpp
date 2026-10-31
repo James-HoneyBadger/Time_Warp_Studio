@@ -3,12 +3,10 @@
 // Where a stored key actually lives.
 //
 // A key in a settings file is a key in a text file. This is the seam that lets the
-// assistant put it somewhere the operating system already protects -- the Windows
-// Credential Manager, the macOS Keychain, or the freedesktop secret service on
-// Linux -- and it is a *seam* rather than a dependency because each of those is
-// reached differently, and a build on a machine with none of them has to keep
-// working: it keeps the key in the settings file, restricted to its owner, exactly
-// as before.
+// assistant put it somewhere the desktop already protects -- the freedesktop secret
+// service, reached through libsecret -- and it is a *seam* rather than a dependency
+// because a build on a machine with no secret service has to keep working: it keeps
+// the key in the settings file, restricted to its owner, exactly as before.
 //
 // #### The override
 //

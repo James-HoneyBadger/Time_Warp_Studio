@@ -9,22 +9,17 @@
 # The order matters and is the order in `CMakeLists.txt`: a library before what links
 # it.
 #
-# Which Qt: 6, or 5.15 for the Windows 7 artifact.
+# Which Qt: 6. There is one.
 
 # ---------------------------------------------------------------------------
-# Qt: version 6, or 5.15
+# Qt 6
 # ---------------------------------------------------------------------------
-# Qt 6 is what the releases ship and what every gate builds. Qt 5.15 is the
-# Windows 7 build: Qt 6 requires Windows 10, and 5.15 is the last Qt that runs on
-# 7 SP1. The two are source-compatible here apart from a handful of names, which
-# `timewarp/core/qt_compat.hpp` supplies, so the choice is a configure option
-# rather than a fork.
-if(TIME_WARP_QT5)
-    find_package(Qt5 5.15 QUIET COMPONENTS Core)
-    set(TIME_WARP_QT Qt5)
-else()
-    find_package(Qt6 QUIET COMPONENTS Core)
-    set(TIME_WARP_QT Qt6)
-endif()
+# The rest of the build names it `${TIME_WARP_QT}::Widgets` rather than
+# `Qt6::Widgets`. That spelling was once a choice between Qt 6 and Qt 5.15, which
+# existed only to build the Windows 7 artifact; with that artifact retired there is
+# one answer, and the variable is kept so the target names in the module files stay
+# readable beside the source lists.
+find_package(Qt6 QUIET COMPONENTS Core)
+set(TIME_WARP_QT Qt6)
 set(TIME_WARP_QT_FOUND "${${TIME_WARP_QT}_FOUND}")
 set(TIME_WARP_QT_CORE_VERSION "${${TIME_WARP_QT}Core_VERSION}")

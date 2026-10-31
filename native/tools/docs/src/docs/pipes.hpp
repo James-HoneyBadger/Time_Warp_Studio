@@ -6,9 +6,8 @@
 // `git ls-files '*.md'` so that build trees, the virtual environment and
 // node_modules stay out of the run without a second ignore list, and this port has
 // to ask git the same question. Python had subprocess.run; C++ has nothing, and
-// popen is the smallest thing that answers on both platforms -- with the `_popen`
-// spelling MSVC uses, which is why the platform lives here and not at the call
-// site. Nothing else in this project starts a process.
+// popen is the smallest thing that answers. Nothing else in this project starts a
+// process.
 
 #pragma once
 

@@ -3,7 +3,7 @@
 !.vscode/settings.json
 !/.vscode/c_cpp_properties.json
 
-# macOS
+# Desktop clutter
 .DS_Store
 
 # Archives
@@ -24,10 +24,6 @@ build/
 # build-ubsan). Ignoring only "build/" let roughly 1500 compiled binaries, object
 # files and caches from the other trees into the working tree as untracked files.
 build-*/
-# The Qt 5 tree, which is a second configuration of the same sources rather than
-# a second build type -- `-DTIME_WARP_QT5=ON` next to the Qt 6 tree.
-build5/
-build5-*/
 *.egg-info/
 
 # CMake generated files, for a build tree created somewhere else

@@ -6,22 +6,15 @@
 #include <cstdlib>
 #include <utility>
 
-#if defined(__unix__) || defined(__APPLE__)
 #include <cerrno>
 #include <cstring>
 #include <fcntl.h>
 #include <termios.h>
 #include <unistd.h>
-#define TIME_WARP_HAS_POSIX_PORTS 1
-#else
-#define TIME_WARP_HAS_POSIX_PORTS 0
-#endif
 
 namespace timewarp::io {
 
 namespace {
-
-#if TIME_WARP_HAS_POSIX_PORTS
 
 /// The `speed_t` for a baud rate, or 0 when this platform has no constant for it.
 /// Every rate a school is likely to meet is here; the ones that are not get a
@@ -61,7 +54,6 @@ namespace {
     return std::strerror(error_number);
 }
 
-#endif  // TIME_WARP_HAS_POSIX_PORTS
 
 void set_error(std::string* error, const std::string& message) {
     if (error != nullptr) {
@@ -70,14 +62,6 @@ void set_error(std::string* error, const std::string& message) {
 }
 
 }  // namespace
-
-bool ports_supported() {
-#if TIME_WARP_HAS_POSIX_PORTS
-    return true;
-#else
-    return false;
-#endif
-}
 
 std::vector<int> supported_bauds() {
     return {115200, 57600, 38400, 19200, 9600, 4800, 2400, 1200, 600, 300};
@@ -89,17 +73,12 @@ const PortPolicy& PortPolicy::current() {
         // The device families a school actually plugs in. `by-id` is a directory
         // of stable symlinks, which is why it is a prefix of its own.
         //
-        // `/dev/ttys` is a BSD pseudo-terminal, which is the only kind macOS has:
-        // Linux's `/dev/pts/` does not exist there, so a test -- or a program --
-        // opening a pty was refused by this list rather than by the line
-        // discipline. `/dev/tty.` and `/dev/cu.` are how a USB serial adapter
-        // appears on a Mac (`cu.usbserial-1420`), one for call-out and one for
-        // call-in, and neither matches the bare `/dev/tty` this list must not
-        // allow.
+        // `/dev/pts/` is a pseudo-terminal: a test -- or a program -- that opens one
+        // is opening a device node that belongs to the user running it, and it is
+        // how `media_tests` exercises this class without a board attached.
         built.prefixes = {"/dev/ttyS",   "/dev/ttyUSB", "/dev/ttyACM", "/dev/ttyAMA",
                           "/dev/ttySAC", "/dev/serial/", "/dev/pts/",  "/dev/lp",
-                          "/dev/parport", "/dev/usb/lp", "/dev/ttys",  "/dev/tty.",
-                          "/dev/cu."};
+                          "/dev/parport", "/dev/usb/lp"};
         if (const char* extra = std::getenv("TIME_WARP_PORTS"); extra != nullptr) {
             std::string remaining{extra};
             while (!remaining.empty()) {
@@ -166,11 +145,6 @@ SerialPort& SerialPort::operator=(SerialPort&& other) noexcept {
 
 bool SerialPort::open(const std::string& path, int baud, std::string* error) {
     close();
-#if !TIME_WARP_HAS_POSIX_PORTS
-    (void)baud;
-    set_error(error, "this build has no serial support (no POSIX device nodes)");
-    return false;
-#else
     if (!PortPolicy::current().allows(path)) {
         set_error(error, "`" + path + "` is not a port this program may open. Ports "
                                  "are limited to serial and parallel devices; a teacher "
@@ -217,15 +191,12 @@ bool SerialPort::open(const std::string& path, int baud, std::string* error) {
     handle_ = handle;
     path_ = path;
     return true;
-#endif
 }
 
 void SerialPort::close() {
-#if TIME_WARP_HAS_POSIX_PORTS
     if (handle_ >= 0) {
         ::close(handle_);
     }
-#endif
     handle_ = -1;
     path_.clear();
 }
@@ -235,10 +206,6 @@ bool SerialPort::write(const std::string& bytes, std::string* error) {
         set_error(error, "the serial port is not open");
         return false;
     }
-#if !TIME_WARP_HAS_POSIX_PORTS
-    set_error(error, "this build has no serial support");
-    return false;
-#else
     std::size_t written = 0;
     while (written < bytes.size()) {
         const ssize_t count = ::write(handle_, bytes.data() + written, bytes.size() - written);
@@ -259,7 +226,6 @@ bool SerialPort::write(const std::string& bytes, std::string* error) {
         written += static_cast<std::size_t>(count);
     }
     return true;
-#endif
 }
 
 std::string SerialPort::read(std::size_t max_bytes, int timeout_ms, std::string* error) {
@@ -267,10 +233,6 @@ std::string SerialPort::read(std::size_t max_bytes, int timeout_ms, std::string*
         set_error(error, "the serial port is not open");
         return {};
     }
-#if !TIME_WARP_HAS_POSIX_PORTS
-    set_error(error, "this build has no serial support");
-    return {};
-#else
     if (max_bytes == 0) {
         return {};
     }
@@ -300,7 +262,6 @@ std::string SerialPort::read(std::size_t max_bytes, int timeout_ms, std::string*
         waited += slice_ms;
     }
     return collected;
-#endif
 }
 
 std::string SerialPort::read_line(int timeout_ms, std::string* error) {
@@ -344,10 +305,6 @@ ParallelPort& ParallelPort::operator=(ParallelPort&& other) noexcept {
 
 bool ParallelPort::open(const std::string& path, std::string* error) {
     close();
-#if !TIME_WARP_HAS_POSIX_PORTS
-    set_error(error, "this build has no parallel support (no POSIX device nodes)");
-    return false;
-#else
     if (!PortPolicy::current().allows(path)) {
         set_error(error, "`" + path + "` is not a port this program may open. Ports "
                                  "are limited to serial and parallel devices; a teacher "
@@ -362,15 +319,12 @@ bool ParallelPort::open(const std::string& path, std::string* error) {
     handle_ = handle;
     path_ = path;
     return true;
-#endif
 }
 
 void ParallelPort::close() {
-#if TIME_WARP_HAS_POSIX_PORTS
     if (handle_ >= 0) {
         ::close(handle_);
     }
-#endif
     handle_ = -1;
     path_.clear();
 }
@@ -380,10 +334,6 @@ bool ParallelPort::write(const std::string& bytes, std::string* error) {
         set_error(error, "the parallel port is not open");
         return false;
     }
-#if !TIME_WARP_HAS_POSIX_PORTS
-    set_error(error, "this build has no parallel support");
-    return false;
-#else
     std::size_t written = 0;
     while (written < bytes.size()) {
         const ssize_t count = ::write(handle_, bytes.data() + written, bytes.size() - written);
@@ -397,7 +347,6 @@ bool ParallelPort::write(const std::string& bytes, std::string* error) {
         written += static_cast<std::size_t>(count);
     }
     return true;
-#endif
 }
 
 bool ParallelPort::write_byte(unsigned char value, std::string* error) {
