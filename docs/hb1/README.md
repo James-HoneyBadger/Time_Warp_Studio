@@ -435,7 +435,7 @@ their ROM, so the disk cannot rot without a test failing.
 - Make it yours: [CONFIG](config.md).
 - Change the machine's mind: [Inside the HB-1](inside.md).
 - See what a later release could add: [enhancements](enhancements.md), the
-  proposals written down after 24.0 became the golden release.
+  proposals written down for after 25.0.
 - See the machine a decade later: [the Model 92](model-92.md), the same company's
   1992 computer, and the overhaul it would take to get there.
 - Meet its sibling: [the CHIP-8](../chip8/README.md).

@@ -26,9 +26,9 @@ This page is the map.
 | [chip8/README.md](chip8/README.md) | **CHIP-8 Machine Manual** — the two ways to run, the window, keys, debugging, sound, limits |
 | [chip8/assembly.md](chip8/assembly.md) | The assembler: listings, labels, directives, errors, worked programs |
 | [chip8/instruction-set.md](chip8/instruction-set.md) | Every opcode as implemented, the 1977 quirks, timing, a full disassembly |
-| [hb1/enhancements.md](hb1/enhancements.md) | Proposals for the HB-1 after the 24.0 golden release: a tape drive, a monitor, sprites, DOS 1.1 |
+| [hb1/enhancements.md](hb1/enhancements.md) | Proposals for the HB-1 after the 25.0 release: a tape drive, a monitor, sprites, DOS 1.1 |
 | [hb1/model-92.md](hb1/model-92.md) | **The Model 92** — the same company's 1992 computer: a bus, a video chip, four-channel audio, DOS 2.0, HB-16 and a desktop |
-| [chip8/enhancements.md](chip8/enhancements.md) | Proposals for the CHIP-8 after the 24.0 golden release: breakpoints in the window, a trace, state files, a library manifest |
+| [chip8/enhancements.md](chip8/enhancements.md) | Proposals for the CHIP-8 after the 25.0 release: breakpoints in the window, a trace, state files, a library manifest |
 
 ---
 

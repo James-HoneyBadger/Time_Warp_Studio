@@ -1,13 +1,13 @@
 # HB-1 enhancements
 
-Time Warp Studio 24.0 is the golden release: the machine described in
-[the owner's manual](README.md) is finished, frozen and validated by the gates in
-[README_TESTING](../README_TESTING.md). Everything on this page is a **proposal for
-after 24.0**, written down rather than wished for, so that a future release has a
-specification to build to and a way to prove it is done.
+Time Warp Studio 25.0 is the current release — 24.0, the golden one, is archived —
+and the machine described in [the owner's manual](README.md) is finished and
+validated by the gates in [README_TESTING](../README_TESTING.md). Everything on this
+page is a **proposal for after 25.0**, written down rather than wished for, so that a
+future release has a specification to build to and a way to prove it is done.
 
 Each proposal says what it is, why the machine wants it in 1982 terms, and what
-would count as proof. Nothing here changes 24.0.
+would count as proof. Nothing here changes 25.0.
 
 ---
 

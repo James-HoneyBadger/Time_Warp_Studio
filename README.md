@@ -3,11 +3,13 @@
 *An old-school programming environment: eleven languages, a full IDE, and two
 complete computers inside it.*
 
+*Timey wimey wibbly wobbly, time & multiuniverse travel computing.*
+
 [![Languages](https://img.shields.io/badge/languages-11-blue)](#eleven-interpreters-one-per-era)
 [![Machines](https://img.shields.io/badge/machines-2-purple)](docs/MACHINES.md)
 [![Platform](https://img.shields.io/badge/platform-Linux-green)](docs/INSTALLATION.md)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/Version-24.0.0-orange)](https://github.com/James-HoneyBadger/Time_Warp_Studio)
+[![Version](https://img.shields.io/badge/Version-25.0.0-orange)](https://github.com/James-HoneyBadger/Time_Warp_Studio)
 
 Time Warp Studio is a desktop programming environment for people who like old
 computers. It is the one the 1980s promised and never quite delivered: a full IDE,
@@ -101,15 +103,27 @@ you had:
 
 ---
 
-## The golden release
+## 25.0.0: timey wimey wibbly wobbly, time & multiuniverse travel computing
 
-**Version 24.0 is the release this project is finished at.** The eleven languages,
-the IDE, the two machines, the curriculum and every book in this repository are
-complete, and every gate that proves it runs on each push. The feature set is
-frozen: 24.x takes bug fixes, and what a later release could add lives in
-[the HB-1 proposals](docs/hb1/enhancements.md) and
-[the CHIP-8 proposals](docs/chip8/enhancements.md), written down with the proof each
-one would need rather than left as a wish.
+**Version 25.0.0 is the current design.** The eleven languages, the IDE, the two
+machines, the curriculum and every book in this repository are complete, and every
+gate that proves it runs on each push. The feature set is not frozen: a release from
+here takes fixes and features alike, and each one arrives with the test and the book
+that make it true.
+
+**Version 24.0 is archived.** It was the golden release — the last one built for
+Windows and macOS — and it is kept exactly as it was built, on its own release page,
+never to change again. The design did not stop with it: the Terminal tab is a real
+pseudo-terminal, the assistant has three historical voices, a run that finishes
+behind you can announce itself on the desktop, the CHIP-8 opens on an original
+five-page tour and can fetch twelve CC0 homebrew programs with one button, and there
+is a Flatpak that carries its own Qt.
+
+What comes next is written down with the proof each item would need, rather than left
+as a wish: [the HB-1 proposals](docs/hb1/enhancements.md),
+[the CHIP-8 proposals](docs/chip8/enhancements.md), and
+[the Model 92](docs/hb1/model-92.md) — the same company's 1992 computer, and the
+overhaul it would take to get there.
 
 ## Install it
 
@@ -118,7 +132,7 @@ carries a ready-built Linux application, with the Qt runtime inside it.
 
 **Time Warp Studio is a Linux application.** It was cross-platform until 24.0, and
 the Windows and macOS builds of that release remain on the release page as they were;
-24.x onward builds and ships for Linux only.
+25.0 builds and ships for Linux only.
 
 | You have | Take | Then |
 | --- | --- | --- |

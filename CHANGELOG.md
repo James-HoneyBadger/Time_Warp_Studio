@@ -2,7 +2,28 @@
 
 <!-- history: all -->
 
-## [Unreleased]
+## [25.0.0] - 2026-10-30
+
+*Timey wimey wibbly wobbly, time & multiuniverse travel computing.*
+
+**24.0 is unfrozen and it becomes an archive.** The golden release was written as the
+last word on a project that had finished; it is now the record of the last release
+built for three platforms. Its Windows, macOS and Windows 7 artifacts stay on that
+release page exactly as they were built, and it will not change again. Nothing was
+deleted to do this: 24.0 is kept whole, beside the releases that follow it, which is
+what an archive is.
+
+**25.0.0 is the design as it stands.** One platform, one Qt, a real pseudo-terminal
+in the Terminal tab, three voices for the assistant, PipeWire and a desktop
+notification for a run that finishes behind you, an original five-page tour the
+CHIP-8 boots into, a curated CC0 homebrew archive behind one button, and a Flatpak
+that carries its own Qt onto any distribution. The feature set is not frozen: a
+release after this one takes fixes and features alike, and each arrives with the test
+and the book that prove it.
+
+The two proposal pages are now **for after 25.0**, and the HB-1 has a second one: the
+[Model 92](docs/hb1/model-92.md), the same company's 1992 computer and the overhaul
+it would take to get there. A plan is not a version; it is what the unfreeze is for.
 
 **Time Warp Studio is a Linux application.** The Windows and macOS ports are gone,
 and so is the second Qt configuration that existed to build them. It is one subtraction
@@ -109,6 +130,24 @@ release page; nothing after it is built or tested for either system.
   and `.icns` encoders with their size tables. `time_warp_icon` writes the desktop
   entry's PNG, which is held to byte equality exactly as before.
 
+### Changed
+
+- **24.0 is archived and 25.0.0 is the version.** `VERSION` says 25.0.0, and the two
+  hand-written copies — the README's badge and the architecture guide's title — say
+  it too, which is what `time_warp_docs version` exists to check. The Flatpak's
+  AppStream metadata gains a 25.0.0 entry and keeps the 24.0.0 one beneath it.
+- **The freeze is lifted.** Every page that described 24.0 as the release the project
+  was *finished* at says instead that it is archived: kept, complete and unchanging,
+  on its own release page. The proposal pages in `docs/hb1/` and `docs/chip8/` are
+  proposals for after 25.0 rather than after 24.0, because that is now what "after"
+  means.
+- **The architecture guide no longer says the Flatpak is not built.** It was built
+  and shipped in this release, and the sentence that called it missing was the one
+  claim in the tree that a gate could not see.
+- **The CHIP-8 archive fetcher reports the build's version** in its user agent
+  (`TIME_WARP_VERSION`) rather than a literal `24.0`, so the string cannot go stale
+  in a header that nothing checks.
+
 ## [24.0.0] - 2026-10-29
 
 CHIP-8 can be walked back. It could already stop: a gutter breakpoint fires before
@@ -119,10 +158,11 @@ checkpoint is the machine's whole state, which `Chip8State` already was — the 
 window's rewind strip keeps it every quarter second — so this is the same value
 carried to the other surface rather than a second mechanism.
 
-> **24.0.0 is the golden release.** The feature set is frozen here: 24.x takes bug
-> fixes, and the two enhancement pages below are what a later release would build
-> from. The example corpus, the command and REPL matrices, the frozen parity
-> corpora, the curriculum and every documentation gate pass on this tree.
+> **24.0.0 is archived.** It was the golden release, and the feature set was frozen
+> here at the time; 25.0.0 unfroze it. This section is the record of what that
+> release was, and it does not change again. The example corpus, the command and REPL
+> matrices, the frozen parity corpora, the curriculum and every documentation gate
+> passed on that tree.
 
 ### Added
 

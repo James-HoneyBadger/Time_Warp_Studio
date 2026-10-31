@@ -295,7 +295,7 @@ says the program had not halted, rather than calling it a failure.
 - Learn the language: [tutorials/chip8.md](../tutorials/chip8.md) and
   [LANGUAGE_GUIDE.md](../LANGUAGE_GUIDE.md#chip-8).
 - See what a later release could add: [enhancements](enhancements.md), the
-  proposals written down after 24.0 became the golden release.
+  proposals written down for after 25.0.
 - Compare machines: [the HB-1](../hb1/README.md).
 
 ---

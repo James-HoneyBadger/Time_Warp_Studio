@@ -1,6 +1,6 @@
 # Architecture Guide
 
-## Time Warp Studio v24.0.0 — System Design and Implementation
+## Time Warp Studio v25.0.0 — System Design and Implementation
 
 > **This page describes the shipping product.** It was rewritten alongside the move
 > to C++20 / Qt6. Earlier revisions documented the PySide6 implementation, which has
@@ -1018,9 +1018,9 @@ coming from the Python application starts from this build's defaults.
   Markdown; the drawing exports as an image or, with Qt6::Svg, as vectors.
 - **Packaging** has `make install` with a desktop entry and an icon, and a tagged
   release builds `.deb`, `.rpm` and tarball artifacts for x86_64 and arm64, an
-  AppImage for x86_64, and a container image from the same install rules. Flatpak,
-  Snap and an arm64 AppImage are not built. The Windows and macOS artifacts stopped
-  at 24.0.
+  AppImage for x86_64, a Flatpak bundle against the KDE runtime, and a container
+  image from the same install rules. Snap and an arm64 AppImage are not built. The
+  Windows and macOS artifacts stopped at 24.0, which is archived.
 - **No pixel framebuffer in the drawing display list.** A drawing is a list of
   strokes and shapes fitted to the content; only a program that names a `SCREEN`
   gets the fixed-coordinate framebuffer, which is where `GET`/`PUT` and `POINT`

@@ -18,6 +18,13 @@
 #include <QNetworkRequest>
 #endif
 
+// Supplied by CMake from the repository's VERSION file, so the agent string cannot
+// go stale in a header that nothing checks. The fallback keeps a standalone compile
+// of this file working.
+#ifndef TIME_WARP_VERSION
+#define TIME_WARP_VERSION "0.0.0"
+#endif
+
 namespace timewarp::ui {
 
 namespace {
@@ -189,7 +196,8 @@ void ArchiveFetcher::requestNext() {
     request.setAttribute(QNetworkRequest::RedirectPolicyAttribute,
                          QNetworkRequest::NoLessSafeRedirectPolicy);
     request.setHeader(QNetworkRequest::UserAgentHeader,
-                      QStringLiteral("TimeWarpStudio/24.0 (+CHIP-8 archive)"));
+                      QStringLiteral("TimeWarpStudio/%1 (+CHIP-8 archive)")
+                          .arg(QLatin1String{TIME_WARP_VERSION}));
     request.setTransferTimeout(30000);
     if (request.url().isEmpty()) {
         failures_.append(tr("%1: no URL").arg(program.file));

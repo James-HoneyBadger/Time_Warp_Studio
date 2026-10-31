@@ -16,13 +16,18 @@ derived rather than remembered.
 
 ---
 
-## 24.0 is the golden release
+## 24.0 is archived, and 25.0.0 is the current design
 
-Version 24.0 is the release this project is finished at: the eleven languages, the
-IDE, the two machines, the curriculum and the documentation set are complete, and
-the gates in [README_TESTING.md](README_TESTING.md) prove it on every push. The
-feature set is **frozen** — nothing below is a promise to change the product, and a
-bug fix is the only change 24.x takes.
+**Version 24.0 is archived.** It was the golden release, the last one built for
+Windows and macOS, and it is kept exactly as it was built on its own release page and
+will not change again. Nothing here removes it: an archive is a thing you keep.
+
+**Version 25.0.0 is the current design,
+*timey wimey wibbly wobbly, time & multiuniverse travel computing*.** The eleven
+languages, the IDE, the two machines, the curriculum and the documentation set are
+complete, and the gates in [README_TESTING.md](README_TESTING.md) prove it on every
+push. The feature set is **not frozen**: a release after this one takes fixes and
+features alike, and each arrives with the test that proves it.
 
 What comes after is written down rather than wished for:
 
@@ -790,7 +795,8 @@ which is what the `.deb` and `.rpm` declare as a dependency; the AppImage is the
 artifact that carries its own.
 
 This is a Linux application. The Windows installer, the Windows 7 rebuild and the
-macOS disk image were 24.0's, and 24.x builds and ships for Linux only.
+macOS disk image were 24.0's — the last cross-platform release, and now archived —
+and 25.0 builds and ships for Linux only.
 
 Still not built: publishing to the **Flathub** repository (the manifest is here and
 CI builds it into a bundle; a Flathub submission is a review process rather than a

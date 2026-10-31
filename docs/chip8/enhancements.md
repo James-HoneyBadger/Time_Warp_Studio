@@ -1,10 +1,10 @@
 # CHIP-8 enhancements
 
-Time Warp Studio 24.0 is the golden release: the machine described in
-[the machine manual](README.md), its [assembler](assembly.md) and its
-[instruction set](instruction-set.md) are finished, frozen and validated by the
-gates in [README_TESTING](../README_TESTING.md). Everything here is a **proposal for
-after 24.0** — written as a specification with a way to prove each item, so a
+Time Warp Studio 25.0 is the current release — 24.0, the golden one, is archived —
+and the machine described in [the machine manual](README.md), its
+[assembler](assembly.md) and its [instruction set](instruction-set.md) are finished
+and validated by the gates in [README_TESTING](../README_TESTING.md). Everything here
+is a **proposal for after 25.0** — written as a specification with a way to prove each item, so a
 future release has something to build to.
 
 The machine's own doctrine stays: **one machine, one manual, no quirk switches.**
