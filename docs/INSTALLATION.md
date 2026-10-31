@@ -56,7 +56,9 @@ cmake -S native -B native/build -DCMAKE_BUILD_TYPE=Release
 cmake --build native/build -j
 ```
 
-The application is `native/build/time_warp_ide`.
+The application is `time_warp_ide`, in the build directory those two commands
+created: the tree does not carry a built binary, so there is nothing to find there
+until you have built it once.
 
 A successful build prints nothing alarming; the first one takes a few minutes and
 later ones are incremental. Useful options:
