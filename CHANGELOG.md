@@ -79,7 +79,10 @@ building them exposed.
   features unbuilt (themes, find/replace, completion, the player, Flatpak), the AppStream
   description software centres show, the container image's description, and a
   `make engine-test` a contributor was told was not optional -- that target has not
-  existed since the Python engine was deleted.
+  existed since the Python engine was deleted. The testing guide gains the HB-2's own
+  harness (it described four of the five the Makefile runs), and the release checklist
+  gains `make hb-check` and the three release-note edits that were being made by hand:
+  the AppStream entry, the Flatpak pin and the API's version example.
 - [The HB-2 manual](docs/hb2/README.md) gains the cassette, the ROM socket and the two
   services its table was missing, and loses the three gaps from its status section;
   [the user guide](docs/USER_GUIDE.md) gains the HB-2 window beside the other two

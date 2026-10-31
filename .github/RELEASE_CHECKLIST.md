@@ -19,7 +19,11 @@ a hand-written copy, kept in step by `time_warp_docs version` and checked by the
 - [ ] Run `./native/tools/docs/build/time_warp_docs version` and confirm it exits 0
       before tagging
 - [ ] Check any prose that names a version by hand — the script only knows the places
-      listed above
+      listed above. Three of them are the release notes rather than a string:
+      `packaging/flatpak/org.honeybadger.TimeWarpStudio.metainfo.xml` gains a
+      `<release version="X.Y.Z" date="…">` entry describing the release, the commented
+      `tag: vX.Y.Z` pin in `packaging/flatpak/org.honeybadger.TimeWarpStudio.yml` moves
+      with it, and the `version` example in `docs/API.md` follows the newest release
 
 ### Testing
 
@@ -30,6 +34,7 @@ a hand-written copy, kept in step by `time_warp_docs version` and checked by the
       192 Scheme programs (168 agree, 24 written down)
 - [ ] `make smoke` — all 94 example programs, through the native engines
 - [ ] `make command-matrix` — every command row as a program (566 rows)
+- [ ] `make hb-check` — the seven HB-2 demonstrations, and two processes on its desktop
 - [ ] `make repl-matrix` — every command row through the native REPL
 - [ ] `make lint-md`, `make doc-links`, `make doc-claims` and `make tree-check` — the
       documentation gates, and the one that fails if a `.py` comes back
