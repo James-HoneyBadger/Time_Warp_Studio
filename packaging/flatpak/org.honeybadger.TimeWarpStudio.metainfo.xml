@@ -74,6 +74,13 @@
   </keywords>
 
   <releases>
+    <release version="25.0.2" date="2026-10-31">
+      <description>
+        <p>Close Other Tabs and Close All Tabs work, a document on the split's
+        right-hand side is saved before it closes, and the guides state the number of
+        programs and suites the tree actually has.</p>
+      </description>
+    </release>
     <release version="25.0.1" date="2026-10-31">
       <description>
         <p>The terminal cannot stall the window, has Interrupt and Restart, names input

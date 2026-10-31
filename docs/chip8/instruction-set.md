@@ -199,8 +199,11 @@ The assembler accepts `SHR Vx, Vy` for compatibility and still assembles `8xy6`.
 | `Cxkk` | `RND Vx, byte` | `Vx = randomByte & kk` |
 
 The generator is seeded from the operating system once per run, so two runs
-differ. It is the same generator the reference implementation uses, accessed
-through the same interface.
+differ. It is MT19937 with the seeding and sampling the reference used — an integer
+seed split little-endian through `init_by_array`, and `randint(low, high)`
+inclusive — because a program that seeds itself has to print the numbers it printed
+before the port. `native/include/timewarp/lang/mersenne_random.hpp` holds it, and
+`lang_tests` asserts the recorded draws.
 
 ---
 

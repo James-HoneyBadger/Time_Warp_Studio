@@ -262,10 +262,10 @@ comment:
 
 [`Examples/chip8/hires.ch8`](../../Examples/chip8/hires.ch8) draws a ring,
 scrolls it and prints a large digit. The whole-program Run and the live emulator
-both implement this set, and the reference the parity gates compare against does
-too. MegaChip's drawing planes and audio extensions are **not** implemented: a ROM
-that uses `Fx01` or the MegaChip sound opcodes is reported as an unknown opcode
-rather than half-drawn.
+both implement this set, and the deleted reference did too — that is why the
+recordings cover it. MegaChip's drawing planes and audio extensions are **not**
+implemented: a ROM that uses `Fx01` or the MegaChip sound opcodes is reported as an
+unknown opcode rather than half-drawn.
 
 ## Quick reference
 

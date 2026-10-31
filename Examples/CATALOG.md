@@ -1,7 +1,7 @@
 # Examples Catalog
 
-This catalog lists the 82 example programs currently shipped with Time Warp Studio.
-It covers all eleven active languages.
+This catalog lists the 95 example programs currently shipped with Time Warp Studio,
+plus the HB-1's own disk image. It covers all eleven active languages.
 
 Each language has a **showcase** program — the first row in each section below —
 that walks through that language's whole surface: its statements, its data types,
@@ -191,8 +191,9 @@ The owner's manual explains [how to run one on the machine](../docs/hb1/README.m
 
 ## Validation
 
-The example verifier runs active examples in isolated subprocesses and reports
-syntax, execution, and timeout failures. Run it from the repository root with:
+The example gate runs every program through the engines the IDE ships
+(`time_warp_check`) and reports syntax and execution failures, and fails when a
+program listed as drawing produces no ink. Run it from the repository root with:
 
 ```bash
 make smoke

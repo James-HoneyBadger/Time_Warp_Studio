@@ -1014,36 +1014,124 @@ bool MainWindow::maybeSave(CodeEditor* editor) {
     return saveDocument(editor);
 }
 
-bool MainWindow::closeTab(int index) {
+bool MainWindow::isScratchOnly(const QTabWidget* pane, int index) {
+    if (pane == nullptr || pane->count() != 1 || index < 0 || index >= pane->count()) {
+        return false;
+    }
+    const auto* editor = qobject_cast<const CodeEditor*>(pane->widget(index));
+    return editor != nullptr && pathOf(editor).isEmpty() && editor->document()->isEmpty() &&
+           !editor->document()->isModified();
+}
+
+bool MainWindow::closeTab(int index) { return closeTabIn(editor_tabs_, index); }
+
+bool MainWindow::closeTabIn(QTabWidget* pane, int index) {
     // An out-of-range index is refused explicitly. `removeTab` treats one as a
     // no-op rather than an error, so without this check the call would report
     // success for a tab that was never there.
-    if (index < 0 || index >= editor_tabs_->count()) {
+    if (pane == nullptr || index < 0 || index >= pane->count()) {
         return false;
     }
-    auto* editor = qobject_cast<CodeEditor*>(editor_tabs_->widget(index));
+    // Closing the lone blank scratch document would only put an identical one back,
+    // and the language the user has just chosen would go with it, so it is kept.
+    // The second pane has no such rule: a pane with no documents closes the split.
+    if (pane == editor_tabs_ && isScratchOnly(pane, index)) {
+        return true;
+    }
+    auto* editor = qobject_cast<CodeEditor*>(pane->widget(index));
     if (!maybeSave(editor)) {
         return false;
     }
 
-    editor_tabs_->removeTab(index);
+    pane->removeTab(index);
     if (editor != nullptr) {
         // `removeTab` detaches the page but does not delete it, so without this the
         // document and its undo history stay alive until the window closes.
         editor->deleteLater();
     }
 
-    // An editor area of empty grey reads as a window that has broken rather than
-    // as a working IDE, so closing the last document opens a new one.
-    if (editor_tabs_->count() == 0) {
-        newFile();
+    if (pane == editor_tabs_) {
+        // An editor area of empty grey reads as a window that has broken rather
+        // than as a working IDE, so closing the last document opens a new one.
+        if (pane->count() == 0) {
+            newFile();
+        }
+    } else if (pane->count() == 0) {
+        // The same reasoning answered the other way: the split exists to show two
+        // documents, so its emptied pane closes rather than staying grey.
+        editor_tabs_secondary_->hide();
+        editor_split_ = false;
+    }
+    refreshDocumentState();
+    return true;
+}
+
+bool MainWindow::closeOtherTabs(QTabWidget* pane, int keep) {
+    if (pane == nullptr || keep < 0 || keep >= pane->count()) {
+        return false;
+    }
+    return closeDocuments(pane, keep);
+}
+
+bool MainWindow::closeAllTabs(QTabWidget* pane) {
+    if (pane == nullptr) {
+        return false;
+    }
+    // Close All on the lone blank scratch document is the same request as closing
+    // it: there is nothing else to remove and its settings are worth keeping.
+    if (pane == editor_tabs_ && isScratchOnly(pane, 0)) {
+        return true;
+    }
+    return closeDocuments(pane, -1);
+}
+
+bool MainWindow::closeDocuments(QTabWidget* pane, int keep) {
+    QList<CodeEditor*> doomed;
+    for (int index = 0; index < pane->count(); ++index) {
+        if (index == keep) {
+            continue;
+        }
+        if (auto* editor = qobject_cast<CodeEditor*>(pane->widget(index))) {
+            doomed.append(editor);
+        }
+    }
+
+    // Every prompt comes before any removal: a Cancel halfway through a Close All
+    // would otherwise leave the window in a state the user never chose.
+    for (CodeEditor* editor : doomed) {
+        if (!maybeSave(editor)) {
+            return false;
+        }
+    }
+
+    for (CodeEditor* editor : doomed) {
+        const int index = pane->indexOf(editor);
+        if (index < 0) {
+            continue;
+        }
+        pane->removeTab(index);
+        editor->deleteLater();
+    }
+
+    if (pane == editor_tabs_) {
+        // The scratch tab above is the one case that ends with a document already
+        // open; everything else ends here with a fresh one.
+        if (pane->count() == 0) {
+            newFile();
+        }
+    } else if (pane->count() == 0) {
+        editor_tabs_secondary_->hide();
+        editor_split_ = false;
     }
     refreshDocumentState();
     return true;
 }
 
 bool MainWindow::closeCurrentTab() {
-    return closeTab(editor_tabs_->currentIndex());
+    // The document the user is working in decides the pane: a tab closed from the
+    // split's right-hand side is the one that goes.
+    QTabWidget* pane = activeEditorTabs();
+    return closeTabIn(pane, pane->currentIndex());
 }
 
 }  // namespace timewarp::ui

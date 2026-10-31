@@ -161,17 +161,20 @@ and the link step as well as the program.
 
 ## Lint
 
+The build is the lint: every target is compiled with `-Wall -Wextra -Wpedantic
+-Wshadow -Wcast-qual -Wuseless-cast -Wlogical-op -Wnull-dereference` and
+`-Werror`, so a warning fails the build rather than travelling. `make lint` is
+kept as the name for that, and says so:
+
 ```bash
-make lint    # ruff over the bridge engine
+make lint    # builds; a warning is an error
+make lint-md # the Markdown rules, over every tracked file
 ```
 
-That covers the bridge only. The commit-time hooks cover more:
-`pre-commit install` runs `ruff`, `ruff-format` and `detect-secrets` over the
-files a commit touches. `detect-secrets` is the one that stops a credential
-reaching GitHub; it compares against `.secrets.baseline`, so it reports only
-what has been added since the baseline was taken. `CONTRIBUTING.md` has the
-install commands and the way to silence a single false positive.
+There is no linter for a second language, because there is no second language:
+`native/tools/docs` is C++ and `make tree-check` fails if a `.py` comes back.
 
-The C++ side is its own linter: the build carries `-Wall -Wextra -Wpedantic
--Wshadow -Wcast-qual -Wuseless-cast -Wlogical-op -Wnull-dereference` with
-`-Werror`, so a warning fails the build.
+The commit-time hook is `detect-secrets`. It stops a credential reaching GitHub;
+it compares against `.secrets.baseline`, so it reports only what has been added
+since the baseline was taken. `CONTRIBUTING.md` has the install command and the
+way to silence a single false positive.

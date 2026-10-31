@@ -103,7 +103,8 @@ make help            # what the root Makefile offers
 
 ### The companion commands
 
-All three are executable scripts at the repository root:
+`run.sh` above is one of the three executable scripts at the repository root; the
+other two are the compiler and the automation service:
 
 ```bash
 ./twc Examples/basic/hello.bas -o hello   # small standalone executable
@@ -122,7 +123,7 @@ the IDE and opens in player mode. The full guide is [USER_GUIDE.md](USER_GUIDE.m
 
 ```bash
 ctest --test-dir native/build --output-on-failure   # 26 suites
-make smoke                                          # all 81 examples
+make smoke                                          # all 94 examples
 make command-matrix                                 # every command-table row
 make repl-matrix                                    # every row through the REPL
 ./native/build/time_warp_teach validate             # every lesson solution

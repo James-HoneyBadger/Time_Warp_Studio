@@ -257,7 +257,7 @@ native/                        - the Qt application (the product)
     gates/                     - time_warp_gates: smoke, commands, repl, golden, tree
     docs/                      - time_warp_docs: links, claims, version (no Qt)
     icon/                      - time_warp_icon: the packaged icons (zlib only)
-Examples/                      - 63 example programs across the 11 active languages
+Examples/                      - 95 example programs across the 11 active languages
 docs/                          - USER_GUIDE, API, language guide and tutorials
 ```
 

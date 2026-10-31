@@ -137,7 +137,7 @@ The gates and the documentation tools are built the same way — `make smoke` an
 # Build and run the IDE
 make -C native run
 
-# The 24 C++ suites
+# The 26 C++ suites
 make test
 ```
 
@@ -569,8 +569,8 @@ make test-all && make lint && make lint-md
 - [ ] Feature/fix complete
 - [ ] Tests written and passing
 - [ ] Build is warning-free (`-Werror`)
-- [ ] Bridge code (if touched) is ruff clean and standard-library only
-- [ ] `make smoke` is unchanged — every example still runs, and the 30 that must draw still draw
+- [ ] No `.py` file and no Python tool's config file was added (`make tree-check`)
+- [ ] `make smoke` is unchanged — every example still runs, and the 54 that must draw still draw
 - [ ] Lesson changes pass `./native/build/time_warp_teach validate`
 - [ ] Documentation updated, including anything the change made untrue
 - [ ] No breaking changes (or documented)
@@ -607,7 +607,7 @@ Time_Warp_Studio/
 │                                 #   golden, tree, in gates/), time_warp_docs
 │                                 #   (links, claims, version, in docs/),
 │                                 #   time_warp_icon (the packaged icons)
-├── Examples/                     # 63 example programs across the 11 languages
+├── Examples/                     # 95 example programs across the 11 languages
 ├── docs/                         # the guides
 │   ├── USER_GUIDE.md             #   the IDE manual (projects, REPL, SQL, API)
 │   ├── API.md                    #   JSON-RPC methods and libraries

@@ -44,7 +44,7 @@ and what a reader of the merged history scrolls to.
 - [ ] **Anything a document claims is true.** If a feature is partial, unported or unreachable, the document says so and `docs/ROADMAP.md` records it. This has been wrong before: a README claimed an in-process evaluator that nothing links.
 - [ ] **A new language or command has been added everywhere it is listed**, not only where it was easiest. `docs/LANGUAGE_GUIDE.md` has the list: enum, registry, the IDE's language table, an example, command-table rows, a tutorial, a lesson, a reference section.
 - [ ] **A new lesson passes `time_warp_teach validate`**, which runs every checkpoint's own solution *and* its starter — so a solution that does not pass, or a starter that already does, is caught before a learner meets it.
-- [ ] **Bridge code (if touched) is ruff clean and standard-library only.**
+- [ ] **New code is free of the removal's leftovers: no Python, and no reference to the deleted bridge's tooling.**
 - [ ] **Tests were added for the behaviour**, not only for the code path. A regression test for a fixed bug is expected.
 - [ ] **No unrelated changes.** A reformat, a rename or a reordered list makes the actual change hard to read.
 

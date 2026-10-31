@@ -425,9 +425,15 @@ void MainWindow::buildEditorColumn(QSplitter* parent) {
     newFile();
     // Closing is the tab widget's signal and the window's decision: whether the
     // last tab may be closed, and whether a new one appears in its place, is
-    // application policy, not a property of a tab bar.
+    // application policy, not a property of a tab bar. Both panes ask the same
+    // question, so a document in the split is saved before it goes rather than
+    // dropped because it happened to be on the right.
     connect(editor_tabs_, &ResizableTabWidget::closeRequested, this,
-            [this](int index) { closeTab(index); });
+            [this](int index) { (void)closeTabIn(editor_tabs_, index); });
+    connect(editor_tabs_, &ResizableTabWidget::closeOthersRequested, this,
+            [this](int index) { closeOtherTabs(editor_tabs_, index); });
+    connect(editor_tabs_, &ResizableTabWidget::closeAllRequested, this,
+            [this] { closeAllTabs(editor_tabs_); });
     connect(editor_tabs_, &QTabWidget::currentChanged, this,
             [this](int /*index*/) { refreshDocumentState(); });
 
@@ -442,7 +448,11 @@ void MainWindow::buildEditorColumn(QSplitter* parent) {
     editor_tabs_secondary_->hide();
     editor_pane_splitter_->addWidget(editor_tabs_secondary_);
     connect(editor_tabs_secondary_, &ResizableTabWidget::closeRequested, this,
-            [this](int index) { editor_tabs_secondary_->removeTab(index); });
+            [this](int index) { (void)closeTabIn(editor_tabs_secondary_, index); });
+    connect(editor_tabs_secondary_, &ResizableTabWidget::closeOthersRequested, this,
+            [this](int index) { closeOtherTabs(editor_tabs_secondary_, index); });
+    connect(editor_tabs_secondary_, &ResizableTabWidget::closeAllRequested, this,
+            [this] { closeAllTabs(editor_tabs_secondary_); });
 
     editor_pane_splitter_->setStretchFactor(0, 1);
     editor_pane_splitter_->setStretchFactor(1, 1);

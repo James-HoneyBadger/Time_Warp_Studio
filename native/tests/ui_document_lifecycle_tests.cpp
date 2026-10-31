@@ -179,6 +179,11 @@ void test_choosing_a_language_sticks() {
 void test_closing_tabs() {
     announce("closing tabs");
     MainWindow window;
+    CodeEditor* initial = currentEditorOf(window);
+    TW_CHECK(QMetaObject::invokeMethod(window.editorTabs(), "tabCloseRequested",
+                                      Qt::DirectConnection, Q_ARG(int, 0)));
+    TW_CHECK_EQ(currentEditorOf(window), initial);
+    TW_CHECK_EQ(window.editorTabs()->tabText(0), QStringLiteral("untitled"));
     window.newFile();
     window.newFile();
     TW_CHECK_EQ(window.editorTabs()->count(), 3);
@@ -190,17 +195,112 @@ void test_closing_tabs() {
     TW_CHECK(window.closeTab(0));
     TW_CHECK_EQ(window.editorTabs()->count(), 1);
 
-    // Closing the last document leaves a fresh one behind. An editor area of empty
-    // grey reads as a window that has broken rather than as an IDE waiting.
+    CodeEditor* remaining = currentEditorOf(window);
+    auto* selector = window.findChild<QComboBox*>(QStringLiteral("languageSelector"));
+    TW_CHECK(selector != nullptr);
+    if (selector == nullptr) {
+        return;
+    }
+    selector->setCurrentIndex(selector->findData(QStringLiteral("logo")));
+    const QString title = window.windowTitle();
+    const QString breadcrumb = badgeText(window, "breadcrumb");
+
+    // Closing the last blank scratch document keeps its identity and settings.
     TW_CHECK(window.closeTab(0));
+    TW_CHECK(window.closeCurrentTab());
+    TW_CHECK(QMetaObject::invokeMethod(window.editorTabs(), "tabCloseRequested",
+                                      Qt::DirectConnection, Q_ARG(int, 0)));
     TW_CHECK_EQ(window.editorTabs()->count(), 1);
-    TW_CHECK(currentEditorOf(window) != nullptr);
+    TW_CHECK_EQ(currentEditorOf(window), remaining);
+    TW_CHECK_EQ(window.editorTabs()->tabText(0), QStringLiteral("untitled 2"));
+    TW_CHECK_EQ(window.windowTitle(), title);
+    TW_CHECK_EQ(badgeText(window, "breadcrumb"), breadcrumb);
+    TW_CHECK_EQ(selector->currentData().toString(), QStringLiteral("logo"));
 
     // An index that does not exist is refused rather than removing a neighbouring
     // tab, which is what an unchecked `removeTab(-1)` does not do but a clamped one
     // would.
     TW_CHECK(!window.closeTab(99));
     TW_CHECK_EQ(window.editorTabs()->count(), 1);
+
+    window.newFile();
+    TW_CHECK_EQ(window.editorTabs()->tabText(1), QStringLiteral("untitled 4"));
+    TW_CHECK(window.closeCurrentTab());
+
+    remaining->setPlainText(QStringLiteral("PRINT 1"));
+    remaining->document()->setModified(false);
+    TW_CHECK(window.closeCurrentTab());
+    TW_CHECK_EQ(window.editorTabs()->count(), 1);
+    TW_CHECK(currentEditorOf(window) != remaining);
+    TW_CHECK_EQ(window.editorTabs()->tabText(0), QStringLiteral("untitled 5"));
+
+    // An empty saved file still closes rather than being kept as a scratch tab.
+    QTemporaryDir dir;
+    TW_CHECK(dir.isValid());
+    const QString path = writeFile(dir, QStringLiteral("empty.bas"), QByteArray{});
+    TW_CHECK(!path.isEmpty());
+    TW_CHECK(window.openFile(path));
+    TW_CHECK(window.closeTab(0));
+    TW_CHECK(window.closeCurrentTab());
+    TW_CHECK(window.openFilePaths().isEmpty());
+    TW_CHECK_EQ(window.editorTabs()->count(), 1);
+    TW_CHECK_EQ(window.editorTabs()->tabText(0), QStringLiteral("untitled 6"));
+}
+
+void test_closing_documents_in_a_split() {
+    announce("closing documents in a split");
+    MainWindow window;
+
+    // Close Other Tabs keeps the named tab and removes the rest. The context
+    // menu's entries emitted signals nothing answered until they were connected,
+    // so choosing one did nothing at all.
+    window.newFile();
+    window.newFile();
+    TW_CHECK_EQ(window.editorTabs()->count(), 3);
+    TW_CHECK(window.closeOtherTabs(window.editorTabs(), 1));
+    TW_CHECK_EQ(window.editorTabs()->count(), 1);
+    TW_CHECK_EQ(window.editorTabs()->tabText(0), QStringLiteral("untitled 2"));
+
+    // Close All Tabs ends with a fresh document rather than the grey rectangle the
+    // single-tab rule exists to prevent.
+    CodeEditor* closed = currentEditorOf(window);
+    window.newFile();
+    TW_CHECK_EQ(window.editorTabs()->count(), 2);
+    TW_CHECK(window.closeAllTabs(window.editorTabs()));
+    TW_CHECK_EQ(window.editorTabs()->count(), 1);
+    TW_CHECK(currentEditorOf(window) != closed);
+
+    // On the lone blank scratch document, Close All is the same request as Close:
+    // there is nothing else to remove, and the language just chosen is worth
+    // keeping.
+    auto* selector = window.findChild<QComboBox*>(QStringLiteral("languageSelector"));
+    TW_CHECK(selector != nullptr);
+    if (selector == nullptr) {
+        return;
+    }
+    CodeEditor* scratch = currentEditorOf(window);
+    selector->setCurrentIndex(selector->findData(QStringLiteral("rexx")));
+    TW_CHECK(window.closeAllTabs(window.editorTabs()));
+    TW_CHECK_EQ(currentEditorOf(window), scratch);
+    TW_CHECK_EQ(selector->currentData().toString(), QStringLiteral("rexx"));
+
+    // The split's second pane closes by the same policy, so a modified document
+    // there is saved before it goes rather than dropped for being on the right.
+    // Its last document takes the split with it: an emptied pane is the grey
+    // rectangle, and Move Tab to Other Pane already closes it when it empties.
+    window.splitEditor();
+    TW_CHECK(window.editorSplit());
+    TW_CHECK_EQ(window.secondaryEditorTabs()->count(), 1);
+    TW_CHECK(QMetaObject::invokeMethod(window.secondaryEditorTabs(), "tabCloseRequested",
+                                       Qt::DirectConnection, Q_ARG(int, 0)));
+    TW_CHECK_EQ(window.secondaryEditorTabs()->count(), 0);
+    // `isHidden`, not `isVisible`: the window has not been shown, and a child of an
+    // unshown window is never "visible" whatever its own flag says.
+    TW_CHECK(window.secondaryEditorTabs()->isHidden());
+    TW_CHECK(!window.editorSplit());
+    // The window is still usable: the primary pane kept its document.
+    TW_CHECK_EQ(window.editorTabs()->count(), 1);
+    TW_CHECK(currentEditorOf(window) != nullptr);
 }
 
 

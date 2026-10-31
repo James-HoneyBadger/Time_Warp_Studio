@@ -9,7 +9,7 @@ complete computers inside it.*
 [![Machines](https://img.shields.io/badge/machines-2-purple)](docs/MACHINES.md)
 [![Platform](https://img.shields.io/badge/platform-Linux-green)](docs/INSTALLATION.md)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/Version-25.0.1-orange)](https://github.com/James-HoneyBadger/Time_Warp_Studio)
+[![Version](https://img.shields.io/badge/Version-25.0.2-orange)](https://github.com/James-HoneyBadger/Time_Warp_Studio)
 
 Time Warp Studio is a desktop programming environment for people who like old
 computers. It is the one the 1980s promised and never quite delivered: a full IDE,
@@ -204,12 +204,12 @@ exercised by the command matrix.
 | **Logo** | Turtle Graphics / Educational | 1967 | Whole-program |
 | **PILOT** | Computer-Aided Instruction | 1969 | Line-by-line |
 | **FOCAL** | Formula calculator / Teaching | 1969 | Line-by-line |
+| **Forth** | Stack / Words all the way down | 1970 | Whole-program |
 | **Scheme** | Functional / Lisp dialect | 1975 | Whole-program |
 | **CHIP-8** | Bytecode machine / Assembly | 1977 | Whole-program |
 | **COMAL** | Structured BASIC / Educational | 1979 | Line-by-line |
 | **REXX** | Scripting / String processing | 1979 | Line-by-line |
 | **Smalltalk** | Object-oriented / Messages all the way down | 1980 | Whole-program |
-| **Forth** | Stack / Words all the way down | 1970 | Whole-program |
 
 ### The IDE, in detail
 
@@ -245,8 +245,9 @@ exercised by the command matrix.
 
 ### What is still being built
 
-What remains unbuilt is a short list — an automatic update check and Snap
-packaging. It is tracked in
+What remains unbuilt is a short list — an automatic update check, Snap packaging, an
+arm64 AppImage, a static build and automatic publishing to a distribution repository.
+It is tracked in
 [docs/ROADMAP.md](docs/ROADMAP.md), which is worth a look before a missing feature is
 reported as a regression, and each item is registered in
 [`native/share/unbuilt.txt`](native/share/unbuilt.txt) so that shipping one without
@@ -289,7 +290,7 @@ See [docs/lessons/](docs/lessons/README.md) for the student and teacher guides.
 
 ### What ships with it
 
-- **82 example programs** across the eleven languages, including a **showcase** per
+- **95 example programs** across the eleven languages, including a **showcase** per
   language that walks its whole surface and ends in a drawing, and
   [`star_patrol.bas`](Examples/basic/star_patrol.bas) — a small game on a
   fixed-coordinate screen. They are worth reading as reference material as much as
@@ -305,7 +306,7 @@ See [docs/lessons/](docs/lessons/README.md) for the student and teacher guides.
 - **Error hints**, which offer a syntax suggestion beside an interpreter's error
   message.
 - **Eleven language tutorials**, one per language, under `docs/tutorials/`.
-- **The machine manuals**: the HB-1's five books and the CHIP-8's three, with
+- **The machine manuals**: the HB-1's six books and the CHIP-8's three, with
   [the machines](docs/MACHINES.md) introducing them.
 
 ---

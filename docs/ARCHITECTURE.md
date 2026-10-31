@@ -1,6 +1,6 @@
 # Architecture Guide
 
-## Time Warp Studio v25.0.1 — System Design and Implementation
+## Time Warp Studio v25.0.2 — System Design and Implementation
 
 > **This page describes the shipping product.** It was rewritten alongside the move
 > to C++20 / Qt6. Earlier revisions documented the PySide6 implementation, which has
@@ -425,15 +425,17 @@ menu can show it on demand.
 
 ### Languages
 
-`native/src/ui/language.cpp` holds the table: display name, settings key and file
-extensions for each of the six, plus `languageFromKey` and `languageForFile`. The enum
-order matches the Python registry's, and new languages are **append-only**, because
-persisted state references these by identity rather than by position.
+`native/src/ui/language.cpp` is a Qt adapter over the one table, which lives in
+`native/include/timewarp/lang/registry.hpp`: display name, protocol key and file
+extensions for each of the eleven, read by the executors, the shell and the gates
+alike. The UI side adds `languageFromKey` and `languageForFile`. The enum order
+matches the registry's, and new languages are **append-only**, because persisted
+state references these by identity rather than by position.
 
 `languageForFile` answers `Unknown` for an unrecognised extension rather than falling
-back to BASIC. The Python registry does fall back; here that fallback is the *caller's*
-decision, because guessing would hide the fact that the file name says nothing about
-the language.
+back to BASIC. The removed Python registry fell back; here that fallback is the
+*caller's* decision, because guessing would hide the fact that the file name says
+nothing about the language.
 
 ### Styling
 
@@ -587,15 +589,16 @@ Nothing crosses a process boundary to run a program. `timewarp_lang` and
 learner's program in the same process through `RecordingHost`, and the gates that
 answer "did the port stay faithful" drive the same binaries the IDE does.
 
-### The protocol
+### The protocol (until 18.0)
 
+<!-- history -->
 JSON lines, one message per line.
 
 **In** (GUI → worker):
 
 | Message | Meaning |
 | --- | --- |
-| `run` | Run a program. The source travels as a JSON string, so any program text is safe |
+| `run` | Run a program. The source travelled as a JSON string, so any program text was safe |
 | `in-reply` | Answer a pending input request |
 | `stop` | Stop the program |
 
@@ -611,20 +614,26 @@ JSON lines, one message per line.
 | `in` | The program is waiting for a line of input |
 | `done` | The run ended: `ok`, an error string, and any unsupported features |
 
-Three things the bridge is careful about:
+Three things the bridge was careful about:
 
-- **A worker that dies is an error, not a hang.** A process that exits without a `done`
-  message is reported as a failure, with the stderr text, rather than leaving a run that
-  never finishes.
-- **A message can be split across reads.** `QProcess::readyRead` says nothing about
-  message boundaries, so partial lines are buffered until their newline arrives.
-- **A stray `print` cannot corrupt the protocol.** The worker redirects its own stdout
-  for exactly that reason; stderr is captured separately and only ever shown as
+- **A worker that died was an error, not a hang.** A process that exited without a `done`
+  message was reported as a failure, with the stderr text, rather than leaving a run that
+  never finished.
+- **A message could be split across reads.** `QProcess::readyRead` said nothing about
+  message boundaries, so partial lines were buffered until their newline arrived.
+- **A stray `print` could not corrupt the protocol.** The worker redirected its own stdout
+  for exactly that reason; stderr was captured separately and only ever shown as
   diagnostics.
 
-`pose` is a signal rather than a canvas command because painting the *marker* is not
+`pose` was a signal rather than a canvas command because painting the *marker* is not
 something the command stream expresses: its commands say what to draw, not where the
 turtle ended up.
+<!-- /history -->
+
+The in-process shape of those messages is what an executor returns and what it sends
+through the `TurtleHost` it was given: `native/include/timewarp/lang/turtle_host.hpp`
+is that contract, and the drawing commands it queues are the ones this section used
+to carry as JSON.
 
 ### Finding the worker (until 17.0)
 
@@ -658,33 +667,39 @@ reference did when its extra was missing.
 | `languages/` | The ten reference executors, and `base.py`, which documents the protocol |
 | `graphics/` | `turtle_state.py` |
 | `features/` | Language-level modules reached *by name* from a program |
-| `utils/` | `expression_evaluator.py` — the reference `timewarp_expr` is gated against — plus error hints and validators |
+| `utils/` | `expression_evaluator.py` — what `timewarp_expr` was gated against — plus error hints and validators |
 | `tests/` | The engine's own suite, plus `command_table.py` |
 
 ### The executor pattern
 
-Each language is a **function**, not a class. `languages/base.py` documents the
-protocol — both execution modes have the *same* signature and differ only in what
+Each language is a **function**, not a class. `native/include/timewarp/lang/executor.hpp`
+declares the one signature both execution modes share — they differ only in what
 `source` holds:
 
-```python
-def execute_logo(interpreter: Interpreter, source: str, turtle: TurtleState) -> str:
-    """Execute the source and return the text to display."""
+```cpp
+using Executor = std::string (*)(Interpreter&, std::string_view, TurtleHost&);
 ```
 
-- **Whole-program executors** receive the entire source. Scheme, CHIP-8, Logo and
-  Smalltalk are dispatched through `_WHOLE_PROGRAM_EXECUTORS` in
-  `core/interpreter.py`.
-- **Line-by-line executors** are called once per logical line/command: BASIC, PILOT,
-  Logo, COMAL, REXX, FOCAL and APL. Logo names the parameter `command` for that
-  reason, and splits multiple commands on one line itself.
+- **Whole-program executors** receive the entire source: CHIP-8, Logo, Smalltalk and
+  Forth, which is what `whole_program` in the registry marks and
+  `is_whole_program` reads. Scheme is whole-program too, but it is not in this table:
+  it is the explicit-stack machine in `timewarp_scheme`, and `executor_for` answers
+  `nullptr` for it.
+- **Line-by-line executors** are called once per logical line or command: BASIC,
+  APL, PILOT, FOCAL, COMAL and REXX. BASIC names the parameter `command` for that
+  reason.
+
+The Python reference had the same contract, with `Interpreter`, `str` and
+`TurtleState` in those positions; the C++ signature is the same shape so the ported
+executor kept its behaviour and its tests.
 
 The contract:
 
 **Must not** store UI references, update the canvas directly, or modify the window.
 
 **May** read and write interpreter state — variables, turtle position — and return
-strings as output.
+strings as output. Drawing crosses the thread boundary as commands on a
+`CanvasCommandQueue`, which the GUI thread drains into `TurtleCanvas`.
 
 Jumping between lines is done by assigning `interpreter.current_line`, a 0-based index
 into `interpreter.program_lines`. After the executor returns, if `current_line` is not

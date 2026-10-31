@@ -47,7 +47,7 @@ No parameters.
 ```json
 {
   "apiVersion": "1.0",
-  "version": "16.4.0",
+  "version": "<version, e.g. 25.0.2>",
   "languages": [{"key":"basic","display":"BASIC","wholeProgram":false}, ...],
   "features": {"repl":true,"sql":true,"projects":true,
                "watchExpressions":true,"dataBreakpoints":true,
@@ -67,7 +67,7 @@ Returns `true` and ends the process after the response.
 
 | Parameter | Type | |
 | --- | --- | --- |
-| `language` | string | `basic`, `pilot`, `logo`, `comal`, `rexx`, `scheme`, `focal`, `chip8`, `apl`, `smalltalk` |
+| `language` | string | `basic`, `pilot`, `logo`, `comal`, `rexx`, `scheme`, `focal`, `chip8`, `apl`, `smalltalk`, `forth` |
 | `source` | string | the program text |
 | `sourceBase64` | string | alternative to `source`, for a binary CHIP-8 ROM |
 | `inputs` | array of strings | answers to `ASK`/`INPUT` prompts, in order; an exhausted list answers empty |

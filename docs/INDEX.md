@@ -68,6 +68,7 @@ One per active language, each written to be worked through:
 | [focal.md](tutorials/focal.md) | FOCAL — line labels and branching on a sign |
 | [chip8.md](tutorials/chip8.md) | CHIP-8 — opcodes and a 64x32 framebuffer |
 | [smalltalk.md](tutorials/smalltalk.md) | Smalltalk — objects and messages |
+| [forth.md](tutorials/forth.md) | Forth — stack, dictionary, words |
 
 ---
 

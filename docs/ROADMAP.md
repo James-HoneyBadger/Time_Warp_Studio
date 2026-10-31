@@ -58,7 +58,7 @@ a memory of a conversation.
 | Input | A program can ask for a line and wait for it — `INPUT`, FOCAL's `ASK`, PILOT's `ACCEPT`, REXX's `PULL` — on whichever engine runs it; BASIC's round trip is asserted on the engine, on `NativeRunner`, and through the API |
 | HB-1 machine | Tools > HB-1 Computer (`Ctrl+Alt+W`): one CRT with a boot intro, a language ROM socket for all eleven languages, TEXT/SPLIT/GRAPHICS modes, a program editor, a turtle canvas, and a prompt with BASIC direct mode; CONFIG (`Ctrl+,`) sets the boot ROM and screen, start-up message, phosphor palette, text sizes and CRT glass; each ROM's program, the ROM, the screen mode and the configuration persist; HB DOS 1.0 stores programs on a 512-sector volume with an Apple DOS-style catalogue, lock bits and a two-step INIT. Manuals: [the machines](MACHINES.md), [HB-1](hb1/README.md) |
 | CHIP-8 machine | Tools > CHIP-8 Emulator (`Ctrl+Shift+M`): a live 60 Hz CHIP-8 with a 64×32 screen (128×64 hi-res), keypad, Run/Pause/Step/Reset, 1–2000 opcodes per frame, register/memory/listing inspector, sound, and a ROM library the user points at a folder. It assembles listings and loads binary ROMs; the editor's CHIP-8 Run is the whole-program path. Manuals: [machine](chip8/README.md), [assembler](chip8/assembly.md), [instruction set](chip8/instruction-set.md) |
-| Languages | 11 languages, 82 example programs, three of them written for the HB-1 |
+| Languages | 11 languages, 95 example programs, nine of them written for the HB-1 |
 | Native engines | Expression evaluator (`timewarp_expr`) and Scheme (`timewarp_scheme`) |
 | Bridged engines | None. Every language runs in process, nothing the product runs starts Python, and the reference engine itself is deleted — the parity gate compares against a frozen corpus instead |
 | Native executors | All eleven — BASIC, FOCAL, PILOT, COMAL, APL and REXX line-by-line; CHIP-8, Logo, Smalltalk, Scheme and Forth whole-program |
@@ -69,7 +69,7 @@ a memory of a conversation.
 | Database | A SQLite-backed Database tab, the shared `SQL` statement in nine languages, scripts, tables and schema; compiled programs link SQLite |
 | Automation | JSON-RPC over stdin/stdout (`language.run`, `repl.*`, `debug.*`, `sql.*`, `project.*`, `watch.evaluate`) and the `twc` terminal compiler |
 | Packaging | `make install`; tagged releases build `.deb`, `.rpm`, AppImage, tarball and container artifacts for Linux |
-| Quality gates | 26 CTest suites in 4 build configurations, on Linux; the frozen-corpus gate over 671 programs (479 language, 192 Scheme); 566 command rows run as programs and through the REPL; 81 example programs through the smoke gate; and the documentation gates (links, claims, version, Markdown lint) |
+| Quality gates | 26 CTest suites in 4 build configurations, on Linux; the frozen-corpus gate over 671 programs (479 language, 192 Scheme); 566 command rows run as programs and through the REPL; 94 example programs through the smoke gate; and the documentation gates (links, claims, version, Markdown lint) |
 
 ---
 
@@ -275,8 +275,8 @@ a curriculum maintainable: without it, a lesson whose answer does not work would
 the tree looking correct, because data is not exercised by anything unless something
 exercises it deliberately. See `docs/lessons/FORMAT.md`.
 
-**CHIP-8 runs SuperChip hi-res.** Both the C++ machine and the Python reference
-implement the 1.1 core -- 64x32 and 128x64 modes, 00Cn/00FB/00FC scrolls, 00FD
+**CHIP-8 runs SuperChip hi-res.** The C++ machine implements the 1.1 core — the
+reference did too, which is why the recordings cover it — 64x32 and 128x64 modes, 00Cn/00FB/00FC scrolls, 00FD
 exit, DXY0's 16x16 sprite, FX30's 8x10 font and the FX75/FX85 flags -- so the
 hi-res and SuperChip ROMs a collection brings can run. MegaChip's planes and audio
 are not implemented and are reported as unknown opcodes rather than half-drawn.
@@ -311,7 +311,7 @@ Every language runs in C++ now, and the Python engine those ports were judged
 against has been deleted. The three jobs it kept have each been taken over:
 
 1. **The parity gate** compares each port with a *recording* —
-   `native/tests/golden/lang_corpus.json.gz`, the reference's answers to 470
+   `native/tests/golden/lang_corpus.json.gz`, the reference's answers to 479
    programs, which carry the program text so the corpus outlives the engine.
 2. **`make command-matrix` and `make smoke`** (`time_warp_gates commands` and
    `smoke`) drive the native engines, so a language that runs and draws nothing is
@@ -329,7 +329,7 @@ engines the product actually ships rather than against the ones that were ported
 narrowing variable types, `SUB`/`FUNCTION`, records and the file channel, the VGA
 statements, and the reference's Logo fallback (a `.bas` file's `FORWARD` is
 Logo's `FORWARD`) are all in `native/src/lang/basic*.cpp`. It is gated by the
-same rows and examples the reference is: 138 programs, 0 differences.
+same rows and examples the recording holds: 129 programs, 0 differences.
 
 Lesson checking, the curriculum and the classroom are native, the worker classes are
 gone from the application and from the installed payload, and the reference engine
@@ -358,12 +358,12 @@ and the command table exercises them. What is now true, and what is still limite
   as several `SOUND` statements.
 - **`SAY` refuses rather than pretending.** There is no speech synthesiser in
   the build, and the reference's was an optional `pyttsx3` it never shipped
-  either. Both answer `Speech synthesis not available`, which the parity gate
-  compares.
+  either. Both answered `Speech synthesis not available`, which is why the
+  recording holds that string.
 - **`INKEY$` reads the canvas's keyboard** while a program runs. A headless run
   has no keyboard and answers empty, which is what the matrix records.
 - **`TIME$`, `DATE$` and `TIMER` read the machine's local clock**, as the
-  reference does. They are not constants, so the parity rows assert their shape
+  reference did. They are not constants, so the parity rows assert their shape
   (`LEN(TIME$)`) rather than a value.
 - **`SHELL` stays blocked.** The reference refuses it for security and the port
   keeps that answer.
@@ -397,7 +397,7 @@ curriculum from `native/share/lessons.json` — the file moved out of the refere
 package, so a package and a checkout teach the same course — and judges a program
 through the engines with `RecordingHost` as the surface, which is what makes a
 lesson checkable on a machine with no window. `time_warp_teach validate` runs all
-sixty worked answers and all sixty starters through it: every answer passes, every
+sixty-six worked answers and all sixty-six starters through it: every answer passes, every
 starter fails, every language is taught. `time_warp_learn` is the learner's side of
 the same library — `list`, `show`, `start`, `check`, `hint`, `solution`,
 `progress`, `reset` — so a learner at a terminal and a learner in the panel are

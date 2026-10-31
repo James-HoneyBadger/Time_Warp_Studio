@@ -19,6 +19,8 @@ void test_moving_the_cursor_updates_the_status_bar();
 void test_editing_marks_the_document_and_the_title();
 void test_choosing_a_language_sticks();
 void test_closing_tabs();
+void test_closing_documents_in_a_split();
+
 void test_saving_a_document();
 void test_a_file_that_cannot_be_read_is_refused();
 void test_a_byte_order_mark_is_not_part_of_the_program();

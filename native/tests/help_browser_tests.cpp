@@ -97,7 +97,11 @@ void test_contents_come_from_the_index() {
         TW_CHECK(!section.topics.isEmpty());
         if (section.title == QLatin1String("Language tutorials")) {
             saw_tutorials = true;
-            TW_CHECK_EQ(section.topics.size(), 10);
+            // One row per language, counted from the language table rather than
+            // from a number here: the table was pinned at ten, and Forth was in
+            // `docs/tutorials/` and missing from this section for three releases.
+            TW_CHECK_EQ(section.topics.size(),
+                        timewarp::ui::allLanguages().size());
         }
         for (const timewarp::ui::HelpTopic& topic : section.topics) {
             ++topics;

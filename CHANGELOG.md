@@ -2,6 +2,62 @@
 
 <!-- history: all -->
 
+## [25.0.2] - 2026-10-31
+
+The same reading of the tree that found 25.0.1's bugs, continued for another hour:
+two of the three ways to close a document were wired to nothing, and the number in
+every guide that says how many programs ship was two releases out of date.
+
+### Fixed
+
+- **Close Other Tabs and Close All Tabs did nothing.** The tab's context menu emits
+  `closeOthersRequested` and `closeAllRequested`, and nothing has connected either
+  since the Qt rewrite — so of the three close entries the menu offers, one worked.
+  Both panes answer them now, through one implementation that asks about every
+  unsaved document before it removes any, so a Cancel halfway through a batch leaves
+  the window as it was rather than half-emptied.
+- **A document on the split's right-hand side is saved before it closes.** That
+  pane's ✕ called `removeTab` and stopped there, so an edited program on the right
+  went without the question the same program on the left gets. Closing its last
+  document now closes the split, which is what Move Tab to Other Pane already did
+  when it emptied the pane: a split with a blank rectangle in one half is the blank
+  rectangle the split exists to avoid.
+- **Closing the last document keeps the language you chose.** The main pane's lone
+  document was replaced with a fresh one even when it was the untouched blank the
+  window opens with, which renamed the tab and reset its language. That one case is
+  left alone now; every other last document is still replaced, because an editor area
+  of empty grey reads as a window that has broken.
+- **`Ctrl+W` closes the document the cursor is in.** It always closed the main pane's
+  current tab, so with the cursor in the split's right-hand pane it closed the wrong
+  document.
+
+### Changed
+
+- **The guides state the tree's own counts.** The example count had been 63 in two
+  places and 82 in three since the machines' twelve programs landed at 25.0.1: it is
+  95 shipped, 94 through `make smoke` and 54 required to draw, and each guide now
+  says the one it means. The suite count was 24 where there are 26.
+- **Forth is in the two lists it was missing from.** It was last in the README's
+  language table, after Smalltalk's 1980, and absent from the Help browser's tutorial
+  section, which reads `docs/INDEX.md`. The test that pinned that section at ten rows
+  now counts the language table instead — a number a new language cannot fall out of.
+- **`docs/README_TESTING.md` describes the lint this tree has.** It promised `make
+  lint` was ruff over a bridge that no longer exists and that the pre-commit hooks ran
+  `ruff-format`; `make lint` is the `-Werror` build, `make lint-md` is the Markdown
+  rules, and `detect-secrets` is the hook. The PR template and `CONTRIBUTING.md`'s
+  checklist lost their ruff items for the same reason.
+- **`docs/ARCHITECTURE.md` describes the code that exists.** The language table is
+  `native/include/timewarp/lang/registry.hpp` rather than a `language.cpp` copy, the
+  worker protocol is marked as history in the way the rest of that section is, and the
+  executor pattern is stated as its C++ signature with Forth in the whole-program list
+  and Scheme's absence from it explained.
+- **Smaller corrections:** `docs/API.md` no longer pins its example `version` at
+  `16.4.0` and lists `forth` among the languages; `docs/ROADMAP.md` counts 479
+  recorded programs rather than 470 and 129 BASIC programs rather than 138;
+  `docs/chip8/` and `docs/tutorials/chip8.md` say the reference is deleted and the
+  recordings are what cover it; `Examples/CATALOG.md` describes the smoke gate rather
+  than a subprocess verifier that was removed with the interpreter.
+
 ## [25.0.1] - 2026-10-31
 
 The first release after the unfreeze, and the review of 25.0.0's own change set —

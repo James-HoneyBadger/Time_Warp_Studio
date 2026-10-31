@@ -621,7 +621,7 @@ PRINT "Graphics complete"
 
 A BASIC program may also drive the turtle with Logo's words. A statement BASIC
 does not recognise whose first word is a Logo command is handed to the Logo
-executor — the same blend the reference makes — which is how a program can mix
+executor — the same blend the reference made — which is how a program can mix
 `PRINT` with direction-and-distance drawing:
 
 ```basic

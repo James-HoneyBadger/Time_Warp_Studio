@@ -61,6 +61,22 @@ from the desktop menu, or run the `time_warp_ide` binary directly.
 - **REPL bar** — one command at a time under the editor.
 - **Status bar** — language, cursor position, run state and the document name.
 
+### Closing documents
+
+The tab's ✕, **Close Tab** in the tab's context menu, and **File > Close Tab**
+(`Ctrl+W`) close a document, asking first when it has unsaved changes. **Close Other
+Tabs** and **Close All Tabs**, in the same context menu, ask about every document
+before removing any, so a Cancel leaves the window exactly as it was; **Close Other
+Tabs** does not ask about the one it keeps.
+
+Two ends are special. Closing the main pane's only document, when it has never been
+saved and has nothing in it, leaves it as it is — its tab name and the language you
+picked included — because closing it would only put an identical blank document
+back. And closing the split's second pane's last document closes the split, because a
+pane with no documents in it is the blank rectangle the split exists to avoid. Any
+other last document is replaced by a fresh blank one, so the editor is never left
+empty.
+
 ### Run, stop and input
 
 | Action | How |

@@ -607,8 +607,17 @@ public slots:
     bool openFileDialog();
     /// Closes the current tab, prompting for unsaved changes first.
     bool closeCurrentTab();
-    /// Closes the tab at `index`, prompting for unsaved changes first.
+    /// Closes the tab at `index` in the main editor pane, prompting for unsaved
+    /// changes first.
     bool closeTab(int index);
+    /// Closes every tab of `pane` except the one at `keep`, asking about each
+    /// unsaved document before anything is removed, so a Cancel leaves the pane
+    /// exactly as it was.
+    bool closeOtherTabs(QTabWidget* pane, int keep);
+    /// Closes every tab of `pane` by the same rule. The main pane keeps its
+    /// untouched scratch document when that is all it held and is left with a
+    /// fresh one otherwise; the split's second pane is closed.
+    bool closeAllTabs(QTabWidget* pane);
 
 public:
     /// Runs the current document.
@@ -747,6 +756,17 @@ private:
     /// Offers to save a modified document. Returns false when the user cancels,
     /// which the caller must treat as "abandon the operation".
     [[nodiscard]] bool maybeSave(CodeEditor* editor);
+
+    /// Closes `index` in `pane`, prompting first, and applies what an empty pane
+    /// means: a fresh document in the main pane, a closed split in the second.
+    [[nodiscard]] bool closeTabIn(QTabWidget* pane, int index);
+    /// The one implementation behind `closeOtherTabs` and `closeAllTabs`.
+    /// `keep` is the index left open, or a negative number for "none".
+    [[nodiscard]] bool closeDocuments(QTabWidget* pane, int keep);
+    /// True when `pane` holds only the document at `index`, and that document has
+    /// never been saved, is empty and is unmodified -- the scratch tab the
+    /// last-close rule keeps rather than replaces.
+    [[nodiscard]] static bool isScratchOnly(const QTabWidget* pane, int index);
 
     /// Rewrites one tab's caption from its path and modification state.
     void updateTabLabel(CodeEditor* editor);
