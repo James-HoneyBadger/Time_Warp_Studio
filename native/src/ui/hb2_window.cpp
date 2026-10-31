@@ -10,11 +10,12 @@
 #include <QAction>
 #include <QApplication>
 #include <QCloseEvent>
-#include <QFile>
 #include <QComboBox>
+#include <QFile>
 #include <QFont>
 #include <QFontDatabase>
 #include <QHBoxLayout>
+#include <QImage>
 #include <QKeyEvent>
 #include <QLabel>
 #include <QLineEdit>

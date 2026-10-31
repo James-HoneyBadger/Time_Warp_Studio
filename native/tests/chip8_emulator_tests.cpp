@@ -11,6 +11,8 @@
 
 #include <QAction>
 #include <QApplication>
+#include <QElapsedTimer>
+#include <QFileInfo>
 #include <QHostAddress>
 #include <QTcpServer>
 #include <QTcpSocket>

@@ -12,6 +12,7 @@
 #include "ui_layout/support.hpp"
 
 #include <QComboBox>
+#include <QDir>
 
 #include "timewarp/ui/app_paths.hpp"
 #include "timewarp/ui/hb2_window.hpp"
