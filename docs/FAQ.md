@@ -32,7 +32,7 @@ Time Warp Studio is an old-school desktop programming environment. It runs eleve
 interpreters from 1964–1980 in one IDE, with an integrated turtle graphics canvas,
 an output console and a debugger that works in every one of them.
 
-It also carries two complete machines: the **HB-1**, a 1982 home computer from a
+It also carries three machines: the **HB-1**, a 1982 home computer from a
 parallel universe, and the **CHIP-8**, the 1977 virtual machine. Both are real
 programs you can type at, debug and save to — see
 [the machines](MACHINES.md).
@@ -45,7 +45,7 @@ a turtle canvas with zoom, pan, scrubber playback, GIF recording and raster, SVG
 PDF and HTML export; a debugger that works in all eleven languages, with watches,
 data breakpoints, a Variables panel and telemetry; projects; SQLite; 22 lessons
 and 66 checkpoints with classroom tools; a JSON-RPC API and a standalone `twc`
-compiler; 35 themes with high contrast and text sizes; the two machines; and help
+compiler; 35 themes with high contrast and text sizes; the machines; and help
 inside the application. The full list, with links, is in the
 [README](../README.md#what-else-is-in-the-workbench).
 
@@ -78,7 +78,7 @@ first session is readable either way.
 
 ### Does it need an internet connection?
 
-No. The core features work offline: the eleven interpreters, the two machines, the
+No. The core features work offline: the eleven interpreters, the machines, the
 debugger, the lessons and the SQL database are all inside the application. The one
 feature that can use a connection is the optional [AI assistant](AI.md), which is
 off until you configure a service and which can point at a model running on this

@@ -1,6 +1,6 @@
 # Roadmap
 
-Time Warp Studio is an old-school programming environment for eleven languages and two machines. This page is
+Time Warp Studio is an old-school programming environment for eleven languages and three machines. This page is
 the honest state of it: what works, what is next, and what is deliberately not
 being built.
 
@@ -24,7 +24,7 @@ will not change again. Nothing here removes it: an archive is a thing you keep.
 
 **Version 25.0 is the current design,
 *timey wimey wibbly wobbly, time & multiuniverse travel computing*.** The eleven
-languages, the IDE, the two machines, the curriculum and the documentation set are
+languages, the IDE, the machines, the curriculum and the documentation set are
 complete, and the gates in [README_TESTING.md](README_TESTING.md) prove it on every
 push. The feature set is **not frozen**: a release after this one takes fixes and
 features alike, and each arrives with the test that proves it.
@@ -58,6 +58,7 @@ a memory of a conversation.
 | Input | A program can ask for a line and wait for it — `INPUT`, FOCAL's `ASK`, PILOT's `ACCEPT`, REXX's `PULL` — on whichever engine runs it; BASIC's round trip is asserted on the engine, on `NativeRunner`, and through the API |
 | HB-1 machine | Tools > HB-1 Computer (`Ctrl+Alt+W`): one CRT with a boot intro, a language ROM socket for all eleven languages, TEXT/SPLIT/GRAPHICS modes, a program editor, a turtle canvas, and a prompt with BASIC direct mode; CONFIG (`Ctrl+,`) sets the boot ROM and screen, start-up message, phosphor palette, text sizes and CRT glass; each ROM's program, the ROM, the screen mode and the configuration persist; HB DOS 1.0 stores programs on a 512-sector volume with an Apple DOS-style catalogue, lock bits and a two-step INIT. Manuals: [the machines](MACHINES.md), [HB-1](hb1/README.md) |
 | CHIP-8 machine | Tools > CHIP-8 Emulator (`Ctrl+Shift+M`): a live 60 Hz CHIP-8 with a 64×32 screen (128×64 hi-res), keypad, Run/Pause/Step/Reset, 1–2000 opcodes per frame, register/memory/listing inspector, sound, and a ROM library the user points at a folder. It assembles listings and loads binary ROMs; the editor's CHIP-8 Run is the whole-program path. Manuals: [machine](chip8/README.md), [assembler](chip8/assembly.md), [instruction set](chip8/instruction-set.md) |
+| HB-2 machine | `time_warp_gates hb`: a bus with the 1982 map as `MODE 0`, a 640 × 480 framebuffer with a blitter and sixteen sprites, four channels of 22 050 Hz audio, a pointer, a clock, a serial port, the `INT` services and HB-16 with its assembler and disassembler. Headless: no IDE panel yet. Manuals: [HB-2](hb2/README.md), [HB-16](hb2/instruction-set.md) |
 | Languages | 11 languages, 95 example programs, nine of them written for the HB-1 |
 | Native engines | Expression evaluator (`timewarp_expr`) and Scheme (`timewarp_scheme`) |
 | Bridged engines | None. Every language runs in process, nothing the product runs starts Python, and the reference engine itself is deleted — the parity gate compares against a frozen corpus instead |

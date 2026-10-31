@@ -80,6 +80,17 @@ check-built:
 golden-check: gates-built
 	@$(GATES) golden --all
 
+# The HB-2's six demonstration listings, through the machine's own harness. A listing
+# that assembles, runs and leaves the screen as it found it fails here, because a
+# machine that runs and draws nothing is the bug this tree treats as the bug.
+hb-check: gates-built
+	@set -e; for demo in palette blitter sprite hello chord desktop; do \
+		quiet=$$($(GATES) hb Examples/hb2/$$demo.s --ticks 4 --quiet 2>&1) || { \
+			echo "$$quiet"; exit 1; }; \
+		echo "  $$demo: ok"; \
+	done
+	@echo "hb: 6 demonstration programs ran and drew"
+
 # The curriculum, checked by the same library the Lessons panel asks: every
 # worked answer passes its checkpoint and every starter fails it. Needs the build,
 # because the tool that does it is `time_warp_teach`.
@@ -89,8 +100,8 @@ teach-check:
 # Every gate in one target: the suites, the four program gates, the curriculum,
 # and the documentation checks -- including the Markdown lint, which is a gate in
 # CI and was the one check a local `test-all` did not run.
-test-all: test smoke command-matrix repl-matrix teach-check golden-check doc-links \
-          doc-claims lint-md tree-check registry-check structure-check
+test-all: test smoke command-matrix repl-matrix teach-check golden-check hb-check \
+          doc-links doc-claims lint-md tree-check registry-check structure-check
 
 # Warnings are errors in every target, so a lint pass is the build passing. Kept as
 # a target because `make lint` is what a contributor types and because the guides

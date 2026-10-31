@@ -1,6 +1,6 @@
 # Time Warp Studio - AI Coding Agent Instructions
 
-**Project:** Time Warp Studio - an old-school programming environment: eleven languages, an IDE, and two complete machines  
+**Project:** Time Warp Studio - an old-school programming environment: eleven languages, an IDE, and three machines  
 **Maintainer:** James Temple <james@honey-badger.org>  
 **Last Updated:** October 2026
 
@@ -8,7 +8,7 @@
 
 ## Project Overview
 
-Time Warp Studio is an old-school desktop programming environment built with **C++20 and Qt6** (Qt 5.15 for the Windows 7 build): a unified IDE for eleven interpreters from 1964 to 1980, with turtle graphics, a debugger in every language, and two complete machines — the HB-1 home computer and a live CHIP-8. A checked lesson curriculum ships for teaching, but the product is framed for retro-computing hobbyists first.
+Time Warp Studio is an old-school desktop programming environment built with **C++20 and Qt6** (Qt 5.15 for the Windows 7 build): a unified IDE for eleven interpreters from 1964 to 1980, with turtle graphics, a debugger in every language, and three machines — the HB-1 home computer and a live CHIP-8. A checked lesson curriculum ships for teaching, but the product is framed for retro-computing hobbyists first.
 
 **Supported Languages:** BASIC, APL, Logo, PILOT, FOCAL, Scheme, CHIP-8, COMAL, REXX, Smalltalk and Forth.
 
@@ -296,7 +296,7 @@ needs an interpreter: if a guide names a `python3` command it is out of date, an
   also the editor's whole-program executor) and `native/src/ui/chip8_*.cpp`
   (`Chip8Window`, the 60 Hz `Chip8Emulator`, the screen, the ROM library). Manuals:
   `docs/chip8/`. Both machines are introduced, and the design premise stated, in
-  `docs/MACHINES.md` — the two machines are a centrepiece, not a demo.
+  `docs/MACHINES.md` — the machines are a centrepiece, not a demo.
 - **Lessons**: `native/src/lessons/` (`timewarp_lessons`: the curriculum, the verifier,
   progress, and the classroom with rosters, handouts, marking and bundles),
   `native/src/ui/panels_lessons.cpp` (`LessonPanel`), and the two commands
@@ -422,7 +422,7 @@ Each fact has one home; the other guides link to it rather than restating it.
 
 | Book | Owns |
 | --- | --- |
-| `docs/MACHINES.md` | The two machines as a set, and the parallel-universe premise item by item |
+| `docs/MACHINES.md` | The machines as a set, and the parallel-universe premise item by item |
 | `docs/hb1/` | The HB-1: owner's manual, ROM library, HB DOS reference, CONFIG reference, engineering companion |
 | `docs/chip8/` | The CHIP-8: machine manual, assembler, instruction set |
 | `docs/USER_GUIDE.md` | The IDE: projects, the REPL bar, debugging, SQL, the assistant, terminal, automation, appearance |

@@ -85,7 +85,8 @@ native/
     ├── canvas_queue_bench.cpp        queue throughput and coalescing ratio
     ├── player.cpp                    the standalone audio player
     ├── gates/                        `time_warp_gates`: smoke, commands, repl,
-    │                                 golden and tree -- every program gate
+    │                                 golden, tree, registry, structure and hb --
+    │                                 every program gate, and the HB-2's harness
     ├── docs/                         `time_warp_docs`: links, claims, version, md
     ├── icon/                         `time_warp_icon`: the packaged icons
     └── twc/                          the `./twc` launcher's C++ support
@@ -131,6 +132,10 @@ make golden-check
 # Every command row: as a program through `time_warp_check`, and through the REPL
 ./build/time_warp_gates commands
 ./build/time_warp_gates repl
+
+# The HB-2: assemble a listing, run the machine, and see the registers and the screen
+./build/time_warp_gates hb Examples/hb2/desktop.s --ticks 4 --screen
+./build/time_warp_gates hb --map
 
 # The lessons: the curriculum, and the two tools that drive it
 ./build/time_warp_teach validate     # runs all 66 solutions through the engine

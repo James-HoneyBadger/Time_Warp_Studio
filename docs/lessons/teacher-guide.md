@@ -239,7 +239,7 @@ re-reads the class it has just changed.
 
 ## 6. Teaching from the front
 
-The two machines were made for a projector. The [HB-1](../hb1/README.md) boots
+The machines were made for a projector. The [HB-1](../hb1/README.md) boots
 into the language you are teaching (`CONFIG`, or the ROM selector), keeps a real
 editor on its PROGRAM page, and its prompt is a live session — so "what does
 `PRINT 6 * 7` do?" can be asked and answered without leaving the example. The

@@ -20,6 +20,7 @@
 //     time_warp_gates tree      the tree holds no Python
 //     time_warp_gates registry  the language table has one home
 //     time_warp_gates structure the files are still the size they were designed to be
+//     time_warp_gates hb        an HB-2 listing, through the machine, with its screen
 //
 // Each returns 0 only when every question it asked was answered.
 
@@ -143,5 +144,10 @@ struct ReplAnswer {
 [[nodiscard]] int runRegistry(const QStringList& arguments);
 /// Fails if a source file or the build file has grown past its budget.
 [[nodiscard]] int runStructure(const QStringList& arguments);
+
+/// The HB-2's harness: assemble a listing, run the machine for a few frames, and
+/// report the registers, the screen and a hash of the framebuffer. `--map` prints
+/// the memory map from the one table the bus routes with.
+[[nodiscard]] int runHb(const QStringList& arguments);
 
 }  // namespace timewarp::gates

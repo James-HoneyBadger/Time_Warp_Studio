@@ -53,6 +53,7 @@ add_executable(time_warp_gates
     tools/gates/tree.cpp
     tools/gates/registry.cpp
     tools/gates/structure.cpp
+    tools/gates/hb.cpp
 )
 # The gates read `timewarp/lang/registry.hpp` for the language table -- the header is
 # a constexpr table with no library behind it, so this is an include path, not a link.
@@ -60,7 +61,9 @@ target_include_directories(time_warp_gates PRIVATE tools/gates include)
 target_compile_definitions(time_warp_gates PRIVATE
     TIME_WARP_SOURCE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/..")
 find_package(ZLIB REQUIRED)
-target_link_libraries(time_warp_gates PRIVATE ${TIME_WARP_QT}::Core ZLIB::ZLIB)
+# The machine is Qt-free, so the harness links the machine rather than the UI: the
+# same object the suite drives, with no display involved.
+target_link_libraries(time_warp_gates PRIVATE timewarp::hb2 ${TIME_WARP_QT}::Core ZLIB::ZLIB)
 set_target_properties(time_warp_gates PROPERTIES
     AUTOMOC OFF)
 timewarp_enable_warnings(time_warp_gates)

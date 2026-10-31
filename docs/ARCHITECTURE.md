@@ -1,6 +1,6 @@
 # Architecture Guide
 
-## Time Warp Studio v25.0.3 — System Design and Implementation
+## Time Warp Studio v26.0.0 — System Design and Implementation
 
 > **This page describes the shipping product.** It was rewritten alongside the move
 > to C++20 / Qt6. Earlier revisions documented the PySide6 implementation, which has
@@ -31,7 +31,7 @@
 Time Warp Studio is a desktop workbench for old-school programming: eleven
 interpreters from 1964–1980 — **BASIC, APL, Logo, PILOT, FOCAL, Scheme, CHIP-8,
 COMAL, REXX, Smalltalk and Forth** — with an integrated turtle graphics canvas, and
-two complete machines. It is a C++20 / Qt 6 application for Linux, and all eleven
+three machines. It is a C++20 / Qt 6 application for Linux, and all eleven
 languages run in C++ inside it. There is no Python in the tree at all: the product,
 its tests, its gates and its documentation checks are one language.
 
@@ -324,7 +324,7 @@ touches it.
   scrubber be a view control rather than a mode the rest of the window has to
   know about.
 
-### The two machines
+### The machines
 
 Both machines are documented as machines, not as features: [MACHINES.md](MACHINES.md)
 is the premise, the [HB-1 books](hb1/README.md) and the

@@ -2,6 +2,68 @@
 
 <!-- history: all -->
 
+## [26.0.0] - 2026-10-31
+
+**The HB-2 exists.** The
+[Model 92 proposal](docs/hb1/model-92.md) -- the machine the same company would have
+shipped ten years after the HB-1 -- was written as a specification for after 25.0, and
+five of its eight proposals are now a machine with a suite, a harness and six
+demonstration programs.
+
+### Added
+
+- **A bus, and a map that is one table.** `devices.inc` holds every region; the bus
+  routes with it, `time_warp_gates hb --map` prints it, and
+  [the manual](docs/hb2/README.md) is written from it. An address no region claims
+  reads zero and refuses the write, and the refusal is counted rather than thrown.
+  `MODE 0` keeps the 1982 map whole -- text cells at `$8000`, attributes at `$9000`,
+  the I/O page at `$A000`, ROM at `$F000` -- so a 1982 program runs on this machine
+  without being told it is on a different one.
+- **A video chip.** 80 × 25 text (the 1982 tube, byte for byte), 320 × 200 × 256 and
+  640 × 480 × 16, a 256-entry RGB DAC, a blitter with six operations whose cost is
+  counted and reported, and sixteen 16 × 16 sprites composed in index order with a
+  collision register that clears when it is read.
+- **A sound chip.** Four channels of 8-bit PCM at 22 050 Hz with a three-stage
+  envelope, a 32-slot waveform bank a program can rewrite, and the 1982 latch as
+  channel zero so every existing `SOUND` still sounds. Deterministic: the same
+  registers and the same frames produce the same bytes, which is what lets a test
+  assert a chord sample by sample.
+- **The peripherals.** A pointer with a delta read once, two joysticks, a real-time
+  clock that advances on the frame tick and takes an injected reading, and a serial
+  port whose transmitted bytes a test can read.
+- **HB-16, and its tools.** A 16-bit processor with a 24-bit address space, eight
+  registers, six addressing modes, forty-four opcodes and a cycle table that is data.
+  An assembler with labels, `ORG`, `DB` (strings included), `DW`, `DS` and `EQU`, and
+  a disassembler that prints what the assembler accepts -- assemble, disassemble,
+  assemble returns the same bytes, asserted. A bad instruction, a zero divisor, a
+  stack overrun or an unknown service is a sentence naming the address, not a crash.
+- **An operating system, such as a 1992 one was.** Sixteen `INT` services: print,
+  fill, line, choose a mode, set the DAC, clear, print a string, place a sprite, read
+  the clock, write the serial port, load a pattern, play a note, write a waveform
+  sample, and exit.
+- **A snapshot.** The whole machine -- RAM, framebuffer, registers, processor -- saves
+  and restores with a format number, and a version it cannot read is refused rather
+  than half-loaded.
+- **`time_warp_gates hb`**, the machine's harness: assemble a listing, run it for a
+  few frames, and print the registers, the cycles, the video mode, a hash of the
+  framebuffer and the screen text. A program that runs and draws nothing fails it.
+- **Six demonstration programs** in `Examples/hb2`, each gated by `hb2_tests` and by
+  `make hb-check`: `palette`, `blitter`, `sprite`, `hello` (the 1982 text map written
+  by hand), `chord` and `desktop`.
+
+### Changed
+
+- **The guides say three machines**, because there are: `README.md`,
+  `docs/MACHINES.md`, `docs/INDEX.md` and the rest now introduce the HB-2 beside the
+  HB-1 and the CHIP-8, and the proposal page says which of its eight parts are built.
+
+### Notes
+
+The HB-2 is **headless**: it has no panel in the IDE, and its pixels are drawn by a
+chip no window is looking at yet. HB DOS 2.0, the round-robin scheduler and the module
+bay remain proposals. [The manual](docs/hb2/README.md#what-is-built-and-what-is-not)
+lists exactly what is and is not there, so no page promises a machine that is not.
+
 ## [25.0.3] - 2026-10-31
 
 The same reading of the tree, once more in the same place: the editor has two panes,

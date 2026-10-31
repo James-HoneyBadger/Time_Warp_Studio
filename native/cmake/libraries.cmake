@@ -119,6 +119,44 @@ target_link_libraries(scheme_bench PRIVATE timewarp::scheme)
 timewarp_enable_warnings(scheme_bench)
 
 # ---------------------------------------------------------------------------
+# HB-2, the machine
+#
+# The Model 92's bus, video chip, sound chip, clock, peripherals and HB-16
+# processor: Qt-free on purpose, because the harness that proves the machine
+# (`time_warp_gates hb`) and its suite must be able to run one without a display.
+# The window that shows it is a later proposal; this is the machine.
+# ---------------------------------------------------------------------------
+
+add_library(timewarp_hb2
+    src/hb2/asm.cpp
+    src/hb2/audio.cpp
+    src/hb2/bus.cpp
+    src/hb2/cpu.cpp
+    src/hb2/device.cpp
+    src/hb2/machine.cpp
+    src/hb2/peripherals.cpp
+    src/hb2/video.cpp
+)
+add_library(timewarp::hb2 ALIAS timewarp_hb2)
+target_include_directories(timewarp_hb2
+    PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+)
+target_compile_features(timewarp_hb2 PUBLIC cxx_std_20)
+timewarp_enable_warnings(timewarp_hb2)
+
+if(TIME_WARP_EXPR_BUILD_TESTS)
+    add_executable(hb2_tests tests/hb2_tests.cpp)
+    target_link_libraries(hb2_tests PRIVATE timewarp::hb2)
+    target_include_directories(hb2_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/tests)
+    # The demonstration listings are a gate as well as samples, so the suite reads
+    # them from the checkout wherever the build tree is.
+    target_compile_definitions(hb2_tests PRIVATE
+        HB2_EXAMPLES="${CMAKE_CURRENT_SOURCE_DIR}/../Examples/hb2")
+    timewarp_enable_warnings(hb2_tests)
+    add_test(NAME hb2_tests COMMAND hb2_tests)
+endif()
+
+# ---------------------------------------------------------------------------
 # Audio and I/O: two libraries that used to be inside the language one
 # ---------------------------------------------------------------------------
 #

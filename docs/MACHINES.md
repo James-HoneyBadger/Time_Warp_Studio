@@ -1,6 +1,6 @@
 # The machines
 
-Time Warp Studio is a time machine that pretends to be an IDE. Two machines are
+Time Warp Studio is a time machine that pretends to be an IDE. Three machines are
 built into it, and they are the reason it exists rather than being another editor
 with a Run button:
 
@@ -9,11 +9,16 @@ with a Run button:
   disk; and
 - the **[CHIP-8](chip8/README.md)** — the 1977 virtual machine: sixty-four by
   thirty-two pixels, sixteen keys, four kilobytes, and more instruction per byte
-  than anything that came before it.
+  than anything that came before it; and
+- the **[HB-2](hb2/README.md)** — the HB-1's 1992 successor, built from
+  [the Model 92 proposal](hb1/model-92.md): a bus, a 640 × 480 framebuffer and a
+  blitter, four channels of sampled audio, hardware sprites, and HB-16, a processor
+  of the machine's own. It runs headless today, through the harness and its suite.
 
-Both are real programs. Both run the same engines as the editor. Neither is a
-screenshot, a theme, or a video of a computer. You can type at them, break them,
-save your work to their disks and come back tomorrow.
+All three are real programs. The first two run the same engines as the editor, and
+the HB-2 runs its own instruction set. None is a screenshot, a theme, or a video of a
+computer: the two home computers are places you can type at, break and come back to,
+and the HB-2 is a machine you can disassemble.
 
 ---
 
@@ -81,7 +86,7 @@ examples:
 
 ---
 
-## The two machines at a glance
+## The machines at a glance
 
 | | HB-1 | CHIP-8 |
 | --- | --- | --- |

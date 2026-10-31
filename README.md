@@ -9,7 +9,7 @@ complete computers inside it.*
 [![Machines](https://img.shields.io/badge/machines-2-purple)](docs/MACHINES.md)
 [![Platform](https://img.shields.io/badge/platform-Linux-green)](docs/INSTALLATION.md)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/Version-25.0.3-orange)](https://github.com/James-HoneyBadger/Time_Warp_Studio)
+[![Version](https://img.shields.io/badge/Version-26.0.0-orange)](https://github.com/James-HoneyBadger/Time_Warp_Studio)
 
 Time Warp Studio is a desktop programming environment for people who like old
 computers. It is the one the 1980s promised and never quite delivered: a full IDE,
@@ -35,7 +35,7 @@ people teaching with it, though nothing in the application assumes a classroom.
 
 ---
 
-## Two machines, one Studio
+## Three machines, one Studio
 
 | | **HB-1** | **CHIP-8** |
 | --- | --- | --- |
@@ -46,6 +46,13 @@ people teaching with it, though nothing in the application assumes a classroom.
 | Telephone | A modem: `DIAL` into **WARP BOARD**, read the bulletins, post one, hang up | — |
 | Run it | Tools > **HB-1 Computer…** (`Ctrl+Alt+W`) or `./run.sh --computer` | Tools > **CHIP-8 Emulator…** (`Ctrl+Shift+M`) |
 | Read it | [Owner's Manual](docs/hb1/README.md) · [ROMs](docs/hb1/roms.md) · [HB DOS](docs/hb1/hb-dos.md) · [WARP BOARD](docs/hb1/bbs.md) · [CONFIG](docs/hb1/config.md) · [Inside](docs/hb1/inside.md) | [Machine Manual](docs/chip8/README.md) · [Assembler](docs/chip8/assembly.md) · [Instruction set](docs/chip8/instruction-set.md) |
+
+The third is the **HB-2**, the HB-1's 1992 successor: a bus, a framebuffer with three
+video modes, four channels of sampled audio, hardware sprites and a processor of its
+own, with the 1982 memory map kept whole as `MODE 0`. It runs headless today -- six
+demonstration listings, `time_warp_gates hb` and a suite -- and its window is the next
+proposal. Manuals: [HB-2](docs/hb2/README.md) · [instruction set](docs/hb2/instruction-set.md)
+· [the proposal](docs/hb1/model-92.md).
 
 What you can do with them:
 
@@ -172,7 +179,7 @@ compiler and the automation service; see [docs/USER_GUIDE.md](docs/USER_GUIDE.md
 ## What else is in the workbench
 
 Everything below is implemented, tested and documented, and the links go to the
-manuals rather than to promises. The two machines are described above; this is the
+manuals rather than to promises. The machines are described above; this is the
 rest of the environment, feature by feature.
 
 | Capability | What it is | Read |
@@ -322,7 +329,7 @@ have drifted apart.
 
 ```text
 An old-school programming environment: eleven interpreters from 1964-1980, a full
-IDE, a debugger in every language and turtle graphics -- plus two complete machines,
+IDE, a debugger in every language and turtle graphics -- plus three machines,
 the HB-1 home computer of 1982 with its own disk OS, and a live CHIP-8 with an
 assembler and register inspector.
 ```

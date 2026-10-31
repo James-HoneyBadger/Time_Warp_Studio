@@ -447,7 +447,7 @@ happened.
 | Where the key lives | `native/include/timewarp/ai/keyring.hpp`, `native/src/ai/keyring.cpp` -- the Credential Manager, the Keychain, `libsecret`, or the settings file |
 | The page | `native/include/timewarp/ui/ai_panel.hpp`, `native/src/ui/ai_panel.cpp` |
 | The settings dialog | `native/include/timewarp/ui/ai_settings.hpp`, `native/src/ui/ai_settings.cpp` |
-| The dialog the two machines open | `native/include/timewarp/ui/assistant_dialog.hpp`, `native/src/ui/assistant_dialog.cpp` |
+| The dialog the machines open | `native/include/timewarp/ui/assistant_dialog.hpp`, `native/src/ui/assistant_dialog.cpp` |
 | The command | `native/tools/ai_cli.cpp` |
 | The suite | `native/tests/ai_tests.cpp` |
 
@@ -501,13 +501,13 @@ and the rule that code comes back in one fenced block labelled with the language
   itself would be a language model with a keyboard.
 - **It does not talk to the machine.** No files, no shell, no debugger: it is asked
   about text and answers in text.
-- **It does not see the drawing, the variables or the debugger.** Two machines can ask
+- **It does not see the drawing, the variables or the debugger.** The machines can ask
   it about their own program (below), and none of the three sends anything else.
 - **It is not in the standalone player.** `time_warp_player` opens a compiled
   program, and a program that opens a socket to an AI service is not what a
   compiled program is for.
 
-### The two machines
+### The machines
 
 The HB-1 and the CHIP-8 each open the same page in a dialog, because those windows are
 machines of their own rather than the IDE: the HB-1's 🤖 button in its header and

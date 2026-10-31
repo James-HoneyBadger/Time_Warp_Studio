@@ -2,8 +2,9 @@
 
 Time Warp Studio is an old-school desktop programming environment: eleven
 interpreters from 1964 to 1980, a full IDE and turtle canvas — and two complete
-machines inside it, the [HB-1](hb1/README.md) home computer from a parallel 1982
-and the [CHIP-8](chip8/README.md) virtual machine.
+machines inside it: the [HB-1](hb1/README.md) home computer from a parallel 1982, the
+[CHIP-8](chip8/README.md) virtual machine, and the [HB-2](hb2/README.md), the 1992
+successor to the HB-1, which runs headless through `time_warp_gates hb`.
 This page is the map.
 
 > **New here?** Build and run it from the [README](../README.md), then try
@@ -23,6 +24,8 @@ This page is the map.
 | [hb1/config.md](hb1/config.md) | CONFIG: every setting, the phosphors, the glass, where it is stored |
 | [hb1/bbs.md](hb1/bbs.md) | **WARP BOARD** — the machine's modem, the bulletins, posting, and where the board is kept |
 | [hb1/inside.md](hb1/inside.md) | Inside the HB-1: how a keystroke becomes ink |
+| [hb2/README.md](hb2/README.md) | **HB-2 Manual** — the bus and its map, the video chip, the sound chip, the peripherals and the `INT` services |
+| [hb2/instruction-set.md](hb2/instruction-set.md) | **HB-16** — the encoding, every opcode with its cycles, and the assembler's syntax |
 | [chip8/README.md](chip8/README.md) | **CHIP-8 Machine Manual** — the two ways to run, the window, keys, debugging, sound, limits |
 | [chip8/assembly.md](chip8/assembly.md) | The assembler: listings, labels, directives, errors, worked programs |
 | [chip8/instruction-set.md](chip8/instruction-set.md) | Every opcode as implemented, the 1977 quirks, timing, a full disassembly |
@@ -78,7 +81,7 @@ One per active language, each written to be worked through:
 | --- | --- |
 | Build and run the IDE | [README](../README.md) |
 | Fix a build or Qt problem | [INSTALLATION.md](INSTALLATION.md) |
-| Meet the two machines | [MACHINES.md](MACHINES.md), then the [HB-1](hb1/README.md) and [CHIP-8](chip8/README.md) manuals |
+| Meet the machines | [MACHINES.md](MACHINES.md), then the [HB-1](hb1/README.md), [CHIP-8](chip8/README.md) and [HB-2](hb2/README.md) manuals |
 | Programme the HB-1 | [hb1/README.md](hb1/README.md), [hb1/hb-dos.md](hb1/hb-dos.md) |
 | Programme the CHIP-8 | [chip8/README.md](chip8/README.md), [chip8/assembly.md](chip8/assembly.md) |
 | Use projects, the REPL, debugging, SQL or the API | [USER_GUIDE.md](USER_GUIDE.md) |
