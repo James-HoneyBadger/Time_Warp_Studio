@@ -48,8 +48,25 @@ public:
     /// shell is gone, which is how a reader learns it is gone.
     [[nodiscard]] QByteArray read();
 
-    /// Types `bytes` at the shell. False when the pty has gone.
+    /// Types `bytes` at the shell, queueing whatever the terminal will not take yet.
+    ///
+    /// It never blocks: a pty's input buffer is small, and the caller is a widget on
+    /// the GUI thread, so a shell that has stopped reading -- a foreground job that
+    /// ignores its input, a process that was stopped -- must not stop the window. What
+    /// does not fit waits in `pending_` for `flush()`, which the caller drives from a
+    /// writable notifier.
+    ///
+    /// False when the input was refused: the pty has gone, or the queue is full
+    /// because the shell has not read anything for a long time. A caller that ignores
+    /// the answer loses keystrokes silently, so it should say so.
     bool write(const QByteArray& bytes);
+
+    /// Sends what is queued, as far as the terminal will take it, and returns how
+    /// many bytes are still waiting.
+    int flush();
+
+    /// Whether anything is still queued, which is what enables the writable notifier.
+    [[nodiscard]] bool hasPending() const noexcept { return !pending_.isEmpty(); }
 
     /// Tells the shell how big the view is, which also sends it `SIGWINCH` so a
     /// program that cares redraws.
@@ -72,6 +89,10 @@ private:
     int status_ = 0;
     bool exited_ = false;
     bool eof_ = false;
+    /// Typed at the widget and not yet accepted by the terminal. Bounded, because a
+    /// queue nobody drains is a memory leak that looks like a keyboard.
+    QByteArray pending_;
+    static constexpr int kMaxPending = 256 * 1024;
 };
 
 }  // namespace timewarp::ui

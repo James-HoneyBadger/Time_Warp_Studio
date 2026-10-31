@@ -9,7 +9,7 @@ complete computers inside it.*
 [![Machines](https://img.shields.io/badge/machines-2-purple)](docs/MACHINES.md)
 [![Platform](https://img.shields.io/badge/platform-Linux-green)](docs/INSTALLATION.md)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/Version-25.0.0-orange)](https://github.com/James-HoneyBadger/Time_Warp_Studio)
+[![Version](https://img.shields.io/badge/Version-25.0.1-orange)](https://github.com/James-HoneyBadger/Time_Warp_Studio)
 
 Time Warp Studio is a desktop programming environment for people who like old
 computers. It is the one the 1980s promised and never quite delivered: a full IDE,
@@ -103,9 +103,9 @@ you had:
 
 ---
 
-## 25.0.0: timey wimey wibbly wobbly, time & multiuniverse travel computing
+## 25.0: timey wimey wibbly wobbly, time & multiuniverse travel computing
 
-**Version 25.0.0 is the current design.** The eleven languages, the IDE, the two
+**Version 25.0 is the current design.** The eleven languages, the IDE, the two
 machines, the curriculum and every book in this repository are complete, and every
 gate that proves it runs on each push. The feature set is not frozen: a release from
 here takes fixes and features alike, and each one arrives with the test and the book

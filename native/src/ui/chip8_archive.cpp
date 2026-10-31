@@ -209,11 +209,30 @@ void ArchiveFetcher::requestNext() {
     QNetworkReply* reply = network_->get(request);
     // A hung server must not hang the dialog: this is a footer-sized download. The
     // timeout is on the request because that is where Qt 5.15 and 6 both have it.
+    //
+    // The size is stopped as the bytes arrive rather than checked afterwards. A cap
+    // applied to `readAll()` is a cap on what was already in memory, and this one
+    // exists so that a catalogue pointing somewhere wrong costs a refused file
+    // rather than an allocation.
+    connect(reply, &QNetworkReply::downloadProgress, this,
+            [reply](qint64 received, qint64 total) {
+                if (received > kMaxProgramBytes || total > kMaxProgramBytes) {
+                    reply->setProperty("tooLarge", true);
+                    reply->abort();
+                }
+            });
 
     connect(reply, &QNetworkReply::finished, this, [this, reply, program] {
+        const bool too_large = reply->property("tooLarge").toBool();
         reply->deleteLater();
         ++done_;
-        if (reply->error() != QNetworkReply::NoError) {
+        if (too_large) {
+            // Named as what it is: an abort is otherwise reported as "canceled",
+            // which reads like something the user did.
+            failures_.append(tr("%1: larger than %2 bytes, so it is not a CHIP-8 program")
+                                 .arg(program.file)
+                                 .arg(kMaxProgramBytes));
+        } else if (reply->error() != QNetworkReply::NoError) {
             failures_.append(tr("%1: %2").arg(program.file, reply->errorString()));
         } else {
             const QByteArray bytes = reply->readAll();
@@ -229,15 +248,31 @@ void ArchiveFetcher::requestNext() {
                 if (!file.open(QIODevice::WriteOnly)) {
                     failures_.append(tr("%1: %2").arg(program.file, file.errorString()));
                 } else {
-                    file.write(bytes);
+                    const qint64 written_now = file.write(bytes);
+                    const QString write_error = file.errorString();
                     file.close();
-                    // Renamed only once it is whole: a library that lists a file it
-                    // cannot run is worse than one that lists nothing.
-                    QFile::remove(path);
-                    if (file.rename(path)) {
-                        ++written_;
+                    if (written_now != bytes.size()) {
+                        // A short write is a full disk, and renaming it would put a
+                        // truncated program in the library as though it were whole.
+                        failures_.append(tr("%1: only %2 of %3 bytes could be written%4")
+                                             .arg(program.file)
+                                             .arg(written_now)
+                                             .arg(bytes.size())
+                                             .arg(write_error.isEmpty()
+                                                      ? QString{}
+                                                      : QStringLiteral(" (%1)")
+                                                            .arg(write_error)));
+                        QFile::remove(file.fileName());
                     } else {
-                        failures_.append(tr("%1: could not be written").arg(program.file));
+                        // Renamed only once it is whole: a library that lists a file
+                        // it cannot run is worse than one that lists nothing.
+                        QFile::remove(path);
+                        if (file.rename(path)) {
+                            ++written_;
+                        } else {
+                            failures_.append(
+                                tr("%1: could not be written").arg(program.file));
+                        }
                     }
                 }
             }

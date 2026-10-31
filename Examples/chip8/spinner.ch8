@@ -1,0 +1,82 @@
+; SPINNER
+; Four shapes turning in place, twelve frames apart.
+;
+; The orientation is an index and the sprite is a table, so the program has to
+; do the one piece of arithmetic CHIP-8 has no instruction for: multiply by
+; eight. Three `SHL`s is that multiplication, and `ADD I, Vx` is how straight
+; CHIP-8 reaches an entry in a table.
+;
+; Each frame draws the shape twice -- once to rub the old one out, once to put
+; the new one there -- which is the whole of animation on a machine with no
+; frame buffer of its own.
+
+start:  CLS
+        LD V0, 0            ; orientation: 0 to 3
+        LD V2, 28           ; x of the eight-by-eight square
+        LD V3, 12           ; y
+        LD V4, 3            ; the mask that wraps the index
+        LD V1, 0            ; the table offset, which starts at nothing
+        LD I, shapes
+        DRW V2, V3, 8       ; the first shape, drawn once
+
+loop:   CALL wait_a_frame
+        ; Rub out what is there: the same draw, and XOR takes it back.
+        LD I, shapes
+        ADD I, V1
+        DRW V2, V3, 8
+        ; Next orientation, wrapping 3 back to 0.
+        ADD V0, 1
+        AND V0, V4
+        ; The offset is the index times eight, in eight-bit arithmetic.
+        LD V1, V0
+        SHL V1
+        SHL V1
+        SHL V1
+        ; And draw the one it has become.
+        LD I, shapes
+        ADD I, V1
+        DRW V2, V3, 8
+        JP loop
+
+wait_a_frame:
+        LD V5, 12
+        LD DT, V5
+frame_loop:
+        LD V5, DT
+        SE V5, 0
+        JP frame_loop
+        RET
+
+; Four shapes of one square: a ring, a diamond, a cross and a filled box.
+shapes: DB 0xFF
+        DB 0x81
+        DB 0x81
+        DB 0x81
+        DB 0x81
+        DB 0x81
+        DB 0x81
+        DB 0xFF
+        DB 0x18
+        DB 0x3C
+        DB 0x7E
+        DB 0xFF
+        DB 0xFF
+        DB 0x7E
+        DB 0x3C
+        DB 0x18
+        DB 0x18
+        DB 0x18
+        DB 0xFF
+        DB 0xFF
+        DB 0xFF
+        DB 0xFF
+        DB 0x18
+        DB 0x18
+        DB 0xFF
+        DB 0xFF
+        DB 0xFF
+        DB 0xFF
+        DB 0xFF
+        DB 0xFF
+        DB 0xFF
+        DB 0xFF

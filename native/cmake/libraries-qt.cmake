@@ -879,7 +879,6 @@ if(TIME_WARP_QT_FOUND)
         install(
             DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/../Examples/
             DESTINATION ${TIME_WARP_SHARE_DIR}/time-warp-studio/examples
-            PATTERN "__pycache__" EXCLUDE
         )
 
         # ---- Qt on the machine --------------------------------------------
@@ -1001,6 +1000,12 @@ if(TIME_WARP_QT_FOUND)
             # controls. The instruction semantics stay in lang_tests.
             add_executable(chip8_emulator_tests tests/chip8_emulator_tests.cpp)
             target_link_libraries(chip8_emulator_tests PRIVATE timewarp::ui)
+            # The homebrew downloader's ceiling is asserted against a loopback stub
+            # that serves a file past it, which needs Qt Network in this binary as
+            # well as in the library.
+            if(TARGET timewarp::ai)
+                target_link_libraries(chip8_emulator_tests PRIVATE ${TIME_WARP_QT}::Network)
+            endif()
             target_include_directories(chip8_emulator_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/tests)
             # The bundled-program test reads the checkout's Examples/ whatever
             # directory CMake put the build in.
@@ -1029,6 +1034,7 @@ if(TIME_WARP_QT_FOUND)
             add_executable(retro_computer_tests
                 tests/retro_computer_tests.cpp
                 tests/retro_basic_tests.cpp
+                tests/retro/example_tests.cpp
                 tests/retro/paper_tests.cpp
                 tests/retro/bbs_tests.cpp
                 tests/retro_boot_tests.cpp

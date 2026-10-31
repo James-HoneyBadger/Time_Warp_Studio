@@ -37,6 +37,7 @@ void test_scrolling_moves_memory_and_peek_agrees();
 void test_writing_text_wraps_and_scrolls();
 void test_memory_checksum_changes_when_a_byte_does();
 void test_a_poked_character_is_on_the_screen();
+void test_the_hb1_examples_run_on_the_machine();
 void test_locate_positions_the_print_that_follows();
 void test_cls_clears_screen_memory();
 void test_a_poke_into_rom_is_refused_out_loud();

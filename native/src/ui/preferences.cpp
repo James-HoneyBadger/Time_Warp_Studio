@@ -151,6 +151,12 @@ void PreferencesDialog::buildUi(const EditorSettings& settings) {
         notify_->setEnabled(false);
         notify_->setToolTip(tr("This build has no Qt DBus, so it cannot post a "
                                "notification."));
+    } else if (!timewarp::ui::notifications_reachable()) {
+        // Compiled in and nowhere to send it: a session with no notification daemon.
+        // Saying so is better than a switch that is on and does nothing.
+        notify_->setEnabled(false);
+        notify_->setToolTip(tr("This session has no notification service, so there is "
+                               "nothing to post to."));
     }
     connect(notify_, &QCheckBox::toggled, this, &PreferencesDialog::notifyToggled);
     workspace_layout->addWidget(notify_);

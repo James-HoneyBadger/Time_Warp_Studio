@@ -543,6 +543,13 @@ with cursor addressing — `vim`, `top`, a full-screen curses interface — star
 its escape sequences are removed rather than drawn. The tab is for commands: a build,
 a script, `git`, a `make`.
 
+**Interrupt** under the prompt sends `Ctrl+C` to whatever is in the foreground, which
+is how a command that will not end on its own ends; the session keeps its variables,
+its history and its directory. **Restart** is for the rarer case where the shell
+itself is wedged: it ends the shell and everything it started and begins a fresh one
+in the same folder. Typing is never dropped without saying so — if a shell stops
+reading, the tab tells you the line did not reach it rather than swallowing it.
+
 The shell follows the document: opening `Examples/logo/mandala.logo` moves it to that
 folder with a `cd`, so `./build` names the right directory without typing a path.
 Closing the window ends the shell and everything it started.

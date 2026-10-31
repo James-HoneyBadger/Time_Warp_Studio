@@ -11,6 +11,9 @@
 
 #include <QAction>
 #include <QApplication>
+#include <QHostAddress>
+#include <QTcpServer>
+#include <QTcpSocket>
 #include <QEventLoop>
 #include <QKeyEvent>
 #include <QLabel>
@@ -25,6 +28,7 @@
 
 #include "check.hpp"
 #include "temp_dir.hpp"
+#include "timewarp/ui/chip8_archive.hpp"
 #include "timewarp/ui/chip8_emulator.hpp"
 #include "timewarp/ui/chip8_library.hpp"
 #include "timewarp/ui/chip8_screen.hpp"
@@ -46,6 +50,67 @@ constexpr const char* kAddProgram =
     "       LD V1, 3\n"
     "       ADD V0, V1\n"
     "       HALT\n";
+
+// The downloader's ceiling is a limit on what it *reads*, not a check on what it has
+// already read: a catalogue is data, and a base URL in it that answers with a
+// gigabyte must cost a refusal rather than an allocation. A loopback stub serves a
+// file well past the cap, and the assertion is that nothing was written and the
+// refusal says why.
+void test_the_homebrew_download_refuses_an_oversized_file() {
+    std::printf("-- archive: a file past the ceiling\n");
+    QTcpServer server;
+    QObject::connect(&server, &QTcpServer::newConnection, [&server] {
+        QTcpSocket* socket = server.nextPendingConnection();
+        QObject::connect(socket, &QTcpSocket::readyRead, socket, [socket] {
+            static_cast<void>(socket->readAll());
+            const QByteArray body(64 * 1024, 'x');
+            socket->write("HTTP/1.1 200 OK\r\nContent-Type: application/octet-stream\r\n"
+                          "Content-Length: " +
+                          QByteArray::number(body.size()) +
+                          "\r\nConnection: close\r\n\r\n" + body);
+            socket->flush();
+            socket->disconnectFromHost();
+        });
+    });
+    TW_CHECK(server.listen(QHostAddress::LocalHost, 0));
+
+    timewarp::ui::ArchiveCatalogue catalogue;
+    catalogue.base_url =
+        QStringLiteral("http://127.0.0.1:%1/roms/").arg(server.serverPort());
+    timewarp::ui::ArchiveProgram program;
+    program.file = QStringLiteral("too-big.ch8");
+    program.title = QStringLiteral("Too big");
+    program.licence = QStringLiteral("CC0-1.0");
+    catalogue.programs.append(program);
+
+    const tw::test::TempDir folder;
+    timewarp::ui::ArchiveFetcher fetcher;
+    int written = -1;
+    int failures = -1;
+    QStringList messages;
+    QObject::connect(&fetcher, &timewarp::ui::ArchiveFetcher::finished,
+                     [&](int wrote, int failed, const QStringList& said) {
+                         written = wrote;
+                         failures = failed;
+                         messages = said;
+                     });
+    fetcher.start(catalogue, folder.path());
+
+    QElapsedTimer timer;
+    timer.start();
+    while (written < 0 && timer.elapsed() < 10000) {
+        QApplication::processEvents();
+    }
+    TW_CHECK_EQ(written, 0);
+    TW_CHECK_EQ(failures, 1);
+    TW_CHECK(!messages.isEmpty());
+    if (!messages.isEmpty()) {
+        // The refusal names the limit rather than reporting an abort, which is what
+        // an aborted transfer otherwise looks like.
+        TW_CHECK(messages.first().contains(QStringLiteral("larger than")));
+    }
+    TW_CHECK(!QFileInfo::exists(folder.path() + QStringLiteral("/too-big.ch8")));
+}
 
 void test_a_listing_runs_and_steps() {
     announce("emulator: a listing runs and steps");
@@ -540,6 +605,7 @@ int main(int argc, char** argv) {
     qputenv("TIME_WARP_EXAMPLES", TIME_WARP_TEST_EXAMPLES);
     QApplication app{argc, argv};
 
+    test_the_homebrew_download_refuses_an_oversized_file();
     test_a_listing_runs_and_steps();
     test_a_frame_runs_the_speed_and_ticks_the_timers();
     test_a_binary_rom_loads_byte_for_byte();

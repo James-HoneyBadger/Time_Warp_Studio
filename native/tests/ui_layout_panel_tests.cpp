@@ -644,6 +644,71 @@ void test_sql_panel_runs_and_shows_results() {
     TW_CHECK(panel->statusText().contains(QStringLiteral("no such table")));
 }
 
+// A terminal you have to close to interrupt `sleep 30` is a terminal nobody uses, so
+// the two controls under the prompt are the thing worth asserting: Interrupt sends
+// what Ctrl+C sends, and the session survives it. This is the one test here that
+// starts a real shell, and it is bounded by a deadline rather than by the sleep it
+// interrupts -- if the interrupt did not work, `after-the-interrupt` would arrive
+// thirty seconds later and the test would have failed already.
+void test_the_terminal_interrupts_a_running_command() {
+    announce("terminal: interrupt and restart");
+    const QByteArray previous_shell = qgetenv("SHELL");
+    qputenv("SHELL", QByteArray{"/bin/sh"});
+
+    {
+        timewarp::ui::TerminalWidget terminal{QDir::tempPath()};
+        TW_CHECK_EQ(terminal.objectName(), QStringLiteral("terminalPanel"));
+        QPushButton* interrupt = terminal.interruptButton();
+        QPushButton* restart = terminal.restartButton();
+        TW_CHECK(interrupt != nullptr);
+        TW_CHECK(restart != nullptr);
+        if (interrupt == nullptr || restart == nullptr) {
+            return;
+        }
+        TW_CHECK_EQ(interrupt->objectName(), QStringLiteral("terminalInterrupt"));
+        // Nothing to interrupt before there is a shell.
+        TW_CHECK(!terminal.isRunning());
+        TW_CHECK(!interrupt->isEnabled());
+
+        terminal.runCommand(QStringLiteral("echo terminal-is-live"));
+        TW_CHECK(spin_until(
+            [&terminal] {
+                return terminal.output().contains(QStringLiteral("terminal-is-live"));
+            },
+            5000));
+        TW_CHECK(terminal.isRunning());
+        TW_CHECK(interrupt->isEnabled());
+
+        // A command that will not end on its own, stopped the way a person stops it.
+        terminal.runCommand(QStringLiteral("sleep 30"));
+        QThread::msleep(150);
+        interrupt->click();
+        terminal.runCommand(QStringLiteral("echo after-the-interrupt"));
+        TW_CHECK(spin_until(
+            [&terminal] {
+                return terminal.output().contains(QStringLiteral("after-the-interrupt"));
+            },
+            6000));
+
+        // Restart is the escape hatch, and it leaves a shell that answers.
+        restart->click();
+        terminal.runCommand(QStringLiteral("echo after-the-restart"));
+        TW_CHECK(spin_until(
+            [&terminal] {
+                return terminal.output().contains(QStringLiteral("after-the-restart"));
+            },
+            5000));
+        terminal.stop();
+        TW_CHECK(!terminal.isRunning());
+    }
+
+    if (previous_shell.isNull()) {
+        qunsetenv("SHELL");
+    } else {
+        qputenv("SHELL", previous_shell);
+    }
+}
+
 // The assistant is the one page of the right column that depends on something
 // outside this machine, so what is asserted about it is what can be known without
 // a network: that it refuses to pretend it is ready, that it says what is missing,

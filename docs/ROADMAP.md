@@ -16,13 +16,13 @@ derived rather than remembered.
 
 ---
 
-## 24.0 is archived, and 25.0.0 is the current design
+## 24.0 is archived, and 25.0 is the current design
 
 **Version 24.0 is archived.** It was the golden release, the last one built for
 Windows and macOS, and it is kept exactly as it was built on its own release page and
 will not change again. Nothing here removes it: an archive is a thing you keep.
 
-**Version 25.0.0 is the current design,
+**Version 25.0 is the current design,
 *timey wimey wibbly wobbly, time & multiuniverse travel computing*.** The eleven
 languages, the IDE, the two machines, the curriculum and the documentation set are
 complete, and the gates in [README_TESTING.md](README_TESTING.md) prove it on every

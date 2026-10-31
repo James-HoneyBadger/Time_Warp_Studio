@@ -2,6 +2,72 @@
 
 <!-- history: all -->
 
+## [25.0.1] - 2026-10-31
+
+The first release after the unfreeze, and the review of 25.0.0's own change set —
+1 342 new lines in eleven files — found three things that mattered and a handful that
+did not, all of them fixed here.
+
+### Added
+
+- **Twelve programs to learn the machines from.** Six CHIP-8 listings: `catch`, a
+  small arcade game with a BCD scoreboard, and `bounce`, `countdown`, `maze`,
+  `spinner` and `typewriter`, each built around one instruction the machine is
+  usually only shown — `SKP` as input, the delay and sound timers as clocks, `VF` as
+  a wall, `ADD I` as indexing and `SHL` as the multiply the machine does not have.
+  And six for the HB-1: `colour_chart` (the phosphor ramp in the attribute byte),
+  `sound_board`, `memory_map`, `canvas_lines` (the 320 × 200 surface as a bar chart),
+  `sprite_lab` (`GET`/`PUT`) and `turtle_garden` (the same machine in Logo).
+- **A gate for the machine's own programs.** `retro_computer_tests` loads every
+  `Examples/hb1` program into a real machine, runs it, and requires it to leave ink in
+  the tube or shapes on the canvas with no error: the smoke gate runs the same files
+  as programs, but that is the engine with no machine attached, where `POKE 32768`
+  lands in a map nothing paints.
+
+### Fixed
+
+- **`SOUND` no longer drives the audio player from the runner thread.** The note went
+  straight from the executing program into a `SoundPlayer` owned by the GUI thread,
+  which starts a `QProcess` — so a program with a tune in it produced "cannot be
+  enabled or disabled from another thread" and, with enough notes, a crash. The note,
+  the tune and the stop are handed to the player's own thread now, which also makes
+  the recorded mix safe to read where it is read.
+- **Typing in the terminal cannot stop the window.** It went through a loop that
+  retried a full pty buffer a millisecond at a time until every byte was sent, on the
+  GUI thread: a foreground job that stopped reading — a `less` nobody can drive, a
+  stopped process, a shell at a full pipe — froze the application at the next
+  keystroke. `PtySession` now queues what the terminal will not take, in a bounded
+  256 KiB buffer, and `TerminalWidget` drains it from a writable `QSocketNotifier`.
+  Nothing blocks, and input the shell refused is reported in the transcript rather
+  than dropped in silence.
+- **`Ctrl+C` and a fresh shell, from the tab.** There was no way to interrupt a
+  command except *Settings > Terminal* off and on, which also threw the session away.
+  **Interrupt** sends `0x03`, which the line discipline turns into `SIGINT` for the
+  foreground process group and nothing else; **Restart** ends the shell and starts a
+  new one in the same folder. `ui_layout_tests` starts a real `/bin/sh`, runs
+  `sleep 30`, and asserts that the next line arrives anyway.
+- **Two background runs leave one notification, not two.** `replaces_id` was passed
+  as `0u` while the comment above it described replacing the previous box; the
+  freedesktop protocol replaces on the id the service returned, so the id is now kept
+  and sent back. The call also has a two-second timeout: it runs on the GUI thread,
+  and a notification daemon that has stopped answering should not hold the window for
+  the twenty-five seconds the default allowed.
+- **The homebrew downloader's size limit is now a limit.** The 8 KiB ceiling was
+  applied to what had already been read into memory, so a catalogue pointing
+  somewhere unexpected cost an allocation instead of a refusal. The cap is enforced
+  from `downloadProgress` and the reply is aborted, and a refusal says the file is
+  too large rather than reporting an abort. A short write is no longer renamed into
+  place either: a truncated ROM was reaching the library as though it were whole.
+- **The terminal's writable notifier is torn down with its pty.** Both notifiers
+  watch the same descriptor, and only one of them was disabled when a shell exited,
+  which left the other watching a closed file descriptor.
+- **The terminal's master descriptor is `O_CLOEXEC`.** It was closed in the shell
+  before `exec` but inherited by every process the IDE started afterwards.
+- **Two leftovers of the platforms that were removed:** the macOS bundle branch in
+  the examples search, and the `__pycache__` pattern in the examples install rule.
+- **A paragraph in `docs/FAQ.md`** ended with literal `\n` sequences, which rendered
+  as backslash-n rather than as a line break.
+
 ## [25.0.0] - 2026-10-30
 
 *Timey wimey wibbly wobbly, time & multiuniverse travel computing.*

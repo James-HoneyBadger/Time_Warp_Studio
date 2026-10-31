@@ -27,6 +27,7 @@
 class QLabel;
 class QLineEdit;
 class QPlainTextEdit;
+class QPushButton;
 class QSocketNotifier;
 class QResizeEvent;
 
@@ -59,6 +60,20 @@ public:
     /// started it.
     void stop();
 
+    /// Sends `Ctrl+C` to whatever is in the foreground, which is how a person stops a
+    /// command that will not stop on its own. The session and its variables survive,
+    /// because a terminal you have to restart to interrupt something is a terminal you
+    /// will not use.
+    void interrupt();
+
+    /// Ends the shell and starts a fresh one in the current directory. The escape
+    /// hatch for a shell that is wedged badly enough that `Ctrl+C` is not enough.
+    void restart();
+
+    /// The two controls above, so a test can click what a person clicks.
+    [[nodiscard]] QPushButton* interruptButton() const noexcept { return interrupt_; }
+    [[nodiscard]] QPushButton* restartButton() const noexcept { return restart_; }
+
     /// Everything written to the output so far. For the tests, and for a caller
     /// that wants to save the transcript.
     [[nodiscard]] QString output() const;
@@ -69,6 +84,9 @@ protected:
 private:
     void startShell();
     void readShellOutput();
+    /// Sends what the terminal would not take yet, and stops watching for writable
+    /// once the queue is empty.
+    void drainPending();
     void apply(const std::vector<TerminalOp>& ops);
     void eraseBack(int count);
     void append(const QString& text);
@@ -80,6 +98,9 @@ private:
     QString working_directory_;
     std::unique_ptr<PtySession> shell_;
     QSocketNotifier* notifier_ = nullptr;
+    QSocketNotifier* write_notifier_ = nullptr;
+    QPushButton* interrupt_ = nullptr;
+    QPushButton* restart_ = nullptr;
     /// What the pty's bytes mean: escape sequences stripped, `\r` applied.
     TerminalText filter_;
     QPlainTextEdit* output_view_ = nullptr;

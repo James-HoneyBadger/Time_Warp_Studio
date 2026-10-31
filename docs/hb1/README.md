@@ -393,16 +393,24 @@ period features; they are the parallel-universe part.
 
 ## Programs to run on it
 
-Three programs in [`Examples/hb1/`](../../Examples/hb1/) are written for this
+Nine programs in [`Examples/hb1/`](../../Examples/hb1/) are written for this
 machine rather than for the IDE. Each one uses something only the HB-1 has, and
 each runs in the IDE as well — the tube writes land there as the same arithmetic,
-and the drawing lands on the canvas.
+and the drawing lands on the canvas. `retro_computer_tests` loads every one of them
+into a real machine and requires it to leave ink behind, so a program here that stops
+working fails the build rather than a lesson.
 
 | Program | What it shows |
 | --- | --- |
 | [`tube_writer.bas`](../../Examples/hb1/tube_writer.bas) | The screen is memory: characters and colours written with `POKE` into `$8000`/`$9000`, read back with `PEEK`, and a turtle frame round the result |
 | [`ram_probe.bas`](../../Examples/hb1/ram_probe.bas) | The 32K below the screen: a pattern written across it, three cells read back, and one bar drawn per byte |
 | [`frame_clock.bas`](../../Examples/hb1/frame_clock.bas) | Both clocks: the frame counter in registers `$A006`/`$A007`, and `ON TIMER` … `TIMER ON` interrupting a loop, with one spoke per interrupt |
+| [`colour_chart.bas`](../../Examples/hb1/colour_chart.bas) | The phosphor ramp: sixteen steps of brightness written into the attribute byte, as ink, as paper, and as a strip |
+| [`sound_board.bas`](../../Examples/hb1/sound_board.bas) | The machine's voice, asked for on purpose: eight notes as `SOUND frequency, ticks`, with a block poked into the tube for each |
+| [`memory_map.bas`](../../Examples/hb1/memory_map.bas) | The map, read rather than believed: four `PEEK`s from four regions, the hole that answers zero, and the ROM that refuses a write |
+| [`canvas_lines.bas`](../../Examples/hb1/canvas_lines.bas) | The other surface: axes, eight filled bars and two circles on the 320 × 200 canvas, with the tube narrating beside it |
+| [`sprite_lab.bas`](../../Examples/hb1/sprite_lab.bas) | A sprite made out of nothing: drawn with `PSET`, taken with `GET`, and `PUT` a hundred and twenty times across the frame |
+| [`turtle_garden.logo`](../../Examples/hb1/turtle_garden.logo) | The same machine in another ROM: a house, a sun and two flowers, in Logo |
 
 To run one on the machine:
 

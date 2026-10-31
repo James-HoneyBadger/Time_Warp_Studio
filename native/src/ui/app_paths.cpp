@@ -55,13 +55,6 @@ QString examplesDir() {
     if (QFileInfo{installed}.isDir()) {
         return QFileInfo{installed}.absoluteFilePath();
     }
-    // A macOS bundle: Contents/MacOS/Time Warp Studio beside
-    // Contents/Resources/share/time-warp-studio/examples.
-    const QString bundled =
-        app_dir + QStringLiteral("/../Resources/share/time-warp-studio/examples");
-    if (QFileInfo{bundled}.isDir()) {
-        return QFileInfo{bundled}.absoluteFilePath();
-    }
     // A build tree: the binary is `native/build/time_warp_ide` and the programs
     // are beside `native/`. The second path covers a binary in `native/build/bin`.
     for (const QString& upward :

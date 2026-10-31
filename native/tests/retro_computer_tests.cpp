@@ -59,6 +59,7 @@ int main(int argc, char** argv) {
     test_the_power_switch_turns_the_machine_off_and_on();
     test_the_frame_register_counts_the_clock();
     test_a_poked_character_is_on_the_screen();
+    test_the_hb1_examples_run_on_the_machine();
     test_a_graphics_character_paints_its_cell();
     test_locate_positions_the_print_that_follows();
     test_cls_clears_screen_memory();

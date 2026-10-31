@@ -613,4 +613,6 @@ See [ROADMAP.md](ROADMAP.md).
 
 ---
 
-**Still stuck?** Start with [README.md](../README.md) and\n[ARCHITECTURE.md](ARCHITECTURE.md), or open an issue on the project's GitHub\nrepository.
+**Still stuck?** Start with [README.md](../README.md) and
+[ARCHITECTURE.md](ARCHITECTURE.md), or open an issue on the project's
+GitHub repository.

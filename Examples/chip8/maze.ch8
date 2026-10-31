@@ -1,0 +1,151 @@
+; MAZE
+; A box with walls in it, and a dot you walk around them.
+;
+;     2 / 8 / 4 / 6   up, down, left, right
+;
+; The interesting instruction here is the one that does nothing: `DRW` reports a
+; collision in VF, and a collision with a wall is exactly "you may not go there".
+; So the program draws the move it is about to make, looks at VF, and -- if the
+; answer is yes -- draws the same move again to take it back. Drawing is XOR, so
+; the second draw restores the wall and the dot with it.
+;
+; The lines of the box are single sprites: one row of eight bytes is sixty-four
+; pixels wide, and one column of thirty-two bytes is thirty-two rows tall, which
+; is the whole trick to drawing a frame in two instructions.
+
+start:  CLS
+        ; The box. A DRW is one byte per row and eight pixels per byte, so a
+        ; sixty-four pixel line is eight draws and a thirty-two row column is
+        ; four; the loops below are what that costs.
+        LD V1, 0
+        CALL across_row
+        LD V1, 31
+        CALL across_row
+        LD I, down
+        LD V1, 0
+column: LD V0, 0
+        DRW V0, V1, 8
+        LD V0, 63
+        DRW V0, V1, 8
+        ADD V1, 8
+        LD V6, V1
+        LD V7, 32
+        SUB V6, V7          ; VF is 1 once the column has reached the bottom
+        SE VF, 1
+        JP column
+        ; Two walls inside it, with gaps to walk through.
+        LD V1, 8
+        LD V0, 8
+        CALL wall_across
+        LD V1, 16
+        LD V0, 40
+        CALL wall_across
+        LD V0, 24
+        LD V1, 16
+        LD I, down
+        DRW V0, V1, 8
+        ; The dot, in the top-left corner of the maze.
+        LD V0, 4
+        LD V1, 4
+        LD I, player
+        DRW V0, V1, 1
+        JP loop
+
+; Eight eight-pixel blocks make a line across the screen.
+across_row:
+        LD V0, 0
+        LD I, block
+row_loop:
+        DRW V0, V1, 1
+        ADD V0, 8
+        LD V6, V0
+        LD V7, 64
+        SUB V6, V7          ; VF is 1 once the row is complete
+        SE VF, 1
+        JP row_loop
+        RET
+
+wall_across:
+        LD I, block
+        DRW V0, V1, 1
+        ADD V0, 8
+        DRW V0, V1, 1
+        LD V6, 8
+        SUB V0, V6
+        RET
+
+loop:   CALL wait_a_frame
+        ; Which way? One step of one pixel, and only one: `SKP` answers now.
+        LD V2, V0           ; where the dot would like to be
+        LD V3, V1
+        LD V5, 0            ; whether a key asked for it
+        LD V4, 4
+        SKP V4
+        JP try_down
+        LD V5, 1
+        LD V6, 1
+        SUB V2, V6
+try_down:
+        LD V4, 6
+        SKP V4
+        JP try_up
+        LD V5, 1
+        ADD V2, 1
+try_up:
+        LD V4, 2
+        SKP V4
+        JP try_left
+        LD V5, 1
+        LD V6, 1
+        SUB V3, V6
+try_left:
+        LD V4, 8
+        SKP V4
+        JP move
+        LD V5, 1
+        ADD V3, 1
+
+move:   SE V5, 1            ; skips the jump when a key asked for a step
+        JP loop
+        ; Nothing is known about walls until something is drawn.
+        LD I, player
+        DRW V0, V1, 1       ; lift the dot
+        DRW V2, V3, 1       ; try the new place
+        SE VF, 0
+        JP blocked
+        LD V0, V2
+        LD V1, V3
+        JP loop
+blocked:
+        LD I, player
+        DRW V2, V3, 1       ; take the attempt back: the wall comes back with it
+        LD I, player
+        DRW V0, V1, 1       ; and so does the dot
+        JP loop
+wait_a_frame:
+        LD V6, 2
+        LD DT, V6
+frame_loop:
+        LD V6, DT
+        SE V6, 0
+        JP frame_loop
+        RET
+
+block:  DB 0xFF
+down:   DB 0x80
+        DB 0x80
+        DB 0x80
+        DB 0x80
+        DB 0x80
+        DB 0x80
+        DB 0x80
+        DB 0x80
+tall:   DB 0x80
+        DB 0x80
+        DB 0x80
+        DB 0x80
+        DB 0x80
+        DB 0x80
+        DB 0x80
+        DB 0x80
+player: DB 0x80

@@ -138,6 +138,12 @@ so it can be opened, edited and re-assembled. The language is documented in
 | `chip8/font_ledger.ch8` | `LD B, Vx` plus `FX29`: 147 drawn as three digits from the built-in font |
 | `chip8/hires_rings.ch8` | One 16x16 `DXY0` sprite drawn three times on a 128x64 SuperChip screen |
 | `chip8/keypad_probe.ch8` | `FX0A` with a seeded key in the editor and a real keypad in the window |
+| `chip8/catch.ch8` | A small arcade game: drops fall, a paddle catches them, the score is BCD and the machine gets faster |
+| `chip8/bounce.ch8` | A comet that bounces off four edges and paints where it has been until the screen is full |
+| `chip8/countdown.ch8` | Nine to zero, once a second, with a bar that drains: the delay timer and the sound timer as clocks |
+| `chip8/maze.ch8` | Walk a dot through a drawn maze with 2/8/4/6; walls are found by drawing and reading `VF` |
+| `chip8/spinner.ch8` | Four shapes turning in place, reached with `ADD I` and the only multiply the machine has: three `SHL`s |
+| `chip8/typewriter.ch8` | Every key is a glyph: the font, a cursor and a wrap, with no string anywhere in it |
 
 ## APL
 
@@ -165,7 +171,7 @@ so it can be opened, edited and re-assembled. The language is documented in
 
 ## HB-1
 
-These three are written for the [HB-1 machine](../docs/hb1/README.md) rather than
+These are written for the [HB-1 machine](../docs/hb1/README.md) rather than
 for the IDE: they use the machine's screen memory, its I/O registers and its timer.
 They also run in the IDE, where the same arithmetic lands on the editor's canvas.
 The owner's manual explains [how to run one on the machine](../docs/hb1/README.md#programs-to-run-on-it).
@@ -175,7 +181,13 @@ The owner's manual explains [how to run one on the machine](../docs/hb1/README.m
 | `hb1/tube_writer.bas` | POKEs a message and its colours into the screen cells at `$8000`/`$9000`, reads a cell back with `PEEK`, then frames it with the turtle |
 | `hb1/ram_probe.bas` | Writes a pattern across the 32K below the screen, reads three cells back, and draws one bar per byte |
 | `hb1/frame_clock.bas` | Reads the 60 Hz frame counter at `$A006`/`$A007`, arms `ON TIMER`, and turns the interrupt count into a dial |
-| `hb1/HBWARP.dsk` | The same three programs already saved on an HB DOS volume, ready to copy into `~/.time_warp/disks` |
+| `hb1/HBWARP.dsk` | The first three programs already saved on an HB DOS volume, ready to copy into `~/.time_warp/disks` |
+| `hb1/colour_chart.bas` | Sixteen steps of phosphor: the brightness ramp as ink, as paper, and as a strip, all written into the attribute byte |
+| `hb1/sound_board.bas` | Eight notes as `SOUND frequency, ticks`, with a block poked into the tube for each one |
+| `hb1/memory_map.bas` | Four `PEEK`s, one from each region of the map, plus the hole that answers zero and the ROM that refuses a write |
+| `hb1/canvas_lines.bas` | The other surface: axes, eight filled bars and two circles on the 320x200 canvas, while the tube narrates |
+| `hb1/sprite_lab.bas` | One sprite made with `PSET`, taken with `GET` and `PUT` a hundred and twenty times across the canvas |
+| `hb1/turtle_garden.logo` | The same machine in the Logo ROM: a house, a sun and two flowers, in turtle commands |
 
 ## Validation
 

@@ -9,6 +9,9 @@
 
 #include "timewarp/canvas/command.hpp"
 
+#include <QMetaObject>
+#include <QThread>
+
 #include <algorithm>
 #include <chrono>
 #include <utility>
@@ -507,13 +510,36 @@ void NativeCanvasHost::set_palette_color(int index, Rgb colour) {
 void NativeCanvasHost::beep(int milliseconds) {
     if (sound_ != nullptr) {
         // The PC speaker's own bell is a square wave around 880Hz, which is also
-        // what `BEEP` means on the machines these dialects come from.
-        sound_->note(880.0, milliseconds > 0 ? milliseconds : 120);
+        // what `BEEP` means on the machines these dialects come from. `tone` owns
+        // the thread hop, so the bell takes the same road as a note.
+        tone(880.0, milliseconds > 0 ? milliseconds : 120, "square");
     }
 }
 
 void NativeCanvasHost::tone(double frequency, int milliseconds, const char* waveform) {
     if (sound_ == nullptr) {
+        return;
+    }
+    // The player is a widget-side object with a QProcess inside it, and this runs on
+    // the runner thread: a QProcess started off the thread that owns it is a warning
+    // from Qt at best and a crash at worst. So the note is handed over rather than
+    // taken, which is also what makes the recorded mix safe to read where it is read.
+    if (QThread::currentThread() != sound_->thread()) {
+        timewarp::audio::Waveform shape = timewarp::audio::Waveform::Square;
+        const std::string name = waveform != nullptr ? waveform : "";
+        if (name == "sine") {
+            shape = timewarp::audio::Waveform::Sine;
+        } else if (name == "triangle") {
+            shape = timewarp::audio::Waveform::Triangle;
+        } else if (name == "noise") {
+            shape = timewarp::audio::Waveform::Noise;
+        }
+        SoundPlayer* player = sound_;
+        QMetaObject::invokeMethod(
+            player, [player, frequency, milliseconds, shape] {
+                player->note(frequency, milliseconds, shape);
+            },
+            Qt::QueuedConnection);
         return;
     }
     timewarp::audio::Waveform shape = timewarp::audio::Waveform::Square;
@@ -537,13 +563,25 @@ void NativeCanvasHost::play_music(const char* notation) {
         timewarp::audio::parse_play(notation, &result);
     // A partly-malformed tune still plays what parsed: the acknowledgement the
     // language printed is the reference's, so the sound is a best effort.
+    if (QThread::currentThread() != sound_->thread()) {
+        SoundPlayer* player = sound_;
+        QMetaObject::invokeMethod(player, [player, tones] { player->play(tones); },
+                                  Qt::QueuedConnection);
+        return;
+    }
     sound_->play(tones);
 }
 
 void NativeCanvasHost::stop_sound() {
-    if (sound_ != nullptr) {
-        sound_->stop();
+    if (sound_ == nullptr) {
+        return;
     }
+    if (QThread::currentThread() != sound_->thread()) {
+        SoundPlayer* player = sound_;
+        QMetaObject::invokeMethod(player, [player] { player->stop(); }, Qt::QueuedConnection);
+        return;
+    }
+    sound_->stop();
 }
 
 bool NativeCanvasHost::audio_available() const {

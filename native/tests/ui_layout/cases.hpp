@@ -103,6 +103,7 @@ void test_a_paused_run_can_be_walked_back();
 void test_sql_panel_runs_and_shows_results();
 void test_the_new_pages_name_what_they_show();
 void test_the_command_reference_lists_the_table();
+void test_the_terminal_interrupts_a_running_command();
 void test_assistant_panel_contract();
 void test_repl_bar_runs_and_keeps_bindings();
 void test_repl_basic_direct_mode();

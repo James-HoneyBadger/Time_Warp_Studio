@@ -66,7 +66,7 @@ bool PtySession::start(const QString& program, const QString& directory, int col
                        int rows, QString* error) {
     stop();
 
-    const int master = ::posix_openpt(O_RDWR | O_NOCTTY);
+    const int master = ::posix_openpt(O_RDWR | O_NOCTTY | O_CLOEXEC);
     if (master < 0) {
         if (error != nullptr) {
             *error = QStringLiteral("no pseudo-terminal available: %1")
@@ -220,27 +220,44 @@ bool PtySession::write(const QByteArray& bytes) {
     if (master_ < 0) {
         return false;
     }
-    std::size_t written = 0;
-    while (written < static_cast<std::size_t>(bytes.size())) {
-        const ssize_t count =
-            ::write(master_, bytes.constData() + written, bytes.size() - written);
+    // Typed input keeps its order: whatever is still queued goes before this.
+    if (pending_.size() + bytes.size() > kMaxPending) {
+        // The shell has not read anything for a long time. Refusing the keystroke is
+        // what makes that visible; growing the queue instead would turn a stopped
+        // shell into an allocation nobody notices.
+        static_cast<void>(flush());
+        return false;
+    }
+    pending_.append(bytes);
+    static_cast<void>(flush());
+    return true;
+}
+
+int PtySession::flush() {
+    if (master_ < 0) {
+        pending_.clear();
+        return 0;
+    }
+    while (!pending_.isEmpty()) {
+        const ssize_t count = ::write(master_, pending_.constData(), pending_.size());
         if (count > 0) {
-            written += static_cast<std::size_t>(count);
+            pending_.remove(0, static_cast<int>(count));
             continue;
         }
         if (count < 0 && errno == EINTR) {
             continue;
         }
         if (count < 0 && errno == EAGAIN) {
-            // The pty's buffer is full: give the reader a moment rather than
-            // dropping the rest of the line.
-            ::usleep(1000);
-            continue;
+            // The terminal is full. The caller's writable notifier comes back here
+            // rather than this loop waiting on the GUI thread.
+            break;
         }
+        // The far side is gone, and with it the input.
         eof_ = true;
-        return false;
+        pending_.clear();
+        return 0;
     }
-    return true;
+    return static_cast<int>(pending_.size());
 }
 
 void PtySession::setWindowSize(int columns, int rows) {
@@ -248,6 +265,7 @@ void PtySession::setWindowSize(int columns, int rows) {
 }
 
 void PtySession::stop() {
+    pending_.clear();
     if (master_ >= 0) {
         ::close(master_);
         master_ = -1;

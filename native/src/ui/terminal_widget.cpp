@@ -12,6 +12,7 @@
 #include <QLabel>
 #include <QLineEdit>
 #include <QPlainTextEdit>
+#include <QPushButton>
 #include <QResizeEvent>
 #include <QSocketNotifier>
 #include <QTextCursor>
@@ -74,6 +75,21 @@ TerminalWidget::TerminalWidget(QString working_directory, QWidget* parent)
     input_row->addWidget(prompt);
     input_row->addWidget(input_, 1);
 
+    // A terminal with no way to stop the thing in the foreground is a terminal you
+    // have to close to interrupt `less`. `Ctrl+C` is the ordinary answer and keeps the
+    // session; Restart is for the case where the shell itself is wedged.
+    interrupt_ = new QPushButton{tr("Interrupt"), this};
+    interrupt_->setObjectName(QStringLiteral("terminalInterrupt"));
+    interrupt_->setToolTip(tr("Send Ctrl+C to whatever is running (the session keeps its "
+                              "variables and history)."));
+    input_row->addWidget(interrupt_);
+    restart_ = new QPushButton{tr("Restart"), this};
+    restart_->setObjectName(QStringLiteral("terminalRestart"));
+    restart_->setToolTip(tr("End this shell and start a new one here."));
+    input_row->addWidget(restart_);
+    connect(interrupt_, &QPushButton::clicked, this, &TerminalWidget::interrupt);
+    connect(restart_, &QPushButton::clicked, this, &TerminalWidget::restart);
+
     auto* layout = new QVBoxLayout{this};
     layout->setContentsMargins(6, 6, 6, 6);
     layout->setSpacing(6);
@@ -105,6 +121,14 @@ void TerminalWidget::startShell() {
     notifier_ = new QSocketNotifier{shell_->descriptor(), QSocketNotifier::Read, this};
     connect(notifier_, &QSocketNotifier::activated, this,
             [this] { readShellOutput(); });
+    // The queue `PtySession` keeps when the terminal is full is emptied here, so a
+    // long paste into a slow foreground job arrives a buffer at a time instead of
+    // holding the window still.
+    write_notifier_ =
+        new QSocketNotifier{shell_->descriptor(), QSocketNotifier::Write, this};
+    write_notifier_->setEnabled(false);
+    connect(write_notifier_, &QSocketNotifier::activated, this,
+            [this] { drainPending(); });
     updateStatus();
 }
 
@@ -116,6 +140,7 @@ void TerminalWidget::readShellOutput() {
     if (!bytes.isEmpty()) {
         apply(filter_.feed(bytes));
     }
+    drainPending();
     if (!shell_->isRunning()) {
         const int code = shell_->exitCode();
         if (notifier_ != nullptr) {
@@ -123,10 +148,29 @@ void TerminalWidget::readShellOutput() {
             notifier_->deleteLater();
             notifier_ = nullptr;
         }
+        // Both notifiers watch the pty's descriptor, so both go before the session
+        // that owns it: a notifier left watching a closed descriptor is a warning
+        // from Qt and, on a busy machine, a stale file descriptor somebody else now
+        // owns.
+        if (write_notifier_ != nullptr) {
+            write_notifier_->setEnabled(false);
+            write_notifier_->deleteLater();
+            write_notifier_ = nullptr;
+        }
         shell_.reset();
         append(code >= 0 ? tr("\n[shell exited with %1]\n").arg(code)
                          : tr("\n[shell exited]\n"));
         updateStatus();
+    }
+}
+
+void TerminalWidget::drainPending() {
+    if (shell_ == nullptr) {
+        return;
+    }
+    const int still_waiting = shell_->flush();
+    if (write_notifier_ != nullptr) {
+        write_notifier_->setEnabled(still_waiting > 0);
     }
 }
 
@@ -167,8 +211,43 @@ void TerminalWidget::runCommand(const QString& command) {
 }
 
 void TerminalWidget::writeLine(const QString& line) {
-    if (shell_ != nullptr) {
-        static_cast<void>(shell_->write(line.toUtf8() + '\n'));
+    if (shell_ == nullptr) {
+        return;
+    }
+    if (!shell_->write(line.toUtf8() + '\n')) {
+        // The one failure a person must not have to guess at: their typing did not
+        // reach the shell. Silently dropping it would look like a terminal that
+        // ignores the keyboard.
+        append(tr("\n[the shell is not reading; that line was not sent]\n"));
+        return;
+    }
+    if (write_notifier_ != nullptr) {
+        write_notifier_->setEnabled(shell_->hasPending());
+    }
+}
+
+void TerminalWidget::interrupt() {
+    if (!isRunning()) {
+        return;
+    }
+    // `0x03` is what the line discipline turns into `SIGINT` for the foreground
+    // process group; sending the signal directly would miss a shell that is itself
+    // waiting on a child.
+    const QByteArray bytes{"\x03"};
+    if (shell_->write(bytes)) {
+        if (write_notifier_ != nullptr) {
+            write_notifier_->setEnabled(shell_->hasPending());
+        }
+    }
+    updateStatus();
+}
+
+void TerminalWidget::restart() {
+    const bool was_running = shell_ != nullptr;
+    stop();
+    startShell();
+    if (was_running) {
+        append(tr("\n[a new shell]\n"));
     }
 }
 
@@ -194,6 +273,11 @@ void TerminalWidget::stop() {
         notifier_->setEnabled(false);
         notifier_->deleteLater();
         notifier_ = nullptr;
+    }
+    if (write_notifier_ != nullptr) {
+        write_notifier_->setEnabled(false);
+        write_notifier_->deleteLater();
+        write_notifier_ = nullptr;
     }
     if (shell_ != nullptr) {
         shell_->stop();
@@ -250,6 +334,9 @@ void TerminalWidget::updateStatus() {
         status_->setText(tr("Shell: %1 \u00b7 %2").arg(shell, where));
     } else {
         status_->setText(tr("Shell: %1 \u00b7 %2 (not started)").arg(shell, where));
+    }
+    if (interrupt_ != nullptr) {
+        interrupt_->setEnabled(isRunning());
     }
 }
 

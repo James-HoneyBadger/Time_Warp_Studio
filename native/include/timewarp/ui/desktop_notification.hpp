@@ -23,6 +23,12 @@ inline constexpr const char* kSettingNotifyOnFinish = "notifications/onFinish";
 /// Whether this build was compiled with Qt DBus.
 [[nodiscard]] bool notifications_available();
 
+/// Whether *this session* has a notification service to talk to. A build with DBus
+/// on a machine with no session bus -- a container, a bare X session, a test -- can
+/// compile the call and have nowhere to send it, and a switch that offers something
+/// the session cannot do is the kind of silent nothing this project treats as a bug.
+[[nodiscard]] bool notifications_reachable();
+
 /// Posts *body* under *title*. False when the build has no DBus, when no
 /// notification service is running, or when the service refused the request; the
 /// caller has nothing useful to do about any of them, so it is not an error.

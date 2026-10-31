@@ -70,6 +70,7 @@ int main(int argc, char** argv) {
     test_sql_panel_runs_and_shows_results();
     test_the_new_pages_name_what_they_show();
     test_the_command_reference_lists_the_table();
+    test_the_terminal_interrupts_a_running_command();
     test_assistant_panel_contract();
     test_repl_bar_runs_and_keeps_bindings();
     test_repl_bar_scheme_errors_and_language_switch();

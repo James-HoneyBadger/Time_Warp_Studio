@@ -100,6 +100,14 @@ const QSet<QString>& drawingExamples() {
         QStringLiteral("chip8/font_ledger.ch8"),
         QStringLiteral("chip8/hires_rings.ch8"),
         QStringLiteral("chip8/keypad_probe.ch8"),
+        // The set added with the machine's 1992 proposal: every one of them draws on
+        // a bare frame, which is the whole of what a CHIP-8 program can do.
+        QStringLiteral("chip8/bounce.ch8"),
+        QStringLiteral("chip8/catch.ch8"),
+        QStringLiteral("chip8/countdown.ch8"),
+        QStringLiteral("chip8/maze.ch8"),
+        QStringLiteral("chip8/spinner.ch8"),
+        QStringLiteral("chip8/typewriter.ch8"),
         // The HB-1 demos: the tube is memory, so a silent run of one is a broken
         // run even though the program is BASIC.
         QStringLiteral("hb1/tube_writer.bas"),

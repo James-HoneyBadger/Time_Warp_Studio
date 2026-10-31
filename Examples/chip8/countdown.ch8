@@ -1,0 +1,84 @@
+; COUNTDOWN
+; Nine to zero, once a second, with a bar that drains as it goes.
+;
+; This is the machine's clock doing the work. The delay timer counts down by
+; itself at sixty ticks a second whether the program looks or not, so a program
+; that wants seconds sets it to sixty and waits. The sound timer is the same
+; counter with the buzzer attached, which is why the beep at zero costs one
+; instruction and no loop.
+;
+; Redrawing is the other lesson: a shape is erased by drawing it again, so the
+; digit and the bar are each drawn twice a tick -- once in the state they were
+; in, once in the state they are in now.
+
+start:  CLS
+        LD V0, 9            ; the digit on show
+        LD V1, 10           ; bar segments on show: the digit plus one
+        LD V3, 10           ; bar segments drawn
+        LD V4, 9            ; digit drawn
+        CALL draw_digit
+        CALL draw_bar
+
+tick:   CALL wait_a_second
+        ; Erase what is there, by drawing it once more.
+        LD V1, V3
+        CALL draw_bar
+        LD V0, V4
+        CALL draw_digit
+        ; The next second.
+        SE V0, 0
+        JP count_down
+        ; At zero: a note, a held beat, then a fresh count.
+        LD V5, 4
+        LD ST, V5
+        CALL wait_a_second
+        LD V0, 10           ; ten, because the subtraction below takes one off
+count_down:
+        LD V5, 1
+        SUB V0, V5
+        LD V1, V0
+        ADD V1, 1
+        ; Draw the new state, and remember it as what is now on the screen.
+        CALL draw_digit
+        CALL draw_bar
+        LD V4, V0
+        LD V3, V1
+        JP tick
+
+; The digit, big, in the middle of the upper half.
+draw_digit:
+        LD F, V0
+        LD V6, 30
+        LD V7, 6
+        DRW V6, V7, 5
+        RET
+
+; V1 segments of the bar: ten blocks along row twenty, five pixels apart.
+draw_bar:
+        LD V8, V1
+        LD V9, 4            ; x of the first block
+bar_loop:
+        SE V8, 0
+        JP draw_block
+        RET
+draw_block:
+        LD I, block
+        LD VA, 20
+        DRW V9, VA, 2
+        ADD V9, 5
+        LD VB, 1
+        SUB V8, VB
+        JP bar_loop
+
+; Sixty ticks is a second on this machine.
+wait_a_second:
+        LD V6, 60
+        LD DT, V6
+second_loop:
+        LD V6, DT
+        SE V6, 0
+        JP second_loop
+        RET
+
+block:  DB 0xF0
+        DB 0xF0

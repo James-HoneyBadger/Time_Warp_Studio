@@ -74,6 +74,13 @@
   </keywords>
 
   <releases>
+    <release version="25.0.1" date="2026-10-31">
+      <description>
+        <p>The terminal cannot stall the window, has Interrupt and Restart, names input
+        it could not deliver, and a background run replaces its own notification
+        instead of stacking a second one.</p>
+      </description>
+    </release>
     <release version="25.0.0" date="2026-10-30">
       <description>
         <p>Timey wimey wibbly wobbly, time &amp; multiuniverse travel computing.</p>
