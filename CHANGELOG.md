@@ -2,7 +2,7 @@
 
 <!-- history: all -->
 
-## [27.0.0] - 2026-11-07
+## [27.0.0] - 2026-10-31
 
 **The HB-2's own gaps are closed: a language on its hardware, a cassette, a joystick.**
 26.1.0 shipped the window and the manual, and the manual's status section named three

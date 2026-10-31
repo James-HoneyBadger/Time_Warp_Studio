@@ -389,10 +389,13 @@ jobs:
             cat <<EOF
           An old-school programming environment for eleven languages — BASIC, APL,
           Logo, PILOT, FOCAL, Scheme, CHIP-8, COMAL, REXX, Smalltalk and Forth — with
-          integrated turtle graphics, all running in C++. Inside it are two complete
+          integrated turtle graphics, all running in C++. Inside it are three complete
           machines: the HB-1, a bespoke 1982 home computer from a parallel universe with
-          an eleven-language ROM socket and its own disk operating system, and a live
-          CHIP-8 with an assembler, keypad and register inspector.
+          an eleven-language ROM socket and its own disk operating system; a live CHIP-8
+          with an assembler, keypad and register inspector; and the HB-2, the same
+          company's 1992 workstation, with a processor of its own, a framebuffer and a
+          blitter, four channels of sampled audio, a disk, a cassette and eight programs
+          sharing a desktop.
 
           ### Which file do I want?
 

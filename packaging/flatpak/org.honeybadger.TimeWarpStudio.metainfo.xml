@@ -76,7 +76,7 @@
   </keywords>
 
   <releases>
-    <release version="27.0.0" date="2026-11-07">
+    <release version="27.0.0" date="2026-10-31">
       <description>
         <p>The HB-2's last three gaps close. Nine of the Studio's languages run on the
         machine's own bus through a ROM socket, so a BASIC POKE writes video memory and
