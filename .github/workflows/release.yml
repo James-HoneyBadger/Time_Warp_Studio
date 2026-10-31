@@ -248,9 +248,13 @@ jobs:
 
       - name: Add the Flathub remote and the runtime the manifest names
         run: |
-          flatpak --user remote-add --if-not-exists flathub \
+          # System-wide, because that is the installation `flatpak-builder
+          # --install-deps-from` asks: it runs `flatpak --system install`, so a
+          # remote added with `--user` is invisible to it and the build stops at
+          # "No remote refs found for 'flathub'" before compiling anything.
+          sudo flatpak remote-add --if-not-exists flathub \
             https://dl.flathub.org/repo/flathub.flatpakrepo
-          flatpak --user install -y --noninteractive flathub \
+          sudo flatpak install -y --noninteractive --system flathub \
             org.kde.Sdk//6.8 org.kde.Platform//6.8
 
       - name: Build

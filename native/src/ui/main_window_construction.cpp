@@ -14,6 +14,7 @@
 #include <QDir>
 #include <QFileInfo>
 #include <QFont>
+#include <QMenu>
 #include <QPlainTextEdit>
 #ifdef TIME_WARP_HAVE_PRINT
 #endif
