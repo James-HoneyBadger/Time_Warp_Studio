@@ -61,13 +61,27 @@ from the desktop menu, or run the `time_warp_ide` binary directly.
 - **REPL bar** — one command at a time under the editor.
 - **Status bar** — language, cursor position, run state and the document name.
 
-### Closing documents
+### The tab's context menu
 
-The tab's ✕, **Close Tab** in the tab's context menu, and **File > Close Tab**
-(`Ctrl+W`) close a document, asking first when it has unsaved changes. **Close Other
-Tabs** and **Close All Tabs**, in the same context menu, ask about every document
-before removing any, so a Cancel leaves the window exactly as it was; **Close Other
-Tabs** does not ask about the one it keeps.
+A tab's right-click menu closes and copies documents:
+
+| Entry | What it does |
+| --- | --- |
+| **Close Tab** | Closes this document. The ✕ and **File > Close Tab** (`Ctrl+W`) are the same request, and `Ctrl+W` closes the document in the pane your cursor is in. |
+| **Close Other Tabs** | Closes every other tab of that pane, and does not ask about the one it keeps. |
+| **Close All Tabs** | Closes every tab of that pane. |
+| **Duplicate Tab** | Opens an unsaved copy of this document — its text, its language and its breakpoints — beside it. A copy rather than a second tab on the same file, because two tabs that write one path lose the later save. |
+| **Copy File Path** | Puts the document's path on the clipboard. Only for a document that has been saved. |
+| **Open Containing Folder** | Opens the folder the file is in. Only for a document that has been saved. |
+
+Closing asks first when a document has unsaved changes — for **Close Other Tabs** and
+**Close All Tabs**, about every one of them before any is removed, so a Cancel leaves
+the window exactly as it was.
+
+Everything that acts on a set of documents covers both panes: a document in the split
+is unsaved work like any other, so it carries the same unsaved dot on its tab, is
+snapshotted by autosave, is asked about when you close the window, and is raised
+rather than opened a second time when you open its file again.
 
 Two ends are special. Closing the main pane's only document, when it has never been
 saved and has nothing in it, leaves it as it is — its tab name and the language you

@@ -169,6 +169,32 @@ void test_autosave_keeps_unsaved_work() {
     // inside one session's millisecond, and the store stays bounded.
     window.autosaveNow();
     TW_CHECK(store.all().size() <= 2);
+
+    // A document in the split is snapshotted too. The sweep read the main pane's
+    // tab list only, so work on the right had no copy at all -- the one case
+    // autosave exists for.
+    window.splitEditor();
+    TW_CHECK(window.editorSplit());
+    QTabWidget* right = window.secondaryEditorTabs();
+    auto* in_split = qobject_cast<CodeEditor*>(right->currentWidget());
+    TW_CHECK(in_split != nullptr);
+    if (in_split == nullptr) {
+        scratch.restoreDataDir();
+        return;
+    }
+    in_split->setPlainText(QString{});
+    QTextCursor in_split_typed = in_split->textCursor();
+    in_split_typed.insertText(QStringLiteral("20 PRINT \"ALSO UNSAVED\"\n"));
+    TW_CHECK(in_split->document()->isModified());
+    window.autosaveNow();
+
+    bool found_split = false;
+    for (const timewarp::ui::Snapshot& snapshot : store.all()) {
+        if (store.read(snapshot) == QStringLiteral("20 PRINT \"ALSO UNSAVED\"\n")) {
+            found_split = true;
+        }
+    }
+    TW_CHECK(found_split);
     scratch.restoreDataDir();
 }
 

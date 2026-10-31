@@ -52,6 +52,9 @@ int main(int argc, char** argv) {
     test_choosing_a_language_sticks();
     test_closing_tabs();
     test_closing_documents_in_a_split();
+    test_the_split_keeps_its_documents_in_step();
+    test_a_file_open_in_the_split_is_not_opened_twice();
+    test_the_tab_menu_offers_the_documents_file();
     test_saving_a_document();
     test_a_file_that_cannot_be_read_is_refused();
     test_a_byte_order_mark_is_not_part_of_the_program();

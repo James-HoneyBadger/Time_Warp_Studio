@@ -74,6 +74,14 @@
   </keywords>
 
   <releases>
+    <release version="25.0.3" date="2026-10-31">
+      <description>
+        <p>Closing the window asks about the split's documents too, a file open on
+        the right is raised rather than opened twice, autosave and the unsaved marker
+        cover both panes, and the tab menu's Duplicate, Copy File Path and Open
+        Containing Folder entries do something.</p>
+      </description>
+    </release>
     <release version="25.0.2" date="2026-10-31">
       <description>
         <p>Close Other Tabs and Close All Tabs work, a document on the split's

@@ -2,6 +2,47 @@
 
 <!-- history: all -->
 
+## [25.0.3] - 2026-10-31
+
+The same reading of the tree, once more in the same place: the editor has two panes,
+and a surprising amount of the window still knew about one of them.
+
+### Fixed
+
+- **Closing the window asks about the split's documents too.** `closeEvent` walked
+  the main pane's tab list, so an edited program in the right-hand pane was discarded
+  at quit without the prompt the same program on the left gets — the loss the rest of
+  that function exists to prevent, three lines above a comment saying so.
+- **A file already open in the split is raised, not opened again.** `openFile`'s
+  "raise the tab that is already open" rule searched only the main pane, so opening a
+  file that was open on the right loaded a second copy of it; two tabs that write one
+  path lose the later save, which is exactly what that rule is for.
+- **Autosave covers the split.** `autosaveNow` snapshotted the main pane only, so
+  unsaved work in the right-hand pane had no copy to recover from at all.
+- **A document in the split shows its unsaved dot.** `updateTabLabel` looked for the
+  editor in the main pane's tab bar and returned when it was not there, so a modified
+  document on the right never showed the marker — and kept its old caption after a
+  Save As.
+- **A tab change inside the split re-describes the window.** Nothing listened to the
+  split's tab bar, so switching tabs there left the title, the language and position
+  badges, the breadcrumb, the outline and the find bar describing the document the
+  pane had been showing before.
+- **Duplicate Tab duplicates.** The context menu's entry emitted
+  `duplicateRequested` and nothing has connected it since the Qt rewrite — the second
+  of that menu's dead entries, after the two 25.0.2 fixed. It now opens an unsaved
+  copy — text, language and breakpoints — beside the original, named for the file it
+  came from (`hello.bas` copies to `hello copy.bas`, which is what Save As then
+  offers), and marked modified so that closing it asks and autosave keeps it. A copy
+  rather than a second tab on the same path: see the raise rule above.
+- **The tab menu offers the document's file.** `aboutToShowTabMenu` is the hook that
+  lets the window add the entries only it can service, and nothing ever connected it,
+  so the menu it was written for never had them. **Copy File Path** and **Open
+  Containing Folder** appear for a document that has been saved, and not for an
+  untitled one, which has neither.
+
+`docs/USER_GUIDE.md` describes the whole context menu now, including what bits of
+the window do and do not cover the split.
+
 ## [25.0.2] - 2026-10-31
 
 The same reading of the tree that found 25.0.1's bugs, continued for another hour:

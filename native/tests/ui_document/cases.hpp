@@ -20,6 +20,9 @@ void test_editing_marks_the_document_and_the_title();
 void test_choosing_a_language_sticks();
 void test_closing_tabs();
 void test_closing_documents_in_a_split();
+void test_the_split_keeps_its_documents_in_step();
+void test_a_file_open_in_the_split_is_not_opened_twice();
+void test_the_tab_menu_offers_the_documents_file();
 
 void test_saving_a_document();
 void test_a_file_that_cannot_be_read_is_refused();

@@ -5,6 +5,10 @@
 
 #include "ui_document/support.hpp"
 
+#include <QClipboard>
+#include <QDir>
+#include <QMenu>
+
 namespace tw::ui_document {
 
 // Read by this file only: it arrived here with the cases that need it.
@@ -303,6 +307,161 @@ void test_closing_documents_in_a_split() {
     TW_CHECK(currentEditorOf(window) != nullptr);
 }
 
+
+void test_the_split_keeps_its_documents_in_step() {
+    announce("the split is a second pane, not a second class");
+    MainWindow window;
+    CodeEditor* first = currentEditorOf(window);
+    TW_CHECK(first != nullptr);
+    if (first == nullptr) {
+        return;
+    }
+
+    window.splitEditor();
+    TW_CHECK(window.editorSplit());
+    QTabWidget* right = window.secondaryEditorTabs();
+    TW_CHECK_EQ(right->count(), 1);
+    auto* in_split = qobject_cast<CodeEditor*>(right->widget(0));
+    TW_CHECK(in_split == first);
+    if (in_split == nullptr) {
+        return;
+    }
+
+    // An edit in the split marks the split's own tab. The caption was only ever
+    // written to the main pane's tab bar, so a modified document on the right
+    // showed no unsaved dot -- the marker that says a close will ask.
+    in_split->setPlainText(QString{});
+    QTextCursor typed = in_split->textCursor();
+    typed.insertText(QStringLiteral("10 PRINT \"SPLIT\"\n"));
+    TW_CHECK(in_split->document()->isModified());
+    TW_CHECK(right->tabText(0).contains(QChar(0x25CF)));
+
+    // Duplicate Tab makes a copy -- text, language, breakpoints -- in the pane the
+    // source is in. The menu entry emitted a signal nothing had connected, so
+    // choosing it did nothing at all.
+    CodeEditor* copy = window.duplicateTab(right, 0);
+    TW_CHECK(copy != nullptr);
+    if (copy == nullptr) {
+        return;
+    }
+    TW_CHECK(copy != in_split);
+    TW_CHECK_EQ(right->count(), 2);
+    TW_CHECK(right->indexOf(copy) >= 0);
+    TW_CHECK_EQ(copy->toPlainText().toStdString(), in_split->toPlainText().toStdString());
+    // Named for what it is a copy of, and marked unsaved: closing it asks, and
+    // autosave keeps it.
+    TW_CHECK_EQ(right->tabText(right->indexOf(copy)),
+                QStringLiteral("untitled copy \u25CF"));
+    TW_CHECK(copy->document()->isModified());
+
+    // A tab change inside the split re-describes the window. Nothing listened to
+    // the split's tab bar, so the title, badges and outline went on describing the
+    // document the pane showed before.
+    //
+    // Focus routing needs a window that can hold focus: `currentEditor` reads the
+    // focused pane, and a hidden window has no focus widget at all. So the window
+    // is shown and the assertions made only once focus was really taken.
+    window.show();
+    QApplication::processEvents();
+    in_split->setFocus(Qt::OtherFocusReason);
+    QApplication::processEvents();
+    if (QApplication::focusWidget() == nullptr) {
+        return;
+    }
+    right->setCurrentWidget(in_split);
+    const QString split_crumb = badgeText(window, "breadcrumb");
+    right->setCurrentWidget(copy);
+    const QString copy_crumb = badgeText(window, "breadcrumb");
+    TW_CHECK_EQ(split_crumb, QStringLiteral("untitled"));
+    TW_CHECK_EQ(copy_crumb, QStringLiteral("untitled copy"));
+}
+
+void test_a_file_open_in_the_split_is_not_opened_twice() {
+    announce("a file open in the split is raised, not copied");
+    MainWindow window;
+    QTemporaryDir dir;
+    TW_CHECK(dir.isValid());
+    if (!dir.isValid()) {
+        return;
+    }
+    const QString path = writeFile(dir, QStringLiteral("shared.bas"), QByteArray{"PRINT 1\n"});
+    TW_CHECK(!path.isEmpty());
+    TW_CHECK(window.openFile(path));
+
+    // Move it to the split, then open it again: the raise rule has to look in both
+    // panes, or the second Open loads a second copy of one file and the last save
+    // silently wins.
+    CodeEditor* opened = currentEditorOf(window);
+    TW_CHECK(opened != nullptr);
+    if (opened == nullptr) {
+        return;
+    }
+    window.splitEditor();
+    QTabWidget* right = window.secondaryEditorTabs();
+    TW_CHECK(window.editorSplit());
+    TW_CHECK(right->indexOf(opened) >= 0);
+    const int tabs_before = right->count();
+    const int left_before = window.editorTabs()->count();
+
+    TW_CHECK(window.openFile(path));
+    TW_CHECK_EQ(right->count(), tabs_before);
+    TW_CHECK_EQ(window.editorTabs()->count(), left_before);
+    TW_CHECK_EQ(right->currentWidget(), opened);
+    TW_CHECK(window.editorTabs()->indexOf(opened) < 0);
+
+    // A copy of a saved document is named for the file in front of its extension,
+    // which is the name Save As then offers.
+    const int index = right->indexOf(opened);
+    CodeEditor* file_copy = window.duplicateTab(right, index);
+    TW_CHECK(file_copy != nullptr);
+    if (file_copy == nullptr) {
+        return;
+    }
+    TW_CHECK_EQ(right->tabText(right->indexOf(file_copy)),
+                QStringLiteral("shared copy.bas \u25CF"));
+    // Untitled, so it is not a second tab on that path.
+    TW_CHECK_EQ(window.openFilePaths().size(), 0);
+}
+
+void test_the_tab_menu_offers_the_documents_file() {
+    announce("tab menu: the document's own file");
+    MainWindow window;
+    QTabWidget* pane = window.editorTabs();
+
+    // An untitled buffer has no path to copy and no folder to open, so the two
+    // entries would be offers to do nothing.
+    QMenu blank_menu;
+    window.addDocumentActions(pane, 0, &blank_menu);
+    TW_CHECK(blank_menu.actions().isEmpty());
+
+    // A saved document gets both. The menu the tab bar shows asks for them through
+    // `aboutToShowTabMenu`, which nothing has ever connected -- so the entries the
+    // signal exists for have never appeared.
+    QTemporaryDir dir;
+    TW_CHECK(dir.isValid());
+    if (!dir.isValid()) {
+        return;
+    }
+    const QString path = writeFile(dir, QStringLiteral("menu.bas"), QByteArray{"PRINT 1\n"});
+    TW_CHECK(!path.isEmpty());
+    TW_CHECK(window.openFile(path));
+
+    QMenu menu;
+    window.addDocumentActions(pane, pane->currentIndex(), &menu);
+    QStringList titles;
+    for (QAction* action : menu.actions()) {
+        titles << action->text();
+        if (action->text() == QStringLiteral("Copy File Path")) {
+            action->trigger();
+        }
+    }
+    TW_CHECK(titles.contains(QStringLiteral("Copy File Path")));
+    TW_CHECK(titles.contains(QStringLiteral("Open Containing Folder")));
+    // The copied text is the path as the platform shows it, which is what a paste
+    // into a terminal or a bug report wants.
+    TW_CHECK_EQ(QGuiApplication::clipboard()->text().toStdString(),
+                QDir::toNativeSeparators(path).toStdString());
+}
 
 void test_saving_a_document() {
     announce("saving");

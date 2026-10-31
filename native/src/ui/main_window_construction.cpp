@@ -157,8 +157,9 @@ void MainWindow::autosaveNow() {
         return;
     }
     const qint64 now = QDateTime::currentMSecsSinceEpoch();
-    for (int index = 0; index < editor_tabs_->count(); ++index) {
-        auto* editor = qobject_cast<CodeEditor*>(editor_tabs_->widget(index));
+    // Both panes: a document in the split is unsaved work like any other, and a
+    // sweep that read only the main tab list left it with no snapshot at all.
+    for (CodeEditor* editor : allEditors()) {
         // Only documents with unsaved changes. Snapshotting everything would push
         // the useful copies out of the five kept, which is the opposite of the
         // point.
@@ -434,6 +435,10 @@ void MainWindow::buildEditorColumn(QSplitter* parent) {
             [this](int index) { closeOtherTabs(editor_tabs_, index); });
     connect(editor_tabs_, &ResizableTabWidget::closeAllRequested, this,
             [this] { closeAllTabs(editor_tabs_); });
+    connect(editor_tabs_, &ResizableTabWidget::duplicateRequested, this,
+            [this](int index) { (void)duplicateTab(editor_tabs_, index); });
+    connect(editor_tabs_, &ResizableTabWidget::aboutToShowTabMenu, this,
+            [this](int index, QMenu* menu) { addDocumentActions(editor_tabs_, index, menu); });
     connect(editor_tabs_, &QTabWidget::currentChanged, this,
             [this](int /*index*/) { refreshDocumentState(); });
 
@@ -453,6 +458,19 @@ void MainWindow::buildEditorColumn(QSplitter* parent) {
             [this](int index) { closeOtherTabs(editor_tabs_secondary_, index); });
     connect(editor_tabs_secondary_, &ResizableTabWidget::closeAllRequested, this,
             [this] { closeAllTabs(editor_tabs_secondary_); });
+    connect(editor_tabs_secondary_, &ResizableTabWidget::duplicateRequested, this,
+            [this](int index) { (void)duplicateTab(editor_tabs_secondary_, index); });
+    connect(editor_tabs_secondary_, &ResizableTabWidget::aboutToShowTabMenu, this,
+            [this](int index, QMenu* menu) {
+                addDocumentActions(editor_tabs_secondary_, index, menu);
+            });
+    // The same two refreshes as the main pane, for the same reason: a tab change
+    // in the split is a different document, so the title, badges, outline and find
+    // bar are describing the wrong one until something says so.
+    connect(editor_tabs_secondary_, &QTabWidget::currentChanged, this, [this](int /*index*/) {
+        refreshOutline();
+        refreshDocumentState();
+    });
 
     editor_pane_splitter_->setStretchFactor(0, 1);
     editor_pane_splitter_->setStretchFactor(1, 1);

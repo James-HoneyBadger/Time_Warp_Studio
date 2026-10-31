@@ -618,6 +618,14 @@ public slots:
     /// untouched scratch document when that is all it held and is left with a
     /// fresh one otherwise; the split's second pane is closed.
     bool closeAllTabs(QTabWidget* pane);
+    /// Duplicates the tab at `index` of `pane` as an **unsaved copy** -- its text,
+    /// its language and its breakpoints -- and returns it. A copy rather than a
+    /// second tab on the same file, because two tabs that write one path lose the
+    /// later save. Null when there is no such tab.
+    CodeEditor* duplicateTab(QTabWidget* pane, int index);
+    /// Adds to a tab's context menu the entries only the window can service: the
+    /// document's own file, when it has been saved somewhere.
+    void addDocumentActions(QTabWidget* pane, int index, QMenu* menu);
 
 public:
     /// Runs the current document.
@@ -752,6 +760,18 @@ private:
     /// somewhere else (a menu, the console, nothing). `currentEditor` reads it, so
     /// "the current document" means the one the user is working in.
     [[nodiscard]] QTabWidget* activeEditorTabs() const;
+
+    /// Every document in the window: the main pane's tabs in order, then the
+    /// split's. Saving on close, autosave and "this file is already open" all go
+    /// through this, because the split is a second place to keep a document and a
+    /// tab list that named only the main pane quietly ignored it.
+    [[nodiscard]] QList<CodeEditor*> allEditors() const;
+    /// The pane that holds `editor`, or nullptr when neither does.
+    [[nodiscard]] QTabWidget* paneOf(CodeEditor* editor) const;
+    /// The tab name for a duplicate: the source's own name with ` copy` before its
+    /// extension, so a saved `hello.bas` copies to `hello copy.bas`, which is what
+    /// Save As then offers.
+    [[nodiscard]] QString duplicateLabelFor(const CodeEditor* source) const;
 
     /// Offers to save a modified document. Returns false when the user cancels,
     /// which the caller must treat as "abandon the operation".

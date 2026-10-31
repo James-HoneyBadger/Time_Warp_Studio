@@ -10,9 +10,11 @@
 
 #include <QAction>
 #include <QApplication>
+#include <QClipboard>
 #include <QCloseEvent>
 #include <QComboBox>
 #include <QDateTime>
+#include <QDesktopServices>
 #include <QDir>
 #include <QFile>
 #include <QFileDialog>
@@ -30,6 +32,7 @@
 #include <QStatusBar>
 #include <QTabWidget>
 #include <QTextDocument>
+#include <QUrl>
 
 #include <memory>
 #include <string>
@@ -151,11 +154,11 @@ void MainWindow::closeEvent(QCloseEvent* event) {
     stopEngines();
 
     // Every open document gets its say before the window goes, and any Cancel
-    // aborts the whole close. The Python window has no such prompt: it discards
-    // unsaved edits without asking, which loses a lesson's worth of typing with
-    // no way to get it back.
-    for (int index = 0; index < editor_tabs_->count(); ++index) {
-        if (!maybeSave(qobject_cast<CodeEditor*>(editor_tabs_->widget(index)))) {
+    // aborts the whole close -- in both panes. A prompt that asked only the
+    // left-hand tab list discarded an edited document in the split without a word,
+    // which is the loss the rest of this function exists to prevent.
+    for (CodeEditor* editor : allEditors()) {
+        if (!maybeSave(editor)) {
             event->ignore();
             return;
         }
@@ -509,6 +512,101 @@ QTabWidget* MainWindow::activeEditorTabs() const {
     return editor_tabs_;
 }
 
+QTabWidget* MainWindow::paneOf(CodeEditor* editor) const {
+    if (editor == nullptr) {
+        return nullptr;
+    }
+    if (editor_tabs_ != nullptr && editor_tabs_->indexOf(editor) >= 0) {
+        return editor_tabs_;
+    }
+    if (editor_tabs_secondary_ != nullptr && editor_tabs_secondary_->indexOf(editor) >= 0) {
+        return editor_tabs_secondary_;
+    }
+    return nullptr;
+}
+
+QList<CodeEditor*> MainWindow::allEditors() const {
+    QList<CodeEditor*> editors;
+    for (QTabWidget* pane : {editor_tabs_, editor_tabs_secondary_}) {
+        if (pane == nullptr) {
+            continue;
+        }
+        for (int index = 0; index < pane->count(); ++index) {
+            if (auto* editor = qobject_cast<CodeEditor*>(pane->widget(index))) {
+                editors.append(editor);
+            }
+        }
+    }
+    return editors;
+}
+
+QString MainWindow::duplicateLabelFor(const CodeEditor* source) const {
+    const QString path = pathOf(source);
+    if (path.isEmpty()) {
+        return tr("%1 copy").arg(nameOf(source));
+    }
+    const QFileInfo info{path};
+    const QString suffix = info.suffix();
+    // `hello.bas` copies to `hello copy.bas` rather than `hello.bas copy`, so the
+    // name Save As offers is the name the tab is already showing.
+    return suffix.isEmpty() ? tr("%1 copy").arg(info.completeBaseName())
+                            : tr("%1 copy.%2").arg(info.completeBaseName(), suffix);
+}
+
+CodeEditor* MainWindow::duplicateTab(QTabWidget* pane, int index) {
+    if (pane == nullptr || index < 0 || index >= pane->count()) {
+        return nullptr;
+    }
+    auto* source = qobject_cast<CodeEditor*>(pane->widget(index));
+    if (source == nullptr) {
+        return nullptr;
+    }
+
+    CodeEditor* copy = newFile();
+    copy->setPlainText(source->toPlainText());
+    // The language travels as an override rather than being guessed from a name:
+    // the copy has no path of its own, and a copy of a Logo program is still a
+    // Logo program even if it is called `untitled 7`.
+    copy->setProperty(kLanguageOverrideProperty, settingsKey(languageOf(source)));
+    copy->setProperty(kUntitledLabelProperty, duplicateLabelFor(source));
+    copy->setBreakpoints(source->breakpoints());
+    // Unsaved work, and it says so: closing it asks, and autosave keeps a copy.
+    // `setPlainText` clears the flag, so this is set afterwards rather than before.
+    copy->document()->setModified(true);
+    updateTabLabel(copy);
+
+    if (pane == editor_tabs_secondary_) {
+        moveEditorToPane(copy, pane);
+        refreshDocumentState();
+    }
+    setExecutionState(tr("ready"), tr("Duplicated %1").arg(nameOf(source)));
+    return copy;
+}
+
+void MainWindow::addDocumentActions(QTabWidget* pane, int index, QMenu* menu) {
+    if (pane == nullptr || menu == nullptr || index < 0 || index >= pane->count()) {
+        return;
+    }
+    auto* editor = qobject_cast<CodeEditor*>(pane->widget(index));
+    const QString path = pathOf(editor);
+    if (path.isEmpty()) {
+        // An untitled buffer has no path to copy and no folder to open, so the two
+        // entries would be offers to do nothing.
+        return;
+    }
+    menu->addSeparator();
+    menu->addAction(tr("Copy File Path"), this, [path] {
+        QGuiApplication::clipboard()->setText(QDir::toNativeSeparators(path));
+    });
+    menu->addAction(tr("Open Containing Folder"), this, [this, path] {
+        const QString folder = QFileInfo{path}.absolutePath();
+        if (!QDesktopServices::openUrl(QUrl::fromLocalFile(folder))) {
+            setExecutionState(tr("ready"),
+                              tr("Could not open %1").arg(QDir::toNativeSeparators(folder)));
+        }
+    });
+}
+
 CodeEditor* MainWindow::currentEditor() const {
     return qobject_cast<CodeEditor*>(activeEditorTabs()->currentWidget());
 }
@@ -742,7 +840,14 @@ void MainWindow::adoptEditor(CodeEditor* editor) {
 }
 
 void MainWindow::updateTabLabel(CodeEditor* editor) {
-    const int index = editor_tabs_->indexOf(editor);
+    // Whichever pane holds the document: a caption that was only ever written to
+    // the main pane's tab bar left a document in the split without the unsaved
+    // marker, and with its old name after a Save As.
+    QTabWidget* pane = paneOf(editor);
+    if (pane == nullptr) {
+        return;
+    }
+    const int index = pane->indexOf(editor);
     if (index < 0) {
         return;
     }
@@ -750,8 +855,8 @@ void MainWindow::updateTabLabel(CodeEditor* editor) {
     // nowhere, but a leading `*` next to a file name reads as a wildcard, and this
     // is a marker for "unsaved", not "matches anything".
     const QString marker = editor->document()->isModified() ? tr(" \u25CF") : QString{};
-    editor_tabs_->setTabText(index, nameOf(editor) + marker);
-    editor_tabs_->setTabToolTip(index, pathOf(editor));
+    pane->setTabText(index, nameOf(editor) + marker);
+    pane->setTabToolTip(index, pathOf(editor));
 }
 
 void MainWindow::refreshDocumentState() {
@@ -839,11 +944,14 @@ bool MainWindow::openFile(const QString& path, OpenFailure failure) {
 
     // Raise the existing tab rather than loading a second copy. Two copies of one
     // file means the last save wins and the other window's edits vanish, which is
-    // the kind of data loss that has no undo.
-    for (int index = 0; index < editor_tabs_->count(); ++index) {
-        auto* existing = qobject_cast<CodeEditor*>(editor_tabs_->widget(index));
+    // the kind of data loss that has no undo. The split is searched too: a file
+    // open on the right is the same file.
+    for (CodeEditor* existing : allEditors()) {
         if (existing != nullptr && pathOf(existing) == absolute) {
-            editor_tabs_->setCurrentIndex(index);
+            QTabWidget* pane = paneOf(existing);
+            if (pane != nullptr) {
+                pane->setCurrentWidget(existing);
+            }
             existing->setFocus();
             // Raising a tab is using the file, so it belongs at the top of the
             // recent list too. Otherwise re-opening a file from the list would
