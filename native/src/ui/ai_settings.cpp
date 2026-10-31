@@ -24,6 +24,7 @@ namespace timewarp::ui {
 namespace {
 
 using timewarp::ai::Config;
+using timewarp::ai::Persona;
 using timewarp::ai::Preset;
 using timewarp::ai::Protocol;
 
@@ -179,6 +180,34 @@ void AiSettingsDialog::buildUi() {
     limits_form->addRow(QString{}, inline_);
     layout->addWidget(limits);
 
+    // The voice: an environment out of its own time, so the assistant can answer in
+    // the one the program belongs to.
+    auto* voice = new QGroupBox{tr("Voice"), this};
+    auto* voice_form = new QFormLayout{voice};
+    persona_ = new QComboBox{voice};
+    persona_->setObjectName(QStringLiteral("aiPersonaChooser"));
+    persona_->setAccessibleName(tr("Voice"));
+    for (const timewarp::ai::Persona persona : timewarp::ai::personas()) {
+        persona_->addItem(timewarp::ai::persona_name(persona),
+                          timewarp::ai::persona_key(persona));
+        const int row = persona_->count() - 1;
+        persona_->setItemData(row, timewarp::ai::persona_description(persona),
+                              Qt::ToolTipRole);
+    }
+    persona_->setToolTip(tr("How a reply reads. The persona changes the register and "
+                            "never the facts: the commands are the ones this "
+                            "application's interpreters have, whichever voice is "
+                            "speaking."));
+    voice_form->addRow(tr("Speak as:"), persona_);
+    auto* voice_note = new QLabel{
+        tr("A voice is a register, not a licence: every persona answers with the same "
+           "commands and the same rules about not inventing them."),
+        voice};
+    voice_note->setObjectName(QStringLiteral("aiPersonaNote"));
+    voice_note->setWordWrap(true);
+    voice_form->addRow(QString{}, voice_note);
+    layout->addWidget(voice);
+
     auto* environment = new QLabel{
         tr("The key may also be given as TIME_WARP_AI_API_KEY, which this application "
            "never writes to disk and which wins over the field above. "
@@ -323,6 +352,8 @@ void AiSettingsDialog::fillFrom(const Config& config) {
     send_document_->setChecked(config.send_document);
     remember_->setChecked(config.remember_conversation);
     inline_->setChecked(config.inline_suggestions);
+    const int persona_index = persona_->findData(timewarp::ai::persona_key(config.persona));
+    persona_->setCurrentIndex(persona_index >= 0 ? persona_index : 0);
 
     const QString name = timewarp::ai::provider_name(config);
     int index = preset_->findData(name);
@@ -365,6 +396,9 @@ Config AiSettingsDialog::collected() const {
     config.send_document = send_document_->isChecked();
     config.remember_conversation = remember_->isChecked();
     config.inline_suggestions = inline_->isChecked();
+    config.persona =
+        timewarp::ai::persona_from_key(persona_->currentData().toString())
+            .value_or(Persona::Plain);
     return config;
 }
 

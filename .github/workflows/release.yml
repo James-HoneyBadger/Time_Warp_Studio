@@ -228,6 +228,52 @@ jobs:
             dist/*.sha256
           if-no-files-found: error
 
+  # The Flatpak, which is the artifact that makes the application the same on Arch,
+  # Fedora and Ubuntu: the runtime carries the Qt the build was tested against, so a
+  # distribution updating its own Qt cannot change what runs.
+  #
+  # Built from the manifest the repository keeps, on every tag, so the file Flathub
+  # will be asked to read is exercised rather than merely reviewed.
+  build-flatpak:
+    name: Build the Flatpak bundle
+    needs: verify
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Install flatpak-builder
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends flatpak flatpak-builder
+
+      - name: Add the Flathub remote and the runtime the manifest names
+        run: |
+          flatpak --user remote-add --if-not-exists flathub \
+            https://dl.flathub.org/repo/flathub.flatpakrepo
+          flatpak --user install -y --noninteractive flathub \
+            org.kde.Sdk//6.8 org.kde.Platform//6.8
+
+      - name: Build
+        uses: flatpak/flatpak-github-actions/flatpak-builder@79327416609af08178ad73b352877e51450790b3 # v6
+        with:
+          bundle: Time_Warp_Studio-${{ needs.verify.outputs.version }}-x86_64.flatpak
+          manifest-path: packaging/flatpak/org.honeybadger.TimeWarpStudio.yml
+          # The manifest builds the checkout, which is already here: no second clone.
+          build-args: --disable-rofiles-fuse
+          cache-key: flatpak-builder-${{ hashFiles('native/**', 'packaging/flatpak/**') }}
+
+      - name: Checksum the bundle
+        run: sha256sum "Time_Warp_Studio-${{ needs.verify.outputs.version }}-x86_64.flatpak" > \
+          "Time_Warp_Studio-${{ needs.verify.outputs.version }}-x86_64.flatpak.sha256"
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: flatpak-artifact-x86_64
+          path: |
+            *.flatpak
+            *.flatpak.sha256
+          if-no-files-found: error
+
   image:
     name: Publish the container image
     needs: [verify, build]
@@ -295,7 +341,7 @@ jobs:
 
   release:
     name: Create the GitHub Release
-    needs: [verify, build, image]
+    needs: [verify, build, build-flatpak, image]
     runs-on: ubuntu-24.04
     # The Deployment GitHub records points at the published release. Add required
     # reviewers to this environment in Settings > Environments if a release
@@ -360,6 +406,7 @@ jobs:
           | If you… | Download | What happens |
           | --- | --- | --- |
           | just want to try it, on Intel/AMD | \`Time_Warp_Studio-${version}-x86_64.AppImage\` | One file. Make it executable and double-click it. Nothing is installed and no root password is asked for. |
+          | want it sandboxed, with its own Qt, on any distribution | \`Time_Warp_Studio-${version}-x86_64.flatpak\` | \`flatpak install ./Time_Warp_Studio-${version}-x86_64.flatpak\`, then run **Time Warp Studio** from the menu. The runtime is shared with the other Flatpaks you have. |
           | use Ubuntu, Debian, Mint or Pop!_OS | \`time-warp-studio_${version}_amd64.deb\` (or \`_arm64.deb\`) | Double-click it, or \`sudo apt install ./time-warp-studio_${version}_amd64.deb\`. Appears in the application menu. |
           | use Fedora, RHEL or openSUSE | \`time-warp-studio-${version}-1.x86_64.rpm\` (or \`.aarch64.rpm\`) | \`sudo dnf install ./time-warp-studio-${version}-1.x86_64.rpm\` |
           | want no desktop integration, or you are on Linux arm64 | \`time-warp-studio-${version}-linux-<arch>.tar.gz\` | \`tar -xzf time-warp-studio-${version}-linux-<arch>.tar.gz -C / --strip-components=1\` |
@@ -389,7 +436,7 @@ jobs:
           gh release create "$tag" \
             --title "Time Warp Studio $version" \
             --notes-file release-notes.md \
-            dist/*.tar.gz dist/*.deb dist/*.rpm dist/*.AppImage \
+            dist/*.tar.gz dist/*.deb dist/*.rpm dist/*.AppImage dist/*.flatpak \
             dist/*.sha256
 
       - name: Verify the release is public and complete

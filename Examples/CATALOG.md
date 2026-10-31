@@ -129,6 +129,7 @@ so it can be opened, edited and re-assembled. The language is documented in
 | `chip8/showcase.ch8` | A montage: hi-res mode, the font, sprites, collision, BCD, arithmetic and the keypad |
 | `chip8/font_and_frames.ch8` | A font glyph, a checker pattern and a frame, with a collision |
 | `chip8/hires.ch8` | SuperChip hi-res (128x64): a 16x16 ring, two scrolls and the large FX30 font |
+| `chip8/tour.ch8` | Five pages on the machine's own behaviour; any key turns the page |
 | `chip8/paint.ch8` | One-pixel paint: move with 2/8/4/6, paint with 5, clear with 0 |
 | `chip8/rewind_lab.ch8` | A three-sprite program with a suggested breakpoint for practising editor rewind |
 | `chip8/pattern_loom.ch8` | A woven lattice drawn with XOR, so every overlap inverts what it covers |

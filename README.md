@@ -5,7 +5,7 @@ complete computers inside it.*
 
 [![Languages](https://img.shields.io/badge/languages-11-blue)](#eleven-interpreters-one-per-era)
 [![Machines](https://img.shields.io/badge/machines-2-purple)](docs/MACHINES.md)
-[![Platforms](https://img.shields.io/badge/platforms-Windows%20%7C%20macOS%20%7C%20Linux-green)](docs/INSTALLATION.md)
+[![Platform](https://img.shields.io/badge/platform-Linux-green)](docs/INSTALLATION.md)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Version](https://img.shields.io/badge/Version-24.0.0-orange)](https://github.com/James-HoneyBadger/Time_Warp_Studio)
 
@@ -89,7 +89,9 @@ you had:
   machine phosphors and CRT glass you can tune from off to heavy. Choosing amber
   recolours the header, the editor, the canvas and the glass together, because the
   palette is one table.
-- **Offline and self-contained.** No account, no network call, no telemetry. The
+- **Offline and self-contained.** No account and no telemetry, and nothing is sent
+  unless you ask: the assistant is off until it is configured, and the CHIP-8
+  homebrew fetch is a button that names what it will download first. The
   interpreters, the lesson checker, the classroom and the manuals are all part of
   the one application, so it works the same in a basement as on a network. The
   project is MIT-licensed, and the sources, the tests and the manuals are in the
@@ -112,26 +114,25 @@ one would need rather than left as a wish.
 ## Install it
 
 You do not need a compiler. Every [release](https://github.com/James-HoneyBadger/Time_Warp_Studio/releases/latest)
-carries a ready-built application for Windows, macOS and Linux, with the Qt runtime
-inside it.
+carries a ready-built Linux application, with the Qt runtime inside it.
+
+**Time Warp Studio is a Linux application.** It was cross-platform until 24.0, and
+the Windows and macOS builds of that release remain on the release page as they were;
+24.x onward builds and ships for Linux only.
 
 | You have | Take | Then |
 | --- | --- | --- |
-| Windows 10 or 11 | `time-warp-studio-<version>-win64.exe` | Run it. Installs into Program Files with Start Menu and desktop shortcuts; the `.zip` beside it is the same application without an installer. |
-| Windows 7 | `time-warp-studio-<version>-win64-win7.exe` | The same application, built for Windows 7 SP1. A `.zip` sits beside it. |
-| macOS 14.4 or later, Intel or Apple silicon | `Time_Warp_Studio-<version>-macOS-universal.dmg` | Open it and drag **Time Warp Studio** to Applications. One image, both architectures. |
 | a Linux desktop, no wish to install anything | `Time_Warp_Studio-<version>-x86_64.AppImage` | Make it executable and double-click it. No root, no package manager, no Qt to fetch. |
+| any distribution, and you want it sandboxed with its own Qt | `Time_Warp_Studio-<version>-x86_64.flatpak` | `flatpak install ./Time_Warp_Studio-<version>-x86_64.flatpak`, then run **Time Warp Studio** from the menu. |
 | Ubuntu, Debian, Mint or Pop!_OS | `time-warp-studio_<version>_amd64.deb`, or `_arm64.deb` | Double-click it, or `sudo apt install ./time-warp-studio_<version>_amd64.deb` |
 | Fedora, RHEL or openSUSE | `time-warp-studio-<version>-1.x86_64.rpm`, or `.aarch64.rpm` | `sudo dnf install ./time-warp-studio-<version>-1.x86_64.rpm` |
 | any other Linux, or arm64 | `time-warp-studio-<version>-linux-<arch>.tar.gz` | `tar -xzf … -C / --strip-components=1` |
 
-On Linux, `uname -m` says which architecture yours is: `x86_64` or `aarch64`. Omit
-the architecture from the file name above and the release assets fill it in. The
-Windows installer and the macOS disk image are not signed with a paid certificate,
-so each asks once — SmartScreen's "More info" and then "Run anyway" on Windows, and
-right-click > Open on macOS. Full requirements, the container image and the
-Windows 7 build are in [docs/INSTALLATION.md](docs/INSTALLATION.md); building from
-source is still supported, and [native/README.md](native/README.md) describes it.
+`uname -m` says which architecture yours is: `x86_64` or `aarch64`. Omit the
+architecture from the file name above and the release assets fill it in. Full
+requirements and the container image are in
+[docs/INSTALLATION.md](docs/INSTALLATION.md); building from source is still
+supported, and [native/README.md](native/README.md) describes it.
 
 ---
 
@@ -230,8 +231,8 @@ exercised by the command matrix.
 
 ### What is still being built
 
-What remains unbuilt is a short list — an automatic update check, code-signed
-Windows and macOS builds, and Flatpak or Snap packaging. It is tracked in
+What remains unbuilt is a short list — an automatic update check and Snap
+packaging. It is tracked in
 [docs/ROADMAP.md](docs/ROADMAP.md), which is worth a look before a missing feature is
 reported as a regression, and each item is registered in
 [`native/share/unbuilt.txt`](native/share/unbuilt.txt) so that shipping one without
@@ -355,16 +356,14 @@ forth
 - **[CONTRIBUTING.md](CONTRIBUTING.md)** — setup, the gates, and recipes for
   adding a language, a command and a lesson
 - **[.github/SUPPORT.md](.github/SUPPORT.md)** — where to ask, and what is
-  supported on which platform
+  supported
 - **[.github/pull_request_template.md](.github/pull_request_template.md)** — what
   a pull request is expected to answer
 - **[SECURITY.md](SECURITY.md)** — how to report a vulnerability privately
 - **[CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md)** — the standard expected here
 - **[CHANGELOG.md](CHANGELOG.md)** — what changed, release by release
 
-Releases carry a Windows installer and a portable ZIP, a second Windows installer
-for Windows 7, a universal macOS disk image, and `.deb`, `.rpm`, tarball and
-(x86_64) AppImage packages for Linux — all of them listed in **Install it** above.
-Building from source is still the way to work on the application itself, and
-[docs/INSTALLATION.md](docs/INSTALLATION.md) is the whole procedure for every
-platform.
+Releases carry `.deb`, `.rpm`, tarball and AppImage packages for Linux, in x86_64
+and arm64, plus a `.flatpak` bundle — all of them listed in **Install it** above. Building from source is
+still the way to work on the application itself, and
+[docs/INSTALLATION.md](docs/INSTALLATION.md) is the whole procedure.

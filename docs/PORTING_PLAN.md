@@ -690,14 +690,17 @@ absence.
 **Tests:** with the setting on, `echo hi` prints `hi`; the process is killed on
 window close; with the setting off the tab is absent.
 
-**Done**, with the policy above. `ui/terminal_widget.{hpp,cpp}` is a `QProcess`
-on `$SHELL` (falling back to `/bin/sh`; `%COMSPEC%` on Windows) with the two
-streams merged, its working directory set to the current document's folder and
-following a tab change with a silent `cd`. Each line typed is echoed as `> …`
-and written to the shell's standard input, because the tab has to show what
-produced the output beneath it. There is **no PTY**: a command that wants a
-terminal (`vim`, `top`) fails instead of taking the IDE over, and there are no
-prompts or job control.
+**Done, and since superseded.** The first version was a `QProcess` pipe on `$SHELL`,
+with the two streams merged and each line echoed as `> …` because a pipe prints no
+prompt. That is now a real pseudo-terminal: `ui/pty_session.{hpp,cpp}` is
+`posix_openpt` and a `fork`, with the shell as a session leader on the slave, so it
+prints its own prompt, colours its output, keeps job control and answers a program
+that asks how wide the terminal is. `ui/terminal_text.{hpp,cpp}` is the filter
+between the pty and the view: it strips the escape sequences a text view would show
+as litter, applies `\r` as "this line is about to be written again" and keeps a
+character split across two reads for the next one. What it is still not is a
+*screen*: a program that paints with cursor addressing (`vim`, `top`) starts, and
+its escapes are removed rather than interpreted.
 
 It is off unless Settings > Workspace ticks it, and the setting is remembered.
 `refreshTerminalTab()` owns the one rule: the tab exists when the setting is on

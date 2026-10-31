@@ -529,6 +529,26 @@ produced by `twc` link it too and accept `--db FILE`.
 
 ---
 
+## 6a. The embedded terminal
+
+**Settings > Workspace > Enable the embedded terminal** adds a 💻 Terminal tab beside
+the console. It is off until you tick it, and it is a real terminal: the shell runs
+on a pseudo-terminal of its own, so it prints its prompt, colours its output, keeps
+job control and answers a program that asks how wide the window is. Each line you
+type goes to the shell as typed, and the transcript shows the shell's echo of it
+rather than a copy printed by the IDE.
+
+What it is not is a *screen*. The tab is a text transcript, so a program that paints
+with cursor addressing — `vim`, `top`, a full-screen curses interface — starts and
+its escape sequences are removed rather than drawn. The tab is for commands: a build,
+a script, `git`, a `make`.
+
+The shell follows the document: opening `Examples/logo/mandala.logo` moves it to that
+folder with a `cd`, so `./build` names the right directory without typing a path.
+Closing the window ends the shell and everything it started.
+
+---
+
 ## 7. Terminal tools
 
 ### `./run.sh`
@@ -602,8 +622,7 @@ It is off until you set it up, and nothing is sent until you press a button.
   the window.
 - The key may come from `TIME_WARP_AI_API_KEY` instead of a store, and **Keep the key
   on this machine** unticked leaves it nowhere at all. A stored key goes in the
-  Windows Credential Manager, the macOS Keychain or the system keyring where the
-  build found one, and in the settings file otherwise.
+  system keyring where the build found one, and in the settings file otherwise.
 - Both machines have the same assistant in a dialog: the HB-1's 🤖 button and the
   CHIP-8's **🤖 Assistant…** ask about the program that machine is holding.
 
@@ -661,7 +680,9 @@ an `ostream`, which is how the tests drive it without a process.
   chrome for a projector; Escape leaves it. Focus Mode (`F11`) is the quieter
   single-window variant.
 - **Settings** — `Ctrl+,` changes fonts, tab width, minimap, whitespace,
-  completion, linting, autosave and the opt-in Terminal tab.
+  completion, linting, autosave, the opt-in Terminal tab, and whether a run that
+  finishes while the window is in the background announces itself through the
+  desktop's notification service.
 
 Settings and learner data live under `~/.time_warp`; `TIME_WARP_DATA_DIR` moves the
 whole directory, which is how tests avoid touching a real learner's files.

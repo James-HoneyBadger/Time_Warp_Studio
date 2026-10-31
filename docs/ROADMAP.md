@@ -58,12 +58,12 @@ a memory of a conversation.
 | Native executors | All eleven — BASIC, FOCAL, PILOT, COMAL, APL and REXX line-by-line; CHIP-8, Logo, Smalltalk, Scheme and Forth whole-program |
 | Printing | File > Print Code (Ctrl+P) and Print Drawing, through the optional Qt6 PrintSupport |
 | Profiling | View > Profile Run times every statement in the line-by-line languages and ends with a per-line report, longest first |
-| Terminal | Opt-in in Settings > Workspace: an embedded shell in the document's folder, absent in presentation and player modes |
+| Terminal | Opt-in in Settings > Workspace: a shell on a real pseudo-terminal in the document's folder, absent in presentation and player modes |
 | Debugging | Breakpoints, Pause, Continue and Trace in all eleven languages; a run can be walked back in every language but Smalltalk, whose heap is an object graph, and Scheme, whose state is an arena; Scheme adds a stack and frame bindings, and Smalltalk reports its own message-send chain; watch expressions and data breakpoints in the Debug panel |
 | Database | A SQLite-backed Database tab, the shared `SQL` statement in nine languages, scripts, tables and schema; compiled programs link SQLite |
 | Automation | JSON-RPC over stdin/stdout (`language.run`, `repl.*`, `debug.*`, `sql.*`, `project.*`, `watch.evaluate`) and the `twc` terminal compiler |
-| Packaging | `make install`; tagged releases build a Windows installer and portable ZIP (Qt 6), a second Windows installer for Windows 7 (Qt 5.15), a universal macOS disk image, `.deb`, `.rpm`, AppImage, tarball and container artifacts |
-| Quality gates | 26 CTest suites in 4 build configurations and on four platforms (Linux, Windows, Windows with Qt 5.15, macOS); the frozen-corpus gate over 671 programs (479 language, 192 Scheme); 566 command rows run as programs and through the REPL; 81 example programs through the smoke gate; and the documentation gates (links, claims, version, Markdown lint) |
+| Packaging | `make install`; tagged releases build `.deb`, `.rpm`, AppImage, tarball and container artifacts for Linux |
+| Quality gates | 26 CTest suites in 4 build configurations, on Linux; the frozen-corpus gate over 671 programs (479 language, 192 Scheme); 566 command rows run as programs and through the REPL; 81 example programs through the smoke gate; and the documentation gates (links, claims, version, Markdown lint) |
 
 ---
 
@@ -340,12 +340,7 @@ and the command table exercises them. What is now true, and what is still limite
   `SOUND` and `PLAY` synthesise square/triangle/sine/noise at equal
   temperament, parse `PLAY`'s notation (tempo, lengths, octaves, accidentals,
   dotted notes, rests, `N` numbers) and play through the first of `paplay`,
-  `aplay`, `afplay`, `ffplay` or `play` on the machine -- and on Windows through
-  `powershell.exe`, which needs no extra install because PowerShell is already
-  there and `Media.SoundPlayer` is in the framework. A path is not a safe thing
-  to paste into a script, so it goes in as a PowerShell single-quoted string with
-  its quote doubled; `ui_layout_tests` pins that with a path containing an
-  apostrophe. `SOUND` joins the mix instead of
+  `aplay`, `afplay`, `ffplay` or `play` on the machine. `SOUND` joins the mix instead of
   replacing it: up to eight voices are summed sample by sample
   (`timewarp::audio::Mixer`, a pure function so `audio_tests` can assert that two
   notes are audible together on a machine with no sound card), and the mix is
@@ -487,7 +482,7 @@ measuring the wrong machine.
 | 24.0 ✓ | CHIP-8 can be walked back too: the checkpoint is the machine's whole state — registers, memory, timers, RPL flags, the frame count, the instruction's slot within the frame and the framebuffer — taken before each instruction and only when a history was asked for, and a rewind repaints the restored screen so the pause shows the pixels the instruction it returned to was drawn on. The test is the drawing rather than a transcript, because a CHIP-8 program prints nothing: an interrupted run that rewinds and replays leaves the same pixels, in the same order, as the run nobody touched |
 
 Smaller items belong in one of those releases rather than a release of their own:
-Flatpak, Snap and an arm64 AppImage, and the distribution work described under
+Snap and an arm64 AppImage, and the distribution work described under
 [Packaging](#packaging). What used to be listed here shipped: Smalltalk reports its
 call stack as frames rather than a Program Counter (23.3.0), and the HB-1 has its own
 voice — boot tone, key click, disk rattle, error buzz and tape motor — through
@@ -779,27 +774,28 @@ Limits, stated rather than discovered:
 
 ## Packaging
 
-Built, from a tag, by `release.yml`, for every desktop the application runs on:
+Built, from a tag, by `release.yml`:
 
-- **Windows** — a NSIS **installer** (`.exe`) and a portable **ZIP**, x64, with Qt
-  and the SQLite library inside them.
-- **macOS** — a **universal disk image** (`.dmg`) that runs on Intel and on Apple
-  silicon, with the frameworks inside the bundle and an ad-hoc signature.
-- **Linux** — a **`.deb`**, an **`.rpm`** and a **tarball** for x86_64 and arm64,
-  plus an **AppImage** for x86_64.
+- a **`.deb`**, an **`.rpm`** and a **tarball** for x86_64 and arm64, plus an
+  **AppImage** for x86_64.
+- a **`.flatpak` bundle**, built from `packaging/flatpak/` against the KDE runtime,
+  so it carries its own Qt.
 - a **container image** on `ghcr.io`.
 
-Every file has a checksum beside it. `cpack` produces all of them from the same
-`install()` rules the desktop entry and icon already used, and the Qt deployment
-tools run as part of that install, so no package can contain a different set of
-files from a local install.
+Every file has a checksum beside it. `cpack` produces them from the same
+`install()` rules the desktop entry and icon already used, so no package can contain
+a different set of files from a local install. The Qt runtime is the distribution's,
+which is what the `.deb` and `.rpm` declare as a dependency; the AppImage is the one
+artifact that carries its own.
 
-Still not built: **Flatpak or Snap** (both need a runtime and a manifest that this
-repository does not carry), an **arm64 AppImage** (the tooling exists; the pipeline
-does not exercise it yet), **code-signed and notarised** Windows and macOS builds
-(the pipeline signs macOS ad-hoc, which starts but still asks once), **automatic
-publishing to a distro repository**, and a **static build** — the Linux packages
-depend on the distribution's Qt 6.
+This is a Linux application. The Windows installer, the Windows 7 rebuild and the
+macOS disk image were 24.0's, and 24.x builds and ships for Linux only.
+
+Still not built: publishing to the **Flathub** repository (the manifest is here and
+CI builds it into a bundle; a Flathub submission is a review process rather than a
+file), **Snap**, an **arm64 AppImage** (the tooling exists; the pipeline does not
+exercise it yet), **automatic publishing to a distro repository**, and a **static
+build** — the packages depend on the distribution's Qt 6.
 
 ---
 

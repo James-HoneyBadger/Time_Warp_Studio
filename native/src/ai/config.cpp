@@ -247,6 +247,8 @@ Config load() {
         settings.value(QLatin1String{kSettingRememberConversation}, false).toBool();
     config.inline_suggestions =
         settings.value(QLatin1String{kSettingInlineSuggestions}, false).toBool();
+    config.persona = persona_from_key(settings.value(QLatin1String{kSettingPersona}).toString())
+                         .value_or(Persona::Plain);
 
     // The environment's word is final. It is how a session supplies a key it does
     // not want written down, and how a test configures an endpoint without
@@ -264,6 +266,11 @@ Config load() {
     }
     if (const QString model = variable(kEnvModel); !model.isEmpty()) {
         config.model = model;
+    }
+    if (const QString persona = variable(kEnvPersona); !persona.isEmpty()) {
+        if (const std::optional<Persona> parsed = persona_from_key(persona)) {
+            config.persona = *parsed;
+        }
     }
     return config;
 }
@@ -284,6 +291,7 @@ void save(const Config& config) {
     settings.setValue(QLatin1String{kSettingRememberConversation},
                       config.remember_conversation);
     settings.setValue(QLatin1String{kSettingInlineSuggestions}, config.inline_suggestions);
+    settings.setValue(QLatin1String{kSettingPersona}, persona_key(config.persona));
     const QString key = config.api_key.trimmed();
     const bool keeping = config.store_key && !key.isEmpty();
     bool in_the_system_store = false;
@@ -380,7 +388,6 @@ QString redact(QString text, const QString& key) {
 }
 
 void tighten_settings_file() {
-#ifndef Q_OS_WIN
     QSettings settings;
     const QString path = settings.fileName();
     if (path.isEmpty() || !QFile::exists(path)) {
@@ -390,7 +397,6 @@ void tighten_settings_file() {
     // mounted share), and failing to restrict them is not a reason to lose the
     // setting the user just saved.
     QFile::setPermissions(path, QFileDevice::ReadOwner | QFileDevice::WriteOwner);
-#endif
 }
 
 }  // namespace timewarp::ai

@@ -39,6 +39,7 @@
 #include <QTextDocument>
 
 #include "check.hpp"
+#include "editor_services/cases.hpp"
 #include "temp_dir.hpp"
 #include "timewarp/ui/autosave.hpp"
 #include "timewarp/ui/breakpoints.hpp"
@@ -51,7 +52,10 @@
 #include "timewarp/ui/snippets.hpp"
 #include "timewarp/ui/console.hpp"
 #include "timewarp/ui/diff.hpp"
+#include "timewarp/ui/chip8_archive.hpp"
+#include "timewarp/ui/desktop_notification.hpp"
 #include "timewarp/ui/language.hpp"
+#include "timewarp/ui/terminal_text.hpp"
 
 namespace {
 
@@ -1384,6 +1388,7 @@ void test_the_console_knows_a_line_link_and_a_failure() {
 
 }  // namespace
 
+
 int main(int argc, char** argv) {
     // A GUI application rather than a core one: the PDF writer lays out text, and
     // laying out text needs a font database. Nothing is shown -- the platform is
@@ -1405,6 +1410,11 @@ int main(int argc, char** argv) {
     test_basic_indents_a_loop_body();
     test_basic_else_body_is_indented();
     test_the_console_knows_a_line_link_and_a_failure();
+    tw::editor_services::test_the_archive_catalogue_is_a_cleared_list();
+    tw::editor_services::test_the_finish_notification_says_one_thing();
+    tw::editor_services::test_terminal_text_strips_escapes();
+    tw::editor_services::test_terminal_text_applies_carriage_returns();
+    tw::editor_services::test_terminal_text_survives_split_characters();
     test_basic_single_line_if_opens_nothing();
     test_basic_comment_does_not_open_a_block();
     test_indent_width_is_honoured();

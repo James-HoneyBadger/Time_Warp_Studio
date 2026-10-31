@@ -63,6 +63,8 @@ public:
     void findModels();
     /// The model chooser, for the tests.
     [[nodiscard]] QComboBox* modelChooser() const noexcept { return models_; }
+    /// The voice chooser, so a test can set it without a mouse.
+    [[nodiscard]] QComboBox* personaChooser() const noexcept { return persona_; }
 
 signals:
     /// OK was pressed. The window saves it and hands it to the panel.
@@ -106,6 +108,7 @@ private:
     QPushButton* test_ = nullptr;
     QPushButton* find_models_ = nullptr;
     QComboBox* models_ = nullptr;
+    QComboBox* persona_ = nullptr;
     QLabel* test_status_ = nullptr;
     QLabel* note_ = nullptr;
 };

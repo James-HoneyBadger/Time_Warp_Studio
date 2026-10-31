@@ -196,6 +196,30 @@ that still are; bundling them would be redistribution the project has no right t
 The library is the lawful half of the problem: you point it at a folder you have
 the right to use.
 
+### The homebrew archive
+
+**Fetch Homebrew Archive…** in the same dialog is the one download the application
+offers. It asks first, in a sentence that names the repository, the licence, the
+number of files and the folder they will go into, and then writes them into
+`~/.time_warp/chip8/archive` — never into the repository, and never anywhere the
+application's own files live. The library then lists what arrived.
+
+The programs come from the **Octo community archive**
+(`JohnEarnest/chip8Archive`), which dedicates everything in it to the public domain
+under [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/), and the
+catalogue in [`native/share/chip8_archive.json`](../../native/share/chip8_archive.json)
+is the gate: each entry names a file, its author and its licence, and the commit is
+pinned so the bytes cannot change under a running application. Adding a program is
+adding an entry; an entry without a licence that permits redistribution does not
+belong in the file.
+
+Two things are worth knowing before you press it. The programs were written for the
+Octo toolchain, which offers its own quirk switches, so a program that depends on a
+quirk this machine resolves the other way (the shift, or `LD [I], Vx` advancing `I`)
+may look different from the GIF somebody posted. And the catalogue is deliberately
+short: a dozen programs, each read before it was listed. A longer list is a
+maintenance job with a legal review attached, not a search box.
+
 ### What is bundled
 
 The programs under [`Examples/chip8/`](../../Examples/chip8/) are listings
@@ -204,18 +228,25 @@ download:
 
 | Program | What it shows |
 | --- | --- |
+| `tour.ch8` | Five pages, each one behaviour: the font, XOR and collision, carry, wrapping, the in-place shift. Any key turns the page |
 | `paint.ch8` | A one-pixel paint program: waiting for keys, XOR drawing, wrap-around coordinates |
 | `font_and_frames.ch8` | The built-in digit font, drawn and tested |
 | `hires.ch8` | SuperChip hi-res, scrolling, the 16×16 sprite and the large font |
 | `showcase.ch8` | The surface of the machine in one program |
 
 Opening the CHIP-8 window with a CHIP-8 document on screen loads that document. With
-any other document — or none — it loads `paint.ch8` and starts it, so the machine
-is alive the moment it appears. If that file is not installed,
-`font_and_frames.ch8` is the fallback; if neither is there, the window opens with
-an empty listing rather than an error. A window that already has a program is
-never overwritten: the learner may have typed into the listing or reached a state
-worth keeping.
+any other document — or none — it opens on the bundled program and starts it, so
+the machine is alive the moment it appears. The **first** time, that program is
+`tour.ch8`: five pages that each show one behaviour, waiting for a key before each,
+so the machine introduces itself at the reader's own pace. After that the window
+opens on `paint.ch8`, which is the one somebody who already knows the machine
+wants. `font_and_frames.ch8` is the fallback if either is missing, and if none of
+the three is there the window opens with an empty listing rather than an error. A
+window that already has a program is never overwritten: the learner may have typed
+into the listing or reached a state worth keeping. The tour is offered once per
+user — `chip8/tourSeen` in the settings — and **Show the guided tour again** in
+Settings does not re-arm it, because it is the machine's tour rather than the
+window's.
 
 ---
 
@@ -277,6 +308,7 @@ and draws under the smoke gate.
 
 | Program | What it shows |
 | --- | --- |
+| [`tour.ch8`](../../Examples/chip8/tour.ch8) | The five-page tour the window opens on the first time: font, XOR and collision, carry, wrapping, the in-place shift |
 | [`showcase.ch8`](../../Examples/chip8/showcase.ch8) | The montage: hi-res, the font, sprites, collision, BCD, arithmetic and the keypad |
 | [`hires.ch8`](../../Examples/chip8/hires.ch8) | SuperChip hi-res, scrolling and the large `FX30` font |
 | [`hires_rings.ch8`](../../Examples/chip8/hires_rings.ch8) | One 16×16 `DXY0` sprite drawn at three places on a 128×64 screen |

@@ -15,6 +15,7 @@
 #include <QKeyEvent>
 #include <QLabel>
 #include <QLineEdit>
+#include <QSettings>
 #include <QListWidget>
 #include <QPlainTextEdit>
 #include <QSlider>
@@ -424,8 +425,44 @@ void test_the_window_opens_a_file() {
     TW_CHECK_EQ(static_cast<int>(window.emulator()->snapshot().v[0]), 11);
 }
 
+void test_the_window_opens_with_the_tour_once() {
+    announce("window: the tour, then the paint program");
+    // A fresh user: the window introduces the machine with the five-page tour,
+    // which waits for a key before each page turns.
+    QSettings{}.remove(QStringLiteral("chip8/tourSeen"));
+    {
+        Chip8Window window;
+        TW_CHECK(window.loadBundledProgram());
+        TW_CHECK(window.emulator()->name().endsWith(QStringLiteral("tour.ch8")));
+        TW_CHECK(window.emulator()->snapshot().running);
+        // The first page draws "1977" from the machine's own font and then stops
+        // at `LD V0, K`, which is the tour waiting for the reader to turn the page.
+        bool waiting = false;
+        for (int frame = 0; frame < 200 && !waiting; ++frame) {
+            window.emulator()->advanceFrame();
+            waiting = window.emulator()->snapshot().waiting_for_key;
+        }
+        TW_CHECK(waiting);
+        // Something is on the screen: a tour of a blank canvas is not a tour.
+        int lit = 0;
+        for (const std::uint8_t pixel : window.emulator()->snapshot().framebuffer) {
+            lit += pixel != 0 ? 1 : 0;
+        }
+        TW_CHECK(lit > 20);
+        TW_CHECK(QSettings{}.value(QStringLiteral("chip8/tourSeen"), false).toBool());
+    }
+    // The second time, the tour is not in the way.
+    {
+        Chip8Window window;
+        TW_CHECK(window.loadBundledProgram());
+        TW_CHECK(window.emulator()->name().endsWith(QStringLiteral("paint.ch8")));
+    }
+}
+
 void test_the_window_starts_with_the_bundled_program() {
     announce("window: the bundled program");
+    // As a user who has seen the tour: this case is about the paint program.
+    QSettings{}.setValue(QStringLiteral("chip8/tourSeen"), true);
     Chip8Window window;
     TW_CHECK(window.loadBundledProgram());
     TW_CHECK(window.emulator()->loaded());
@@ -519,6 +556,7 @@ int main(int argc, char** argv) {
     test_a_hires_program_reaches_the_screen();
     test_the_window_wires_the_screen_and_controls();
     test_the_window_opens_a_file();
+    test_the_window_opens_with_the_tour_once();
     test_the_window_starts_with_the_bundled_program();
     test_the_listing_tab_assembles_and_runs();
     return tw::test::summary("chip8_emulator");

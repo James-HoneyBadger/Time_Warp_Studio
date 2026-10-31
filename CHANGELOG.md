@@ -2,6 +2,113 @@
 
 <!-- history: all -->
 
+## [Unreleased]
+
+**Time Warp Studio is a Linux application.** The Windows and macOS ports are gone,
+and so is the second Qt configuration that existed to build them. It is one subtraction
+with many parts, and every part of it was a thing to keep green: two compilers that
+reject what GCC accepts, a Qt 5.15 tree whose only reason for existing was
+Windows 7, an installer format, a disk image, an ad-hoc signature that still asked
+Gatekeeper's question, and four platform conditionals in the source that no gate on
+this machine could run. 24.0's Windows, macOS and Windows 7 artifacts stay on that
+release page; nothing after it is built or tested for either system.
+
+### Added
+
+- **A real pseudo-terminal in the Terminal tab.** The tab was a `QProcess` pipe: a
+  shell on a pipe prints no prompt, colours nothing and cannot be asked how wide it
+  is. `ui/pty_session.cpp` is `posix_openpt` and a `fork`, with the shell as a
+  session leader on the slave, so it prints its own prompt, keeps job control and
+  answers `TIOCGWINSZ`; the widget forwards a resize as `TIOCSWINSZ`, which sends
+  the shell `SIGWINCH`. `ui/terminal_text.cpp` is the filter between them: it strips
+  the escape sequences a text view would show as `^[[?2004h` litter, applies `\r`
+  as "this line is about to be written again" so a progress bar rewrites rather than
+  scrolls, handles backspace, and keeps a UTF-8 character split across two reads for
+  the next one. The test asserts the thing that distinguishes a pty from a pipe —
+  `test -t 0` inside the shell succeeds — and that nothing with an escape byte
+  reaches the transcript.
+- **Three voices for the assistant.** `ai/persona` chooses between no persona,
+  1974's lecturer, 1984's bedroom programmer and 2026's machine, and
+  `TIME_WARP_AI_PERSONA` overrides it. The voice is appended to the same standing
+  instructions and each one says so in its own words: a command is real because it
+  is in the list, not because it existed that year. `ai_tests` asserts that every
+  persona extends the base prompt and that all four still carry the rule against
+  inventing commands.
+- **PipeWire, and a notification when a run finishes in the background.** `pw-play`
+  is now the first player the sound code looks for, ahead of `paplay` and `aplay`.
+  A run that ends while the window is not the active one posts one desktop
+  notification through the session bus (`org.freedesktop.Notifications`, optional Qt
+  DBus), naming the document and how it ended; a run you are watching says nothing,
+  and **Settings > Workspace** turns it off.
+- **A five-page tour of the CHIP-8 machine, and it is what the window opens on the
+  first time.** `Examples/chip8/tour.ch8` is a listing, not a blob: page one draws
+  the machine's own font, page two the XOR collision that erases what it lands on,
+  page three the carry in `VF`, page four the wrap at 64 and 32, page five the
+  in-place shift. Any key turns the page, and after the first visit the window opens
+  on `paint.ch8` as it did before.
+- **A curated homebrew archive in the ROM library.** **Fetch Homebrew Archive…**
+  downloads a dozen public-domain programs from the Octo community archive
+  (`JohnEarnest/chip8Archive`, CC0 1.0) into `~/.time_warp/chip8/archive`, after a
+  dialog that names the repository, the licence, the count and the folder. The
+  catalogue is `native/share/chip8_archive.json`: one entry per program with its
+  author and licence, a pinned commit, and a loader that refuses an entry with no
+  licence or a file name that is a path. The repository still ships no third-party
+  ROMs and the application still makes no call it was not asked to make.
+- **A Flatpak.** `packaging/flatpak/` carries the manifest, the AppStream metainfo
+  and the application id (`org.honeybadger.TimeWarpStudio`), built against the KDE
+  runtime so the application carries its own Qt and is sandboxed; `release.yml`
+  builds a `.flatpak` bundle on every tag, and the window reads `FLATPAK_ID` to name
+  its own desktop entry so the launcher and the window agree in a sandbox and in a
+  `.deb` alike. Built here and installed from the bundle: one launcher, one icon,
+  and `time_warp_ide --version` answers from inside the sandbox.
+
+### Fixed
+
+- **An optional dependency that is declared but absent no longer stops a
+  configure.** A `.pc` file naming an include directory that is not in the tree being
+  built against -- a sysroot for a different prefix, or a Flatpak SDK carrying a
+  stray entry for `libsecret` -- became a hard CMake error at generate time. The
+  assistant's key store is optional, so the directory is now checked and a missing
+  one means "no libsecret", which is the documented fallback.
+- **The pty's child-side calls consume their results.** glibc marks `chdir`,
+  `setenv`, `dup2` and `ioctl` `warn_unused_result` under `-D_FORTIFY_SOURCE`, and
+  `static_cast<void>` does not silence that, so the Flatpak's compiler rejected
+  `pty_session.cpp` where the host's had not. Nothing changes in behaviour: between
+  `fork` and `exec` there is nobody to tell.
+
+- **A `CALL` to a subroutine name that does not exist crashed the application.** The
+  lookup stored a `functions` iterator in the variable that held a `subs` one and
+  compared it against the other map's `end()`: comparing iterators from different
+  containers is undefined behaviour, and when the comparison came out false the code
+  carried on and dereferenced `end()`. Seven `CALL`s to names no subroutine has --
+  which is what a CHIP-8 listing looks like when it is run as BASIC -- was enough to
+  reach it. Two lookups and one answer now, and `lang_tests` asserts both halves:
+  the message a person reads, and that a `CALL` that does name a `SUB` or a
+  `FUNCTION` still finds it.
+
+### Removed
+
+- **The Windows and macOS builds.** `-DTIME_WARP_QT5=ON` and
+  `-DTIME_WARP_WIN7=ON`, the `WIN32` and `MACOSX_BUNDLE` targets, `windeployqt` and
+  `macdeployqt`, the NSIS and DragNDrop CPack generators, the resource script and
+  the `.icns`, and the `cross-platform` and `windows-7` jobs in `native.yml`.
+  `release.yml` now builds two Linux architectures and the container image.
+- **The Windows and macOS implementations in the code.** The Credential Manager and
+  the Keychain key stores (the secret service through libsecret is the one left), the
+  PowerShell sound sink and `afplay`, the `%COMSPEC%` shell fallback in the terminal,
+  `/dev/ttys` and `/dev/cu.*` in the port policy, and the console-attach and
+  `.exe`-suffix paths in the entry point.
+- **The Qt 5 compatibility seam.** `qt_compat.hpp` and `qt_gui_compat.hpp` are
+  deleted with the second Qt, and the `qt5` gate with them: it existed to catch a
+  bare signal pointer that one Qt resolves and the other does not, and with one Qt
+  there is nothing for it to compare. The two spellings used at many call sites --
+  `fromUtf8` for the language registry's `string_view`s and `keySequence` for the
+  menu shortcuts -- live in `qt_names.hpp`, which is a name for a Qt 6 call rather
+  than a shim over two.
+- **`packaging/windows` and `packaging/macos`,** and the icon generator's `.ico`
+  and `.icns` encoders with their size tables. `time_warp_icon` writes the desktop
+  entry's PNG, which is held to byte equality exactly as before.
+
 ## [24.0.0] - 2026-10-29
 
 CHIP-8 can be walked back. It could already stop: a gutter breakpoint fires before

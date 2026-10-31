@@ -1,7 +1,6 @@
 # Installing and Building Time Warp Studio
 
-Time Warp Studio is a desktop application for Windows, macOS and Linux, built with
-**C++20 and Qt6**. Everything you need to run all eleven languages is in this
+Time Warp Studio is a Linux desktop application, built with **C++20 and Qt6**. Everything you need to run all eleven languages is in this
 repository; nothing has to be downloaded at run time.
 
 ---
@@ -10,12 +9,11 @@ repository; nothing has to be downloaded at run time.
 
 | Requirement | Minimum | Notes |
 | --- | --- | --- |
-| C++ compiler | C++20 | GCC 11+, Clang 14+, or MSVC 19.30+ |
+| C++ compiler | C++20 | GCC 11+ or Clang 14+ |
 | CMake | 3.20 | |
 | Qt6 | 6.2 | Widgets, Core and Gui modules must be installed; the Svg and PrintSupport modules are optional and enable SVG drawing export and printing |
-| or Qt5 | 5.15 | Only for the Windows 7 build (`-DTIME_WARP_QT5=ON`); same modules, same role |
 | SQLite3 | 3.35 | The database manager and the languages' `SQL` statement; the development package (`libsqlite3-dev`) is required to build |
-| zlib | 1.2 | Classroom bundles are zips, read and written with it; `zlib1g-dev` on Linux, the system library on macOS, `vcpkg install zlib` on Windows |
+| zlib | 1.2 | Classroom bundles are zips, read and written with it; `zlib1g-dev` |
 All eleven languages and the lesson check run in C++ inside the application.
 Nothing in the product or its validation gates requires Python; the parity gate
 compares against the frozen corpus rather than a live reference. See §6.
@@ -33,22 +31,9 @@ sudo dnf install gcc-c++ cmake qt6-qtbase-devel qt6-qtsvg-devel sqlite-devel zli
 sudo pacman -S base-devel cmake qt6-base qt6-svg sqlite zlib
 ```
 
-On macOS, `brew install cmake qt` and pass `-DCMAKE_PREFIX_PATH=$(brew --prefix qt)`.
-SQLite is part of the macOS SDK, so it needs no separate install. On macOS 26 and
-later, use Qt 6.10 or newer: Qt 6.8 and 6.9 link `-framework AGL`, a framework the
-newest SDK no longer ships, and the link fails on every executable. The released
-disk image is built with Qt 6.12, which is universal and needs macOS 14.4.
-
-On Windows, use the Qt online installer (or `aqtinstall`) for Qt 6 and either
-`vcpkg install sqlite3:x64-windows-static-md` or a prebuilt SQLite to satisfy
-SQLite3. The application builds with MSVC 2022 in a "x64 Native Tools" prompt:
-
-```powershell
-cmake -S native -B native/build -G "Visual Studio 17 2022" -A x64 `
-  -DCMAKE_TOOLCHAIN_FILE="$env:VCPKG_INSTALLATION_ROOT/scripts/buildsystems/vcpkg.cmake" `
-  -DVCPKG_TARGET_TRIPLET=x64-windows-static-md
-cmake --build native/build --config Release --parallel
-```
+These are the three families the releases are built and tested on: Ubuntu 24.04
+(GCC), Debian and a Fedora/RHEL-family distribution. Qt 6.2 or newer is the floor;
+the release builds use 6.8.
 
 The Svg package above is optional. Without it the IDE builds and runs, and the
 only difference is that drawing export offers PNG, JPEG and BMP but not SVG.
@@ -71,11 +56,7 @@ cmake -S native -B native/build -DCMAKE_BUILD_TYPE=Release
 cmake --build native/build -j
 ```
 
-On macOS the same two commands produce `native/build/Time Warp Studio.app` -- a
-bundle, because that is what the Finder runs and what the disk image ships. Run it
-with `open "native/build/Time Warp Studio.app"`, or point at the executable inside
-it (`.../Contents/MacOS/Time Warp Studio --help`). On Windows the executable is
-`native\build\Release\time_warp_ide.exe`.
+The application is `native/build/time_warp_ide`.
 
 A successful build prints nothing alarming; the first one takes a few minutes and
 later ones are incremental. Useful options:
@@ -237,61 +218,24 @@ it looks for them (`../share/time-warp-studio` relative to the binary), so an
 installed build needs no path configuration. Nothing installed needs Python: the
 reference engine was removed, and its recorded answers remain in the checkout.
 
-### Installing on Windows and macOS
+### Installing into a prefix
 
-`cmake --install` produces the package layout on every platform, and each one adds
-the Qt runtime the application needs at run time; the Qt deployment tool runs as
-part of the install, so an installed tree runs on a machine that has no Qt.
-
-| Platform | `<prefix>` gets | Qt | To install |
-| --- | --- | --- | --- |
-| Linux | `bin/`, `share/` and the desktop entry, as in the table above | the distribution's | `cmake --install native/build --prefix /usr` |
-| Windows | `bin\time_warp_ide.exe`, `share\…`, with `windeployqt`'s Qt DLLs and plugins beside it | copied in | `cmake --install native/build --config Release --prefix "C:/Program Files/Time Warp Studio"` |
-| macOS | `Time Warp Studio.app`, with the bridge, examples, snippets, docs and `macdeployqt`'s frameworks inside `Contents` | copied in and ad-hoc signed | `cmake --install native/build --prefix /Applications` |
-
-On macOS, the bundle layout is what the path lookup understands: the payload lives
-in `Contents/Resources/share`, which is where the application looks for the bridge,
-the examples, the snippets and the help pages when it is inside a bundle. Signing
-is ad-hoc (`codesign --sign -`), which is enough for the application to start,
-including on Apple silicon; it is not a Developer ID signature, so a copy that has
-travelled over the network still needs the right-click > Open once.
-
-The Windows installer and the macOS disk image are built from this same install
-tree by CPack (`cpack -G NSIS` and `cpack -G DragNDrop`); see §8.
-
-One feature differs by platform. `PLAY`, `SOUND` and the two machines' beeps write
-a WAV and hand it to a command-line player: `afplay` on macOS, `paplay` or `aplay`
-(or `ffplay`/`play`) on Linux. Windows has no equivalent command-line player, so
-there those commands report that playback is unavailable rather than pretending to
-make a sound. Everything else -- the eleven languages, the debugger, the canvas, both
-machines, the SQL tab and the automation surface -- is the same code on all three.
-
-### Windows 7
-
-Qt 6 requires Windows 10, so the Windows 7 artifact is the same application built
-against **Qt 5.15** — the last Qt that runs on Windows 7 SP1 — from the same tree:
+`cmake --install` produces the package layout: `bin/`, `share/` and the desktop
+entry, as in the table above. The Qt runtime is not copied in — a Linux
+application uses the distribution's Qt 6, which is what the `.deb` and `.rpm`
+declare as a dependency, and the AppImage is the one artifact that carries its own.
 
 ```bash
-cmake -S native -B native/build -DTIME_WARP_QT5=ON -DTIME_WARP_WIN7=ON
-cmake --build native/build --parallel
-cpack --config native/build/CPackConfig.cmake -G NSIS
+cmake --install native/build --prefix /usr
 ```
 
-`-DTIME_WARP_QT5=ON` selects Qt 5 and `-DTIME_WARP_WIN7=ON` states the API level
-(`WINVER` and `_WIN32_WINNT` at 6.01), so a call into anything newer than Windows 7
-fails to compile here rather than failing to launch on the target machine. Both are
-off by default; the release build is Qt 6.
+`cpack` builds the same tree into the packages from here (`cpack -G DEB`, and
+`-G RPM` where `rpmbuild` is installed); see §8.
 
-What the pipeline checks is that this configuration builds, that all 26 suites pass
-against Qt 5.15, and that the executable starts and renders a window -- on Windows
-11, because that is what the runner is. What has **not** been verified is Windows 7
-itself: no continuous-integration image is older than Windows Server 2019, and the
-project has no Windows 7 machine to try it on. If it does not start there, the
-likely causes are the Visual C++ runtime and a Qt 5.15 DLL that wants a newer API;
-both are worth reporting rather than working around.
-
-The version of Qt 5 the artifact is built with, and the `windeployqt` that deploys
-it, come from `jurplel/install-qt-action`'s `win64_msvc2019_64` package of 5.15.2.
+`PLAY`, `SOUND` and the two machines' beeps write a WAV and hand it to a
+command-line player: `paplay` or `aplay` (or `ffplay`/`play`). With none of them
+installed, those commands report that playback is unavailable rather than
+pretending to make a sound.
 
 ### 8. A release without building anything
 
@@ -303,21 +247,18 @@ an `.rpm` says `x86_64`/`aarch64`, and the tarball and the AppImage say
 
 | You have | Take | Then |
 | --- | --- | --- |
-| Windows 10 or 11 | `time-warp-studio-<version>-win64.exe` | Run it: it installs into Program Files, adds Start Menu and desktop shortcuts, and carries Qt and the SQLite library inside it. `time-warp-studio-<version>-win64.zip` is the same tree without the installer. |
-| Windows 7 | `time-warp-studio-<version>-win64-win7.exe` | The same application built against Qt 5.15, the last Qt that runs on Windows 7 SP1 (Qt 6 requires Windows 10). It is built and tested on Windows 11 — see [the Windows 7 section](#windows-7) — and `time-warp-studio-<version>-win64-win7.zip` is the same tree without the installer. |
-| macOS 14.4 or later, Intel or Apple silicon | `Time_Warp_Studio-<version>-macOS-universal.dmg` | Open it, drag **Time Warp Studio** to Applications. The image is universal, so one file covers both architectures. |
 | a Linux desktop and no wish to install anything | `Time_Warp_Studio-<version>-x86_64.AppImage` | `chmod +x` it and double-click. It needs no root, no package manager and no Qt: everything is inside the file. |
 | Ubuntu, Debian, Mint or Pop!_OS | `time-warp-studio_<version>_amd64.deb`, or `_arm64.deb` | Double-click it, or `sudo apt install ./time-warp-studio_<version>_amd64.deb` |
 | Fedora, RHEL or openSUSE | `time-warp-studio-<version>-1.x86_64.rpm`, or `.aarch64.rpm` | `sudo dnf install ./time-warp-studio-<version>-1.x86_64.rpm` |
 | any other Linux, or arm64 | `time-warp-studio-<version>-linux-x86_64.tar.gz`, or `-arm64` | `tar -xzf … -C / --strip-components=1` |
 
-The **Windows installer** is a NSIS package: it puts the application and its Qt
-runtime in `Program Files\Time Warp Studio`, with `bin\time_warp_ide.exe` and
-`share\` beside it — the same layout the other packages use — and it uninstalls
-from Settings > Apps. Neither it nor the disk image is signed with a paid
-certificate, so SmartScreen may ask the first time ("More info", then "Run
-anyway") and Gatekeeper will ask once on macOS (right-click the application and
-choose Open).
+The **Flatpak** is the answer for anybody who does not want to think about Qt: the
+KDE runtime carries the Qt this was built against, the application is sandboxed, and
+the same file works on Arch, Fedora and Ubuntu. `flatpak install
+./Time_Warp_Studio-<version>-x86_64.flatpak` and run **Time Warp Studio** from the
+menu. The sandbox reaches the home directory — the IDE opens your programs — and
+nothing else. `packaging/flatpak/` is the manifest, and `release.yml` builds it on
+every tag so the file is exercised rather than only reviewed.
 
 The **AppImage is the answer for a non-technical Linux user**: one file, double-clicked,
 nothing installed. It is built for glibc 2.39 or newer (Ubuntu 24.04 and later, or

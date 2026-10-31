@@ -1185,6 +1185,10 @@ private:
     /// Tears down the current run and waits for its thread, then empties the
     /// queue so no command from the old run can land on the fresh canvas.
     void finishRun(const QString& error, bool completed);
+
+    /// Says, through the desktop's notification service, that a run ended --
+    /// and only when the window is not the one being looked at.
+    void announceFinishedRun(bool completed, const QString& error);
 };
 
 }  // namespace timewarp::ui

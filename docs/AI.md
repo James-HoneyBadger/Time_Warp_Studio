@@ -152,20 +152,18 @@ A key is a secret. Three things follow, and all three are deliberate.
 - **Keeping the key is your choice.** With **Keep the key on this machine** unticked
   the key is used for that session and *removed* from the settings file, so a saved
   configuration can be handed to another machine without the secret in it.
-- **A stored key goes in the operating system's own store where there is one.** On
-  Windows that is the Credential Manager, on macOS the Keychain, and on Linux the
-  freedesktop secret service when the build found `libsecret`. A build or a machine
-  without one keeps the key in the settings file, restricted to its owner, exactly as
-  before -- and the settings dialog names the store it would use. The choice is
-  `TIME_WARP_AI_KEYRING`: `file` refuses the system store, `system` asks for it, and a
-  build that has none answers `file` either way rather than pretending.
+- **A stored key goes in the system's own store where there is one.** That is the
+  freedesktop secret service, reached through `libsecret` when the build found it. A
+  build or a machine without it keeps the key in the settings file, restricted to its
+  owner, exactly as before -- and the settings dialog names the store it would use.
+  The choice is `TIME_WARP_AI_KEYRING`: `file` refuses the system store, `system`
+  asks for it, and a build that has none answers `file` either way rather than
+  pretending.
 
-  The item is one per user and is named the same way everywhere it is visible: a
-  `TimeWarpStudio/assistant` target in the Windows Credential Manager, a generic
-  password with the service `Time Warp Studio` and the account `assistant` in the
-  macOS Keychain, and the same account name in the freedesktop secret service. A
-  reader who wants to remove a key by hand can find it; a reader who wants to know
-  where it went does not have to guess.
+  The item is one per user: a generic password with the service `Time Warp Studio`
+  and the account `assistant` in the secret service. A reader who wants to remove a
+  key by hand can find it; a reader who wants to know where it went does not have to
+  guess.
 
 The key is never logged, never shown in a message, and stripped from anything a
 service sends back — a proxy that echoes the request in an error still cannot put
@@ -181,6 +179,7 @@ The environment variables that override the stored configuration:
 | `TIME_WARP_AI_PROTOCOL` | `openai` or `anthropic` |
 | `TIME_WARP_AI_ENABLED` | `1`/`0`: whether the assistant is on |
 | `TIME_WARP_AI_KEYRING` | `file` or `system`: where a stored key lives |
+| `TIME_WARP_AI_PERSONA` | `plain`, `professor`, `hacker` or `machine`: the voice |
 
 ### What exactly leaves the machine
 
@@ -196,6 +195,11 @@ One request contains:
 
 Nothing else. No other tab, no other file, no path, no list of what you have open,
 no telemetry, no version of this application beyond the request itself.
+
+The assistant is one of the application's two network calls, and both are asked for:
+this one, and the CHIP-8 window's **Fetch Homebrew Archive…**, which requests a
+dozen fixed files from one pinned commit and sends nothing but the request for each
+(`docs/chip8/README.md`). Nothing else in the application opens a socket.
 
 **The program is capped at 12,000 characters.** A larger document is cut at that
 point and the model is told so in the text it receives — a truncated program the
@@ -286,6 +290,28 @@ it is a mistake the assistant otherwise makes:
 
 `ai_tests` reads the language table and fails if the prompt stops naming a language,
 so a twelfth language cannot be added without the assistant learning about it.
+
+### The voice
+
+**Settings > Assistant > Voice** chooses how a reply reads. It was going to be a
+gimmick and turned out to be the most in-character thing in the application: an
+environment that is deliberately out of its own time can answer in the time the
+program belongs to.
+
+| Voice | What it does to a reply |
+| --- | --- |
+| **No persona** | The register above, with no era in it. The default. |
+| **1974: the lecturer** | Speaks as a computer science teacher of that year: the machine, the listing, structured programming, flowcharts, the language's own specification. |
+| **1984: the bedroom programmer** | Terse and hands-on: type-in listings, tape and disk, memory you can count, "try this and watch what happens". |
+| **2026: the machine** | Precise and unhurried, current vocabulary welcome, and says plainly when a limit is the interpreter's rather than the language's. |
+
+What a voice may **not** do is change the facts. Every persona is appended to the
+same standing instructions, and each one says so in its own words: a command is real
+because it is in the list, not because it existed somewhere in that year. `ai_tests`
+asserts both halves — that a persona adds to the base prompt rather than replacing
+it, and that every voice still carries the rule against inventing commands. A
+persona that sweet-talked the model into `CIRCLE` in Logo would be a bug in exactly
+the way the rest of this chapter is about.
 
 ## What it costs, and what it reports
 

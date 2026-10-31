@@ -136,13 +136,118 @@ QString task_label(Task task) {
     return QStringLiteral("Ask");
 }
 
+namespace {
+
+/// What each voice adds. The first sentence of every one of them says the same
+/// thing in a different register: the voice is how the answer reads, not what it
+/// may claim, and the commands are the ones the base prompt lists.
+QString persona_suffix(Persona persona) {
+    switch (persona) {
+        case Persona::Plain:
+            return {};
+        case Persona::Professor:
+            return QStringLiteral(
+                "\n\nVoice: a computer science lecturer in 1974. Speak the way a "
+                "teacher of that year spoke: name the machine, refer to the listing, "
+                "talk about structured programming and flowcharts, and prefer the "
+                "language's own specification to modern shorthand. Address the reader as "
+                "a student in the room. Keep the register formal and unhurried. What you "
+                "may say about this dialect is unchanged: a command is real because it "
+                "is in the list above, not because it existed somewhere in 1974.");
+        case Persona::Hacker:
+            return QStringLiteral(
+                "\n\nVoice: a bedroom programmer in 1984. Be terse and enthusiastic. "
+                "Type-in listings, tape and disk, memory as something you can count, and "
+                "the habit of trying it and watching what happens are the vocabulary. "
+                "Skip the marketing. Say 'try this' and give the lines. What the program "
+                "does is not in doubt: short sentences are a style, not permission to "
+                "invent a command and hope it is there.");
+        case Persona::Machine:
+            return QStringLiteral(
+                "\n\nVoice: an artificial intelligence in 2026, asked to help with a "
+                "1974 machine. Be precise and unhurried; current technical vocabulary is "
+                "welcome, including words none of these languages had. Say plainly when a "
+                "thing is a limit of the interpreter rather than of the language, and do "
+                "not pretend to a memory of an era you did not live through. Everything "
+                "you state about the dialect is still the list above.");
+    }
+    return {};
+}
+
+}  // namespace
+
+QString persona_key(Persona persona) {
+    switch (persona) {
+        case Persona::Plain:
+            return QStringLiteral("plain");
+        case Persona::Professor:
+            return QStringLiteral("professor");
+        case Persona::Hacker:
+            return QStringLiteral("hacker");
+        case Persona::Machine:
+            return QStringLiteral("machine");
+    }
+    return QStringLiteral("plain");
+}
+
+std::optional<Persona> persona_from_key(const QString& key) {
+    const QString wanted = key.trimmed().toLower();
+    for (const Persona persona : personas()) {
+        if (persona_key(persona) == wanted) {
+            return persona;
+        }
+    }
+    return std::nullopt;
+}
+
+QString persona_name(Persona persona) {
+    switch (persona) {
+        case Persona::Plain:
+            return QStringLiteral("No persona");
+        case Persona::Professor:
+            return QStringLiteral("1974: the lecturer");
+        case Persona::Hacker:
+            return QStringLiteral("1984: the bedroom programmer");
+        case Persona::Machine:
+            return QStringLiteral("2026: the machine");
+    }
+    return QStringLiteral("No persona");
+}
+
+QString persona_description(Persona persona) {
+    switch (persona) {
+        case Persona::Plain:
+            return QStringLiteral("Plain, with no era in it");
+        case Persona::Professor:
+            return QStringLiteral("Structured programming, listings and the machine");
+        case Persona::Hacker:
+            return QStringLiteral("Terse, hands-on, tape and disk");
+        case Persona::Machine:
+            return QStringLiteral("Precise, modern, honest about being a model");
+    }
+    return {};
+}
+
+QList<Persona> personas() {
+    return {Persona::Plain, Persona::Professor, Persona::Hacker, Persona::Machine};
+}
+
 QString system_prompt() { return QString::fromUtf8(kSystemPrompt); }
+
+QString system_prompt(Persona persona) {
+    return system_prompt() + persona_suffix(persona);
+}
 
 int max_context_characters() { return kMaxContextCharacters; }
 
 Conversation build_prompt(Task task, const Context& context, const QString& input) {
+    return build_prompt(task, context, Persona::Plain, input);
+}
+
+Conversation build_prompt(Task task, const Context& context, Persona persona,
+                          const QString& input) {
     Conversation conversation;
-    conversation.system = system_prompt();
+    conversation.system = system_prompt(persona);
 
     const QString language =
         context.language.trimmed().isEmpty() ? QStringLiteral("this language")

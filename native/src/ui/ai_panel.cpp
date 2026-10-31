@@ -421,7 +421,7 @@ void AiPanel::ask(Task task, const QString& input) {
 timewarp::ai::Conversation AiPanel::compose(Task task, const QString& input,
                                             const timewarp::ai::Context& context) const {
     timewarp::ai::Conversation conversation =
-        timewarp::ai::build_prompt(task, context, input);
+        timewarp::ai::build_prompt(task, context, config_.persona, input);
     QList<Message> turns = history_;
     for (const Message& message : conversation.messages) {
         turns.append(message);

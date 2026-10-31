@@ -40,7 +40,9 @@ struct Chip8Rom {
 /// Stores the folder. An empty string removes the key.
 void storeChip8RomFolder(const QString& folder);
 
-/// Browses the folder: a filter, the list, and a button to pick another folder.
+/// Browses the folder: a filter, the list, a button to pick another folder, and --
+/// where the build has a network -- the one download this application offers: the
+/// public-domain homebrew archive in `chip8_archive.hpp`.
 ///
 /// A dialog rather than a panel because it is used once per program and then
 /// dismissed; the CHIP-8 window keeps the folder, not the dialog.
@@ -61,6 +63,10 @@ private:
     void chooseFolder();
     void reload();
     void acceptSelection();
+    /// Confirms, then fetches the catalogue into its own folder and shows it.
+    void fetchArchive();
+    /// Says, in the dialog, what the fetch is doing. Empty clears the line.
+    void setArchiveStatus(const QString& text);
 
     QString folder_;
     QLabel* folder_label_ = nullptr;
@@ -68,6 +74,8 @@ private:
     QLineEdit* filter_ = nullptr;
     QListWidget* list_ = nullptr;
     QPushButton* open_ = nullptr;
+    QPushButton* fetch_ = nullptr;
+    QLabel* archive_status_ = nullptr;
 };
 
 }  // namespace timewarp::ui

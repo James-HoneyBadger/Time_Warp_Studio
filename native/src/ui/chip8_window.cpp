@@ -27,6 +27,7 @@
 #include <QPlainTextEdit>
 #include <QPushButton>
 #include <QScrollBar>
+#include <QSettings>
 #include <QSignalBlocker>
 #include <QSpinBox>
 #include <QStatusBar>
@@ -45,6 +46,10 @@
 namespace timewarp::ui {
 
 namespace {
+
+/// Whether the five-page tour has been shown. One per user, so the machine
+/// introduces itself once and is a paint program afterwards.
+constexpr auto kSettingChip8TourSeen = "chip8/tourSeen";
 
 constexpr std::array<const char*, 16> kRegisterNames{
     "V0", "V1", "V2", "V3", "V4", "V5", "V6", "V7",
@@ -376,20 +381,36 @@ bool Chip8Window::loadBundledProgram() {
     if (root.isEmpty()) {
         return false;
     }
-    // The paint program is the introduced example because it uses the keypad;
-    // the older font demo is the fallback for an installation that lacks it.
-    for (const QString& name : {QStringLiteral("chip8/paint.ch8"),
-                                QStringLiteral("chip8/font_and_frames.ch8")}) {
+    // The first time this machine is opened, it introduces itself. The tour waits
+    // for a key on each of its five pages, so a person can read it at their own
+    // pace and press nothing else; after that the window opens on the paint
+    // program, which is the one somebody who already knows the machine wants. The
+    // font demo is the fallback for an installation that lacks the other two.
+    QSettings settings;
+    const bool toured = settings.value(QLatin1String{kSettingChip8TourSeen}, false).toBool();
+    QStringList names;
+    if (!toured) {
+        names.append(QStringLiteral("chip8/tour.ch8"));
+    }
+    names.append(QStringLiteral("chip8/paint.ch8"));
+    names.append(QStringLiteral("chip8/font_and_frames.ch8"));
+    for (const QString& name : names) {
         const QString path = root + QLatin1Char('/') + name;
-        if (QFileInfo::exists(path)) {
-            if (!openFile(path)) {
-                return false;
-            }
-            // The point of the bundled program is that the window is alive when
-            // it opens: the paint cursor waits for a key immediately.
-            emulator_->start();
-            return true;
+        if (!QFileInfo::exists(path)) {
+            continue;
         }
+        if (!openFile(path)) {
+            return false;
+        }
+        if (name.endsWith(QLatin1String("tour.ch8"))) {
+            // Written only when the tour actually opened: a machine whose tour is
+            // missing should still be offered it once somebody restores the file.
+            settings.setValue(QLatin1String{kSettingChip8TourSeen}, true);
+        }
+        // The point of the bundled program is that the window is alive when it
+        // opens: the tour waits for a key, and the paint cursor does too.
+        emulator_->start();
+        return true;
     }
     return false;
 }

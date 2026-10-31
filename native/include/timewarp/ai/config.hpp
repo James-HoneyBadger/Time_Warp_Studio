@@ -27,6 +27,8 @@
 
 #pragma once
 
+#include "timewarp/ai/prompt.hpp"
+
 #include <QList>
 #include <QString>
 
@@ -62,6 +64,7 @@ inline constexpr const char* kSettingTemperature = "ai/temperature";
 inline constexpr const char* kSettingSendDocument = "ai/sendDocument";
 inline constexpr const char* kSettingRememberConversation = "ai/rememberConversation";
 inline constexpr const char* kSettingInlineSuggestions = "ai/inlineSuggestions";
+inline constexpr const char* kSettingPersona = "ai/persona";
 
 /// The environment variables that override the stored configuration, documented in
 /// `docs/AI.md`. The key's is the one that matters: an exported key is never
@@ -71,6 +74,7 @@ inline constexpr const char* kEnvBaseUrl = "TIME_WARP_AI_BASE_URL";
 inline constexpr const char* kEnvModel = "TIME_WARP_AI_MODEL";
 inline constexpr const char* kEnvProtocol = "TIME_WARP_AI_PROTOCOL";
 inline constexpr const char* kEnvEnabled = "TIME_WARP_AI_ENABLED";
+inline constexpr const char* kEnvPersona = "TIME_WARP_AI_PERSONA";
 
 /// One assistant configuration.
 struct Config {
@@ -105,6 +109,9 @@ struct Config {
     /// Off by default, and deliberately not the same switch as `enabled`: a chat
     /// panel is asked things, a ghost line arrives while you type.
     bool inline_suggestions = false;
+    /// The voice a reply is written in. It changes the register and nothing else;
+    /// `prompt.hpp` says what that means for the facts.
+    Persona persona = Persona::Plain;
 };
 
 /// `openai` / `anthropic`: the settings value, which is also what

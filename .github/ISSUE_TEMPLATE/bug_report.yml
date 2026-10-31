@@ -108,7 +108,7 @@ body:
     id: os
     attributes:
       label: Operating system
-      placeholder: "Arch Linux, glibc 2.39 / macOS 15.1 / Windows 11 24H2"
+      placeholder: "Ubuntu 24.04, glibc 2.39 / Fedora 42, glibc 2.41"
     validations:
       required: true
 

@@ -33,6 +33,7 @@ void test_the_scrubber_appears_only_when_there_is_ink();
 void test_turtle_command_log_spells_each_command();
 void test_turtle_log_and_inspector_follow_the_canvas();
 void test_output_sub_tabs();
+void test_the_desktop_entry_follows_the_packaging();
 void test_function_key_bar_is_fixed_height();
 void test_function_key_layers();
 void test_function_keys_are_wired();

@@ -4,6 +4,8 @@
 
 #include "ui_layout/support.hpp"
 
+#include "timewarp/ui/app.hpp"
+
 namespace tw::ui_layout {
 
 // Read by this file only: it arrived here with the cases that need it.
@@ -340,6 +342,28 @@ void test_output_sub_tabs() {
     QSettings{}.remove(QStringLiteral("terminal/enabled"));
 }
 
+
+
+/// The window belongs to a desktop entry, and which one depends on how it was
+/// packaged: a Flatpak is named after its application id, a distribution package
+/// after the product. The sandbox says which, and the launcher gets the right icon.
+void test_the_desktop_entry_follows_the_packaging() {
+    announce("identity: the desktop entry");
+    qunsetenv("FLATPAK_ID");
+    timewarp::ui::applyApplicationIdentity();
+    TW_CHECK_EQ(QGuiApplication::desktopFileName(), QStringLiteral("time-warp-studio"));
+
+    qputenv("FLATPAK_ID", QByteArray{"org.honey-badger.TimeWarpStudio"});
+    timewarp::ui::applyApplicationIdentity();
+    TW_CHECK_EQ(QGuiApplication::desktopFileName(),
+                QStringLiteral("org.honey-badger.TimeWarpStudio"));
+
+    // An empty variable is the same as none: a session that exports an empty string
+    // must not leave the window with no desktop entry at all.
+    qputenv("FLATPAK_ID", QByteArray{});
+    timewarp::ui::applyApplicationIdentity();
+    TW_CHECK_EQ(QGuiApplication::desktopFileName(), QStringLiteral("time-warp-studio"));
+}
 
 void test_function_key_bar_is_fixed_height() {    announce("function key bar");
     MainWindow window;

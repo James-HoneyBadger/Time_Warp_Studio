@@ -1,30 +1,38 @@
 // SPDX-License-Identifier: MIT
 //
-// An embedded shell: the user's own `$SHELL`, one command line at a time.
+// An embedded shell, on a pseudo-terminal of its own.
 //
-// Ported from `ui/terminal_widget.py`, with a deliberate restriction. This is
-// not a terminal emulator: there is no PTY, so there are no prompts, no job
-// control and no full-screen programs. Each line typed here is written to the
-// shell's standard input and whatever the shell writes back is appended. That
-// makes `echo`, a compiler run or a small script work, and makes `vim`, `top` or
-// anything that asks the terminal for its size fail instead of taking the IDE
-// over.
+// The shell is the user's own `$SHELL`, and it runs on a real pty
+// (`pty_session.hpp`), so it prints its prompt, colours its output, keeps job
+// control and answers a program that asks how wide the terminal is. What it does
+// not have is a screen: the transcript is text, so a program that paints with
+// cursor addressing -- `vim`, `top`, a full-screen curses interface -- starts and
+// writes its escape sequences into a filter that throws them away. The tab is for
+// commands, which is what an IDE's terminal is for.
 //
-// It is off unless the user turns it on in Settings, and the window removes it
-// in presentation and player modes. Running commands is a support and safety
-// cost in a teaching IDE, so the feature is opted into rather than greeted.
+// It is off unless the user turns it on in Settings, and the window removes it in
+// presentation and player modes. Running commands is a support and safety cost in a
+// teaching IDE, so the feature is opted into rather than greeted.
 
 #pragma once
+
+#include "timewarp/ui/terminal_text.hpp"
 
 #include <QString>
 #include <QWidget>
 
+#include <memory>
+#include <vector>
+
 class QLabel;
 class QLineEdit;
 class QPlainTextEdit;
-class QProcess;
+class QSocketNotifier;
+class QResizeEvent;
 
 namespace timewarp::ui {
+
+class PtySession;
 
 class TerminalWidget final : public QWidget {
     Q_OBJECT
@@ -46,23 +54,34 @@ public:
 
     [[nodiscard]] bool isRunning() const;
 
-    /// Ends the shell: terminate, then kill if it does not go. Called when the
-    /// window closes or the terminal is switched off, so no child process
-    /// outlives the thing that started it.
+    /// Ends the shell and everything it started. Called when the window closes or
+    /// the terminal is switched off, so no child process outlives the thing that
+    /// started it.
     void stop();
 
     /// Everything written to the output so far. For the tests, and for a caller
     /// that wants to save the transcript.
     [[nodiscard]] QString output() const;
 
+protected:
+    void resizeEvent(QResizeEvent* event) override;
+
 private:
     void startShell();
+    void readShellOutput();
+    void apply(const std::vector<TerminalOp>& ops);
+    void eraseBack(int count);
     void append(const QString& text);
+    void writeLine(const QString& text);
+    void ptySize(int* columns, int* rows) const;
     void submitInput();
     void updateStatus();
 
     QString working_directory_;
-    QProcess* process_ = nullptr;
+    std::unique_ptr<PtySession> shell_;
+    QSocketNotifier* notifier_ = nullptr;
+    /// What the pty's bytes mean: escape sequences stripped, `\r` applied.
+    TerminalText filter_;
     QPlainTextEdit* output_view_ = nullptr;
     QLineEdit* input_ = nullptr;
     QLabel* status_ = nullptr;

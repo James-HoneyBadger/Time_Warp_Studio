@@ -79,6 +79,7 @@ int main(int argc, char** argv) {
     test_turtle_command_log_spells_each_command();
     test_turtle_log_and_inspector_follow_the_canvas();
     test_output_sub_tabs();
+    test_the_desktop_entry_follows_the_packaging();
     test_function_key_bar_is_fixed_height();
     test_function_key_layers();
     test_function_keys_are_wired();

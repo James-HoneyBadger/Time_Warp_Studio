@@ -10,6 +10,8 @@
 
 #include "timewarp/ui/main_window.hpp"
 
+#include "timewarp/ui/desktop_notification.hpp"
+
 #include "timewarp/lang/executor.hpp"
 #include "timewarp/lang/watch.hpp"
 #include "timewarp/ui/native_runner.hpp"
@@ -787,10 +789,28 @@ void MainWindow::finishRun(const QString& error, bool completed) {
 
     if (!error.isEmpty()) {
         reportError(error);
+        announceFinishedRun(false, error);
         return;
     }
     setExecutionState(completed ? tr("ready") : tr("stopped"),
                       completed ? tr("Finished") : tr("Stopped"));
+    announceFinishedRun(completed, QString{});
+}
+
+void MainWindow::announceFinishedRun(bool completed, const QString& error) {
+    // The one rule that keeps this bearable: a notification is for a run whose
+    // window is not the one the person is looking at. Announcing a program they are
+    // watching finish is an interruption carrying no news.
+    if (isActiveWindow() && !isMinimized()) {
+        return;
+    }
+    if (!QSettings{}.value(QLatin1String{kSettingNotifyOnFinish}, true).toBool()) {
+        return;
+    }
+    const CodeEditor* editor = currentEditor();
+    const QString body =
+        runNotificationBody(editor != nullptr ? nameOf(editor) : QString{}, completed, error);
+    static_cast<void>(notifyDesktop(tr("Time Warp Studio"), body));
 }
 
 
@@ -1025,7 +1045,7 @@ void MainWindow::requestInlineSuggestion(CodeEditor* editor, const QString& pref
     inline_prefix_ = prefix;
     inline_client_->send(ai_config_,
                          timewarp::ai::build_prompt(timewarp::ai::Task::Continue, context,
-                                                    QString{}));
+                                                    ai_config_.persona, QString{}));
 }
 
 void MainWindow::askAssistantAboutOutput() {

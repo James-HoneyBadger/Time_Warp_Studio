@@ -254,7 +254,8 @@ surprise at run time.
 
 ## Writing a program to run in the window
 
-1. Open Tools > **CHIP-8 Emulator…**. `paint.ch8` starts.
+1. Open Tools > **CHIP-8 Emulator…**. The machine starts on whatever it opens with
+   — `tour.ch8` the first time, `paint.ch8` after that.
 2. Switch to the **Listing** tab and replace the text.
 3. `Ctrl+Return` — **Assemble & Load**. Errors appear above the button with their
    line numbers; the running program is untouched.

@@ -50,6 +50,8 @@
 #include "timewarp/ui/help_browser.hpp"
 #include "timewarp/ui/panels.hpp"
 #include "timewarp/ui/preferences.hpp"
+
+#include "timewarp/ui/desktop_notification.hpp"
 #include "timewarp/ui/profile_report.hpp"
 #include "timewarp/ui/project_panel.hpp"
 #include "timewarp/ui/retro_computer.hpp"
@@ -713,6 +715,12 @@ void MainWindow::showPreferences() {
         setExecutionState(tr("ready"),
                           on ? tr("The terminal is on")
                              : tr("The terminal is off"));
+    });
+    connect(dialog, &PreferencesDialog::notifyToggled, this, [this](bool on) {
+        QSettings{}.setValue(QLatin1String{kSettingNotifyOnFinish}, on);
+        setExecutionState(tr("ready"),
+                          on ? tr("A finished run will announce itself")
+                             : tr("A finished run will stay quiet"));
     });
     dialog->open();
 }

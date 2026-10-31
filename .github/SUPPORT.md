@@ -25,9 +25,9 @@ one I would type:
 - **[docs/INSTALLATION.md](../docs/INSTALLATION.md)** — requirements, building
   from source, and what a failure at each step usually means.
 - **[docs/ROADMAP.md](../docs/ROADMAP.md)** — what is deliberately not built
-  yet. A dedicated player target, an automatic update check, code-signed Windows
-  and macOS builds and Flatpak/Snap are on this list. A missing feature from it is
-  not a bug, and reporting one as a regression costs a round trip.
+  yet. A dedicated player target, an automatic update check and Flatpak/Snap are
+  on this list. A missing feature from it is not a bug, and reporting one as a
+  regression costs a round trip.
 - **[docs/USER_GUIDE.md](../docs/USER_GUIDE.md)** — the IDE manual: projects, the
   REPL, debugging, SQL, terminal tools and the API.
 - **[docs/FAQ.md](../docs/FAQ.md)** — the questions that come up most.
@@ -38,18 +38,18 @@ one I would type:
 
 ## What is supported
 
-**Platforms.** Linux, Windows and macOS are all built and tested on every change:
-the 26 suites run under GCC on Ubuntu 24.04, under MSVC on Windows, under MSVC
-with Qt 5.15 for the Windows 7 artifact and under Apple's Clang on macOS, and a
-tagged release ships a Windows installer, a second installer for Windows 7 and a
-universal macOS disk image beside the Linux packages. Say which platform you are
-on when you report; the three differ in their file dialogs, their fonts and their
-packaging, and a report that names the platform is one I can reproduce.
+**Platforms.** Linux, and only Linux. The 26 suites run under GCC on Ubuntu 24.04
+on every change, and a tagged release ships `.deb`, `.rpm`, tarball and AppImage
+packages for x86_64 and arm64. Time Warp Studio was cross-platform until 24.0; the
+Windows and macOS builds of that release remain on the release page as they were,
+and are not maintained. A report about either is out of scope unless it is about
+the 24.0 artifacts specifically.
 
-**Windows 7** is built and released, and tested on Windows 11 — no CI runner is
-older than Windows Server 2019. It is expected to work; it is not verified on
-Windows 7 hardware, and a report from a real 7 machine is the most useful one
-anybody could send.
+**Your distribution.** The releases are built and tested on Ubuntu 24.04. The
+`.deb` and `.rpm` name the distribution's Qt 6 and SQLite, so a distribution with
+those in the version ranges `docs/INSTALLATION.md` lists should work; say which
+distribution and version you are on when you report, and include
+`./native/build/time_warp_ide --version`.
 
 **Configurations.** Every build configuration is expected to be green: Release,
 Debug, AddressSanitizer and UndefinedBehaviorSanitizer. A crash or a diagnostic
@@ -73,11 +73,10 @@ build and launch from a checkout.
 
 ## What is not
 
-- **Every package format.** A tagged release builds a Windows installer and ZIP,
-  a Windows 7 installer and ZIP, a universal macOS disk image, a `.deb`, an
-  `.rpm`, a tarball, an AppImage (x86_64) and a container image, and `make -C native install` produces the same
-  tree locally, with Qt deployed into it. Flatpak, Snap, an arm64 AppImage and
-  code-signed (Developer ID / Authenticode) builds are not made.
+- **Every package format.** A tagged release builds a `.deb`, an `.rpm`, a
+  tarball, an AppImage (x86_64) and a container image, and
+  `make -C native install` produces the same tree locally. Flatpak, Snap and an
+  arm64 AppImage are not made.
 - **A player executable.** `--compile` writes a copy of the IDE with the authoring
   UI hidden; a small `time_warp_player` that opens a program is queued work without a
   date.

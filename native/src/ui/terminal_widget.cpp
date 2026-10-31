@@ -2,16 +2,22 @@
 
 #include "timewarp/ui/terminal_widget.hpp"
 
+#include "timewarp/ui/pty_session.hpp"
+
 #include <QDir>
 #include <QFileInfo>
 #include <QFont>
+#include <QFontMetrics>
 #include <QHBoxLayout>
 #include <QLabel>
 #include <QLineEdit>
 #include <QPlainTextEdit>
-#include <QProcess>
+#include <QResizeEvent>
+#include <QSocketNotifier>
 #include <QTextCursor>
 #include <QVBoxLayout>
+
+#include <algorithm>
 
 namespace timewarp::ui {
 
@@ -28,7 +34,7 @@ namespace {
 }
 
 /// A `cd` the shell will run. Quoted, because a document can live in a folder
-/// whose name contains a space.
+/// whose name contains a space or an apostrophe.
 [[nodiscard]] QString cdCommand(const QString& directory) {
     QString quoted = directory;
     quoted.replace(QLatin1Char('\''), QStringLiteral("'\\''"));
@@ -48,7 +54,8 @@ TerminalWidget::TerminalWidget(QString working_directory, QWidget* parent)
     output_view_->setLineWrapMode(QPlainTextEdit::NoWrap);
     output_view_->setAccessibleName(tr("Terminal Output"));
     output_view_->setPlaceholderText(
-        tr("Commands run in your shell. Nothing here is sandboxed.\u2026"));
+        tr("Commands run in a shell on a terminal of its own. Nothing here is "
+           "sandboxed.\u2026"));
 
     input_ = new QLineEdit{this};
     input_->setObjectName(QStringLiteral("terminalInput"));
@@ -82,40 +89,65 @@ TerminalWidget::~TerminalWidget() {
 }
 
 void TerminalWidget::startShell() {
-    // A previous shell that has exited is replaced rather than reused: `exit`
-    // should give the learner a fresh shell on the next command, not silence.
     stop();
 
-    const QString shell = shellProgram();
-    process_ = new QProcess{this};
-    process_->setProcessChannelMode(QProcess::MergedChannels);
-    if (!working_directory_.isEmpty()) {
-        process_->setWorkingDirectory(working_directory_);
+    int columns = 80;
+    int rows = 24;
+    ptySize(&columns, &rows);
+    auto session = std::make_unique<PtySession>();
+    QString error;
+    if (!session->start(shellProgram(), working_directory_, columns, rows, &error)) {
+        append(error + QLatin1Char('\n'));
+        updateStatus();
+        return;
     }
-    process_->setProgram(shell);
-    connect(process_, &QProcess::readyReadStandardOutput, this, [this] {
-        if (process_ != nullptr) {
-            append(QString::fromLocal8Bit(process_->readAllStandardOutput()));
-        }
-    });
-    connect(process_, &QProcess::errorOccurred, this, [this](QProcess::ProcessError error) {
-        if (error == QProcess::FailedToStart) {
-            append(tr("Could not start %1. Is it installed?\n").arg(shellProgram()));
-            updateStatus();
-        }
-    });
-    connect(process_, qOverload<int, QProcess::ExitStatus>(&QProcess::finished), this,
-            [this](int code, QProcess::ExitStatus) {
-                append(tr("\n[shell exited with %1]\n").arg(code));
-                updateStatus();
-            });
-    process_->start();
-    if (!process_->waitForStarted(2000)) {
-        append(tr("Could not start %1: %2\n").arg(shell, process_->errorString()));
-        process_->deleteLater();
-        process_ = nullptr;
-    }
+    shell_ = std::move(session);
+    notifier_ = new QSocketNotifier{shell_->descriptor(), QSocketNotifier::Read, this};
+    connect(notifier_, &QSocketNotifier::activated, this,
+            [this] { readShellOutput(); });
     updateStatus();
+}
+
+void TerminalWidget::readShellOutput() {
+    if (shell_ == nullptr) {
+        return;
+    }
+    const QByteArray bytes = shell_->read();
+    if (!bytes.isEmpty()) {
+        apply(filter_.feed(bytes));
+    }
+    if (!shell_->isRunning()) {
+        const int code = shell_->exitCode();
+        if (notifier_ != nullptr) {
+            notifier_->setEnabled(false);
+            notifier_->deleteLater();
+            notifier_ = nullptr;
+        }
+        shell_.reset();
+        append(code >= 0 ? tr("\n[shell exited with %1]\n").arg(code)
+                         : tr("\n[shell exited]\n"));
+        updateStatus();
+    }
+}
+
+void TerminalWidget::apply(const std::vector<TerminalOp>& ops) {
+    for (const TerminalOp& op : ops) {
+        if (op.kind == TerminalOp::Kind::EraseBack) {
+            eraseBack(op.count);
+        } else {
+            append(op.text);
+        }
+    }
+}
+
+void TerminalWidget::eraseBack(int count) {
+    if (count <= 0 || output_view_ == nullptr) {
+        return;
+    }
+    QTextCursor cursor = output_view_->textCursor();
+    cursor.movePosition(QTextCursor::End);
+    cursor.movePosition(QTextCursor::Left, QTextCursor::KeepAnchor, count);
+    cursor.removeSelectedText();
 }
 
 void TerminalWidget::runCommand(const QString& command) {
@@ -123,18 +155,21 @@ void TerminalWidget::runCommand(const QString& command) {
     if (trimmed.isEmpty()) {
         return;
     }
-    if (process_ == nullptr || process_->state() == QProcess::NotRunning) {
+    if (!isRunning()) {
         startShell();
     }
-    if (process_ == nullptr || process_->state() == QProcess::NotRunning) {
+    if (!isRunning()) {
         return;
     }
-    // Echoed like a prompt would: the transcript has to show what produced the
-    // output beneath it, because the shell prints no prompt of its own.
-    append(QStringLiteral("> ") + trimmed + QLatin1Char('\n'));
-    // Queued rather than waited on: a write that blocks would stall the window
-    // that is supposed to be showing the command it was given.
-    process_->write(trimmed.toLocal8Bit() + '\n');
+    // The terminal echoes what is typed on it, so the transcript shows the command
+    // as the shell saw it. Writing our own `> ` copy would say it twice.
+    writeLine(trimmed);
+}
+
+void TerminalWidget::writeLine(const QString& line) {
+    if (shell_ != nullptr) {
+        static_cast<void>(shell_->write(line.toUtf8() + '\n'));
+    }
 }
 
 void TerminalWidget::setWorkingDirectory(const QString& directory) {
@@ -142,35 +177,29 @@ void TerminalWidget::setWorkingDirectory(const QString& directory) {
         return;
     }
     working_directory_ = directory;
-    if (process_ != nullptr && process_->state() != QProcess::NotRunning) {
+    if (isRunning()) {
         // `cd` rather than a restart: the shell's variables and history are the
         // reason it is worth keeping alive across a tab change.
-        process_->write(cdCommand(directory).toLocal8Bit() + '\n');
+        writeLine(cdCommand(directory));
     }
     updateStatus();
 }
 
 bool TerminalWidget::isRunning() const {
-    return process_ != nullptr && process_->state() != QProcess::NotRunning;
+    return shell_ != nullptr && shell_->isRunning();
 }
 
 void TerminalWidget::stop() {
-    if (process_ == nullptr) {
-        return;
+    if (notifier_ != nullptr) {
+        notifier_->setEnabled(false);
+        notifier_->deleteLater();
+        notifier_ = nullptr;
     }
-    QProcess* process = process_;
-    process_ = nullptr;
-    // The widget is going away or the shell is being replaced: a `finished`
-    // signal during shutdown would append to a view that may not exist.
-    disconnect(process, nullptr, this, nullptr);
-    if (process->state() != QProcess::NotRunning) {
-        process->terminate();
-        if (!process->waitForFinished(500)) {
-            process->kill();
-            process->waitForFinished(500);
-        }
+    if (shell_ != nullptr) {
+        shell_->stop();
+        shell_.reset();
     }
-    process->deleteLater();
+    filter_.reset();
     updateStatus();
 }
 
@@ -193,6 +222,25 @@ void TerminalWidget::submitInput() {
     const QString command = input_->text();
     input_->clear();
     runCommand(command);
+}
+
+void TerminalWidget::ptySize(int* columns, int* rows) const {
+    const QFontMetrics metrics{output_view_->font()};
+    const int width = std::max(40, output_view_->viewport()->width());
+    const int height = std::max(40, output_view_->viewport()->height());
+    // A terminal cell is as wide as a monospaced `M` and as tall as a line.
+    *columns = std::max(20, width / std::max(1, metrics.horizontalAdvance(QLatin1Char('M'))));
+    *rows = std::max(4, height / std::max(1, metrics.lineSpacing()));
+}
+
+void TerminalWidget::resizeEvent(QResizeEvent* event) {
+    QWidget::resizeEvent(event);
+    if (shell_ != nullptr) {
+        int columns = 80;
+        int rows = 24;
+        ptySize(&columns, &rows);
+        shell_->setWindowSize(columns, rows);
+    }
 }
 
 void TerminalWidget::updateStatus() {

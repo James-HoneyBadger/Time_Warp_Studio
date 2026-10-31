@@ -224,7 +224,9 @@ opens the same bytes as a live machine:
   to assemble and run it without leaving the window. A listing that does not
   assemble reports the error there and leaves the running program alone.
 
-It opens on the bundled [`paint.ch8`](../../Examples/chip8/paint.ch8): move the
+It opens on the bundled [`tour.ch8`](../../Examples/chip8/tour.ch8) the first time
+— five pages, any key to turn them — and on
+[`paint.ch8`](../../Examples/chip8/paint.ch8) after that: move the
 cursor with `2`, `8`, `4` and `6`, paint with `5`, and clear with `0`.
 
 Open any other `.ch8` with the toolbar, browse a folder with **ROM Library...**,

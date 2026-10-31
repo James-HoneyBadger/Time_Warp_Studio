@@ -568,6 +568,18 @@ void test_the_terminal_runs_commands_when_enabled() {
         }));
         TW_CHECK(terminal->isRunning());
 
+        // The tab is a terminal rather than a pipe: inside it `isatty` is true, so
+        // a shell prints a prompt and a program can ask how wide it is. A pipe
+        // answers neither, and that difference is the whole point of the pty.
+        terminal->runCommand(QStringLiteral("test -t 0 && echo on-a-terminal"));
+        TW_CHECK(waitFor([terminal] {
+            return terminal->output().contains(QStringLiteral("on-a-terminal"));
+        }));
+        // Nothing the shell sends for the screen reaches the transcript: colour,
+        // bracketed-paste mode and the rest are escape sequences, and a text view
+        // would show them as `^[[?2004h` litter.
+        TW_CHECK(!terminal->output().contains(QChar{0x1b}));
+
         window.close();
         TW_CHECK(!terminal->isRunning());
     }

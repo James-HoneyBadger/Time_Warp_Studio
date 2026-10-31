@@ -31,10 +31,9 @@
 Time Warp Studio is a desktop workbench for old-school programming: eleven
 interpreters from 1964–1980 — **BASIC, APL, Logo, PILOT, FOCAL, Scheme, CHIP-8,
 COMAL, REXX, Smalltalk and Forth** — with an integrated turtle graphics canvas, and
-two complete machines. It is a C++20 / Qt application — Qt 6 for the release, Qt 5.15
-for the Windows 7 build — and all eleven languages run in C++ inside it. There is no
-Python in the tree at all: the product, its tests, its gates and its documentation
-checks are one language.
+two complete machines. It is a C++20 / Qt 6 application for Linux, and all eleven
+languages run in C++ inside it. There is no Python in the tree at all: the product,
+its tests, its gates and its documentation checks are one language.
 
 So the product is **one GUI process**. The only child process is the optional
 embedded terminal, which is a shell the user asked for;
@@ -886,13 +885,11 @@ for separately and only by `timewarp_ui`: it enables SVG drawing export, and wit
 that format is absent rather than broken. Nothing outside the canvas Qt adapter, the
 debugger runner and `src/ui/` includes a Qt header.
 
-`TIME_WARP_QT` is `Qt6` or `Qt5`, and `-DTIME_WARP_QT5=ON` is what chooses the second.
-It exists for one reason: Qt 6 requires Windows 10, so a Windows 7 build cannot use it and
-Qt 5.15 — the last Qt that runs on 7 SP1 — must. The two versions differ in a handful of
-names and in whether `QList` and `QVector` are one type, and those differences live in two
-small headers, `timewarp/core/qt_compat.hpp` and `timewarp/core/qt_gui_compat.hpp`, rather
-than in a conditional at each call site. Every `${TIME_WARP_QT}::` reference in the build
-is spelled that way, so a target linked in one build is linked in the other.
+`TIME_WARP_QT` is `Qt6`. It was a choice between two Qts while the Windows 7 artifact
+existed — Qt 6 requires Windows 10, and 5.15 is the last Qt that runs on 7 SP1 — and the
+variable is kept because every target names `${TIME_WARP_QT}::Widgets` rather than
+`Qt6::Widgets`. `timewarp/core/qt_names.hpp` holds the two Qt spellings used at many call
+sites, so a menu entry stays one readable line.
 
 ### The build file
 
@@ -904,7 +901,7 @@ five modules under `native/cmake/`:
 | `version.cmake` | the product version, read from `../VERSION` |
 | `warnings.cmake` | `timewarp_enable_warnings(target)` and `timewarp_add_suite(name, libs…)` — the policy that used to be written at each of 37 targets |
 | `libraries.cmake` | the Qt-free libraries: expression, Scheme, language (with its per-language object libraries), canvas, audio, I/O |
-| `qt.cmake` | which Qt: 6, or 5.15 for the Windows 7 artifact |
+| `qt.cmake` | Qt 6, and the `TIME_WARP_QT` name the other modules use for it |
 | `tools.cmake` | the command-line tools that need no Qt: `time_warp_check`, the gates, the icon generator |
 | `libraries-qt.cmake` | the Qt libraries: canvas bridge, debugger, SQL, projects, lessons, API |
 | `packaging.cmake` | install rules, the desktop entry and CPack |
@@ -1021,10 +1018,9 @@ coming from the Python application starts from this build's defaults.
   Markdown; the drawing exports as an image or, with Qt6::Svg, as vectors.
 - **Packaging** has `make install` with a desktop entry and an icon, and a tagged
   release builds `.deb`, `.rpm` and tarball artifacts for x86_64 and arm64, an
-  AppImage for x86_64, a NSIS Windows installer and portable ZIP, a universal macOS
-  disk image, and a container image from the same install rules. Flatpak, Snap and an
-  arm64 AppImage are not built, and nothing is code-signed or notarised with a paid
-  certificate.
+  AppImage for x86_64, and a container image from the same install rules. Flatpak,
+  Snap and an arm64 AppImage are not built. The Windows and macOS artifacts stopped
+  at 24.0.
 - **No pixel framebuffer in the drawing display list.** A drawing is a list of
   strokes and shapes fitted to the content; only a program that names a `SCREEN`
   gets the fixed-coordinate framebuffer, which is where `GET`/`PUT` and `POINT`

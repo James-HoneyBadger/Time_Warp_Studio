@@ -1,0 +1,142 @@
+{
+  "_comment": [
+    "The homebrew catalogue the CHIP-8 window can fetch, and the reason it is a",
+    "list rather than a search: every entry here was read and cleared one at a",
+    "time. The source repository states a blanket CC0 dedication ('everything in",
+    "this repository is placed under the Creative Commons 0 license'), and the",
+    "commit is pinned so the bytes cannot change under a running application.",
+    "Adding a program is adding an entry: name the file, the author, and the",
+    "licence that permits redistribution. An entry without a licence does not",
+    "belong here."
+  ],
+  "source": {
+    "repository": "JohnEarnest/chip8Archive",
+    "commit": "761e3ffc63f43e6a849e80714122feff2afca208",
+    "base_url": "https://raw.githubusercontent.com/JohnEarnest/chip8Archive/761e3ffc63f43e6a849e80714122feff2afca208/roms/",
+    "licence": "CC0-1.0",
+    "licence_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+    "note": "The Octo community archive. Programs are homebrew, submitted by their own authors; the repository dedicates everything in it to the public domain."
+  },
+  "programs": [
+    {
+      "file": "slipperyslope.ch8",
+      "title": "Slippery Slope",
+      "authors": [
+        "JohnEarnest"
+      ],
+      "description": "The ice we skate is getting pretty thin.",
+      "platform": "chip8",
+      "licence": "CC0-1.0"
+    },
+    {
+      "file": "br8kout.ch8",
+      "title": "Br8kout",
+      "authors": [
+        "SharpenedSpoon"
+      ],
+      "description": "A breakout clone.",
+      "platform": "chip8",
+      "licence": "CC0-1.0"
+    },
+    {
+      "file": "tank.ch8",
+      "title": "Tank!",
+      "authors": [
+        "Rectus"
+      ],
+      "description": "A two-player artillery game.",
+      "platform": "chip8",
+      "licence": "CC0-1.0"
+    },
+    {
+      "file": "spacejam.ch8",
+      "title": "Spacejam!",
+      "authors": [
+        "WilliamDonnelly"
+      ],
+      "description": "An extended ShipTunnel.",
+      "platform": "chip8",
+      "licence": "CC0-1.0"
+    },
+    {
+      "file": "spaceracer.ch8",
+      "title": "Space Racer",
+      "authors": [
+        "WilliamDonnelly"
+      ],
+      "description": "A two-player race.",
+      "platform": "chip8",
+      "licence": "CC0-1.0"
+    },
+    {
+      "file": "mastermind.ch8",
+      "title": "Mastermind",
+      "authors": [
+        "WilliamDonnelly"
+      ],
+      "description": "The deduction puzzle.",
+      "platform": "chip8",
+      "licence": "CC0-1.0"
+    },
+    {
+      "file": "caveexplorer.ch8",
+      "title": "Cave Explorer",
+      "authors": [
+        "JohnEarnest"
+      ],
+      "description": "Explore a cave.",
+      "platform": "chip8",
+      "licence": "CC0-1.0"
+    },
+    {
+      "file": "flightrunner.ch8",
+      "title": "Flight Runner",
+      "authors": [
+        "TodPunk"
+      ],
+      "description": "A simple flight runner.",
+      "platform": "chip8",
+      "licence": "CC0-1.0"
+    },
+    {
+      "file": "mini-lights-out.ch8",
+      "title": "Mini Lights Out",
+      "authors": [
+        "tobiasvl"
+      ],
+      "description": "Turn the lights out.",
+      "platform": "chip8",
+      "licence": "CC0-1.0"
+    },
+    {
+      "file": "ghostEscape.ch8",
+      "title": "Ghost Escape",
+      "authors": [
+        "TomRintjema"
+      ],
+      "description": "An adventure.",
+      "platform": "chip8",
+      "licence": "CC0-1.0"
+    },
+    {
+      "file": "1dcell.ch8",
+      "title": "1D Cellular Automata",
+      "authors": [
+        "SharpenedSpoon"
+      ],
+      "description": "One-dimensional automata.",
+      "platform": "chip8",
+      "licence": "CC0-1.0"
+    },
+    {
+      "file": "octojam10title.ch8",
+      "title": "Octojam 10 Title",
+      "authors": [
+        "JohnEarnest"
+      ],
+      "description": "A greetings program.",
+      "platform": "chip8",
+      "licence": "CC0-1.0"
+    }
+  ]
+}

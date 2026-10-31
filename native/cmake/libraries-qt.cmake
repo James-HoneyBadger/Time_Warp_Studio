@@ -242,6 +242,20 @@ if(TIME_WARP_QT_FOUND)
         if(PkgConfig_FOUND)
             pkg_check_modules(LIBSECRET IMPORTED_TARGET libsecret-1)
         endif()
+        # A `.pc` file can name an include directory that is not in the tree being
+        # built against: a sysroot for a different prefix does exactly that, and so
+        # does a Flatpak SDK carrying a stray entry. CMake turns the missing path
+        # into a hard error at generate time, and this dependency is optional -- a
+        # directory that is not there means "no libsecret", not "stop".
+        if(LIBSECRET_FOUND)
+            foreach(_libsecret_include IN LISTS LIBSECRET_INCLUDE_DIRS)
+                if(NOT EXISTS "${_libsecret_include}")
+                    message(STATUS "libsecret names ${_libsecret_include}, which is not there: the assistant key stays in the settings file")
+                    set(LIBSECRET_FOUND FALSE)
+                    break()
+                endif()
+            endforeach()
+        endif()
         if(LIBSECRET_FOUND)
             target_link_libraries(timewarp_ai PRIVATE PkgConfig::LIBSECRET)
             target_compile_definitions(timewarp_ai PRIVATE TIME_WARP_HAVE_LIBSECRET=1)
@@ -439,7 +453,7 @@ if(TIME_WARP_QT_FOUND)
         # Print entries. A build without either still runs: the format and the
         # entries are absent rather than broken, and the save dialog and the
         # `--export` help do not name what the build cannot do.
-        find_package(${TIME_WARP_QT} QUIET COMPONENTS Svg PrintSupport)
+        find_package(${TIME_WARP_QT} QUIET COMPONENTS Svg PrintSupport DBus)
 
         # Some distributions ship Qt built for one configuration only -- Arch's
         # qt6-base 6.12 provides RelWithDebInfo. An imported target with no
@@ -528,6 +542,7 @@ if(TIME_WARP_QT_FOUND)
             src/ui/autosave.cpp
             src/ui/breakpoints.cpp
             src/ui/classroom_marker.cpp
+            src/ui/chip8_archive.cpp
             src/ui/chip8_emulator.cpp
             src/ui/chip8_library.cpp
             src/ui/chip8_screen.cpp
@@ -589,6 +604,9 @@ if(TIME_WARP_QT_FOUND)
             src/ui/snippets.cpp
             src/ui/sql_panel.cpp
             src/ui/syntax_highlighter.cpp
+            src/ui/desktop_notification.cpp
+            src/ui/pty_session.cpp
+            src/ui/terminal_text.cpp
             src/ui/terminal_widget.cpp
             src/ui/tour.cpp
             src/ui/version_history.cpp
@@ -598,6 +616,7 @@ if(TIME_WARP_QT_FOUND)
             include/timewarp/ui/breakpoints.hpp
             include/timewarp/ui/code_editor.hpp
             include/timewarp/ui/chip8_emulator.hpp
+            include/timewarp/ui/chip8_archive.hpp
             include/timewarp/ui/chip8_library.hpp
             include/timewarp/ui/classroom_marker.hpp
             include/timewarp/ui/chip8_screen.hpp
@@ -633,6 +652,9 @@ if(TIME_WARP_QT_FOUND)
             include/timewarp/ui/scrubber.hpp
             include/timewarp/ui/sql_panel.hpp
             include/timewarp/ui/syntax_highlighter.hpp
+            include/timewarp/ui/desktop_notification.hpp
+            include/timewarp/ui/pty_session.hpp
+            include/timewarp/ui/terminal_text.hpp
             include/timewarp/ui/terminal_widget.hpp
             include/timewarp/ui/tour.hpp
             include/timewarp/ui/version_history.hpp
@@ -691,6 +713,18 @@ if(TIME_WARP_QT_FOUND)
         else()
             message(STATUS "Qt PrintSupport not found: printing disabled")
         endif()
+        # `DBus` posts the one notification a run needs: the window was in the
+        # background, the program finished, and the person who started it is looking
+        # at something else. A build without it is a build that says nothing rather
+        # than one that fails. Private: it is the notification helper's business, not
+        # the API of the library.
+        if(${TIME_WARP_QT}DBus_FOUND)
+            target_link_libraries(timewarp_ui PRIVATE ${TIME_WARP_QT}::DBus)
+            target_compile_definitions(timewarp_ui PRIVATE TIME_WARP_HAVE_DBUS=1)
+            message(STATUS "Qt DBus ${${TIME_WARP_QT}DBus_VERSION} found: desktop notifications enabled")
+        else()
+            message(STATUS "Qt DBus not found: desktop notifications disabled")
+        endif()
         set_target_properties(timewarp_ui PROPERTIES AUTOMOC ON)
 
         # The assistant's page and its settings dialog exist only where there is a
@@ -707,7 +741,8 @@ if(TIME_WARP_QT_FOUND)
                 include/timewarp/ui/assistant_dialog.hpp
             )
             target_link_libraries(timewarp_ui PRIVATE timewarp::ai)
-            target_compile_definitions(timewarp_ui PUBLIC TIME_WARP_HAVE_AI=1)
+            target_compile_definitions(timewarp_ui PUBLIC TIME_WARP_HAVE_AI=1
+                                                          TIME_WARP_HAVE_NETWORK=1)
         endif()
 
         target_compile_options(timewarp_ui PRIVATE
@@ -795,6 +830,13 @@ if(TIME_WARP_QT_FOUND)
         # course.
         install(
             FILES ${CMAKE_CURRENT_SOURCE_DIR}/share/lessons.json
+            DESTINATION ${TIME_WARP_SHARE_DIR}/time-warp-studio
+        )
+        # The homebrew catalogue: the CHIP-8 window's fetch button reads it, and it
+        # is the allowlist that keeps the application out of the redistribution
+        # question, so it ships with the binary rather than being built in.
+        install(
+            FILES ${CMAKE_CURRENT_SOURCE_DIR}/share/chip8_archive.json
             DESTINATION ${TIME_WARP_SHARE_DIR}/time-warp-studio
         )
         # The command table: the Reference page reads it, and it is the same file
@@ -941,12 +983,16 @@ if(TIME_WARP_QT_FOUND)
             # the snippet library, find-in-files and autosave. One binary because
             # they share a concern -- text in, text out, no program run -- and
             # none of them needs a window.
-            add_executable(editor_services_tests tests/editor_services_tests.cpp)
+            add_executable(editor_services_tests
+                tests/editor_services_tests.cpp
+                tests/editor_services_terminal_tests.cpp
+            )
             target_link_libraries(editor_services_tests PRIVATE timewarp::ui)
             target_include_directories(editor_services_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/tests)
             # The shipped catalogue, from the checkout: see ui_layout_tests.
             target_compile_definitions(editor_services_tests PRIVATE
-                TIME_WARP_TEST_SNIPPETS="${CMAKE_CURRENT_SOURCE_DIR}/share/snippets.json")
+                TIME_WARP_TEST_SNIPPETS="${CMAKE_CURRENT_SOURCE_DIR}/share/snippets.json"
+                TIME_WARP_TEST_ARCHIVE="${CMAKE_CURRENT_SOURCE_DIR}/share/chip8_archive.json")
             timewarp_enable_warnings(editor_services_tests)
             add_test(NAME editor_services_tests COMMAND editor_services_tests)
 

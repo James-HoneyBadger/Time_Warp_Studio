@@ -124,9 +124,11 @@ That message comes from a build whose Qt libraries were compiled for a newer CPU
 than the one running them. It is not a bug in your program. Use a build of Qt
 matching the machine, or run on a physical machine rather than an old VM.
 
-### Does it run on Windows and macOS?
+### Does it run on Windows or macOS?
 
-See the [Installation Guide](INSTALLATION.md) for platform-specific steps.
+No. Time Warp Studio is a Linux application. It was cross-platform up to 24.0, and
+those artifacts are still on that release page, but nothing after 24.0 is built or
+tested for either. The [Installation Guide](INSTALLATION.md) has the Linux steps.
 
 ---
 

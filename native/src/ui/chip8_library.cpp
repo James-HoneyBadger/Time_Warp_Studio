@@ -4,6 +4,8 @@
 
 #include "timewarp/lang/registry.hpp"
 
+#include "timewarp/ui/chip8_archive.hpp"
+
 #include <QDialogButtonBox>
 #include <QDir>
 #include <QDirIterator>
@@ -13,6 +15,7 @@
 #include <QLabel>
 #include <QLineEdit>
 #include <QListWidget>
+#include <QMessageBox>
 #include <QPushButton>
 #include <QSettings>
 #include <QVBoxLayout>
@@ -104,12 +107,30 @@ Chip8LibraryDialog::Chip8LibraryDialog(const QString& folder, QWidget* parent)
     // Said in the dialog rather than only in the documentation: the moment a
     // teacher goes looking for ROMs is the moment the licensing question comes up.
     auto* note = new QLabel{
-        tr("The studio ships no ROMs. Point this at a folder you have the right to use."),
+        tr("The studio ships no ROMs. Point this at a folder you have the right to use, "
+           "or fetch the public-domain homebrew archive below."),
         this};
     note->setObjectName(QStringLiteral("chip8LibraryNote"));
     note->setWordWrap(true);
     note->setEnabled(false);
     layout->addWidget(note);
+
+    if (archiveFetchingAvailable()) {
+        auto* archive_row = new QHBoxLayout;
+        fetch_ = new QPushButton{tr("Fetch Homebrew Archive..."), this};
+        fetch_->setObjectName(QStringLiteral("chip8LibraryFetch"));
+        fetch_->setToolTip(
+            tr("Downloads a dozen public-domain CHIP-8 programs into this "
+               "application's own folder. Nothing is sent except the request for "
+               "each file."));
+        connect(fetch_, &QPushButton::clicked, this, &Chip8LibraryDialog::fetchArchive);
+        archive_row->addWidget(fetch_);
+        archive_status_ = new QLabel{this};
+        archive_status_->setObjectName(QStringLiteral("chip8LibraryFetchStatus"));
+        archive_status_->setWordWrap(true);
+        archive_row->addWidget(archive_status_, 1);
+        layout->addLayout(archive_row);
+    }
 
     filter_ = new QLineEdit{this};
     filter_->setObjectName(QStringLiteral("chip8LibraryFilter"));
@@ -185,6 +206,77 @@ void Chip8LibraryDialog::reload() {
     }
     if (!roms.isEmpty()) {
         list_->setCurrentRow(0);
+    }
+}
+
+void Chip8LibraryDialog::fetchArchive() {
+    QString error;
+    const QString path = archiveCataloguePath();
+    const std::optional<ArchiveCatalogue> catalogue = loadArchiveCatalogue(path, &error);
+    if (!catalogue) {
+        setArchiveStatus(error);
+        return;
+    }
+    // What is about to happen, in the dialog, before it happens: the repository, the
+    // licence, how many files and where they go. A download a person did not ask
+    // about in these terms is one they did not agree to.
+    const QString question =
+        tr("Download %1 program(s) from %2, under the %3 licence, into %4?\n\n"
+           "This is the only place the application fetches anything, and it only "
+           "does it when you ask.")
+            .arg(catalogue->programs.size())
+            .arg(catalogue->repository, catalogue->licence,
+                 QDir::toNativeSeparators(archiveFolder()));
+    if (QMessageBox::question(this, tr("Fetch the homebrew archive"), question,
+                              QMessageBox::Yes | QMessageBox::No, QMessageBox::No) !=
+        QMessageBox::Yes) {
+        return;
+    }
+
+    auto* fetcher = new ArchiveFetcher{this};
+    fetch_->setEnabled(false);
+    setArchiveStatus(tr("Fetching 0 of %1...").arg(catalogue->programs.size()));
+    connect(fetcher, &ArchiveFetcher::progressed, this, [this](int done, int total,
+                                                               const QString& current) {
+        setArchiveStatus(tr("Fetching %1 of %2: %3").arg(done).arg(total).arg(current));
+    });
+    connect(fetcher, &ArchiveFetcher::failed, this, [this, fetcher](const QString& message) {
+        setArchiveStatus(message);
+        if (fetch_ != nullptr) {
+            fetch_->setEnabled(true);
+        }
+        fetcher->deleteLater();
+    });
+    connect(fetcher, &ArchiveFetcher::finished, this,
+            [this, fetcher](int written, int failures, const QStringList& messages) {
+                fetcher->deleteLater();
+                if (fetch_ != nullptr) {
+                    fetch_->setEnabled(true);
+                }
+                if (written == 0) {
+                    setArchiveStatus(failures == 0 ? tr("Nothing to fetch.")
+                                                   : messages.join(QStringLiteral("; ")));
+                    return;
+                }
+                // The library becomes the archive: the files are there, and a person
+                // who just fetched them wants to see them rather than to go looking.
+                folder_ = archiveFolder();
+                reload();
+                if (failures == 0) {
+                    setArchiveStatus(tr("\u2705 %1 program(s) fetched.").arg(written));
+                } else {
+                    setArchiveStatus(tr("\u2705 %1 fetched, %2 failed: %3")
+                                         .arg(written)
+                                         .arg(failures)
+                                         .arg(messages.join(QStringLiteral("; "))));
+                }
+            });
+    fetcher->start(*catalogue, archiveFolder());
+}
+
+void Chip8LibraryDialog::setArchiveStatus(const QString& text) {
+    if (archive_status_ != nullptr) {
+        archive_status_->setText(text);
     }
 }
 

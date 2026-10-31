@@ -374,7 +374,8 @@ void write_report(const Invocation& invocation, const QJsonObject& report) {
         return 1;
     }
     return deliver(invocation, config,
-                   timewarp::ai::build_prompt(task, context, words_of(invocation)));
+                   timewarp::ai::build_prompt(task, context, config.persona,
+                                              words_of(invocation)));
 }
 
 int run_check(const Invocation& invocation) {

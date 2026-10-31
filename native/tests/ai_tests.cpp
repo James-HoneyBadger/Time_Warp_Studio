@@ -563,6 +563,73 @@ void test_system_prompt_names_the_languages() {
 }
 
 
+/// A persona changes the register and nothing else.
+///
+/// The thing worth asserting is not that the text differs -- an assistant that
+/// merely decorated its replies would pass that -- but that every voice keeps the
+/// standing rules, including the one that stops a period voice inventing a command
+/// that period never had.
+
+void test_personas_add_a_voice_to_the_same_rules() {
+    announce("prompt: a persona is a register, not a different set of facts");
+    const QString base = timewarp::ai::system_prompt();
+    // The two rules that must survive every voice.
+    TW_CHECK(base.contains(QStringLiteral("Do not invent commands")));
+    TW_CHECK(base.contains(QStringLiteral("Turtle")));
+
+    for (const timewarp::ai::Persona persona : timewarp::ai::personas()) {
+        const QString text = timewarp::ai::system_prompt(persona);
+        TW_CHECK(text.startsWith(base));
+        if (persona == timewarp::ai::Persona::Plain) {
+            TW_CHECK_EQ(text, base);
+            continue;
+        }
+        // Every other voice says something, and says the commands are not negotiable.
+        TW_CHECK(text.size() > base.size());
+        TW_CHECK(text.contains(QStringLiteral("Voice:")));
+        TW_CHECK(text.contains(QStringLiteral("command"), Qt::CaseInsensitive));
+    }
+
+    // The era each one claims is the era in its text.
+    const QString professor = timewarp::ai::system_prompt(timewarp::ai::Persona::Professor);
+    TW_CHECK(professor.contains(QStringLiteral("1974")));
+    TW_CHECK(professor.contains(QStringLiteral("lecturer")));
+    const QString hacker = timewarp::ai::system_prompt(timewarp::ai::Persona::Hacker);
+    TW_CHECK(hacker.contains(QStringLiteral("1984")));
+    TW_CHECK(hacker.contains(QStringLiteral("listings")));
+    const QString machine = timewarp::ai::system_prompt(timewarp::ai::Persona::Machine);
+    TW_CHECK(machine.contains(QStringLiteral("2026")));
+}
+
+void test_persona_keys_round_trip() {
+    announce("config: the persona is a stored key");
+    for (const timewarp::ai::Persona persona : timewarp::ai::personas()) {
+        const QString key = timewarp::ai::persona_key(persona);
+        TW_CHECK(!key.isEmpty());
+        TW_CHECK_EQ(timewarp::ai::persona_from_key(key).value_or(timewarp::ai::Persona::Plain),
+                    persona);
+        // Case and stray space are the user's, not the settings file's.
+        TW_CHECK_EQ(
+            timewarp::ai::persona_from_key(QStringLiteral(" ") + key.toUpper() + QStringLiteral(" "))
+                .value_or(timewarp::ai::Persona::Plain),
+            persona);
+        TW_CHECK(!timewarp::ai::persona_name(persona).isEmpty());
+        TW_CHECK(!timewarp::ai::persona_description(persona).isEmpty());
+    }
+    TW_CHECK(!timewarp::ai::persona_from_key(QStringLiteral("beatnik")).has_value());
+
+    // A request carries the chosen voice, and the plain one is what a caller with no
+    // settings gets.
+    Context context;
+    context.language = QStringLiteral("FOCAL");
+    context.source = QStringLiteral("1.01 TYPE \"HI\"\n");
+    const Conversation voiced = timewarp::ai::build_prompt(
+        Task::Explain, context, timewarp::ai::Persona::Hacker, QString{});
+    TW_CHECK(voiced.system.contains(QStringLiteral("1984")));
+    TW_CHECK_EQ(timewarp::ai::build_prompt(Task::Explain, context, QString{}).system,
+                timewarp::ai::system_prompt());
+}
+
 void test_prompt_explain_carries_the_program() {
     announce("prompt: explain sends the program once");
     Context context;
@@ -1303,6 +1370,8 @@ int main(int argc, char** argv) {
     test_redaction();
 
     test_system_prompt_names_the_languages();
+    test_personas_add_a_voice_to_the_same_rules();
+    test_persona_keys_round_trip();
     test_prompt_explain_carries_the_program();
     test_prompt_selection_wins_over_the_document();
     test_prompt_fix_carries_the_last_run();

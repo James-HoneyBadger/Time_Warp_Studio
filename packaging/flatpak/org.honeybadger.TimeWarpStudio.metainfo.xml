@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- SPDX-License-Identifier: MIT -->
+<!--
+  The AppStream file the software centres read and Flathub requires. The id is the
+  Flatpak id, and the file is named after it.
+
+  Everything here is true of the program as it ships: the languages, the two
+  machines, and the fact that it makes no network call of its own. The URLs are the
+  project's own; a screenshot is the one thing a listing wants that this file does
+  not carry yet, because a repository screenshot is a file that goes stale silently
+  and the release page is where the current ones are.
+-->
+<component type="desktop-application">
+  <id>org.honeybadger.TimeWarpStudio</id>
+  <name>Time Warp Studio</name>
+  <summary>An old-school programming environment with eleven languages</summary>
+
+  <metadata_license>MIT</metadata_license>
+  <project_license>MIT</project_license>
+
+  <description>
+    <p>
+      Time Warp Studio is a workbench for old-school programming: BASIC, APL, Logo,
+      PILOT, FOCAL, Scheme, CHIP-8, COMAL, REXX, Smalltalk and Forth in one window,
+      each with an editor, a debugger and turtle graphics.
+    </p>
+    <p>
+      Inside it are two complete machines rather than two themes: the HB-1, a
+      home computer of 1982 with an eleven-language ROM socket, a CRT and its own
+      disk operating system, and a live CHIP-8 with an assembler, a keypad and a
+      register inspector.
+    </p>
+    <p>
+      A checked curriculum of 22 lessons and 66 checkpoints ships with it for
+      teaching, and the whole application is offline: it makes no network call of
+      its own unless you configure the assistant or ask it to fetch the
+      public-domain CHIP-8 homebrew archive.
+    </p>
+  </description>
+
+  <launchable type="desktop-id">org.honeybadger.TimeWarpStudio.desktop</launchable>
+
+  <url type="homepage">https://github.com/James-HoneyBadger/Time_Warp_Studio</url>
+  <url type="bugtracker">https://github.com/James-HoneyBadger/Time_Warp_Studio/issues</url>
+  <url type="vcs-browser">https://github.com/James-HoneyBadger/Time_Warp_Studio</url>
+  <url type="help">https://github.com/James-HoneyBadger/Time_Warp_Studio/blob/main/docs/USER_GUIDE.md</url>
+
+  <developer id="org.honeybadger">
+    <name>James Temple</name>
+  </developer>
+
+  <content_rating type="oars-1.1"/>
+
+  <categories>
+    <category>Development</category>
+    <category>Education</category>
+    <category>IDE</category>
+  </categories>
+
+  <keywords>
+    <keyword>BASIC</keyword>
+    <keyword>APL</keyword>
+    <keyword>Logo</keyword>
+    <keyword>PILOT</keyword>
+    <keyword>FOCAL</keyword>
+    <keyword>Scheme</keyword>
+    <keyword>CHIP-8</keyword>
+    <keyword>COMAL</keyword>
+    <keyword>REXX</keyword>
+    <keyword>Smalltalk</keyword>
+    <keyword>Forth</keyword>
+    <keyword>retro computing</keyword>
+    <keyword>emulator</keyword>
+  </keywords>
+
+  <releases>
+    <release version="24.0.0" date="2026-10-29">
+      <description>
+        <p>CHIP-8 runs can be walked back, and 24.0 is the golden release.</p>
+      </description>
+    </release>
+  </releases>
+</component>

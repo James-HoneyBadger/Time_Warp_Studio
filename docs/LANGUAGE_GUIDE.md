@@ -490,9 +490,8 @@ with a joystick plugged in does not change a program that never asked to read on
 `JOYINIT` reports the device it opened or that there is none: a gamepad is
 optional hardware, not an error in the program.
 
-On Linux the pad is `/dev/input/js0`, or the first of `js0` to `js3` that opens;
-`TIME_WARP_GAMEPAD=/dev/input/js1 ./time_warp_ide` names one instead. Windows and
-macOS builds report no pad rather than a backend that cannot read one.
+The pad is `/dev/input/js0`, or the first of `js0` to `js3` that opens;
+`TIME_WARP_GAMEPAD=/dev/input/js1 ./time_warp_ide` names one instead.
 
 ### Drawing without the turtle: `DRAW`
 
@@ -1471,9 +1470,10 @@ would be a corrupted program waiting to be saved.
 **Tools > CHIP-8 Emulator** (Ctrl+Shift+M) runs the same bytes as a live
 machine: the screen in either mode, a keypad that can be pressed while the program runs,
 Run/Pause/Step/Reset, a speed control, the sound timer's buzzer, and registers,
-stack and memory beside the screen. It opens on the bundled `paint.ch8` when the
-current document is not a CHIP-8 program, and its **Listing** tab assembles and
-runs typed source (`Ctrl+Return`) without using the main editor. The Run button
+stack and memory beside the screen. When the current document is not a CHIP-8
+program it opens on the bundled `tour.ch8` the first time and on `paint.ch8`
+afterwards, and its **Listing** tab assembles and runs typed source
+(`Ctrl+Return`) without using the main editor. The Run button
 keeps the whole-program model described below, because a lesson, a gate and an
 animation want different answers from the same file.
 
@@ -1481,6 +1481,11 @@ animation want different answers from the same file.
 recursively, remembering the folder after a successful open. The studio ships no
 ROMs: most CHIP-8 programs in circulation are somebody else's copyright, so the
 library reads a folder the user has the right to use rather than bundling one.
+Its **Fetch Homebrew Archive...** button is the one download in the application: a
+dozen public-domain programs from the Octo archive, fetched into
+`~/.time_warp/chip8/archive` after a dialog that names what it will fetch and under
+which licence. [The CHIP-8 manual](chip8/README.md#the-homebrew-archive) has the
+detail.
 
 ```chip8
 ; a comment

@@ -1,0 +1,82 @@
+# SPDX-License-Identifier: MIT
+#
+# The Flatpak manifest: a sandboxed build of the whole application against a Qt the
+# image carries, so it runs the same on Arch, Fedora and Ubuntu whether or not those
+# distributions' Qt 6 is the version this was tested against.
+#
+#   flatpak install flathub org.kde.Sdk//6.8 org.kde.Platform//6.8
+#   flatpak-builder --user --install --force-clean build packaging/flatpak/org.honeybadger.TimeWarpStudio.yml
+#
+# `release.yml` builds the same manifest into a `.flatpak` bundle on every tag, so
+# the file is exercised by the pipeline rather than only by whoever submits it.
+#
+# Submitting to Flathub wants a `git` source pinned to a commit instead of the `dir`
+# below, because Flathub builds from a checkout rather than from a working tree:
+#
+#   - type: git
+#     url: https://github.com/James-HoneyBadger/Time_Warp_Studio.git
+#     tag: v24.0.0
+id: org.honeybadger.TimeWarpStudio
+runtime: org.kde.Platform
+runtime-version: '6.8'
+sdk: org.kde.Sdk
+command: time_warp_ide
+
+finish-args:
+  - --share=ipc
+  - --socket=wayland
+  - --socket=fallback-x11
+  # A raster-rendered widget application still wants the GPU for the canvas.
+  - --device=dri
+  # SOUND, PLAY and the machines' beeps hand a WAV to a player on the PATH.
+  - --socket=pulseaudio
+  # The IDE opens the user's own programs, so the sandbox has to reach them. This
+  # is the whole cost of the Flatpak: a document outside the home directory is not
+  # visible, and that is the price of the runtime being identical everywhere.
+  - --filesystem=home
+  # A run that finishes in the background announces itself through the session bus.
+  - --talk-name=org.freedesktop.Notifications
+
+build-options:
+  # The build tree is thrown away with the container; the prefix is what ships.
+  strip: true
+
+modules:
+  - name: time-warp-studio
+    # `simple` rather than `cmake-ninja` because the CMake project is a directory
+    # down from the repository root, and the install rules reach back up: the
+    # documentation, the examples, the licence and the packaging assets all live
+    # beside `native/`. The source has to be the whole checkout, so the three
+    # commands say where to configure it.
+    buildsystem: simple
+    build-commands:
+      - cmake -S native -B . -G Ninja
+          -DCMAKE_BUILD_TYPE=Release
+          -DTIME_WARP_EXPR_BUILD_TESTS=OFF
+      - cmake --build . --parallel
+      - cmake --install . --prefix ${FLATPAK_DEST}
+    sources:
+      - type: dir
+        path: ../..
+    post-install:
+      # Flathub matches the desktop entry, the icon and the AppStream file to the
+      # application id, so the three are named after it here rather than in the
+      # install rules, where the package managers want the product's own name.
+      - install -Dm644 /run/build/time-warp-studio/packaging/linux/time-warp-studio.desktop
+        /app/share/applications/org.honeybadger.TimeWarpStudio.desktop
+      - install -Dm644 /run/build/time-warp-studio/packaging/linux/time-warp-studio.png
+        /app/share/icons/hicolor/256x256/apps/org.honeybadger.TimeWarpStudio.png
+      - install -Dm644 /run/build/time-warp-studio/packaging/flatpak/org.honeybadger.TimeWarpStudio.metainfo.xml
+        /app/share/metainfo/org.honeybadger.TimeWarpStudio.metainfo.xml
+      # The entry is the package's own, so there is one desktop file to maintain
+      # rather than two that drift; `Icon=` is the one line that has to change,
+      # because the image ships the icon under the application id and a launcher
+      # looks the icon up by that name.
+      - sed -i 's|^Icon=.*|Icon=org.honeybadger.TimeWarpStudio|'
+        /app/share/applications/org.honeybadger.TimeWarpStudio.desktop
+      # The package's own pair is now a second, unnamed entry in the same menu: the
+      # sandbox has exactly one launcher, and it is the one named after the id.
+      - rm -f /app/share/applications/time-warp-studio.desktop
+        /app/share/icons/hicolor/256x256/apps/time-warp-studio.png
+      # The entry the package's Exec line names is `time_warp_ide`, which the
+      # install rules put in /app/bin: the sandbox finds it on the PATH it sets.

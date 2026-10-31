@@ -20,7 +20,7 @@ It asks for the four things needed to reproduce a problem, because a prose issue
 usually leaves one of them out:
 
 1. **Check [docs/ROADMAP.md](docs/ROADMAP.md) first.** A dedicated player target,
-   an automatic update check and Flatpak/Snap or Windows/macOS packaging are
+   an automatic update check and Flatpak/Snap packaging are
    deliberately not built yet, so a missing feature from that list is a feature
    request rather than a regression.
 2. **Check existing issues** — it may already be reported.
@@ -105,7 +105,7 @@ interpreter in the tree, so a checkout needs a compiler and nothing else.
 | To work on | You need |
 | ---------- | -------- |
 | The IDE and the C++ suites | A C++20 compiler (GCC 11+ or Clang 14+), CMake 3.20+, Qt6 (Widgets, Core, Gui; Svg optional for SVG export, PrintSupport optional for printing) and the SQLite 3 development package |
-| The gates (`make smoke`, `command-matrix`, `repl-matrix`, `golden-check`, `tree-check`, `qt5-check`) | The same build: they are `time_warp_gates`, built with the product |
+| The gates (`make smoke`, `command-matrix`, `repl-matrix`, `golden-check`, `tree-check`) | The same build: they are `time_warp_gates`, built with the product |
 | The documentation gates (`make doc-links`, `doc-claims`) | A C++20 compiler. `time_warp_docs` is its own small project with no Qt |
 | `make lint-md` | A C++20 compiler: it is `time_warp_docs md`, built with the documentation tools |
 | Any of it | Git and a command line |

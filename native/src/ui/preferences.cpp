@@ -2,6 +2,8 @@
 
 #include "timewarp/ui/preferences.hpp"
 
+#include "timewarp/ui/desktop_notification.hpp"
+
 #include <QCheckBox>
 #include <QDialogButtonBox>
 #include <QFontComboBox>
@@ -9,6 +11,7 @@
 #include <QGroupBox>
 #include <QLabel>
 #include <QPushButton>
+#include <QSettings>
 #include <QSpinBox>
 #include <QVBoxLayout>
 
@@ -40,6 +43,10 @@ PreferencesDialog::PreferencesDialog(const EditorSettings& settings, bool termin
     buildUi(settings);
     if (terminal_ != nullptr) {
         terminal_->setChecked(terminal_enabled);
+    }
+    if (notify_ != nullptr) {
+        notify_->setChecked(
+            QSettings{}.value(QLatin1String{kSettingNotifyOnFinish}, true).toBool());
     }
 }
 
@@ -132,6 +139,21 @@ void PreferencesDialog::buildUi(const EditorSettings& settings) {
            "in this folder, with your permissions. It is not sandboxed."));
     connect(terminal_, &QCheckBox::toggled, this, &PreferencesDialog::terminalToggled);
     workspace_layout->addWidget(terminal_);
+
+    notify_ = new QCheckBox{tr("Announce a run that finishes while the window is in the "
+                               "background"),
+                            workspace};
+    notify_->setObjectName(QStringLiteral("notifyOnFinishBox"));
+    notify_->setToolTip(tr("A desktop notification through the session bus, only when "
+                           "this window is not the active one. A run you are watching "
+                           "says nothing."));
+    if (!timewarp::ui::notifications_available()) {
+        notify_->setEnabled(false);
+        notify_->setToolTip(tr("This build has no Qt DBus, so it cannot post a "
+                               "notification."));
+    }
+    connect(notify_, &QCheckBox::toggled, this, &PreferencesDialog::notifyToggled);
+    workspace_layout->addWidget(notify_);
     layout->addWidget(workspace);
 
     auto* help_group = new QGroupBox{tr("Help"), this};
@@ -231,6 +253,10 @@ EditorSettings PreferencesDialog::settings() const { return settings_; }
 
 bool PreferencesDialog::terminalEnabled() const {
     return terminal_ != nullptr && terminal_->isChecked();
+}
+
+bool PreferencesDialog::notificationsOnFinish() const {
+    return notify_ != nullptr && notify_->isChecked();
 }
 
 }  // namespace timewarp::ui

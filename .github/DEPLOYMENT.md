@@ -8,12 +8,12 @@ that exist and what they gate.
 
 | Workflow | Trigger | What it does |
 | -------- | ------- | ------------ |
-| `native.yml` | Push and pull request to `main`, when anything under `native/` or `Examples/` changes | Configures and builds the Qt application, refuses to pass if the widget UI was skipped, then runs the CTest suites in Release, Debug, AddressSanitizer and UndefinedBehaviorSanitizer configurations, the Scheme differential (asserting **0 unexpected mismatches**) and the parity gate against the frozen corpus, every example program through the native engines, and every command row both as a program and through the native REPL. Also smoke-tests the entry point (`--version`, `--help`, a bad-file screenshot) and renders an image artifact. A second job, `cross-platform`, builds the same tree with MSVC on `windows-latest` and with Apple's Clang on `macos-latest` and runs the same suites there, because each of those compilers rejects things GCC accepts and a release is the wrong place to find that out. A third, `windows-7`, configures with `-DTIME_WARP_QT5=ON -DTIME_WARP_WIN7=ON` against Qt 5.15.2 and runs the same suites, so the second Qt a release ships is not the first one anybody builds with it. |
+| `native.yml` | Push and pull request to `main`, when anything under `native/` or `Examples/` changes | Configures and builds the Qt application, refuses to pass if the widget UI was skipped, then runs the CTest suites in Release, Debug, AddressSanitizer and UndefinedBehaviorSanitizer configurations, the Scheme differential (asserting **0 unexpected mismatches**) and the parity gate against the frozen corpus, every example program through the native engines, and every command row both as a program and through the native REPL. Also smoke-tests the entry point (`--version`, `--help`, a bad-file screenshot) and renders an image artifact. It is one job on one runner: the Windows, macOS and Qt 5.15 configurations were removed with those ports, and a Linux-only target has one compiler, one Qt and one set of libraries to build against. |
 | `docs.yml` | Push and pull request to `main`, when anything under `docs/`, `README.md`, the lesson curriculum (`native/share/lessons.json`) or `time_warp_teach` changes | That every guide `docs/INDEX.md` promises exists — including the HB-1 and CHIP-8 manuals — that every relative link and `#anchor` in the guides resolves, that all eleven languages have a tutorial, and that every claim in the guides about a path, a name or a `make` target is still true. Runs `native/tools/docs`, one small C++ target with no Qt, so it answers in seconds and does not depend on the product's build. Regenerating the lesson plans needs `time_warp_teach`, so that check lives in `native.yml`. |
 | `markdown-lint.yml` | Push and pull request to `main`, when any `*.md` changes | Markdown lint by `time_warp_docs md`, built from `native/tools/docs`: the house rules in `native/tools/docs/src/docs/md_*_rules.cpp`, which replaced `markdownlint-cli2` and its `.markdownlint.json` at 22.2.0. **This step fails a pull request**, because it is the project's own tool with a verdict it stands behind. The spell check beside it stays `continue-on-error`: a dictionary is not this project's to enforce. |
 | `version.yml` | Push and pull request to `main`, when `VERSION`, the README, the changelog, `docs/` or the tool's own source changes | That every hand-written copy of the version agrees with `VERSION`. Separate from the native build because it has to run on documentation changes, which the C++ job does not watch; it compiles `native/tools/docs` (no Qt, one compiler) rather than relying on anything installed. |
 | `security.yml` | Push and pull request to `main`, weekly on a schedule, and by hand | Trivy over the tree — the Dockerfile `release.yml` packages from, every file no secret should be in, and any lockfile a dependency brings later — uploaded as SARIF so a finding lands in the repository's Security tab. Advisory rather than a gate: the SARIF is the record and the scan's exit code is 0, because a CVE in an upstream package is not a change a pull request here can make. The upload is skipped for a pull request from a fork, where the token is read-only; the scan still runs. |
-| `release.yml` | A `v*` tag, or `workflow_dispatch` with a version | Refuses a tag that disagrees with `VERSION` (running `time_warp_docs version` as the same check `version.yml` makes), then builds the release on five runners -- `ubuntu-24.04` and `ubuntu-24.04-arm` for the Linux packages, `windows-latest` for the installer and ZIP, `windows-2022` for the Windows 7 installer that Qt 5.15 makes possible, `macos-latest` for the universal disk image -- running the CTest suites and an offscreen screenshot against each tree before packaging it, and attaching every artifact with a `.sha256` to the GitHub Release. It also pushes the container image to `ghcr.io`. The release job runs in the `production` environment, which is what makes GitHub record a Deployment. |
+| `release.yml` | A `v*` tag, or `workflow_dispatch` with a version | Refuses a tag that disagrees with `VERSION` (running `time_warp_docs version` as the same check `version.yml` makes), then builds the release on two runners -- `ubuntu-24.04` and `ubuntu-24.04-arm` for the packages and the AppImage, plus a Flatpak bundle on `ubuntu-24.04` -- running the CTest suites and an offscreen screenshot against each tree before packaging it, and attaching every artifact with a `.sha256` to the GitHub Release. It also pushes the container image to `ghcr.io`. The release job runs in the `production` environment, which is what makes GitHub record a Deployment. |
 
 **The actions, and the Node runtime behind them.** Every `uses:` names a full
 commit SHA, with the release that SHA was taken from in the comment after it —
@@ -33,12 +33,9 @@ Seven of the pinned actions are JavaScript, and every one of those releases is a
 Node 24 major — `checkout` `v7.0.1`, `upload-artifact` `v7.0.2`, `download-artifact`
 `v8.0.2` and the four `docker/*` actions at `v4`/`v7` — because GitHub runs a
 Node 20 action on Node 24 only until it stops, and a workflow that pins one is a
-workflow with a date on it. `ilammy/msvc-dev-cmd` is the exception worth knowing:
-its newest release (`v1.13.0`, pinned as `0b201ec…`) is still a Node 20 action and
-upstream has published nothing newer, so the annotation it draws is upstream's to
-fix. The rest carry no Node at all: `install-qt-action`, `upload-sarif` from
-`codeql-action` and `trivy-action` are composite, and the spell check is a Docker
-action.
+workflow with a date on it. The rest carry no Node at all:
+`upload-sarif` from `codeql-action` and `trivy-action` are composite, and the spell
+check is a Docker action.
 
 **Why there is a scan again.** The only workflow that ever uploaded SARIF here was
 the Python-era pipeline, deleted with the application it audited — so the alerts it
@@ -101,9 +98,7 @@ change.
 | `time-warp-studio-<version>-linux-<arch>.tar.gz` + `.sha256` | Release assets | The staged `cmake --install` tree (`/usr/bin`, `/usr/share/applications`, the icon, the documentation at `/usr/share/doc/time-warp-studio`), the example programs and the licence. Unpack into `/` and run `time_warp_ide`. |
 | `time-warp-studio_<version>_<arch>.deb`, `time-warp-studio-<version>-1.<arch>.rpm` | Release assets | CPack packages over the same install rules, with Qt 6, SQLite and `zlib1g` as declared dependencies. x86_64 and arm64. The install includes `time_warp_ide` and the `time_warp_api` automation binary. |
 | `Time_Warp_Studio-<version>-x86_64.AppImage` | Release assets | One file, no root, Qt bundled by `linuxdeploy`. **x86_64 only**: the ARM build of the bundling tool is not exercised by this pipeline, and an artifact nobody has run is not one to publish. |
-| `time-warp-studio-<version>-win64.exe` + `.sha256` | Release assets | The NSIS installer CPack builds on `windows-latest`: `bin\time_warp_ide.exe` and `share\…` under `Program Files\Time Warp Studio`, with the Qt DLLs and plugins `windeployqt` copied in during the install, Start Menu and desktop shortcuts, and an uninstaller. |
-| `time-warp-studio-<version>-win64.zip` + `.sha256` | Release assets | The same installed tree as a portable ZIP, for a user who would rather not run an installer. |
-| `Time_Warp_Studio-<version>-macOS-universal.dmg` + `.sha256` | Release assets | A CPack DragNDrop disk image built on `macos-latest` from a universal (`arm64;x86_64`) build: `Time Warp Studio.app` with its frameworks from `macdeployqt`, examples, snippets and documentation inside `Contents/Resources`, ad-hoc signed (`codesign --sign -`) so it starts on Apple silicon, and an `/Applications` symlink for drag-install. The MIT licence is a file in `Contents/Resources`, not a volume agreement in front of the image, so the image mounts without a dialog. Not notarised. |
+| `Time_Warp_Studio-<version>-x86_64.flatpak` + `.sha256` | Release assets | Built from `packaging/flatpak/org.honeybadger.TimeWarpStudio.yml` against the KDE 6.8 runtime, so it carries its own Qt and is sandboxed. The desktop entry, the icon and the AppStream file are named after the application id inside the sandbox; the application reads `FLATPAK_ID` to associate its window with the entry. |
 | `ghcr.io/<owner>/time-warp-studio:<version>` and `:latest` | GitHub Packages (container registry) | Built by `packaging/docker/Dockerfile`: two stages, Ubuntu 24.04 base -- the same distribution and package set the Linux job of `native.yml` tests -- with Qt 6 in the runtime layer and no interpreter of any kind, `alsa-utils` so `SOUND` can reach a device if one is mounted, and an `ldd` check that fails the build rather than the user if the runtime stage has lost a library. Each tag is a manifest list for `linux/amd64` and `linux/arm64`; the arm64 half is built under QEMU on the same runner. Runs as a non-root `studio` user, uid 1000, so a bind mount from a desktop user's directory is writable. The same tags go to `<owner>/time_warp_studio`, the repository's name lowercased, because that is where releases before 16.4.2 put it: a note or script naming it pulls the current build rather than the one that was last published there. |
 
 The image is also the headless path: `-e QT_QPA_PLATFORM=offscreen` plus
@@ -180,16 +175,15 @@ which is easy to do in a description and invisible until a user clicks New issue
 There is no automated release pipeline yet. The manual checklist is in
 [RELEASE_CHECKLIST.md](RELEASE_CHECKLIST.md), and these gaps are deliberate:
 
-- **No distro packages or installers.** Linux/snap packaging and Windows
-  installers were built for the removed Python application and were deleted with
-  it, rather than left pointing at a binary that no longer exists. What exists
-  today is `make -C native install` (with `DESTDIR` staging), which installs the
-  binary, the examples, a desktop entry and an icon.
-- **Nothing is published to a package registry.** The PyPI project `timewarp-ide`
-  and the GHCR image both packaged the Python application.
+- **No Snap.** A Snap needs its own build and its own store account; the Flatpak
+  covers the same ground with a runtime this repository can name.
+- **Nothing is published to a package repository.** The `.deb`, `.rpm`, tarball,
+  AppImage and Flatpak are on the release page, and Flathub has not been submitted
+  to: the manifest is here and CI builds it, but a Flathub listing is a review
+  process rather than a file.
 
-Turning the install target into `.deb`/`.rpm`/Flatpak/AppImage artifacts, a
-Windows installer and a published release is tracked in `docs/ROADMAP.md`.
+Adding Snap, an arm64 AppImage, a Flathub submission and a distro repository is
+tracked in `docs/ROADMAP.md`.
 
 To produce a release today: build from source, run the release checklist, push an
 annotated tag, and attach the built binary plus `SHA256SUMS.txt` to the GitHub

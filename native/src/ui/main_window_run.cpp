@@ -705,7 +705,7 @@ void MainWindow::stopEngines() {
     // would be parked in `wait()`. That is a deadlock, and whether it is reached
     // is a matter of which thread gets there first: a program that draws fast
     // enough to fill the ring before Stop is pressed deadlocks, and one that does
-    // not, stops tidily. Linux never reached it; Windows and macOS did.
+    // not, stops tidily.
     const auto wait_draining = [this](QThread* thread) {
         while (thread != nullptr && thread->isRunning()) {
             if (thread->wait(50)) {
@@ -894,6 +894,7 @@ void MainWindow::runNatively(CodeEditor* editor, timewarp::lang::Language langua
                 }
                 setExecutionState(completed ? tr("ready") : tr("stopped"),
                                   completed ? tr("Finished") : tr("Stopped"));
+                announceFinishedRun(completed, error);
 
                 if (profiling) {
                     const auto profile_rows = runner->profile();

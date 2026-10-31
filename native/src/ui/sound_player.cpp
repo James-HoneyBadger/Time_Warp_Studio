@@ -23,6 +23,10 @@ struct Candidate {
 };
 
 constexpr Candidate kCandidates[] = {
+    // PipeWire first: it is what a current desktop runs, and `pw-play` talks to it
+    // directly. `paplay` and `aplay` follow because both still exist, and a
+    // distribution may have one of them and not the others.
+    {"pw-play", ""},
     {"paplay", ""},
     {"aplay", "-q"},
     {"ffplay", "-nodisp -autoexit -loglevel quiet"},
