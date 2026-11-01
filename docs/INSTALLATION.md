@@ -1,7 +1,8 @@
 # Installing and Building Time Warp Studio
 
-Time Warp Studio is a Linux desktop application, built with **C++20 and Qt6**. Everything you need to run all ten languages is in this
-repository; nothing has to be downloaded at run time.
+Time Warp Studio is a Linux desktop application, built with **C++20 and Qt6**.
+Everything needed to run all ten languages is in this repository: there is no
+interpreter to install and nothing to download at run time.
 
 ---
 
@@ -122,8 +123,8 @@ the IDE and opens in player mode. The full guide is [USER_GUIDE.md](USER_GUIDE.m
 ## 4. Verify the build
 
 ```bash
-ctest --test-dir native/build --output-on-failure   # 27 suites
-make smoke                                          # the 94 examples it runs
+ctest --test-dir native/build --output-on-failure   # 24 suites
+make smoke                                          # the 67 examples it runs
 make command-matrix                                 # every command-table row
 make repl-matrix                                    # every row through the REPL
 ./native/build/time_warp_teach validate             # every lesson solution
@@ -182,7 +183,8 @@ rather than a wish.
 ## 7. Installing
 
 A build can install itself, which is also how you check that the installed layout
-finds the language bridge:
+finds its own data -- the curriculum, the snippets and the command table -- rather
+than only the build tree's copy:
 
 ```bash
 make -C native install                 # to /usr/local (may need sudo)
@@ -230,10 +232,10 @@ cmake --install native/build --prefix /usr
 `cpack` builds the same tree into the packages from here (`cpack -G DEB`, and
 `-G RPM` where `rpmbuild` is installed); see §8.
 
-`PLAY`, `SOUND` and the machines' beeps write a WAV and hand it to a command-line
-player: `pw-play` first (PipeWire), then `paplay`, `aplay`, `ffplay` or `play`. With
-none of them installed, those commands report that playback is unavailable rather than
-pretending to make a sound.
+`PLAY` and `SOUND` write a WAV and hand it to a command-line player: `pw-play` first
+(PipeWire), then `paplay`, `aplay`, `ffplay` or `play`. With none of them installed,
+those commands report that playback is unavailable rather than pretending to make a
+sound.
 
 ### 8. A release without building anything
 
@@ -275,11 +277,11 @@ It needs Qt 6, SQLite, zlib and a C++ runtime — the same requirements as a loc
 build, minus the compiler.
 
 The container image is `ghcr.io/james-honeybadger/time-warp-studio:<version>`
-(or `:latest`), and it carries everything, including Qt and Python. It is named
-after the product, as every other artifact here is, and the release tags the same
-build as `time_warp_studio` too -- the repository's name, lowercased -- so a note
-from an older release, or a script copied out of one, still pulls something
-current rather than whatever was last published under that name.
+(or `:latest`), and it carries everything the application needs, including Qt and
+SQLite. It is named after the product, as every other artifact here is, and the
+release tags the same build as `time_warp_studio` too -- the repository's name,
+lowercased -- so a note from an older release, or a script copied out of one, still
+pulls something current rather than whatever was last published under that name.
 
 So, on a machine with Docker:
 

@@ -1,14 +1,13 @@
-# Examples Catalog
+# Examples
 
-This catalog lists the 68 example programs currently shipped with Time Warp Studio.
-It covers all ten active languages.
+The 68 example programs shipped with Time Warp Studio, across the ten languages.
 
-Each language has a **showcase** program — the first row in each section below —
-that walks through that language's whole surface: its statements, its data types,
-its control flow, the features unique to it, and a drawing at the end. The
-smaller examples beside them each teach one idea; the showcases are the tour.
+Each language has a **showcase** — the first row of its section — that exercises the
+language's whole surface: its statements, its data types, its control flow, the
+features particular to it, and a drawing at the end. The smaller programs beside it
+each demonstrate one idea.
 
-## Active Languages
+## Languages
 
 - BASIC
 - APL

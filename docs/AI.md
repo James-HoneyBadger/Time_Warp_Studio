@@ -1,14 +1,14 @@
 # The AI Assistant
 
-The Studio can explain a program, find what is wrong with it, comment it, rewrite it
-in another language, or write a new one from a description — through a service you
-choose and configure yourself.
+The assistant can explain a program, find a fault in it, comment it, rewrite it in
+another language, or write a new one from a description. It runs against a service you
+configure.
 
-It is **off until you configure it**, and nothing is sent until you press a button or
-turn on the one setting that asks while you type. There is no bundled model, no
-account, no default endpoint, and nothing on this page requires a particular vendor:
-the assistant speaks two request shapes, and any service that speaks one of them
-works.
+It is **off until configured**, and nothing is sent until you press a button or enable
+the one setting that asks while you type. There is no bundled model, no account and no
+default endpoint. The client speaks two request shapes — OpenAI-compatible chat
+completions and Anthropic's Messages API — so any service that speaks one of them
+works, including one on this machine.
 
 - [What it does](#what-it-does)
 - [Configuring it](#configuring-it)

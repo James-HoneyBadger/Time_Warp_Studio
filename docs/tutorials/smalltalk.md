@@ -1,9 +1,9 @@
 # Smalltalk Tutorial
 
-Smalltalk-80 is the language that made "everything is an object" a working
-proposal rather than a slogan. It is the one language in Time Warp Studio that is
-object-oriented, and the one with the fewest reserved words: there is **no syntax
-for control flow at all**. `ifTrue:`, `whileTrue:` and `to:do:` are messages sent
+Smalltalk-80 is the language that made "everything is an object" a working system
+rather than a principle. It is the one object-oriented language in Time Warp Studio and
+the one with the fewest reserved words: there is **no syntax for control flow at
+all**. `ifTrue:`, `whileTrue:` and `to:do:` are messages sent
 to objects.
 
 Time Warp Studio runs Smalltalk whole-program, like Scheme and Forth: a file

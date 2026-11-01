@@ -1,19 +1,20 @@
-# Time Warp Studio — native engine ports (C++20)
+# Time Warp Studio — the application
 
-The dependency-free C++20 libraries the Qt application is built from, and how
-each one replaced or absorbed its Python original:
+Design notes for the C++20 / Qt 6 application: the libraries it is built from, the
+decisions behind them, and the tests that hold them. The right-hand column of the
+table below is the original each library replaced; that provenance is kept because
+it explains several shapes the code still has, not because the originals survive.
 
-| Library | Ported from | What it is |
+| Library | Replaced | What it is |
 | --- | --- | --- |
 | `timewarp_expr` | `utils/expression_evaluator.py` | the expression lexer/evaluator shared by every language executor |
 | `timewarp_scheme` | `languages/scheme.py` | a tree-walking Scheme interpreter with **no native recursion** |
 | `timewarp_lang` | `languages/*.py` | the shared interpreter loop and all ten executors: BASIC, FOCAL, PILOT, COMAL, APL and REXX line by line, Logo, Smalltalk and Forth whole-program |
 | `timewarp_canvas` | bridging `ui/output.py` and `ui/canvas.py` | a lock-free single-producer/single-consumer canvas command queue, with an optional Qt6 adapter |
 
-`timewarp_expr` came first: a self-contained, hot, allocation-sensitive unit with
-no Qt dependency, whose behaviour was already pinned down by a test suite — which
-makes "did the port stay faithful?" a measurable question rather than a matter of
-opinion.
+`timewarp_expr` came first: a self-contained, allocation-sensitive unit with no Qt
+dependency, whose behaviour was already pinned down by a test suite, which made
+fidelity a measurable question rather than a matter of opinion.
 
 `timewarp_canvas` is not a port of a single file; it replaces the *mechanism* by
 which the Python application moves drawing work from the interpreter thread to

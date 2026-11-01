@@ -1,6 +1,7 @@
 # Contributing to Time Warp Studio
 
-Welcome! Thank you for considering contributing to Time Warp Studio. This guide explains how to contribute.
+This guide covers what a change to this repository is expected to look like: the
+workflow, the checks it has to pass, and the recipes for the changes made most often.
 
 ---
 
@@ -422,37 +423,61 @@ project uses, and every fix is expected to arrive with one.
 
 ## Documentation
 
-### Update Docs When
+### When documentation changes with the code
 
-- Adding new feature
-- Changing existing behavior
-- Fixing docs, typos, clarity
-- Adding examples
+A change to behaviour is a documentation change in the same commit, not a follow-up:
 
-### Files to Update
+| Change | Document |
+| --- | --- |
+| Anything a user sees | `README.md`, and the section of `docs/USER_GUIDE.md` it belongs to |
+| Internal structure, a new library, a changed thread or process contract | `docs/ARCHITECTURE.md`, and `native/README.md` for the design note |
+| Build, dependency or packaging steps | `docs/INSTALLATION.md` |
+| A command, an operand or an error message | `docs/LANGUAGE_GUIDE.md` and, if the language has one, its tutorial |
+| A gate, a suite or a harness | `docs/README_TESTING.md` |
+| A planned item landing or being deferred | `docs/ROADMAP.md`, and `native/share/unbuilt.txt` |
+| Anything at all | `CHANGELOG.md` |
 
-- `README.md` - If user-visible change
-- `docs/ARCHITECTURE.md` - If internal change
-- `docs/INSTALLATION.md` - If build or run steps change
-- `docs/LANGUAGE_GUIDE.md` - If language syntax
-- `docs/ROADMAP.md` - If a planned item lands or is deferred
-- `native/README.md` - If the Qt application's design or behaviour changes
+A program's output appears verbatim in the guides and in the lesson transcripts, so a
+change to what a program prints is a documentation change even when no sentence
+mentions the feature by name.
 
-### Documentation Standard
+### Documentation standard
+
+The house voice is a technical manual written by someone who knows the system: a
+datasheet's precision with a hobbyist's patience. Concretely:
+
+- **State what is true.** Present tense, indicative. No selling, no superlatives, no
+  rhetorical questions, no addressing the reader's feelings.
+- **Prefer the specific to the impressive.** Name the file, the function, the number,
+  the limit. "Ten seconds and two million statements" beats "a robust budget".
+- **Say what it does not do**, in the same voice and the same place. A limit stated
+  once is worth more than a claim dressed up to hide it.
+- **Keep the history out of the instructions.** Where old behaviour explains current
+  shape, say so in one sentence, or mark the passage `<!-- history -->` …
+  `<!-- /history -->` so the claims gate stops checking it as current fact.
+- **Second person for procedures only.** "Press `F9`" in a procedure; nowhere else.
+- **Em dashes sparingly, colon or full stop otherwise.** Emoji only where they are
+  part of a control's name (the 🐞 Debug tab), never as decoration.
+- **One memorable line is allowed.** The project has one — "Timey wimey wibbly wobbly"
+  at the top of the README — and does not need a second.
 
 ```markdown
-# Feature Title
+# Feature title
 
-Brief description of feature.
+What it is, in one or two sentences, with the reason it exists.
 
-## Example
+## Using it
 
-Code example showing usage.
+Steps, with the exact menu path or command.
 
-## Related
+## Limits
 
-Links to related docs or code.
+What it does not do, and why.
 ```
+
+`make lint-md` checks the mechanical part of this (headings, list markers, line
+length, single trailing newline); `make doc-links` and `make doc-claims` check that
+every path and name a sentence mentions exists. The rest is a reading matter.
 
 ---
 

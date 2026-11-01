@@ -1,38 +1,44 @@
 # Roadmap
 
-Time Warp Studio is an old-school programming environment for ten languages. This
-page is the honest state of it: what works, what is next, and what is deliberately
-not being built.
+Time Warp Studio is a programming environment for ten interpreters of the 1964–1980
+period. This page records what is built, what is next, and what was deliberately not
+built.
 
-The PySide6 implementation that came before this one has been **removed**. Where
-this page says a feature is "not ported", it existed there and does not exist here
-yet — please check the list below before reporting one as a regression.
+The PySide6 implementation that preceded this one was removed. Where an item below is
+"not ported", it existed there and does not exist here; check the list before treating
+a gap as a regression.
 
-[PORTING_PLAN.md](PORTING_PLAN.md) is the sequenced plan for those features: what
-each one becomes in this codebase, the test that proves it, and the order they are
-worth building in. That plan was written by diffing the removed tree against this
-one, so its list is longer than the paragraphs below and its categories are
-derived rather than remembered.
+[PORTING_PLAN.md](PORTING_PLAN.md) is the sequenced plan for those features: what each
+one became, the test that proves it, and the order they were built in. It was written
+by diffing the removed tree against this one, so its list is longer than the paragraphs
+below and its categories are derived rather than remembered.
 
 ---
 
 ## 24.0 is archived, and 28.0 is the current design
 
-**Version 24.0 is archived.** It was the golden release, and it is kept exactly as it
-was built on its own release page and will not change again. Nothing here removes it:
-an archive is a thing you keep.
+**Version 24.0 is archived.** It is kept on its own release page exactly as it was
+built and will not change again.
 
-**Version 28.0 is the current design.** The ten languages, the IDE, the curriculum
-and the documentation set are complete, and the gates in
-[README_TESTING.md](README_TESTING.md) prove it on every push. The feature set is
-**not frozen**: a release after this one takes fixes and features alike, and each
-arrives with the test that proves it. What 25.0, 26.0, 26.1 and 27.0 each added is in
+**Version 28.0 is the current design.** Ten languages, the IDE, the curriculum and the
+documentation set; the gates in [README_TESTING.md](README_TESTING.md) run on every
+push. The feature set is not frozen: a later release takes fixes and features alike,
+each arriving with the test that proves it. What 25.0 through 27.0 added is in
 [the ladder](#the-ladder) below and in the [changelog](../CHANGELOG.md).
 
-**28.0 removed the machines.** The HB-1 home computer, the HB-2 of 1992 and the
-CHIP-8 virtual machine are gone, and so is the language that ran on the last of
-them. What is left is the IDE and the ten languages, which is what the application
-was for. What comes after is written down rather than wished for, below.
+**28.0 removed the machines.** The HB-1 home computer, the HB-2 of 1992 and the CHIP-8
+virtual machine are gone, and with the last of them the language that ran on it. What
+remains is the IDE and the ten languages. The items that follow are the work still
+open against that scope.
+
+---
+
+## Open work
+
+Five items, none of them a gap in the product as it ships: an automatic update check,
+Snap packaging, an arm64 AppImage, a fully static build, and automatic publishing to a
+distribution repository. Each is registered in `native/share/unbuilt.txt`, which
+`make doc-claims` checks against these pages.
 
 ---
 
@@ -64,7 +70,7 @@ was for. What comes after is written down rather than wished for, below.
 
 ---
 
-## Next: interpreter defects the command examination found
+## Interpreter defects found by the command examination
 
 `time_warp_gates commands` drives one row per documented command through
 `time_warp_check` and the C++ executors (`native/share/command_rows.json`). Examining
@@ -238,10 +244,10 @@ libraries.
 
 ---
 
-## The four newest languages are complete
+## The later languages
 
-**APL, FOCAL, Smalltalk and Forth** arrived after the original six. Each now has
-everything the others have:
+**APL, FOCAL, Smalltalk and Forth** arrived after the original six and now have the
+same support as the rest:
 
 - a native **executor** in `native/src/lang/`, and rows in the recorded parity
   corpus that `make golden-check` compares it with,
@@ -283,10 +289,10 @@ Three limits are recorded rather than left to be discovered:
 
 ---
 
-## Ports complete: the bridge is gone
+## The port, and the removal of the bridge
 
-Every language runs in C++ now, and the Python engine those ports were judged
-against has been deleted. The three jobs it kept have each been taken over:
+Every language runs in C++, and the Python engine the ports were judged against has
+been deleted. The three jobs it performed have each been taken over:
 
 1. **The parity gate** compares each port with a *recording* —
    `native/tests/golden/lang_corpus.json.gz`, the reference's answers to 442
@@ -363,11 +369,12 @@ and the command table exercises them. What is now true, and what is still limite
 
 ---
 
-## 17.0
+## The 17.0 milestone
 
-A major version here is a claim, not a number. 16.0 claimed that all ten languages
-run in C++. 17.0 claims two: the product contains no Python, and a program can draw
-and play a game. This section is what stands behind them.
+A major version number here marks a claim that has to be true. 16.0 claimed that all
+ten languages run in C++; 17.0 claimed two more, that the product contains no Python
+and that a program can draw and play a game. This section records what stands behind
+each.
 
 **The product has no Python in it.** The bridge had two runtime jobs left, and
 both are native now. `timewarp_lessons` (`native/src/lessons/`) reads the
@@ -479,7 +486,7 @@ call stack as frames rather than a Program Counter (23.3.0).
 
 ---
 
-## Next: finish the IDE itself
+## The IDE: design notes
 
 **Debugging** — every language can stop. `DebuggerRunner` drives Scheme, and the
 **Debug** tab is a real panel over it: Continue, Pause, Step In/Over/Out, Stop,
@@ -669,11 +676,11 @@ everything on either side of it.
 
 ---
 
-## Next: the retro workstation feel
+## Display: design notes
 
-**Themes are built.** All 33 of the removed implementation's schemes are back
-(`native/src/ui/themes.cpp`, data in `theme_table.inc`, generated from the Python's
-table): the retro sets (Amber Lab, Borland Turbo Vision, NeXTSTEP, Amiga Workbench,
+**Themes.** The 33 schemes of the removed implementation are transcribed
+(`native/src/ui/themes.cpp`, data in `theme_table.inc`), with two added since: the
+retro sets (Amber Lab, Borland Turbo Vision, NeXTSTEP, Amiga Workbench,
 CGA, C64, Apple II, DOS Blue, ZX Spectrum), the modern editor palettes (Dracula,
 Nord, Solarized, Catppuccin, Tokyo Night, Gruvbox) and the accessibility sets (high
 contrast, dyslexia friendly, two monochromes). View > Theme lists them, Shift+F10
@@ -784,7 +791,7 @@ build** — the packages depend on the distribution's Qt 6.
 
 ---
 
-## Deliberately out of scope for now
+## Out of scope
 
 A web (WebAssembly) build, and calling one language from another.
 

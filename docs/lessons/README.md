@@ -1,9 +1,9 @@
 # Lessons
 
-Time Warp Studio is a teaching environment, and lessons are the teaching
-material: twenty short pieces of curriculum, two for each of the ten languages,
-each one a sequence of checkpoints that a learner works through and the studio
-**checks by running what they wrote**.
+The curriculum is twenty lessons: two for each of the ten languages, each a sequence
+of checkpoints. A checkpoint is **checked by running the learner's program**, not by
+comparing it with a model answer, so `PRINT 6 * 7` and `PRINT 42` both pass and a
+drawing checkpoint cannot be satisfied by printing a description of a drawing.
 
 ```text
 ./native/build/time_warp_learn list

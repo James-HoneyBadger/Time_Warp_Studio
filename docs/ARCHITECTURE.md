@@ -34,11 +34,11 @@ COMAL, REXX, Smalltalk and Forth** — with an integrated turtle graphics canvas
 a C++20 / Qt 6 application for Linux, and all ten languages run in C++ inside it. There is no Python in the tree at all: the product,
 its tests, its gates and its documentation checks are one language.
 
-So the product is **one GUI process**. Two things it can start as children, both
-optional and both asked for: the embedded terminal, which is a shell the user turned on
-in Settings; and the audio player (`pw-play`, `paplay`, `aplay`, `ffplay` or `play`),
-which is handed a WAV whenever anything sounds. That channel is JSON lines, one message
-per line — program text going in and a stream of JSON messages coming back.
+So the product is **one GUI process**. Nothing crosses a process boundary to run a
+program: every engine is a library linked into the application. Two things it can start
+as children, both optional and both asked for: the embedded terminal, which is a shell
+the user turned on in Settings; and the audio player (`pw-play`, `paplay`, `aplay`,
+`ffplay` or `play`), which is handed a WAV whenever anything sounds.
 
 ### The moving parts
 
@@ -56,13 +56,13 @@ per line — program text going in and a stream of JSON messages coming back.
 | `timewarp_debugger` | `native/src/debugger/` | its own `QThread` | Runs a Scheme program and services pause / step / breakpoint requests |
 | `timewarp_expr` | `native/src/token.cpp`, `lexer.cpp`, `evaluator.cpp` | runner thread, in-process | The ported expression evaluator, linked into `timewarp_lang` — see the note below |
 | `timewarp_lessons` | `native/src/lessons/` | GUI thread, or a command | The curriculum, the verifier, the learner's progress and the classroom. See the libraries section |
-| the frozen corpus | `native/tests/golden/lang_corpus.json.gz` | read by a command, never at run time | The reference engine's answers to 442 programs -- the Forth ones recorded from this engine, which has no reference run -- : what each printed, every drawing call, the variables it left. The parity gate compares the ports with these. The engine itself is deleted |
+| the frozen corpus | `native/tests/golden/lang_corpus.json.gz` | read by a command, never at run time | The reference engine's answers to 442 programs — what each printed, every drawing call, the variables it left. The Forth entries were recorded from this engine, which has no reference run, so they pin behaviour rather than prove parity. The parity gate compares the ports with these. The engine itself is deleted |
 
-> **`timewarp_expr` is part of a Run now.** It builds, it has 485 checks of its
-> own, the expression cases are in the recorded parity corpus, and `timewarp_lang`
-> links it: BASIC, FOCAL,
-> PILOT, COMAL, APL and Logo evaluate every arithmetic expression through it. The
-> parity gate is what keeps the native evaluator honest.
+> **`timewarp_expr` is part of a Run now.** It builds, it has 485 checks of its own
+> across `lexer_tests` and `evaluator_tests`, the expression cases are in the recorded
+> parity corpus, and `timewarp_lang` links it: BASIC, FOCAL, PILOT, COMAL, APL and Logo
+> evaluate every arithmetic expression through it. The parity gate is what keeps the
+> native evaluator honest.
 
 ### Two contracts holding the design together
 
@@ -141,9 +141,9 @@ arbitrary quantum boundary. With no controller attached the cost disappears enti
 ### Closing the window during a runaway program
 
 `MainWindow::closeEvent` stops every engine before it does anything else. `~QThread`
-joins and the bridge worker holds a child process, so a window closed mid-run would
-otherwise appear to hang. The join is bounded by one form, because that is how often
-the stop flag is checked.
+joins, and a runner part-way through a long program would otherwise make a window
+closed mid-run appear to hang. The join is bounded by one form, because that is how
+often the stop flag is checked.
 
 ---
 
@@ -642,41 +642,39 @@ depends on the distinction:
 
 ### Adding a language
 
-Since 17.0 the order is the other way round: the **native executor** in
-`native/src/lang/`, registered in `executor_for`, is what a language is; the bridge
-steps below record how the ten that existed in 18.0 were ported, and go with the reference
-engine at 18.0.
+A language is five things, and each one is a compile error or a failed gate if it is
+missed. The order is the native one, because that is the only implementation there is:
 
-<!-- history -->
-1. **The executor**, in `native/bridge/time_warp/languages/my_lang.py`<!-- doc-claims: ignore -->, as a function with
-   the signature above.
-2. **Register it in the bridge**: import it in `languages/__init__.py`, add
-   `Language.MY_LANG` in `core/interpreter.py`, and add the extension in
-   `Language.from_extension()` and `core/language_registry.py`.
-<!-- /history -->
-
-3. **Register it on the Qt side** in `native/src/ui/language.cpp`: display name, settings
-   key, extensions. The IDE needs this to name the language and to pick it from a file
-   name.
-4. **Add an example** under `Examples/my_lang/`<!-- doc-claims: ignore --> — adding the ones that draw to
-   `drawingExamples()` in `native/tools/gates/smoke.cpp`, or a program that draws
-   nothing passes by being silent — and a row to the `rows` list in
+1. **The identity and the executor.** Add the `Language` member to
+   `include/timewarp/lang/language.hpp`, the row to `include/timewarp/lang/registry.hpp`
+   (display name, protocol key, extensions, whole-program flag), and the executor in
+   `src/lang/`, registered in `executor_for`. A line-by-line language is called once per
+   statement; a whole-program one receives the whole source and runs to completion.
+2. **The Qt side** in `src/ui/language.cpp`: the IDE needs the key to name the language
+   and the extensions to pick it from a file name. The UI enum maps onto the registry by
+   position, and a `static_assert` holds the two lists together.
+3. **An example** under `Examples/my_lang/`<!-- doc-claims: ignore -->, adding the ones
+   that draw to `drawingExamples()` in `native/tools/gates/smoke.cpp` — a program that
+   draws nothing otherwise passes by being silent — and a row to the `rows` list in
    `native/share/command_rows.json` so every new command is covered by
    `time_warp_gates commands`.
-5. **Add a lesson** so the curriculum can teach it: two lessons in
-   `native/share/lessons.json`, then `make teach-check` (`time_warp_teach validate`
-   once the tree is built) until it is silent. A checkpoint is checked by *running* the learner's program, so this
-   is also the only thing that proves the lesson's transcript.
-6. **Document it**: a reference section in `docs/LANGUAGE_GUIDE.md`, a tutorial in
+4. **A lesson** so the curriculum can teach it: two lessons in
+   `native/share/lessons.json`, then `make teach-check` until it is silent. A checkpoint
+   is checked by *running* the learner's program, so this is also the only thing that
+   proves the lesson's transcript.
+5. **The prose**: a reference section in `docs/LANGUAGE_GUIDE.md`, a tutorial in
    `docs/tutorials/` (the docs workflow requires one per language), a row in the README's
    language table, and a line per example in `Examples/CATALOG.md`.
 
-A language ported to C++ skips the bridge entirely: it gets an executor in
-`timewarp_lang`, and `MainWindow::runCurrentDocument` dispatches to it when
-`executor_for()` returns non-null. Every language is now ported, so no runtime
-dispatch reaches the bridge; the same `NativeRunner` (a `QThread` feeding
-`CanvasCommandQueue`) runs any executor that appears in that table, so the window
-needs no change per language.
+Nothing in the window changes per language: `MainWindow::runCurrentDocument` dispatches
+through `executor_for()`, and the same `NativeRunner` — a `QThread` feeding
+`CanvasCommandQueue` — runs any executor that appears in that table.
+
+<!-- history -->
+Until 18.0 a language was two things: a Python module with the executor function, and
+a registration in the bridge's `core/interpreter.py` and `core/language_registry.py`.
+Those steps went with the reference engine.
+<!-- /history -->
 
 ### Adding a canvas command
 
@@ -695,22 +693,19 @@ needs no change per language.
 The right column's **Variables**, **Telemetry HUD**, **Debug**, **Lessons** and
 **Classroom** tabs are real panels (`VariablesPanel`, `TelemetryPanel`, `DebugPanel`,
 `LessonPanel`, `ClassroomPanel` in `src/ui/panels.cpp`), driven by data the window gets
-from two places. The outline dock was the last `PlaceholderPanel`; the console's
+from the runners. The outline dock was the last `PlaceholderPanel`; the console's
 **Terminal** tab is a real shell (`TerminalWidget`), added only when the user enables
 it. Nothing ships a placeholder now, and `PlaceholderPanel` remains in `panels.hpp` as
 the documented way to stand in for a panel that does not exist yet -- a real widget
 with honest size hints, so the layout can be built and tested before the feature is.
 
 Replacing one is a single construction site in `buildRightColumn()` or
-`buildOutputColumn()`, plus wiring in `runCurrentDocument()` or `adoptBridgeWorker()` for
-anything that needs interpreter data -- which is exactly how the three inspect panels
-were filled in:
+`buildOutputColumn()`, plus wiring in `runCurrentDocument()` for anything that needs
+interpreter data -- which is exactly how the three inspect panels were filled in:
 
 - **The native runner** reports the variables after every run (`NativeRunner`'s
-  snapshot) and the window adds the HUD's engine counters. The bridge path is
-  still there for a language with no executor, and a lesson check uses the worker;
-  no current language takes the bridge path.
-- **Scheme** reports nothing over the bridge, so the window reads
+  snapshot) and the window adds the HUD's engine counters.
+- **Scheme** has no executor in that path, so the window reads
   `DebuggerRunner::snapshot()` -- including a final snapshot taken when a run ends
   without pausing, because a finished program still has bindings and "no variables" is
   a claim, not an absence.
@@ -732,17 +727,19 @@ send and Forth at a token through `note_source_line`. Scheme is the only
 one that also reports a call stack and frame bindings, because it is the only machine
 that keeps them. `DebugPanel`'s buttons drive whichever runner is paused.
 
-**The lesson panel was never a placeholder.** `LessonPanel` is fully implemented. It holds no curriculum and runs no program: it
-asks the bridge for the lesson list, displays the checkpoint, and sends the learner's
-source back to be checked. That is deliberate, and it is what makes the panel's green tick
-and `native/tools/learn.cpp`'s verdict the same function's answer rather than two opinions
-that drift. The protocol it uses is in [docs/lessons/FORMAT.md](lessons/FORMAT.md).
+**The lesson panel was never a placeholder.** `LessonPanel` is fully implemented. It
+holds no curriculum and runs no program: it raises `curriculumNeeded`, the window loads
+`timewarp_lessons` and hands back summaries, and a check is judged by the same library
+`time_warp_teach` and `time_warp_learn` ask. That is deliberate, and it is what makes the
+panel's green tick and the command-line verdict the same function's answer rather than two
+opinions that drift. The format it reads is in [docs/lessons/FORMAT.md](lessons/FORMAT.md).
 
 It also never touches a document. "Open" raises `openCodeRequested` and the *window*
 decides where the code goes, because a panel has no business knowing about tabs.
 
-The curriculum is loaded when the tab is first looked at, not when the window is built: a
-user who never opens the lesson panel should not pay for a Python process at start-up.
+The curriculum is loaded when the tab is first looked at, not when the window is built:
+a user who never opens the lesson panel should not pay for reading and validating a
+curriculum they do not want.
 
 Three widgets are worth knowing about because what they cover is easy to
 underestimate:
@@ -920,9 +917,10 @@ coming from the Python application starts from this build's defaults.
   Ctrl+click adds one and typing, Backspace and Delete act at all of them.
 - **The console** offers clickable line links (`[12]`, `❌ [line 30]`, `at line 30:`
   become jumps to the line the program numbers), an errors-only filter that hides
-  instead of deleting, and **File > Save Output As…**. The **Terminal** is a real shell
-  but no terminal emulator: without a PTY there are no prompts, job control or
-  full-screen programs, which is deliberate.
+  instead of deleting, and **File > Save Output As…**. The **Terminal** is the user's
+  own shell on a real pseudo-terminal (`pty_session.cpp`), with the escapes for colour
+  stripped and the carriage returns applied; it is opt-in, and absent in presentation
+  and player modes.
 - **Files and sessions** have autosave and version history — `AutosaveStore`
   keeps bounded snapshots under the data directory and the version-history dialog
   reopens one in a new tab — and the split editor: two panes that each hold their

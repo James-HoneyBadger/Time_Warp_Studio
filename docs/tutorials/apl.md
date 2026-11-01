@@ -1,8 +1,8 @@
 # APL Tutorial
 
-APL (Iverson's notation, 1962; interactive APL\360 in 1966) is an array language, and it is the one language here where
-the **shape** of the data is the program. Two properties surprise everyone the
-first time:
+APL (Iverson's notation, 1962; interactive APL\360 in 1966) is an array language,
+and the one language here where the **shape** of the data is the program. Two
+properties are worth stating before the first example:
 
 - **There is no operator precedence.** Evaluation is right to left.
 - **Most functions work on whole arrays**, not on single numbers.

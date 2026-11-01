@@ -1,29 +1,26 @@
-# Language Guide - Time Warp Studio
+# Language Guide — Time Warp Studio
 
-Time Warp Studio actively implements and ships **10 programming languages**:
-BASIC, APL, Logo, PILOT, FOCAL, Scheme, COMAL, REXX, Smalltalk and Forth.
+Time Warp Studio implements ten languages: BASIC, APL, Logo, PILOT, FOCAL, Scheme,
+COMAL, REXX, Smalltalk and Forth. Each has a reference section below.
 
-> **All ten have reference sections below.** Each language also has a suite in
-> `native/tests/`, a worked example and a showcase under `Examples/`, and rows in
-> `native/share/command_rows.json`; running `make command-matrix` exercises every
-> command through the native engines, so the tables here are checked against the
-> code rather than written from memory.
+> Every section is checked against the code rather than written from memory. Each
+> language has a suite in `native/tests/`, a worked example and a showcase under
+> `Examples/`, and rows in `native/share/command_rows.json`; `make command-matrix`
+> runs every row through the native engine that owns it.
 >
-> This page is the *reference*. To learn a language, start with the
-> [tutorial](tutorials/) for it; to be taught it, the
-> [lessons](lessons/README.md) have two per language, each with a plan, hints and
-> a worked answer.
+> This page is the reference. To learn a language, start with its
+> [tutorial](tutorials/); to teach one, the [lessons](lessons/README.md) hold two per
+> language, each with a plan, hints and a worked answer.
 
-The shortest way to try a command from these tables without opening a file is the
-**REPL bar** under the editor: it runs one entry in the current document's
-language, and in BASIC it is also the classic direct mode. See
-[the user guide](USER_GUIDE.md#3-the-repl-bar).
+To try a command from these tables without opening a file, use the **REPL bar** under
+the editor: it runs one entry in the current document's language, and in BASIC it is
+also the classic direct mode. See [the user guide](USER_GUIDE.md#3-the-repl-bar).
 
 ---
 
 ## Table of Contents
 
-### ✅ Active Languages (supported in this release)
+### Languages
 
 1. [BASIC](#basic)
 2. [PILOT](#pilot)
@@ -41,7 +38,7 @@ survive between commands, and [SQL in eight languages](#sql-in-eight-languages) 
 Studio extension available from every language except Logo, Smalltalk and Forth's
 whole-program shape — the line-by-line languages all have it.
 
-Each language also has a worked example and a tutorial:
+Worked example, showcase and tutorial for each:
 
 | Language | Extensions | Example | Showcase | Tutorial |
 | --- | --- | --- | --- | --- |
@@ -1172,9 +1169,9 @@ and blue, 0–255).
 ## APL
 
 Iverson's *A Programming Language* (1962; interactive APL\360 in 1966) is the one
-language here where the **shape** of the data is the program. Two of its
-properties surprise everyone the first time: there is **no operator precedence**,
-and most functions work on whole arrays rather than on single numbers.
+language here where the **shape** of the data is the program. Two properties are
+worth stating before the first example: there is **no operator precedence**, and most
+functions work on whole arrays rather than on single numbers.
 
 Executed line by line. Each line is an expression, and its value is displayed -
 which is exactly what APL's original interface did, and what makes it feel like a
@@ -1445,9 +1442,9 @@ A **Time Warp extension**: 1969 FOCAL had no graphics at all. `FORWARD`/`FD`,
 ## Smalltalk
 
 Smalltalk-80 is the language that made "everything is an object" a working
-proposal rather than a slogan. There is **no syntax for control flow at all**:
-`ifTrue:`, `whileTrue:` and `to:do:` are messages sent to objects. It fills the
-one paradigm gap the lineup had - nothing else here is object-oriented.
+system rather than a principle. There is **no syntax for control flow at all**:
+`ifTrue:`, `whileTrue:` and `to:do:` are messages sent to objects. It is the one
+object-oriented language in the set.
 
 Executed whole-program, like Scheme and Forth. A file defines classes and
 methods and then runs some code, and a method body is more than one line, so the

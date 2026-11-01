@@ -1,9 +1,9 @@
 # Scheme Tutorial
 
-Scheme is a small, elegant dialect of Lisp. Programs are built from
-**S-expressions**: parenthesised lists in which the operator always comes
-first. It is an excellent language for learning recursion, higher-order
-procedures, and functional thinking.
+Scheme is a small dialect of Lisp. Programs are built from **S-expressions**:
+parenthesised lists in which the operator always comes first. The language is a short
+list of special forms plus a standard library built from them, which makes it a
+practical way to work with recursion, higher-order procedures and closures.
 
 Time Warp Studio runs Scheme as a whole program.
 

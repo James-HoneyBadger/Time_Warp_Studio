@@ -1,13 +1,11 @@
 # Time Warp Studio — User Guide
 
-This is the manual for the Qt application: how to open it, organise work, try
-commands without writing a program, debug, use SQL, ask an AI assistant about a
-program, and drive the Studio from a script or a terminal. The per-language command
-reference is
-[LANGUAGE_GUIDE.md](LANGUAGE_GUIDE.md), and the tutorials start at
-[tutorials/](tutorials/).
+This is the manual for the application: starting it, organising work, running
+commands without writing a program, debugging, SQL, the embedded terminal, the
+assistant, automation and appearance. The command reference is
+[LANGUAGE_GUIDE.md](LANGUAGE_GUIDE.md); the tutorials begin at [tutorials/](tutorials/).
 
-> **First time here?** Run `./run.sh`, open
+> First time here? Run `./run.sh`, open
 > [`Examples/logo/hello.logo`](../Examples/logo/hello.logo) and press **F9**.
 
 ---
@@ -101,10 +99,9 @@ empty.
 | Answer an input prompt | Type it into the dialog and press Return |
 | Open a file | **File → Open** (`Ctrl+O`) or pass it on the command line |
 
-The engine stops a runaway program after its own step and time budget — 10
-seconds, two million statements, a hundred thousand program steps — with a
-sentence in the console rather than a hung window; Stop ends it sooner, at the next
-statement or instruction.
+The engine stops a runaway program after its own step and time budget — 10 seconds
+and two million statements — with a sentence in the console rather than a hung
+window; Stop ends it sooner, at the next statement.
 
 ### A program with a screen
 
@@ -270,7 +267,7 @@ Press **Debug** on the toolbar, or use the Debug tab:
 | **Debug** | Run and stop at the first breakpoint |
 | **Continue** | Resume to the next breakpoint or the end |
 | **Pause** | Ask a running program to stop at its next boundary |
-| **Step In / Step Over / Step Out** | Advance one unit. Scheme distinguishes calls; the other languages have one statement/command/message/instruction unit, so all three stop at the next boundary |
+| **Step In / Step Over / Step Out** | Advance one unit. Scheme distinguishes calls; the other languages have one statement/command/message/token unit, so all three stop at the next boundary |
 | **Stop** | End the run |
 
 The paused location is shown as a line, with the procedure name and call depth

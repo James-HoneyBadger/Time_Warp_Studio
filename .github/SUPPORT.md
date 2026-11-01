@@ -1,9 +1,9 @@
 # Support
 
-Time Warp Studio is a desktop application maintained by one person in their own
-time. There is no support contract and no response-time promise — but reports and
-questions from people actually using it are the reason it exists, so they are
-welcome and they get read.
+Time Warp Studio is maintained by one person in their own time. There is no support
+contract and no response-time commitment. Bug reports and questions from people using
+it are read; a report that includes the information the form asks for is answered
+sooner than one that does not.
 
 ## Where to ask
 

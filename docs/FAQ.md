@@ -67,11 +67,11 @@ Yes. It is released under the MIT License. See [LICENSE](../LICENSE).
 ### Who is it for?
 
 People who like old computers: retro-computing hobbyists, language collectors and
-anyone who wants to type at a 1982 machine that never existed. The Studio is also a
-complete teaching environment — checked lessons,
-rosters and marking — for anyone who wants that, but it does not assume a
-classroom. Output and errors are in plain language with emoji prefixes, so the
-first session is readable either way.
+anyone who wants to write a program the way it was written in 1975 and watch it run.
+The Studio is also a complete teaching environment — checked lessons, rosters and
+marking — for anyone who wants that, but it does not assume a classroom. Output and
+errors are in plain language with emoji prefixes, so the first session is readable
+either way.
 
 ### Does it need an internet connection?
 
@@ -91,8 +91,8 @@ machine instead.
   adds SVG drawing export, PrintSupport is optional and adds the two Print
   entries), and SQLite 3 (the development package is needed for a source build)
 - Nothing else. Every language, the lesson check, the classroom, the gates and the
-  documentation tools are C++ built from this repository: no interpreter is needed to run a program, test the tree or check a
-  guide.
+  documentation tools are C++ built from this repository: no interpreter is needed to
+  run a program, test the tree or check a guide.
 
 ### How do I build it?
 
@@ -181,9 +181,11 @@ folder and follows a tab change with a `cd`. It is off by default because it run
 whatever you type with your permissions — nothing there is sandboxed — and it is
 removed entirely in presentation and player modes, with the shell stopped.
 
-It is a command line, not a terminal emulator: there is no PTY, so there are no
-prompts, no job control and no full-screen programs. `echo`, a compiler or a
-script work; `vim` and `top` do not.
+The shell runs on a real pseudo-terminal, so it prints its prompt, keeps job control
+and colours its output. What the tab is not is a *screen*: it shows a text transcript,
+so a program that paints with cursor addressing — `vim`, `top`, anything full-screen —
+runs and has its escape sequences stripped rather than drawn. It is for commands: a
+build, a script, `git`, a `make`.
 
 ### Does the Studio send my code anywhere?
 
@@ -365,11 +367,22 @@ tutorial for its graphics commands.
 
 ### Does the Studio have a debugger?
 
-Yes, for every language. The 🐞 Debug tab, the toolbar's Debug/Continue/Trace actions and gutter breakpoints stop the run at the language's natural boundary: a statement for BASIC, FOCAL, PILOT, COMAL, APL and REXX; a top-level statement for Logo; a message send for Smalltalk; a token for Forth. **Continue** runs to the next breakpoint and **Trace** stops at the next boundary.
+Yes, for every language. The 🐞 Debug tab, the toolbar's Debug/Continue/Trace actions
+and gutter breakpoints stop the run at the language's natural boundary: a statement for
+BASIC, FOCAL, PILOT, COMAL, APL and REXX; a top-level statement for Logo; a message send
+for Smalltalk; a token for Forth. **Continue** runs to the next breakpoint and **Trace**
+stops at the next boundary.
 
-Scheme additionally reports the call stack and the paused frame's bindings. Smalltalk reports the message sends it is inside, and the line-loop languages report the calls they are inside — a `GOSUB`, `CALL`, `PROC`, `DO` group or PILOT unit, under the program's own frame. Logo and Forth keep no return stack, so they report no chain. For every language the 🔍 Variables tab shows the bindings the run is stopped in.
+Scheme additionally reports the call stack and the paused frame's bindings. Smalltalk
+reports the message sends it is inside, and the line-loop languages report the calls
+they are inside — a `GOSUB`, `CALL`, `PROC`, `DO` group or PILOT unit, under the
+program's own frame. Logo and Forth keep no return stack, so they report no chain. For
+every language the 🔍 Variables tab shows the bindings the run is stopped in.
 
-The Debug tab also has **watch expressions** — `X * 2` is evaluated over the paused bindings, with a typo reported as `?` rather than silently read as zero — and **data breakpoints**: type a variable name, or double-click it in the Variables table, and the run stops when its value changes. The pause says which variable changed.
+The Debug tab also has **watch expressions** — `X * 2` is evaluated over the paused
+bindings, with a typo reported as `?` rather than silently read as zero — and **data
+breakpoints**: type a variable name, or double-click it in the Variables table, and the
+run stops when its value changes. The pause says which variable changed.
 
 ### Is there an API?
 
@@ -397,11 +410,14 @@ Click in the editor's gutter, or put the cursor on the line and press **Ctrl+F8*
 
 ### How do I start debugging?
 
-Set a breakpoint and Run (F9): the program stops before the statement, message send or instruction on that line. **Debug** on the toolbar raises the Debug tab and runs. While a program runs, **Pause** stops it at the next boundary. **Continue** resumes it.
+Set a breakpoint and Run (F9): the program stops before the statement, message send
+or token on that line. **Debug** on the toolbar raises the Debug tab and runs. While a program runs, **Pause** stops it at the next boundary. **Continue** resumes it.
 
 ### What do the step commands do?
 
-For Scheme, **Step In**, **Step Over** and **Step Out** advance the machine by one form, entering or stepping past a call. For every other language there is one step unit, the boundary named above, and all three buttons do the same thing as **Trace**: stop again at the next statement, message send or instruction.
+For Scheme, **Step In**, **Step Over** and **Step Out** advance the machine by one form, entering or stepping past a call. For every other language there is one step unit, the boundary named above, and all
+three buttons do the same thing as **Trace**: stop again at the next statement,
+message send or token.
 
 ### Can I see variable values while debugging?
 
@@ -503,11 +519,11 @@ The `Examples/` folder has sample programs for each language. The [examples cata
 
 ### How many themes are there?
 
-There are 33. **View → Theme** lists them — Dracula, Monokai, Catppuccin Mocha,
+There are 35. **View → Theme** lists them — Dracula, Monokai, Catppuccin Mocha,
 Gruvbox, Nord, Solarized, the retro CRT sets and the rest — and **View → Next Theme**
-cycles through them. **View → High Contrast** (`Ctrl+Alt+H`) applies a maximum-contrast variant of
-whichever theme is active, and **View → Screen Mode** pairs the CRT settings with the
-amber, green and white-phosphor looks.
+cycles through them. **View → High Contrast** (`Ctrl+Alt+H`) applies a
+maximum-contrast variant of whichever theme is active, and **View → Screen Mode**
+pairs the CRT settings with the amber, green and white-phosphor looks.
 
 ### Can I change the font size?
 
@@ -521,11 +537,14 @@ tab width, and the change is previewed live before it is applied.
 
 ### My program shows a syntax error. What should I check?
 
-Read the message carefully. It shows the line number and a hint when one is available. Common causes include a missing line number in BASIC or an unmatched `END` in Logo.
+Read the message carefully. It shows the line number and a hint when one is
+available. Common causes are a missing line number in BASIC or an unmatched `END` in
+Logo.
 
 ### The canvas is blank after running a turtle program. Why?
 
-Check that the program actually moves the turtle with `penup` or `pendown` set correctly. Look for an error message in the output panel.
+Check that the program actually moves the turtle, and that the pen is down when it
+should be. Look for an error message in the output panel.
 
 ### Where are the full troubleshooting steps?
 
@@ -544,7 +563,9 @@ the problem, and the error message.
 
 ### How can I contribute?
 
-Read [CONTRIBUTING.md](../CONTRIBUTING.md) and the [architecture guide](ARCHITECTURE.md). For a new language, see [Adding a New Language](ARCHITECTURE.md#adding-a-language).
+Read [CONTRIBUTING.md](../CONTRIBUTING.md) and the
+[architecture guide](ARCHITECTURE.md). For a new language, see
+[Adding a language](ARCHITECTURE.md#adding-a-language).
 
 ### Where do I report a security issue?
 

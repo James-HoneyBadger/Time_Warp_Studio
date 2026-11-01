@@ -1,12 +1,16 @@
-# Logo Programming & Turtle Graphics Tutorial
+# Logo Tutorial
 
-Create amazing graphics using Logo's turtle drawing commands!
+Logo teaches programming through visual feedback: you direct a turtle that draws as it
+moves, so a loop or a procedure has a shape you can see.
 
 ---
 
-## Introduction to Logo
+## Introduction
 
-Logo is a language designed to teach programming through visual feedback. You control a virtual "turtle" that draws pictures as it moves.
+The turtle holds a position, a heading and a pen. `FORWARD 100` moves it 100 units
+along its heading and leaves a line; `RIGHT 90` turns it; `PENUP` lifts the pen. Every
+drawing in this tutorial is a sequence of those instructions, run by the engine and
+rendered on the canvas.
 
 ### Why Logo?
 

@@ -1,12 +1,15 @@
-# BASIC Programming Tutorial
+# BASIC Tutorial
 
-Learn BASIC programming language in Time Warp Studio. BASIC is a beginner-friendly language perfect for learning programming fundamentals.
+BASIC is the language most home computers of the late 1970s booted into: numbered
+lines, a direct mode, and a small vocabulary that fits on one page.
 
 ---
 
-## Introduction to BASIC
+## Introduction
 
-BASIC stands for **B**eginner's **A**ll-purpose **S**ymbolic **I**nstruction **C**ode. It was designed to teach programming concepts in simple, readable syntax.
+BASIC stands for **B**eginner's **A**ll-purpose **S**ymbolic **I**nstruction **C**ode.
+It was designed at Dartmouth in 1964 to teach programming with as little syntax as
+possible, and the dialect here is the line-numbered one of the machines that followed.
 
 ### Why BASIC?
 

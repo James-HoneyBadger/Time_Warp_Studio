@@ -1,8 +1,7 @@
 # Teacher guide: planning, marking and running a class
 
-Everything a teacher needs is in ``time_warp_teach``. Half of it needs no
-class at all — it is about the curriculum — and half of it is about the people in
-front of you.
+`time_warp_teach` covers the whole of it. Half is about the curriculum and needs no
+class at all; half is about the people in front of you.
 
 ```text
 ./native/build/time_warp_teach --help

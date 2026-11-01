@@ -2,13 +2,13 @@
 
 **Project:** Time Warp Studio - an old-school programming environment: ten languages and an IDE  
 **Maintainer:** James Temple <james@honey-badger.org>  
-**Last Updated:** October 2026
+**Last Updated:** November 2026
 
 ---
 
 ## Project Overview
 
-Time Warp Studio is an old-school desktop programming environment built with **C++20 and Qt6** for Linux: a unified IDE for ten interpreters from 1964 to 1980, with turtle graphics and a debugger in every language. A checked lesson curriculum ships for teaching, but the product is framed for retro-computing hobbyists first. The application is the IDE and the languages: there is no emulator in it.
+Time Warp Studio is a desktop programming environment built with **C++20 and Qt 6** for Linux: one IDE for ten interpreters of the 1964–1980 period, with turtle graphics and a debugger in every language. A checked lesson curriculum ships for teaching, but the product is aimed at retro-computing hobbyists first. The application is the IDE and the languages; there is no emulator in it.
 
 **Supported Languages:** BASIC, APL, Logo, PILOT, FOCAL, Scheme, COMAL, REXX, Smalltalk and Forth.
 

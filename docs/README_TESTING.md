@@ -1,8 +1,8 @@
 # Testing Time Warp Studio
 
-The product is the Qt application in `native/`, and its engines, lesson checks and
-validation gates are C++ suites and tools built from this tree. The Python reference
-engine was removed; parity uses its frozen recorded corpus.
+The product is the Qt application in `native/`. Its engines, lesson checks and
+validation gates are C++ suites and tools built from this tree; the Python reference
+engine was removed, and parity is measured against its frozen recorded corpus.
 
 Run everything from the repository root.
 

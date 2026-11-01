@@ -1,9 +1,9 @@
 # Forth Tutorial
 
-Forth is the language that fits in a pocket. There is no syntax to learn in the usual
-sense — no parentheses around conditions, no statement keywords — only **words** and a
-**stack**. A word takes what it needs from the top of the stack and leaves what it
-produces there, and a program is a sequence of words.
+Forth has no syntax in the sense the other languages here do: no parentheses around
+conditions, no statement keywords, only **words** and a **stack**. A word takes what it
+needs from the top of the stack and leaves what it produces there, and a program is a
+sequence of words.
 
 It is the newest language in Time Warp Studio, and the one you can write an
 interpreter for in an afternoon: that was always the point of it.

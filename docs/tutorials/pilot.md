@@ -1,6 +1,8 @@
 # PILOT Language Tutorial
 
-PILOT (Programmed Inquiry Learning Or Teaching) is an interactive teaching language designed for educational environments. It excels at creating interactive learning experiences with branching logic and user engagement.
+PILOT (Programmed Inquiry Learning Or Teaching) is a small language for writing
+drills: present text, accept an answer, branch on it. Every statement is a letter and
+a colon, which is why a PILOT listing reads as a script rather than as code.
 
 ## Quick Start
 

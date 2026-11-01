@@ -1,12 +1,12 @@
 # Student guide: working through a lesson
 
-A lesson is a short piece of one language, split into **checkpoints**. Each
-checkpoint gives you a program with something missing, tells you what the
-finished program should do, and can check your work by running it. There are
-twenty lessons — two for each language — and sixty checkpoints.
+A lesson covers one piece of one language and is split into **checkpoints**. Each
+checkpoint gives you a program with something missing, states what the finished
+program should do, and checks your work by running it. There are twenty lessons — two
+per language — and sixty checkpoints.
 
-You can work through them at a terminal or in the IDE's **🎓 Lessons** panel.
-Both check your work the same way, so you can switch between them freely.
+Work through them at a terminal or in the IDE's 🎓 Lessons panel. Both check with the
+same verifier, so you can switch between them as you like.
 
 ---
 
