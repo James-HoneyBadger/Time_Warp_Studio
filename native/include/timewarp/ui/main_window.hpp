@@ -438,7 +438,7 @@ public:
     /// the keyboard, so it leaves the fonts alone. This one is for a room.
     void setPresentationMode(bool on);
     [[nodiscard]] bool presentationMode() const noexcept { return presentation_mode_; }
-    /// The size and window style the class is taught at, as `teach.py present`
+    /// The size and window style the class is taught at, as `time_warp_teach present`
     /// wrote them. Kept even while the mode is off, so entering it needs no round
     /// trip; a size of zero means the worker has not answered yet, and the fonts
     /// are then left as the teacher configured them.
@@ -1047,7 +1047,7 @@ private:
     bool focus_mode_ = false;
     QList<QPointer<QWidget>> focus_hidden_;
     /// Presentation mode: the same recorded-chrome idea, plus the class's font
-    /// size and the window style `teach.py present` asked for. The geometry is
+    /// size and the window style `time_warp_teach present` asked for. The geometry is
     /// restored only when this mode changed it, so a window the user had already
     /// made full screen stays that way.
     QAction* presentation_action_ = nullptr;
@@ -1134,7 +1134,7 @@ private:
     /// the marks are still being worked out.
     void requestClassroom();
     /// Asks for a path and has the engine write the class to it. The archive is
-    /// the engine's format, so `teach.py unbundle` can read what this writes.
+    /// the engine's format, so `time_warp_teach unbundle` can read what this writes.
     void exportClassroomBundle();
     /// Asks for an archive and unpacks it, after asking whether files that are
     /// already there should be replaced.

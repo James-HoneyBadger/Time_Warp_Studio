@@ -530,7 +530,7 @@ void MainWindow::buildMenuBar() {
     connect(focus_shortcut_, &QShortcut::activated, this, [this] { setFocusMode(false); });
 
     // The classroom's mode: focus mode for an audience. The size and whether it
-    // takes the whole screen belong to the class, because `teach.py present`
+    // takes the whole screen belong to the class, because `time_warp_teach present`
     // writes them, so the menu entry is only the switch.
     presentation_action_ = view->addAction(tr("&Presentation Mode"));
     presentation_action_->setObjectName(QStringLiteral("presentationModeAction"));

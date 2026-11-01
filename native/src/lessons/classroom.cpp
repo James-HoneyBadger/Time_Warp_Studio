@@ -34,7 +34,7 @@ namespace {
 // ---------------------------------------------------------------------------
 //
 // A bundle is a plain zip: a class handed to a school has to open with the tools
-// they already have, and `teach.py` writes the same thing. The reader accepts
+// they already have, and `time_warp_teach` writes the same thing. The reader accepts
 // both methods a real archive uses -- stored and deflated -- because a bundle may
 // have been made by either side of this port.
 

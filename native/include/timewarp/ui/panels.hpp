@@ -100,8 +100,8 @@ private:
 
 /// The classroom: the class list, what has been assigned, and the marks.
 ///
-/// A view, like the lesson panel: the roster and the marking live in
-/// `classroom_mode.py`, which `teach.py` writes too, and the panel reaches them
+/// A view, like the lesson panel: the roster and the marking live in the
+/// classroom files `time_warp_teach` writes, and the panel reaches them
 /// through the worker's `classroom-roster`/`classroom-marks` requests. Parsing
 /// `roster.json` here would be a second reader of one file, and the one that
 /// drifts is the one a teacher is looking at.
@@ -133,7 +133,8 @@ public:
 
 signals:
     /// The panel wants fresh numbers. Asking rather than polling, because a
-    /// classroom file changes when a teacher runs `teach.py`, not on a timer.
+    /// classroom file changes when a teacher runs `time_warp_teach`, not on a
+    /// timer.
     void refreshRequested();
     /// Open one learner's folder in the file manager.
     void openFolderRequested(const QString& path);

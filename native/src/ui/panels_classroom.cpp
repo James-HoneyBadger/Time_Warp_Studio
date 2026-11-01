@@ -42,7 +42,7 @@ ClassroomPanel::ClassroomPanel(QWidget* parent) : QFrame(parent) {
     layout->addWidget(marks_, 1);
 
     empty_ = new QLabel{tr("No class list yet. A teacher creates one with "
-                           "`teach.py roster add`."),
+                           "`time_warp_teach roster add`."),
                         this};
     empty_->setObjectName(QStringLiteral("classroomEmptyState"));
     empty_->setAlignment(Qt::AlignCenter);
@@ -72,7 +72,7 @@ ClassroomPanel::ClassroomPanel(QWidget* parent) : QFrame(parent) {
 
     // Carrying a class to another machine is two buttons rather than a menu: it is
     // the teacher's own page, and a class is what moves. The format is the
-    // engine's, so what this writes `teach.py unbundle` can read.
+    // engine's, so what this writes `time_warp_teach unbundle` can read.
     auto* archive = new QHBoxLayout;
     archive->setSpacing(4);
     bundle_ = new QPushButton{tr("Save Bundle..."), this};

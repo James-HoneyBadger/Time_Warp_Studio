@@ -386,7 +386,7 @@ void MainWindow::applyPresentationSettings() {
         }
     } else if (presentation_restore_geometry_ && isFullScreen()) {
         // The class says windowed and this mode made it full screen: put it back
-        // but stay in the mode, which is what `teach.py present --windowed` means.
+        // but stay in the mode, which is what `time_warp_teach present --windowed` means.
         presentation_restore_geometry_ = false;
         if (presentation_was_maximized_) {
             showMaximized();
