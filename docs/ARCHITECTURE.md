@@ -1,6 +1,6 @@
 # Architecture Guide
 
-## Time Warp Studio v28.0.0 — System Design and Implementation
+## Time Warp Studio v28.1.0 — System Design and Implementation
 
 > **This page describes the shipping product.** It was rewritten alongside the move
 > to C++20 / Qt6. Earlier revisions documented the PySide6 implementation, which has
@@ -352,23 +352,47 @@ nothing about the language.
 
 ### Styling
 
-`native/src/ui/ui_style.cpp` owns the stylesheet, as one sheet applied once to the
-window. Qt copies a widget's stylesheet to its children and re-polishes all of them on
-every `setStyleSheet()` call, so six calls mean six full passes over a window with
-hundreds of widgets; composing the sections and setting the result once removes that,
-and gives a theme manager a single string to replace. Rules are scoped by object name,
-because a bare `QTabWidget { ... }` cascades to *every* descendant tab widget —
-including the output sub-tabs nested inside a page of the widget being styled. Colour
-roles are written with Qt's `palette(...)` function, so the sheet follows the active
-palette.
+Three layers, in order: a theme's data, the tokens derived from it, and the
+stylesheet built from those tokens.
 
-**The theme system is built.** `native/src/ui/theme_table.inc` carries the 35 schemes
-— the removed implementation's 33 plus Windows 2000 and Windows 7 — as data:
-name, background, foreground, editor colours and the `dark`/`mid`/`shadow` roles this
-sheet reads. `themes.cpp` resolves the optional fields, applies the palette and
-composes the QSS. View > Theme selects one, View > Next Theme cycles, and View >
-High Contrast derives a maximum-contrast variant of the active theme rather than
-replacing it.
+**The data.** `native/src/ui/theme_table.inc` carries the 35 schemes — the removed
+implementation's 33 plus Windows 2000 and Windows 7 — as `Theme` records of string
+literals: name, background, foreground, editor colours, accent colours and the panel
+chrome. `themes::resolve()` is the one place a record becomes `Colours`, including
+the high-contrast adjustment, and `paletteFor()` turns that into the application
+palette, which is what dialogs, message boxes and the native parts of the controls
+read.
+
+**The tokens.** `design::tokens()` (`native/src/ui/design.cpp`) derives the
+vocabulary an interface is actually built from: four surfaces (window, chrome,
+panel, editor, plus raised and sunken), two lines, three text ranks, one accent with
+its hover, pressed, on-accent and wash states, the theme's selection pair, the state
+colours, scrollbar shades and the metrics the layout is built on. None of those are
+in a theme record, and all of them have to be the same relationship for all 35 of
+them — a toolbar is the window lifted 6%, a hover is the accent at 14% alpha, the
+muted rank is the text pulled 40% toward its background. Two rules keep a derived
+palette safe on a retro set: the *direction* is the theme's (a light theme's raised
+surface is darker), and the theme's own colours win wherever it named one. Where a
+derivation would produce something unreadable — a keyword chosen to sit on a navy
+editor used as an accent on a grey window, a border colour a shade off the page —
+`reachContrast()` steps the colour away from its surface until it clears a floor.
+
+**The sheet.** `native/src/ui/ui_style.cpp` is one stylesheet, applied once, built
+from those tokens and written as literal colours. It is applied once because Qt
+copies a widget's stylesheet to its children and re-polishes all of them on every
+`setStyleSheet()` call. Sections are scoped by object name, because a bare
+`QTabWidget { ... }` cascades to *every* descendant tab widget — including the
+output sub-tabs nested inside a page of the widget being styled.
+
+Icons are not part of it. A stylesheet cannot recolour an image, and a
+`url(...)` per theme per state is 35 themes times three states of a PNG set, so the
+icons are drawn by `icons::glyph()`, whose icon engine asks the palette at paint
+time (see `native/include/timewarp/ui/icons.hpp`). Nothing in the interface carries
+an emoji in its label: emoji are rendered by whichever font supplies them, at that
+font's weight, in colours that ignore the theme.
+
+View > Theme selects a scheme, View > Next Theme cycles, and View > High Contrast
+derives a maximum-contrast variant of the active theme rather than replacing it.
 
 ---
 
@@ -432,7 +456,7 @@ Five libraries sit beside the engines, each with one job and a test suite:
   the window applies to the model and then saves, which is why a drag and a context
   menu cannot disagree about where a file lives.
 - **`timewarp_sql`** wraps one SQLite connection in `sql::Database`. It is the
-  connection both the 🗄 Database tab and a program's `SQL` statement use, guarded by
+  connection both the Database tab and a program's `SQL` statement use, guarded by
   a mutex because one may run on a runner thread while the other is on the GUI
   thread. Results carry columns, rows, the change count and an error; the row cap
   (1000) is part of the type, not a thing the panel decides. Table and schema
@@ -624,7 +648,8 @@ for the ordinary case.
 ### Output conventions
 
 Every message the engine produces carries an emoji prefix, and the IDE's presentation
-depends on the distinction:
+depends on the distinction. This is the *output* convention and it is the only place
+emoji remain: the interface's own controls and tabs carry drawn icons, not emoji.
 
 | Prefix | Meaning |
 | --- | --- |

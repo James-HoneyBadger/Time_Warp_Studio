@@ -153,11 +153,6 @@ struct Colours {
 /// window.
 [[nodiscard]] QPalette paletteFor(const Theme& theme, bool high_contrast = false);
 
-/// The theme's own rules, appended after `style::window()`: the tokens a
-/// palette cannot express (a menu bar that is a different colour from the
-/// window, the function-key bar's badge, the editor surface).
-[[nodiscard]] QString stylesheetFor(const Theme& theme, bool high_contrast = false);
-
 /// `#rrggbb` to a QColor. Returns an invalid QColor for anything else rather
 /// than silently producing black, so a typo in the table shows up in a test.
 [[nodiscard]] QColor colour(const char* hex);

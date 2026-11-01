@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: MIT
 
+#include "timewarp/ui/design.hpp"
 #include "timewarp/ui/notebook_window.hpp"
 
 #include <QComboBox>
@@ -114,6 +115,7 @@ NotebookWindow::CellWidgets NotebookWindow::addCell(NotebookCell::Kind kind,
     CellWidgets widgets;
     widgets.kind = kind;
     widgets.text = new QPlainTextEdit{text, frame};
+    widgets.text->setFont(design::monoFont());
     widgets.text->setObjectName(QStringLiteral("notebookCellText"));
     widgets.text->setMinimumHeight(kind == NotebookCell::Kind::Code ? 110 : 60);
 
@@ -140,6 +142,7 @@ NotebookWindow::CellWidgets NotebookWindow::addCell(NotebookCell::Kind kind,
         layout->addLayout(header);
 
         widgets.output = new QPlainTextEdit{frame};
+        widgets.output->setFont(design::monoFont());
         widgets.output->setObjectName(QStringLiteral("notebookCellOutput"));
         widgets.output->setReadOnly(true);
         widgets.output->setMaximumHeight(120);

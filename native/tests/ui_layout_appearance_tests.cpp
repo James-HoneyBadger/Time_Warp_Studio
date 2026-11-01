@@ -258,7 +258,6 @@ void test_focus_mode_hides_and_restores_the_chrome() {
 
     // What is visible before entering is what has to come back.
     const bool bar_before = window->mainToolBar()->isVisible();
-    const bool second_before = window->secondaryToolBar()->isVisible();
     const bool keys_before = window->functionKeyBar()->isVisible();
     const bool status_before = window->statusBar()->isVisible();
     TW_CHECK(bar_before);
@@ -267,7 +266,6 @@ void test_focus_mode_hides_and_restores_the_chrome() {
     action->trigger();
     TW_CHECK(window->focusMode());
     TW_CHECK(!window->mainToolBar()->isVisible());
-    TW_CHECK(!window->secondaryToolBar()->isVisible());
     TW_CHECK(!window->functionKeyBar()->isVisible());
     TW_CHECK(!window->statusBar()->isVisible());
     if (escape != nullptr) {
@@ -277,7 +275,6 @@ void test_focus_mode_hides_and_restores_the_chrome() {
     action->trigger();
     TW_CHECK(!window->focusMode());
     TW_CHECK_EQ(window->mainToolBar()->isVisible(), bar_before);
-    TW_CHECK_EQ(window->secondaryToolBar()->isVisible(), second_before);
     TW_CHECK_EQ(window->functionKeyBar()->isVisible(), keys_before);
     TW_CHECK_EQ(window->statusBar()->isVisible(), status_before);
     if (escape != nullptr) {
@@ -322,7 +319,6 @@ void test_presentation_mode_is_focus_mode_for_a_room() {
     window->setPresentationSettings(28, false);
 
     const bool bar_before = window->mainToolBar()->isVisible();
-    const bool second_before = window->secondaryToolBar()->isVisible();
     const bool keys_before = window->functionKeyBar()->isVisible();
     const bool status_before = window->statusBar()->isVisible();
     const bool menu_before = window->menuBar()->isVisible();
@@ -341,7 +337,6 @@ void test_presentation_mode_is_focus_mode_for_a_room() {
     // but a room does not need File and Edit above the lesson.
     TW_CHECK(!window->menuBar()->isVisible());
     TW_CHECK(!window->mainToolBar()->isVisible());
-    TW_CHECK(!window->secondaryToolBar()->isVisible());
     TW_CHECK(!window->functionKeyBar()->isVisible());
     TW_CHECK(!window->statusBar()->isVisible());
     TW_CHECK(!window->isFullScreen());
@@ -367,7 +362,6 @@ void test_presentation_mode_is_focus_mode_for_a_room() {
     TW_CHECK(!window->presentationMode());
     TW_CHECK_EQ(window->menuBar()->isVisible(), menu_before);
     TW_CHECK_EQ(window->mainToolBar()->isVisible(), bar_before);
-    TW_CHECK_EQ(window->secondaryToolBar()->isVisible(), second_before);
     TW_CHECK_EQ(window->functionKeyBar()->isVisible(), keys_before);
     TW_CHECK_EQ(window->statusBar()->isVisible(), status_before);
     if (escape != nullptr) {

@@ -49,6 +49,7 @@
 #include "timewarp/ui/native_runner.hpp"
 #include "timewarp/ui/sound_player.hpp"
 #include "timewarp/ui/standalone.hpp"
+#include "timewarp/ui/design.hpp"
 #include "timewarp/ui/themes.hpp"
 #include "timewarp/ui/turtle_canvas.hpp"
 #include "timewarp/ui/ui_style.hpp"
@@ -86,8 +87,9 @@ public:
         const QString theme_name = timewarp::ui::themes::defaultName();
         const timewarp::ui::Theme& theme = timewarp::ui::themes::byName(theme_name);
         QApplication::setPalette(timewarp::ui::themes::paletteFor(theme));
-        setStyleSheet(timewarp::ui::style::window() +
-                      timewarp::ui::themes::stylesheetFor(theme));
+        const timewarp::ui::design::Tokens tokens = timewarp::ui::design::tokens(
+            timewarp::ui::themes::resolve(theme, false));
+        setStyleSheet(timewarp::ui::style::sheet(tokens));
 
         auto* layout = new QVBoxLayout{this};
         layout->setContentsMargins(0, 0, 0, 0);

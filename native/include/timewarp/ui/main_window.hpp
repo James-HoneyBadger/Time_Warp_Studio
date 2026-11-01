@@ -365,11 +365,10 @@ public:
     }
     [[nodiscard]] CrtOverlay* crtOverlay() const noexcept { return crt_overlay_; }
     [[nodiscard]] QDockWidget* outlineDock() const noexcept { return outline_dock_; }
+    /// The one toolbar. The display controls used to live on a second bar below
+    /// this one, which cost 40 pixels of height to say the same thing twice; they
+    /// now sit at its right-hand end, past an expanding spacer.
     [[nodiscard]] QToolBar* mainToolBar() const noexcept { return tool_bar_; }
-    /// The second toolbar row. Split from the first because a single row of the
-    /// combined controls does not fit a 1400px window without overflowing into a
-    /// chevron, which hides the overflow rather than making it reachable.
-    [[nodiscard]] QToolBar* secondaryToolBar() const noexcept { return tool_bar_secondary_; }
     [[nodiscard]] TurtleCanvas* turtleCanvas() const noexcept { return turtle_canvas_; }
     /// The strip under the canvas: pose, pen, the screen mode a program asked
     /// for, and the command count. Public because a test reads what a user reads.
@@ -998,7 +997,6 @@ private:
     CommandReferencePanel* reference_panel_ = nullptr;
     std::shared_ptr<timewarp::sql::Database> sql_database_;
     QToolBar* tool_bar_ = nullptr;
-    QToolBar* tool_bar_secondary_ = nullptr;
     /// Rebuilt on every open: a recent list that is only built once is a list of
     /// the files that were open when the window was created.
     QMenu* recent_menu_ = nullptr;

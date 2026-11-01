@@ -2,6 +2,75 @@
 
 <!-- history: all -->
 
+## [28.1.0] - 2026-11-01
+
+**A renewed interface: drawn icons, one toolbar, and a design system underneath.**
+The window had three colour languages (grey chrome, white editor, navy status bar),
+two stacked toolbars and a third row of function keys, and every control was labelled
+with an emoji -- which is rendered by whichever font supplies it, at that font's
+weight, in colours that ignore the theme. This release replaces all three: the
+interface is built from a small set of design tokens derived from the active theme,
+its icons are drawn, and its chrome is one row.
+
+### Added
+
+- **A vector icon set.** `icons.hpp`/`icons.cpp` carry 31 glyphs on a 16-unit grid
+  (1.5-unit strokes, round caps, one colour), painted through a `QIconEngine` that
+  asks the palette at paint time. A theme change repaints every icon without anything
+  being rebuilt, and a disabled or selected state is answered with the matching
+  palette entry rather than a second set of images.
+- **A design token layer.** `design::tokens()` derives what an interface is built
+  from -- six surfaces, two lines, three text ranks, one accent with its hover,
+  pressed, on-accent and wash states, the theme's selection pair, scrollbar shades
+  and the spacing and type metrics -- from a theme's `Colours`. Where a derivation
+  would be unreadable (a keyword picked to sit on a navy editor, used as an accent
+  on a grey window; a border colour a shade off the page) `reachContrast()` steps
+  the colour away from its surface until it clears a floor. All 35 themes are
+  covered by the same rules; none of their records changed.
+- **Ranked font fallbacks.** `design::uiFont()` and `design::monoFont()` name a
+  preference list instead of one family, so a machine with Cantarell or JetBrains
+  Mono gets it and a machine without one lands on its own sans or fixed-width face
+  rather than on `Courier New`, which is not installed on a stock Linux system.
+- **A drawn chevron for combo boxes.** Qt stops drawing a native arrow once a
+  drop-down subcontrol is styled, and QSS cannot draw a shape, so the arrow is a
+  small PNG rendered per theme into the cache directory.
+
+### Changed
+
+- **One toolbar.** The display controls moved out of the second row and onto the
+  right-hand end of the first, past an expanding spacer: words for the document
+  actions that start and save a program, glyphs for the transport controls and the
+  display strip. The Run button is the bar's one tinted control. Everything fits at
+  the window's own 900-pixel minimum, which the old two-row layout existed to
+  approximate.
+- **The stylesheet is built from tokens.** Tabs are labels with an accent rule under
+  them rather than boxes; bars are flat with a hairline; fields, menus, tooltips,
+  scrollbars and sliders are drawn from the same metrics, and dock titles are small
+  muted labels instead of another row of chrome. `themes::stylesheetFor()` is gone:
+  its rules were the second half of a sheet that is now composed in one place.
+- **Every emoji is out of the interface.** Toolbar labels, tab titles, the output
+  sub-tabs, dock titles, the language badge and the window title carry words or
+  icons. The engine's emoji output prefixes (`❌`, `✅`, `ℹ️`) are unchanged -- that
+  is a message convention, not an icon set.
+- **The minimap is a map.** Each line gets its own row while there is room for one
+  instead of a two-line document being stretched into two grey blocks across the
+  whole strip; it sits on the gutter's surface, clear of the vertical scroll bar
+  that used to be painted over its right-hand column, and its viewport band is a
+  wash rather than a bright outline.
+- **The canvas grid is derived from the paper**, so an amber or near-black theme no
+  longer has a pale-grey grid drawn across it.
+- **Panel actions fit their panel.** The lessons page and the debug page each held
+  six word-buttons in a dock-width row and were being clipped on both edges --
+  "Continue" was drawn as "ntin" -- so both are two rows of three, with the debug
+  transport as glyphs. The database page's path elides instead of pushing its
+  buttons off the edge, and its empty state no longer repeats the toolbar's buttons.
+
+### Removed
+
+- `MainWindow::secondaryToolBar()`, the `secondaryToolBar` widget itself, and the
+  "Language" label in front of the language selector -- which cost 66 pixels of a
+  bar that has to hold fourteen controls at 900 pixels wide.
+
 ## [28.0.0] - 2026-11-01
 
 **The IDE and the languages, and nothing else: the machines are removed.**

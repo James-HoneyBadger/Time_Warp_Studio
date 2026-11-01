@@ -109,7 +109,7 @@ constexpr int kEditorColumnHeight = 550;
 constexpr int kImmediateModeHeight = 50;
 constexpr int kOutputHeight = 200;
 constexpr int kCanvasHeight = 300;
-constexpr int kToolBarMinimumHeight = 44;
+constexpr int kToolBarMinimumHeight = 40;
 
 /// The ink a program draws with before it names a colour.
 ///

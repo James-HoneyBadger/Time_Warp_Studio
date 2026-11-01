@@ -2,6 +2,7 @@
 
 #include "main_window_internal.hpp"
 
+#include "timewarp/ui/icons.hpp"
 #include "timewarp/ui/main_window.hpp"
 
 #include "timewarp/lang/executor.hpp"
@@ -90,7 +91,7 @@ void MainWindow::buildSqlPanel() {
         sql_database_ = std::make_shared<timewarp::sql::Database>();
     }
     sql_panel_ = new SqlPanel{right_tabs_};
-    right_tabs_->addTab(sql_panel_, tr("\U0001F5C4 Database"));
+    right_tabs_->addTab(sql_panel_, icons::glyph(icons::Glyph::Database), tr("Database"));
     connect(sql_panel_, &SqlPanel::openDatabaseRequested, this,
             &MainWindow::openSqlDatabaseDialog);
     connect(sql_panel_, &SqlPanel::newDatabaseRequested, this,
@@ -265,8 +266,7 @@ void MainWindow::refreshProjectPanel() {
     if (project_dock_ != nullptr) {
         project_dock_->setWindowTitle(
             project_.isValid()
-                ? tr("\U0001F5C2 %1").arg(project_.name())
-                : tr("\U0001F5C2 Projects"));
+                ? project_.name() : tr("Projects"));
     }
 }
 

@@ -389,7 +389,7 @@ void MainWindow::buildMenuBar() {
     // what this IDE can do *to a program* is a menu a person can find, and a
     // top-level menu with five entries is a heading that exists to hold its own
     // name.
-    add(tools, tr("\U0001F916 &Assistant"),
+    add(tools, tr("&Assistant"),
         timewarp::core::keySequence(Qt::CTRL | Qt::SHIFT, Qt::Key_A),
         [this] { showAssistant(); })
         ->setObjectName(QStringLiteral("aiAssistantAction"));

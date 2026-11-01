@@ -3,6 +3,7 @@
 #include "main_window_internal.hpp"
 
 #include "timewarp/core/qt_names.hpp"
+#include "timewarp/ui/icons.hpp"
 #include "timewarp/ui/main_window.hpp"
 
 #include "timewarp/lang/executor.hpp"
@@ -69,6 +70,8 @@
 
 namespace timewarp::ui {
 
+namespace icons = timewarp::ui::icons;
+
 // The settings keys and the small helpers the sections share; they were an
 // anonymous namespace in the one-file version, and a `using` is what keeps the call
 // sites reading the same.
@@ -79,11 +82,12 @@ using namespace detail;
 // ---------------------------------------------------------------------------
 
 void MainWindow::buildToolBar() {
-    // Two rows. The Python build put all thirteen controls on one toolbar, which
-    // needs roughly 1900px to fit; below that Qt collapses the overflow behind a
-    // chevron, so the display controls at the right-hand end are simply not
-    // reachable at any ordinary window size. Splitting by frequency -- actions
-    // first, display settings second -- keeps every control on screen at 1000px.
+    // One bar, two weights. The labelled controls that start, save and run a
+    // program come first; the icon strip that clears a pane or opens Settings sits
+    // at the right-hand end, past a spacer. Two bars stacked was what made this
+    // chrome look like a 1994 application with a second row bolted on, and the
+    // split it bought -- keeping the display controls reachable at 1000px -- is
+    // what the spacer keeps without spending the height.
     auto makeBar = [this](const QString& objectName, const QString& title) {
         auto* bar = new QToolBar{title, this};
         bar->setObjectName(objectName);
@@ -97,12 +101,7 @@ void MainWindow::buildToolBar() {
     };
 
     tool_bar_ = makeBar(QStringLiteral("mainToolBar"), tr("Main Toolbar"));
-    tool_bar_secondary_ = makeBar(QStringLiteral("secondaryToolBar"), tr("Display Toolbar"));
-
     addToolBar(Qt::TopToolBarArea, tool_bar_);
-    // Without the break the two bars share one row and the split buys nothing.
-    addToolBarBreak(Qt::TopToolBarArea);
-    addToolBar(Qt::TopToolBarArea, tool_bar_secondary_);
 
     // -- file group -------------------------------------------------------
     // Standard keys rather than literal "Ctrl+N": Qt translates them per
@@ -112,11 +111,11 @@ void MainWindow::buildToolBar() {
     // The F-key alternates are the Python's: F2 saves and F3 opens. They are part
     // of the interface the tooltips advertise, so an action whose tooltip says
     // "F3" has to answer to F3.
-    auto addFileAction = [this](const QString& text, QKeySequence::StandardKey key,
-                                const Qt::Key alternate, const QString& tip,
-                                const QString& statusTip,
+    auto addFileAction = [this](icons::Glyph glyph, const QString& text,
+                                QKeySequence::StandardKey key, const Qt::Key alternate,
+                                const QString& tip, const QString& statusTip,
                                 const std::function<void()>& slot) {
-        QAction* action = tool_bar_->addAction(text);
+        QAction* action = tool_bar_->addAction(icons::glyph(glyph), text);
         // The standard key first, then the F-key alternate the tooltip promises.
         // A toolbar action whose tooltip says "F3" has to answer to F3.
         QList<QKeySequence> shortcuts{QKeySequence{key}};
@@ -129,13 +128,13 @@ void MainWindow::buildToolBar() {
         connect(action, &QAction::triggered, this, slot);
         return action;
     };
-    addFileAction(tr("\U0001F4C4 New"), QKeySequence::New, Qt::Key_unknown,
+    addFileAction(icons::Glyph::New, tr("New"), QKeySequence::New, Qt::Key_unknown,
                   tr("Create a new file (Ctrl+N)"),
                   tr("Create a new editor tab"), [this] { newFile(); });
-    addFileAction(tr("\U0001F4C2 Open"), QKeySequence::Open, Qt::Key_F3,
+    addFileAction(icons::Glyph::Open, tr("Open"), QKeySequence::Open, Qt::Key_F3,
                   tr("Open an existing file (F3 / Ctrl+O)"),
                   tr("Open a file from disk"), [this] { openFileDialog(); });
-    addFileAction(tr("\U0001F4BE Save"), QKeySequence::Save, Qt::Key_F2,
+    addFileAction(icons::Glyph::Save, tr("Save"), QKeySequence::Save, Qt::Key_F2,
                   tr("Save the current file (F2 / Ctrl+S)"),
                   tr("Save changes to disk"), [this] { saveCurrentFile(); });
 
@@ -143,14 +142,16 @@ void MainWindow::buildToolBar() {
     tool_bar_->addSeparator();
 
     // -- language selector -------------------------------------------------
-    // The label and the combo are handed to the toolbar rather than parented to
-    // it here: `addWidget` transfers ownership, and a parent that disagrees with
-    // the toolbar's layout would be a second owner of the same widget.
-    tool_bar_->addWidget(new QLabel{tr(" Language: ")});
+    // Handed to the toolbar rather than parented to it here: `addWidget` transfers
+    // ownership, and a parent that disagrees with the toolbar's layout would be a
+    // second owner of the same widget. No "Language" label in front of it -- the
+    // selector's own value names the language and its tooltip explains it, and the
+    // word cost 66 pixels of a bar that has to hold fourteen controls at the
+    // window's 900-pixel minimum.
     language_combo_ = new QComboBox;
     language_combo_->setObjectName(QStringLiteral("languageSelector"));
     language_combo_->setToolTip(tr("Programming language for the current tab"));
-    language_combo_->setMinimumWidth(120);
+    language_combo_->setMinimumWidth(104);
     for (const Language language : allLanguages()) {
         // The settings key is the item's data, not its text: persisted state and
         // the runner protocol both carry "logo", and "Logo" would have to be
@@ -185,7 +186,12 @@ void MainWindow::buildToolBar() {
     // a plain click on the main action.
     auto* run_button = new QToolButton{tool_bar_};
     run_button->setObjectName(QStringLiteral("runButton"));
-    run_button->setText(tr("\U0001F680 Run"));
+    run_button->setText(tr("Run"));
+    run_button->setIcon(icons::glyph(icons::Glyph::Run));
+    // A widget added to a toolbar does not inherit the toolbar's button style --
+    // `addWidget` takes any QWidget -- so without this the button is an icon-only
+    // tool button and the word "Run" is never drawn.
+    run_button->setToolButtonStyle(Qt::ToolButtonTextBesideIcon);
     run_button->setToolTip(tr("Execute the current program (F9)"));
     run_button->setStatusTip(tr("Execute the code in the current editor"));
     run_button->setPopupMode(QToolButton::MenuButtonPopup);
@@ -199,31 +205,67 @@ void MainWindow::buildToolBar() {
     // Rebuilt on every open: a history menu built once is the history as it was
     // when the window started.
     connect(run_menu_, &QMenu::aboutToShow, this, [this] { rebuildRunMenu(); });
-    QAction* popup_run = run_menu_->addAction(tr("\U0001F680 Run"));
+    QAction* popup_run =
+        run_menu_->addAction(icons::glyph(icons::Glyph::Run), tr("Run"));
     // No shortcut here: F9 belongs to the Run menu's action, and two actions
     // claiming it is an ambiguous shortcut rather than a convenience.
     connect(popup_run, &QAction::triggered, this, [this] { runCurrentDocument(); });
-    QAction* popup_stop = run_menu_->addAction(tr("\u23F9\uFE0F Stop"));
+    QAction* popup_stop =
+        run_menu_->addAction(icons::glyph(icons::Glyph::Stop), tr("Stop"));
     connect(popup_stop, &QAction::triggered, this, [this] { stopRunningDocument(); });
     run_button->setMenu(run_menu_);
     connect(run_button, &QToolButton::clicked, this, [this] { runCurrentDocument(); });
     tool_bar_->addWidget(run_button);
 
-    auto addRunAction = [this](const QString& text, const QString& tip) {
-        QAction* action = tool_bar_->addAction(text);
+    // A display control is a glyph with a tooltip, not a labelled button: the
+    // labelled row is the one that starts and saves things, and six words of
+    // second-tier text beside four icons is what made the old bar look crowded.
+    auto addDisplayAction = [this](icons::Glyph glyph, const QString& text,
+                                   const QString& tip) {
+        QAction* action = tool_bar_->addAction(icons::glyph(glyph), text);
         action->setToolTip(tip);
+        action->setStatusTip(tip);
+        if (QWidget* button = tool_bar_->widgetForAction(action)) {
+            if (auto* tool = qobject_cast<QToolButton*>(button)) {
+                tool->setToolButtonStyle(Qt::ToolButtonIconOnly);
+                // A glyph does not need the horizontal padding a word does; the
+                // sheet reads this property to tighten it.
+                tool->setProperty("compact", true);
+            }
+        }
+        return action;
+    };
+
+    // The transport controls are glyphs, not words. Play/pause/step/stop are the
+    // most universally understood icons in software, every one of them has a
+    // tooltip and a status-bar explanation, and the five words cost a quarter of
+    // the bar's width -- which the bar does not have, because the window's own
+    // minimum is 900 pixels wide.
+    auto addRunAction = [this](icons::Glyph glyph, const QString& text,
+                               const QString& tip) {
+        QAction* action = tool_bar_->addAction(icons::glyph(glyph), text);
+        action->setToolTip(tip);
+        action->setStatusTip(tip);
+        if (QWidget* button = tool_bar_->widgetForAction(action)) {
+            if (auto* tool = qobject_cast<QToolButton*>(button)) {
+                tool->setToolButtonStyle(Qt::ToolButtonIconOnly);
+                tool->setAccessibleName(text);
+                tool->setProperty("compact", true);
+            }
+        }
         return action;
     };
     // The debugging controls, live for every language. The line-loop languages
     // stop at a statement; Logo at a top-level statement, Smalltalk at a message
     // send and Forth at a token; Scheme through its own runner. Continue
     // resumes and Trace stops at the next boundary.
-    QAction* debug_action =
-        addRunAction(tr("\U0001F41B Debug"), tr("Run, stopping before any breakpoint"));
+    QAction* debug_action = addRunAction(icons::Glyph::Debug, tr("Debug"),
+                                         tr("Run, stopping before any breakpoint"));
     debug_action->setObjectName(QStringLiteral("debugAction"));
     connect(debug_action, &QAction::triggered, this, [this] { runCurrentDocument(); });
-    QAction* continue_action = addRunAction(
-        tr("\u25B6\uFE0F Continue"), tr("Resume from a pause to the next breakpoint"));
+    QAction* continue_action =
+        addRunAction(icons::Glyph::Continue, tr("Continue"),
+                     tr("Resume from a pause to the next breakpoint"));
     continue_action->setObjectName(QStringLiteral("continueAction"));
     connect(continue_action, &QAction::triggered, this, [this] {
         if (native_runner_ != nullptr && native_runner_->isPaused()) {
@@ -233,7 +275,7 @@ void MainWindow::buildToolBar() {
         setExecutionState(tr("ready"), tr("Nothing is paused"));
     });
     QAction* trace_action = addRunAction(
-        tr("\u2193 Trace"),
+        icons::Glyph::Trace, tr("Trace"),
         tr("Resume and stop at the next statement, message send or instruction"));
     trace_action->setObjectName(QStringLiteral("traceAction"));
     connect(trace_action, &QAction::triggered, this, [this] {
@@ -244,37 +286,48 @@ void MainWindow::buildToolBar() {
         setExecutionState(tr("ready"), tr("Nothing is paused"));
     });
     QAction* stop_action =
-        addRunAction(tr("\u23F9\uFE0F Stop"), tr("Stop the running program"));
+        addRunAction(icons::Glyph::Stop, tr("Stop"), tr("Stop the running program"));
     connect(stop_action, &QAction::triggered, this, [this] { stopRunningDocument(); });
-    QAction* snippets_action =
-        addRunAction(tr("\U0001F4CB Snippets"), tr("Insert a code snippet (Ctrl+Shift+I)"));
+    QAction* snippets_action = addRunAction(icons::Glyph::Snippets, tr("Snippets"),
+                                             tr("Insert a code snippet (Ctrl+Shift+I)"));
     connect(snippets_action, &QAction::triggered, this, [this] { insertSnippet(); });
 
-    QAction* clear_output = tool_bar_secondary_->addAction(tr("\U0001F9F9 Clear Output"));
-    clear_output->setToolTip(tr("Clear the output panel"));
+    // Everything past this point is a glyph: the spacer pushes the strip to the
+    // right edge, and the icon-only weight says these are the controls reached for
+    // between runs rather than to start one.
+    auto* spacer = new QWidget{tool_bar_};
+    spacer->setObjectName(QStringLiteral("toolBarSpacer"));
+    spacer->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Preferred);
+    tool_bar_->addWidget(spacer);
+    tool_bar_->addSeparator();
+
+    QAction* clear_output = addDisplayAction(icons::Glyph::ClearOutput,
+                                             tr("Clear Output"),
+                                             tr("Clear the output panel"));
     connect(clear_output, &QAction::triggered, this, [this] { clearOutput(); });
-    QAction* clear_canvas = tool_bar_secondary_->addAction(tr("\U0001F5BC Clear Canvas"));
-    clear_canvas->setToolTip(tr("Clear the graphics canvas"));
+    QAction* clear_canvas = addDisplayAction(icons::Glyph::ClearCanvas,
+                                             tr("Clear Canvas"),
+                                             tr("Clear the graphics canvas"));
     connect(clear_canvas, &QAction::triggered, this, [this] { clearCanvas(); });
 
-    tool_bar_secondary_->addSeparator();
     // The accessibility ladder: 100, 125, 150%. It scales the editor, the console
     // and the panels together -- a learner who needs bigger text needs all of it,
     // not one pane at a time -- and the chosen step is a setting.
-    QAction* font_scale = tool_bar_secondary_->addAction(tr("\u267F A+"));
+    QAction* font_scale = addDisplayAction(
+        icons::Glyph::TextScale, tr("Text Size"),
+        tr("Bigger text: 100%, 125%, 150% (Ctrl+Alt+A)"));
     font_scale->setObjectName(QStringLiteral("fontScaleAction"));
-    font_scale->setToolTip(tr("Bigger text: 100%, 125%, 150% (Ctrl+Alt+A)"));
     font_scale->setShortcut(timewarp::core::keySequence(Qt::CTRL | Qt::ALT, Qt::Key_A));
     connect(font_scale, &QAction::triggered, this, [this] { cycleFontScale(); });
 
-    tool_bar_secondary_->addSeparator();
+    tool_bar_->addSeparator();
     // Where the turtle-speed slider used to be. The slider was removed rather
     // than finished: nothing animates the display list, so it controlled an
     // ability the application does not have, and a disabled control that never
     // becomes enabled is clutter in a row a learner reads as the feature list.
-    QAction* preferences = tool_bar_secondary_->addAction(tr("\u2699\uFE0F Settings"));
+    QAction* preferences = addDisplayAction(icons::Glyph::Settings, tr("Settings"),
+                                            tr("Editor and application settings (Ctrl+,)"));
     preferences->setObjectName(QStringLiteral("preferencesAction"));
-    preferences->setToolTip(tr("Editor and application settings (Ctrl+,)"));
     connect(preferences, &QAction::triggered, this, [this] { showPreferences(); });
 }
 
@@ -290,7 +343,22 @@ void MainWindow::buildStatusBar() {
     // Permanent widgets are laid out from the right edge and are not covered by
     // transient messages -- which is the point: the language and cursor position
     // stay visible while a status message is showing.
-    language_badge_ = new QLabel{tr("\U0001F522 BASIC"), bar};
+    // Permanent widgets accumulate from the left of the permanent area, so this
+    // order is the reading order: the document's path, then the three chips that
+    // describe it and the run. The path comes first because it is the subject and
+    // the chips are its attributes.
+    //
+    // The path used to be a message-area widget, which was wrong in two ways: Qt
+    // paints a transient message over the message area and hides whatever is in it,
+    // so every status message hid the path -- and because the messages had no
+    // timeout, the path was never visible at all.
+    breadcrumb_ = new QLabel{QString{}, bar};
+    breadcrumb_->setObjectName(QStringLiteral("breadcrumb"));
+    // The path is elided when the bar is narrow, so the full path is on the tooltip.
+    breadcrumb_->setToolTip(tr("Current document"));
+    bar->addPermanentWidget(breadcrumb_);
+
+    language_badge_ = new QLabel{tr("BASIC"), bar};
     language_badge_->setObjectName(QStringLiteral("languageBadge"));
     bar->addPermanentWidget(language_badge_);
 
@@ -302,20 +370,6 @@ void MainWindow::buildStatusBar() {
     execution_badge_->setObjectName(QStringLiteral("executionBadge"));
     execution_badge_->setToolTip(tr("Current program execution state"));
     bar->addPermanentWidget(execution_badge_);
-
-    // The breadcrumb is the *first* permanent widget, so it sits to the left of
-    // the three badges and the message area is left free for messages.
-    //
-    // It used to be a message-area widget, and that was wrong in two ways: Qt paints
-    // a transient message over the message area and hides whatever is in it, so
-    // every status message hid the path -- and because the messages had no timeout,
-    // the path was never visible at all. A screenshot is what showed it, as messages
-    // printed on top of the path.
-    breadcrumb_ = new QLabel{QString{}, bar};
-    breadcrumb_->setObjectName(QStringLiteral("breadcrumb"));
-    // The path is elided when the bar is narrow, so the full path is on the tooltip.
-    breadcrumb_->setToolTip(tr("Current document"));
-    bar->addPermanentWidget(breadcrumb_);
 
     setExecutionState(tr("ready"), tr("Ready"));
 }
@@ -381,7 +435,7 @@ void MainWindow::buildDocks() {
                 }
             });
 
-    project_dock_ = new QDockWidget{tr("\U0001F5C2 Projects"), this};
+    project_dock_ = new QDockWidget{tr("Projects"), this};
     project_dock_->setObjectName(QStringLiteral("projectDock"));
     project_dock_->setWidget(project_panel_);
     project_dock_->setAllowedAreas(Qt::LeftDockWidgetArea | Qt::RightDockWidgetArea);
@@ -400,7 +454,7 @@ void MainWindow::buildDocks() {
         }
     });
 
-    outline_dock_ = new QDockWidget{tr("\U0001F4CB Document Outline"), this};
+    outline_dock_ = new QDockWidget{tr("Document Outline"), this};
     outline_dock_->setObjectName(QStringLiteral("documentOutlineDock"));
     outline_dock_->setWidget(outline_panel_);
     // Deliberately not `setAllowedAreas(AllDockWidgetAreas)`: a dock that can be

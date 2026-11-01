@@ -478,6 +478,7 @@ measuring the wrong machine.
 | 26.1.0 ✓ | The HB-2 becomes a machine you can use: a window with the screen, the prompt, the monitor and a listing page; text through a ROM font on every video mode; HB DOS 2.0 with directories and a sector map; eight processes on a desktop; a monitor; the module bay; the prompt; PCM playback; and the Studio is Linux only, with no installer for any other system |
 | 27.0.0 ✓ | The HB-2's own gaps close: nine of the engines run on its bus through a ROM socket (`SYS` calls HB-16, `POKE` writes video memory, `STICK` reads the machine's joystick), a cassette with `INT 20`–`23`, the joystick fed from the IDE's gamepad, the module bay's fourth kind (a package of processes booted onto a running machine), and the assembler no longer able to turn a two-`ORG` listing into a four-gigabyte allocation |
 | 28.0.0 ✓ | The machines are removed: the HB-1, the HB-2 and the CHIP-8, with the language that ran on it, its windows, its manuals, its examples, its suites and its gates. The IDE and the ten languages are what remains, and every remaining gate still passes — 442 parity programs, 532 command rows, 67 example programs |
+| 28.1.0 ✓ | A renewed interface: drawn icons in place of emoji labels, one toolbar row, and a design-token layer under the stylesheet so all 35 themes get the same chrome |
 
 Smaller items belong in one of those releases rather than a release of their own:
 Snap and an arm64 AppImage, and the distribution work described under

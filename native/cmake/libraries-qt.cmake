@@ -487,6 +487,7 @@ if(TIME_WARP_QT_FOUND)
         # session restore and eleven docks are not part of opening a game, and
         # until 18.0 the only way to ship a program was to ship all of it.
         add_library(timewarp_ui_core
+            src/ui/design.cpp
             src/ui/language.cpp
             src/ui/native_runner.cpp
             src/ui/sound_player.cpp
@@ -497,6 +498,7 @@ if(TIME_WARP_QT_FOUND)
             src/ui/turtle_canvas_raster.cpp
             src/ui/turtle_canvas_view.cpp
             src/ui/ui_style.cpp
+            include/timewarp/ui/design.hpp
             include/timewarp/ui/language.hpp
             include/timewarp/ui/native_runner.hpp
             include/timewarp/ui/sound_player.hpp
@@ -556,6 +558,7 @@ if(TIME_WARP_QT_FOUND)
             src/ui/formatter.cpp
             src/ui/gif_encoder.cpp
             src/ui/help_browser.cpp
+            src/ui/icons.cpp
             src/ui/lint.cpp
             src/ui/main_window_construction.cpp
             src/ui/main_window_menus.cpp
@@ -602,6 +605,7 @@ if(TIME_WARP_QT_FOUND)
             include/timewarp/ui/find_bar.hpp
             include/timewarp/ui/find_in_files.hpp
             include/timewarp/ui/help_browser.hpp
+            include/timewarp/ui/icons.hpp
             include/timewarp/ui/gallery.hpp
             include/timewarp/ui/notebook.hpp
             include/timewarp/ui/notebook_window.hpp

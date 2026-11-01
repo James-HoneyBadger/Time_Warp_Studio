@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: MIT
 
+#include "timewarp/ui/design.hpp"
 #include "timewarp/ui/version_history.hpp"
 
 #include "timewarp/ui/diff.hpp"
@@ -48,12 +49,14 @@ VersionHistoryDialog::VersionHistoryDialog(const AutosaveStore& store, QString d
     }
 
     preview_ = new QPlainTextEdit{this};
+    preview_->setFont(design::monoFont());
     preview_->setObjectName(QStringLiteral("versionHistoryPreview"));
     preview_->setReadOnly(true);
     preview_->setLineWrapMode(QPlainTextEdit::NoWrap);
     preview_->setAccessibleName(tr("Saved copy"));
 
     diff_ = new QPlainTextEdit{this};
+    diff_->setFont(design::monoFont());
     diff_->setObjectName(QStringLiteral("versionHistoryDiff"));
     diff_->setReadOnly(true);
     diff_->setLineWrapMode(QPlainTextEdit::NoWrap);

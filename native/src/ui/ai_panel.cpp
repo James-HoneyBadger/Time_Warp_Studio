@@ -9,6 +9,7 @@
 #include <QCheckBox>
 #include <QClipboard>
 #include <QGuiApplication>
+#include <QGridLayout>
 #include <QHBoxLayout>
 #include <QLabel>
 #include <QPlainTextEdit>
@@ -70,20 +71,24 @@ void AiPanel::buildUi() {
     connect(configure_, &QPushButton::clicked, this, &AiPanel::configureRequested);
     layout->addWidget(configure_);
 
-    auto* context_row = new QHBoxLayout{};
-    context_row->setSpacing(6);
     include_document_ = new QCheckBox{tr("Send the program"), this};
     include_document_->setObjectName(QStringLiteral("aiSendDocumentBox"));
     include_document_->setToolTip(
         tr("Include the current document, or the selected lines, with each question. "
            "Unticked, only your words are sent."));
-    context_row->addWidget(include_document_);
+    layout->addWidget(include_document_);
     context_hint_ = new QLabel{this};
     include_document_->setAccessibleName(tr("Send the program with the question"));
     context_hint_->setObjectName(QStringLiteral("aiContextHint"));
     context_hint_->setWordWrap(true);
-    context_row->addWidget(context_hint_, 1);
-    layout->addLayout(context_row);
+    // Ignored horizontally: a wrapped label still reports the width of its longest
+    // word run as a minimum, which drew it on top of the check box beside it.
+    // Under the box rather than beside it: in a dock the note beside a check box
+    // is two wrapped lines in a 140-pixel column, which reads as a caption that has
+    // fallen off its control.
+    context_hint_->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Preferred);
+    context_hint_->setMinimumWidth(0);
+    layout->addWidget(context_hint_);
     connect(include_document_, &QCheckBox::toggled, this, [this](bool on) {
         context_hint_->setText(on ? tr("the current program is sent with each question")
                                   : tr("only your words are sent"));
@@ -105,17 +110,25 @@ void AiPanel::buildUi() {
     question_->setFixedHeight(kQuestionHeight);
     layout->addWidget(question_);
 
-    auto* tasks = new QHBoxLayout{};
+    // Two rows of three rather than five across: a dock is not wide enough for five
+    // labelled buttons, and the ones that did not fit were clipped on both edges --
+    // "Translate" was drawn as "ranslat".
+    auto* tasks = new QGridLayout{};
     tasks->setSpacing(4);
-    const auto add_task = [this, tasks](const QString& text, const QString& name,
-                                        const QString& tip, Task task) {
+    tasks->setContentsMargins(0, 0, 0, 0);
+    int task_slot = 0;
+    const auto add_task = [this, tasks, &task_slot](const QString& text,
+                                                    const QString& name,
+                                                    const QString& tip, Task task) {
         auto* button = new QPushButton{text, this};
         button->setObjectName(name);
         button->setToolTip(tip);
+        button->setStatusTip(tip);
         connect(button, &QPushButton::clicked, this, [this, task] {
             ask(task, question_->toPlainText());
         });
-        tasks->addWidget(button);
+        tasks->addWidget(button, task_slot / 3, task_slot % 3);
+        ++task_slot;
         task_buttons_.append(button);
         return button;
     };
@@ -132,10 +145,14 @@ void AiPanel::buildUi() {
     add_task(tr("Write"), QStringLiteral("aiWriteButton"),
              tr("Type what the program should do in the box above, then press this"),
              Task::Write);
+    for (int column = 0; column < 3; ++column) {
+        tasks->setColumnStretch(column, 1);
+    }
     layout->addLayout(tasks);
 
-    auto* actions = new QHBoxLayout{};
+    auto* actions = new QGridLayout{};
     actions->setSpacing(4);
+    actions->setContentsMargins(0, 0, 0, 0);
     send_ = new QPushButton{tr("Send"), this};
     send_->setObjectName(QStringLiteral("aiSendButton"));
     send_->setToolTip(tr("Send the question with the program in view (Ctrl+Enter)"));
@@ -154,8 +171,13 @@ void AiPanel::buildUi() {
     auto* settings = new QPushButton{tr("Settings…"), this};
     settings->setObjectName(QStringLiteral("aiSettingsButton"));
     settings->setToolTip(tr("The endpoint, the model and the key"));
+    int action_slot = 0;
     for (QPushButton* button : {send_, stop_, clear_, insert_, copy_, settings}) {
-        actions->addWidget(button);
+        actions->addWidget(button, action_slot / 3, action_slot % 3);
+        ++action_slot;
+    }
+    for (int column = 0; column < 3; ++column) {
+        actions->setColumnStretch(column, 1);
     }
     layout->addLayout(actions);
 
@@ -336,7 +358,7 @@ void AiPanel::restoreConversation() {
         }
         renderTurn(mine ? tr("You") : tr("Assistant"), shown);
     }
-    status_->setText(tr("\U0001F4BE %1 earlier turn(s) restored").arg(stored.size()));
+    status_->setText(tr("\u2139\ufe0f %1 earlier turn(s) restored").arg(stored.size()));
 }
 
 void AiPanel::storeConversation() const {

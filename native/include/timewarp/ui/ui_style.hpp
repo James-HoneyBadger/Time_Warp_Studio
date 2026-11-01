@@ -1,50 +1,55 @@
 // SPDX-License-Identifier: MIT
 //
-// The main window's stylesheet, in one place.
+// The window's stylesheet.
 //
-// Translated from the six scattered `setStyleSheet()` calls in the removed
-// PySide6 implementation's `main_window.py`.
+// One sheet, composed from `design::Tokens`, applied once per theme change. It
+// reads no `palette(...)` roles: a palette can say what colour body text is, but
+// it cannot say that a toolbar is the window lifted six percent, that a hover is
+// a wash of the accent at 14% alpha, or that a dock title is the muted rank at
+// eleven pixels. Those relationships are the interface, so they are derived in
+// `design::tokens()` and written here as literal values.
 //
-// Two deliberate changes from that implementation:
+// #### What is deliberately *not* styled
 //
-//  1. **One sheet, applied once, to the window.** Qt copies a widget's
-//     stylesheet to its children and re-polishes all of them on every
-//     `setStyleSheet()` call; six calls means six full re-polish passes over a
-//     window with hundreds of widgets. Composing the sections and setting the
-//     result once removes that, and gives a theme manager a single string to
-//     replace.
+// Icons are not drawn from a stylesheet: Qt has no way to recolour an image in
+// QSS, and an `image: url(...)` per theme per state is thirty-five themes times
+// three states of a PNG set. They come from `icons::glyph()`, whose icon engine
+// asks the palette at paint time -- see `icons.cpp`. Check marks, radio dots and
+// spin arrows stay native for the same reason: a custom `::indicator` without an
+// image is an invisible control, and an image per theme is a set of files to keep
+// in step. What those controls get instead is a frame and spacing that match the
+// rest, so the native marks sit inside the design rather than beside it.
 //
-//  2. **Scoped by object name.** The Python writes bare `QTabWidget { ... }`,
-//     which cascades to *every* descendant tab widget -- including
-//     `output_sub_tabs`, nested inside a page of the widget being styled. The
-//     author had to notice this and add a compensating padding override.
-//     Naming the widgets instead makes the cascade intentional rather than
-//     accidental, so a tab widget added later cannot silently inherit editor
-//     chrome.
+// #### Scoping
 //
-// Colour roles are written with Qt's `palette(...)` function, so the sheet
-// follows the active palette and the existing theme system keeps working.
+// Sections that apply to the whole window are unscoped on purpose -- every tab
+// bar should match, including the output sub-tabs. Where one widget needs to
+// differ, it is named: `#editorTabs`, `#outputSubTabs`, `#runButton`.
 
 #pragma once
+
+#include "timewarp/ui/design.hpp"
 
 #include <QString>
 
 namespace timewarp::ui::style {
 
-/// Every section, joined. What `MainWindow` installs.
-[[nodiscard]] QString window();
+/// The whole sheet for a set of tokens. What `MainWindow` installs.
+[[nodiscard]] QString sheet(const design::Tokens& tokens);
 
-// -- sections, exposed so a theme manager can compose or replace them -------
+// -- sections, exposed so a caller can compose or replace one ----------------
 
-[[nodiscard]] QString windowBackground();
-[[nodiscard]] QString tabBar();
-[[nodiscard]] QString tabPane();
-[[nodiscard]] QString splitter();
-[[nodiscard]] QString pushButtons();
-[[nodiscard]] QString toolbar();
-[[nodiscard]] QString statusBar();
-[[nodiscard]] QString statusBadges();
-[[nodiscard]] QString outputSubTabs();
-[[nodiscard]] QString functionKeyBar();
+[[nodiscard]] QString base(const design::Tokens& tokens);
+[[nodiscard]] QString menus(const design::Tokens& tokens);
+[[nodiscard]] QString toolbars(const design::Tokens& tokens);
+[[nodiscard]] QString tabs(const design::Tokens& tokens);
+[[nodiscard]] QString panes(const design::Tokens& tokens);
+[[nodiscard]] QString buttons(const design::Tokens& tokens);
+[[nodiscard]] QString fields(const design::Tokens& tokens);
+[[nodiscard]] QString views(const design::Tokens& tokens);
+[[nodiscard]] QString panels(const design::Tokens& tokens);
+[[nodiscard]] QString scrollBars(const design::Tokens& tokens);
+[[nodiscard]] QString statusBar(const design::Tokens& tokens);
+[[nodiscard]] QString functionKeyBar(const design::Tokens& tokens);
 
 }  // namespace timewarp::ui::style

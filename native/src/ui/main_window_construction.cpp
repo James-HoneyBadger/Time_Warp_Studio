@@ -3,6 +3,8 @@
 #include "main_window_internal.hpp"
 
 #include "timewarp/ui/command_reference.hpp"
+#include "timewarp/ui/icons.hpp"
+#include "timewarp/ui/design.hpp"
 #include "timewarp/ui/main_window.hpp"
 
 #include "timewarp/lang/executor.hpp"
@@ -87,7 +89,7 @@ using namespace detail;
 
 MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent) {
     setObjectName(QStringLiteral("mainWindow"));
-    setWindowTitle(tr("\U0001F3A8 Time Warp Studio v%1").arg(TIME_WARP_VERSION));
+    setWindowTitle(tr("Time Warp Studio v%1").arg(TIME_WARP_VERSION));
     setMinimumSize(kMinimumWindowWidth, kMinimumWindowHeight);
     // Before the widget tree: the first document is created while the UI is being
     // built, and it has to be born with the user's font and tab width rather than
@@ -504,22 +506,25 @@ void MainWindow::buildRightColumn(QSplitter* parent) {
     // and their size hints must not pin the window's minimum.
 
     buildOutputColumn();
-    right_tabs_->addTab(output_canvas_splitter_,
-                        tr("\U0001F4DD Output  \U0001F3A8 Graphics"));
+    right_tabs_->addTab(output_canvas_splitter_, icons::glyph(icons::Glyph::Console),
+                        tr("Output"));
 
     variables_panel_ = new VariablesPanel{right_tabs_};
-    right_tabs_->addTab(variables_panel_, tr("\U0001F50D Variables"));
+    right_tabs_->addTab(variables_panel_, icons::glyph(icons::Glyph::Variables),
+                        tr("Variables"));
 
     telemetry_panel_ = new TelemetryPanel{right_tabs_};
-    right_tabs_->addTab(telemetry_panel_, tr("\u26A1 Telemetry HUD"));
+    right_tabs_->addTab(telemetry_panel_, icons::glyph(icons::Glyph::Telemetry),
+                        tr("Telemetry"));
 
     debug_panel_ = new DebugPanel{right_tabs_};
-    right_tabs_->addTab(debug_panel_, tr("\U0001F41B Debug"));
+    right_tabs_->addTab(debug_panel_, icons::glyph(icons::Glyph::Debug), tr("Debug"));
     connectDebugPanel();
     // The lesson panel is a real page rather than a placeholder: a learner is not
     // going to open a terminal instead.
     lesson_panel_ = new LessonPanel{right_tabs_};
-    right_tabs_->addTab(lesson_panel_, tr("\U0001F393 Lessons"));
+    right_tabs_->addTab(lesson_panel_, icons::glyph(icons::Glyph::Lessons),
+                        tr("Lessons"));
     connect(lesson_panel_, &LessonPanel::curriculumNeeded, this,
             &MainWindow::requestLessonCurriculum);
     connect(lesson_panel_, &LessonPanel::progressNeeded, this,
@@ -554,7 +559,8 @@ void MainWindow::buildRightColumn(QSplitter* parent) {
     // says so, because a class list is a file a teacher makes, not a setting the
     // program guesses at.
     classroom_panel_ = new ClassroomPanel{right_tabs_};
-    right_tabs_->addTab(classroom_panel_, tr("\U0001F3EB Classroom"));
+    right_tabs_->addTab(classroom_panel_, icons::glyph(icons::Glyph::Classroom),
+                        tr("Classroom"));
     buildSqlPanel();
     buildCommandReference();
 #ifdef TIME_WARP_HAVE_AI
@@ -626,21 +632,23 @@ void MainWindow::buildOutputColumn() {
     console_view_ = new QPlainTextEdit{output_sub_tabs_};
     console_view_->setObjectName(QStringLiteral("consoleOutput"));
     console_view_->setReadOnly(true);
-    console_view_->setFont(QFont{QStringLiteral("Courier New"), 10});
+    console_view_->setFont(design::monoFont(10));
     console_view_->setAccessibleName(tr("Program Output"));
     console_view_->setPlaceholderText(tr("Program output appears here\u2026"));
     // Wrapping is off: a program that prints a table should keep its columns,
     // and a horizontal scroll bar is a better answer than quietly reflowing it.
     console_view_->setLineWrapMode(QPlainTextEdit::NoWrap);
-    output_sub_tabs_->addTab(console_view_, tr("\U0001F4DD Console"));
+    output_sub_tabs_->addTab(console_view_, icons::glyph(icons::Glyph::Console),
+                             tr("Console"));
 
     errors_view_ = new QPlainTextEdit{output_sub_tabs_};
     errors_view_->setObjectName(QStringLiteral("errorsLog"));
     errors_view_->setReadOnly(true);
-    errors_view_->setFont(QFont{QStringLiteral("Courier New"), 10});
+    errors_view_->setFont(design::monoFont(10));
     errors_view_->setAccessibleName(tr("Error Log"));
     errors_view_->setPlaceholderText(tr("Errors and warnings appear here\u2026"));
-    output_sub_tabs_->addTab(errors_view_, tr("\u274C Errors"));
+    output_sub_tabs_->addTab(errors_view_, icons::glyph(icons::Glyph::Close),
+                             tr("Errors"));
     // A click on a line that names a source line goes there, in either view.
     console_view_->viewport()->installEventFilter(this);
     errors_view_->viewport()->installEventFilter(this);
@@ -650,7 +658,7 @@ void MainWindow::buildOutputColumn() {
     // reader is looking for.
     console_filter_ = new QToolButton{output_sub_tabs_};
     console_filter_->setObjectName(QStringLiteral("consoleErrorFilter"));
-    console_filter_->setText(tr("\u26A0\uFE0F Errors only"));
+    console_filter_->setText(tr("Errors only"));
     console_filter_->setCheckable(true);
     console_filter_->setToolTip(tr("Show only the lines that report a failure. Every "
                                    "line comes back when this is switched off."));
@@ -661,7 +669,8 @@ void MainWindow::buildOutputColumn() {
 
     auto* turtle_log = new TurtleCommandLog{output_sub_tabs_};
     turtle_log_ = turtle_log;
-    output_sub_tabs_->addTab(turtle_log, tr("\U0001F422 Turtle Log"));
+    output_sub_tabs_->addTab(turtle_log, icons::glyph(icons::Glyph::Graphics),
+                             tr("Turtle Log"));
 
     // The terminal tab is added by `refreshTerminalTab()`, which the constructor
     // and the Preferences checkbox drive: a build where nobody asked for a shell

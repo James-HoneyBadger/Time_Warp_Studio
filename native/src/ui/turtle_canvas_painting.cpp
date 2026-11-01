@@ -3,6 +3,7 @@
 // The painter: what the widget draws for the display list, the grid, the turtle marker,
 // and the two exports.
 
+#include "timewarp/ui/design.hpp"
 #include "timewarp/ui/turtle_canvas.hpp"
 
 #include "turtle_canvas_internal.hpp"
@@ -181,7 +182,12 @@ void TurtleCanvas::paintGrid(QPainter& painter) {
     const QPointF bottom_right =
         toWorld(QPointF{static_cast<double>(width()), static_cast<double>(height())});
 
-    QPen minor{QColor{228, 228, 232}};
+    // The grid is derived from the paper rather than fixed: a theme whose canvas
+    // is amber or near-black used to get a pale-grey grid across it, which is
+    // the one place a hard-coded colour is unmistakable.
+    const bool light_paper = background_.lightness() > 128;
+    const QColor contrast = light_paper ? QColor{0, 0, 0} : QColor{255, 255, 255};
+    QPen minor{design::blend(background_, contrast, 0.07)};
     minor.setCosmetic(true);
     minor.setWidthF(1.0);
     painter.setPen(minor);
@@ -201,7 +207,7 @@ void TurtleCanvas::paintGrid(QPainter& painter) {
                          QPointF{static_cast<double>(width()), left.y()});
     }
 
-    QPen axes{QColor{148, 148, 156}};
+    QPen axes{design::blend(background_, contrast, 0.22)};
     axes.setCosmetic(true);
     axes.setWidthF(1.0);
     painter.setPen(axes);

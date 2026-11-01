@@ -1,11 +1,13 @@
 // SPDX-License-Identifier: MIT
 
+#include "timewarp/ui/icons.hpp"
 #include "timewarp/ui/panels.hpp"
 #include "timewarp/core/qt_names.hpp"
 
 #include <cmath>
 
 #include <QComboBox>
+#include <QGridLayout>
 #include <QHBoxLayout>
 #include <QHeaderView>
 #include <QLabel>
@@ -183,20 +185,41 @@ DebugPanel::DebugPanel(QWidget* parent) : QFrame(parent) {
     reason_->setWordWrap(true);
     layout->addWidget(reason_);
 
-    auto* transport = new QHBoxLayout;
+    // Icon buttons, two rows of three. Six labelled buttons do not fit the width
+    // of a dock, and the ones that did not fit were clipped on both sides, so
+    // "Continue" was drawn as "ntin" -- which is worse than a glyph with a tooltip.
+    auto* transport = new QGridLayout;
     transport->setSpacing(4);
-    const auto button = [transport](const QString& text, const QString& name) {
-        auto* item = new QPushButton{text};
+    transport->setContentsMargins(0, 0, 0, 0);
+    int slot = 0;
+    const auto button = [transport, &slot](icons::Glyph glyph, const QString& text,
+                                           const QString& name, const QString& tip) {
+        auto* item = new QPushButton;
         item->setObjectName(name);
-        transport->addWidget(item);
+        item->setIcon(icons::glyph(glyph));
+        item->setToolTip(tip);
+        item->setStatusTip(tip);
+        item->setAccessibleName(text);
+        transport->addWidget(item, slot / 3, slot % 3);
+        ++slot;
         return item;
     };
-    continue_ = button(tr("Continue"), QStringLiteral("debugContinue"));
-    pause_ = button(tr("Pause"), QStringLiteral("debugPause"));
-    step_into_ = button(tr("Step In"), QStringLiteral("debugStepInto"));
-    step_over_ = button(tr("Step Over"), QStringLiteral("debugStepOver"));
-    step_out_ = button(tr("Step Out"), QStringLiteral("debugStepOut"));
-    stop_ = button(tr("Stop"), QStringLiteral("debugStop"));
+    continue_ = button(icons::Glyph::Continue, tr("Continue"),
+                       QStringLiteral("debugContinue"),
+                       tr("Continue to the next breakpoint"));
+    pause_ = button(icons::Glyph::Pause, tr("Pause"), QStringLiteral("debugPause"),
+                    tr("Pause at the next statement"));
+    step_into_ = button(icons::Glyph::Step, tr("Step In"), QStringLiteral("debugStepInto"),
+                        tr("Step into the next call"));
+    step_over_ = button(icons::Glyph::Trace, tr("Step Over"), QStringLiteral("debugStepOver"),
+                        tr("Step over the next call"));
+    step_out_ = button(icons::Glyph::Continue, tr("Step Out"),
+                       QStringLiteral("debugStepOut"), tr("Run out of this call"));
+    stop_ = button(icons::Glyph::Stop, tr("Stop"), QStringLiteral("debugStop"),
+                   tr("Stop the run"));
+    for (int column = 0; column < 3; ++column) {
+        transport->setColumnStretch(column, 1);
+    }
     layout->addLayout(transport);
 
     connect(continue_, &QPushButton::clicked, this, &DebugPanel::continueRequested);
@@ -789,7 +812,7 @@ TurtleCommandLog::TurtleCommandLog(QWidget* parent) : QPlainTextEdit(parent) {
     setAccessibleName(tr("Turtle Command Log"));
     setReadOnly(true);
     setFont(QFont{QStringLiteral("Courier New"), 10});
-    setPlaceholderText(tr("Turtle \U0001F422 commands appear here\u2026"));
+    setPlaceholderText(tr("Turtle commands appear here\u2026"));
     // A command is one line and its arguments are its columns, so wrapping would
     // turn one command into two and break the alignment that makes the log
     // scannable.

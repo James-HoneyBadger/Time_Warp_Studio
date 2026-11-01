@@ -119,7 +119,7 @@ void test_window_frame_properties() {
     MainWindow window;
 
     TW_CHECK_EQ(window.minimumSize(), QSize(900, 600));
-    TW_CHECK(window.windowTitle().startsWith(QStringLiteral("\U0001F3A8 Time Warp Studio v")));
+    TW_CHECK(window.windowTitle().startsWith(QStringLiteral("Time Warp Studio v")));
     TW_CHECK_EQ(window.objectName(), QStringLiteral("mainWindow"));
     // One stylesheet, scoped by object name, so it must be present.
     TW_CHECK(!window.styleSheet().isEmpty());
@@ -247,15 +247,11 @@ void test_right_column_tabs_and_order() {
     // Order is part of the interface: users reach for Output first, the classroom
     // page is late because only a teacher opens it, and the assistant is last
     // because it is the one page that needs something outside this machine.
-    QString expected =
-        QStringLiteral("\U0001F4DD Output  \U0001F3A8 Graphics|"
-                       "\U0001F50D Variables|\u26A1 Telemetry HUD|"
-                       "\U0001F41B Debug|\U0001F393 Lessons|"
-                       "\U0001F3EB Classroom|\U0001F5C4 Database|"
-                       "\U0001F4D6 Reference");
+    QString expected = QStringLiteral("Output|Variables|Telemetry|Debug|Lessons|"
+                                      "Classroom|Database|Reference");
 #ifdef TIME_WARP_HAVE_AI
     // The assistant is last, and only where Qt has a transport to put behind it.
-    expected += QStringLiteral("|\U0001F916 Assistant");
+    expected += QStringLiteral("|Assistant");
 #endif
     TW_CHECK_EQ(tabTitles(tabs).toStdString(),
                 expected.toStdString());
@@ -306,7 +302,7 @@ void test_output_sub_tabs() {
     TW_CHECK(tabs->documentMode());
     TW_CHECK_EQ(tabs->count(), 3);
     TW_CHECK_EQ(tabTitles(tabs).toStdString(),
-                std::string{"\U0001F4DD Console|\u274C Errors|\U0001F422 Turtle Log"});
+                std::string{"Console|Errors|Turtle Log"});
 
     // The error and turtle logs are plain text edits with the fixed-width font
     // the Python sets, so log columns line up.
@@ -318,7 +314,8 @@ void test_output_sub_tabs() {
         // `errors->font().family()` would hand back a reference into a temporary
         // that dies at the end of the statement.
         const QFont logFont = errors->font();
-        TW_CHECK_EQ(logFont.family(), QStringLiteral("Courier New"));
+        TW_CHECK(logFont.families().contains(QStringLiteral("JetBrains Mono")));
+        TW_CHECK_EQ(logFont.styleHint(), QFont::Monospace);
     }
     TW_CHECK(tabs->findChild<QPlainTextEdit*>(QStringLiteral("turtleLog")) != nullptr);
 
@@ -328,8 +325,7 @@ void test_output_sub_tabs() {
     window.setTerminalEnabled(true);
     TW_CHECK_EQ(tabs->count(), 4);
     TW_CHECK_EQ(tabTitles(tabs).toStdString(),
-                std::string{"\U0001F4DD Console|\u274C Errors|\U0001F422 Turtle Log|"
-                            "\U0001F4BB Terminal"});
+                std::string{"Console|Errors|Turtle Log|Terminal"});
     // Presentation mode is a room, not a workspace: the tab goes and comes back.
     window.setPresentationMode(true);
     TW_CHECK_EQ(tabs->count(), 3);

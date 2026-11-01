@@ -456,8 +456,9 @@ datasheet's precision with a hobbyist's patience. Concretely:
   shape, say so in one sentence, or mark the passage `<!-- history -->` …
   `<!-- /history -->` so the claims gate stops checking it as current fact.
 - **Second person for procedures only.** "Press `F9`" in a procedure; nowhere else.
-- **Em dashes sparingly, colon or full stop otherwise.** Emoji only where they are
-  part of a control's name (the 🐞 Debug tab), never as decoration.
+- **Em dashes sparingly, colon or full stop otherwise.** No emoji in prose, and
+  none in a control's label either: interface icons are drawn by `icons::glyph()`,
+  so a label carries words and the icon carries the picture.
 - **No whimsy in the manuals.** A joke in a guide costs a reader a second look at a
   sentence that was supposed to be a fact. The product's name is the one piece of
   character the text carries; the rest earns its place by being accurate.

@@ -4,6 +4,7 @@
 
 
 #include <QComboBox>
+#include <QGridLayout>
 #include <QHBoxLayout>
 #include <QLabel>
 #include <QListWidget>
@@ -55,8 +56,12 @@ LessonPanel::LessonPanel(QWidget* parent) : QFrame(parent) {
     checkpoints_->setMaximumHeight(96);
     layout->addWidget(checkpoints_);
 
-    auto* actions = new QHBoxLayout{};
+    // Six buttons do not fit across a 340px dock -- they were being clipped on
+    // both edges, so "Open" read as "per" -- so they are two rows of three, which
+    // also groups them: act on the checkpoint, ask for help, start again.
+    auto* actions = new QGridLayout{};
     actions->setSpacing(4);
+    actions->setContentsMargins(0, 0, 0, 0);
     open_ = new QPushButton{tr("Open"), this};
     open_->setObjectName(QStringLiteral("lessonOpenButton"));
     open_->setToolTip(tr("Put this checkpoint's starting program in a document"));
@@ -73,8 +78,13 @@ LessonPanel::LessonPanel(QWidget* parent) : QFrame(parent) {
     solution_->setToolTip(tr("Show the worked answer. Try a hint first."));
     reset_ = new QPushButton{tr("Restart"), this};
     reset_->setObjectName(QStringLiteral("lessonResetButton"));
+    int slot = 0;
     for (QPushButton* button : {open_, check_, hand_in_, hint_, solution_, reset_}) {
-        actions->addWidget(button);
+        actions->addWidget(button, slot / 3, slot % 3);
+        ++slot;
+    }
+    for (int column = 0; column < 3; ++column) {
+        actions->setColumnStretch(column, 1);
     }
     layout->addLayout(actions);
 

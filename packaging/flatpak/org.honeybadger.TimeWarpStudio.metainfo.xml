@@ -66,6 +66,14 @@
   </keywords>
 
   <releases>
+    <release version="28.1.0" date="2026-11-01">
+      <description>
+        <p>A renewed interface. The chrome is one row, its icons are drawn rather
+        than borrowed from an emoji font, and the stylesheet is built from design
+        tokens derived from the active theme — so all thirty-five themes, the retro
+        sets included, get the same coherent toolbar, tabs, docks and menus.</p>
+      </description>
+    </release>
     <release version="28.0.0" date="2026-11-01">
       <description>
         <p>The IDE and the languages, and nothing else. The three emulated machines

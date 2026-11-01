@@ -2,6 +2,7 @@
 
 #include "timewarp/ui/terminal_widget.hpp"
 
+#include "timewarp/ui/design.hpp"
 #include "timewarp/ui/pty_session.hpp"
 
 #include <QDir>
@@ -51,7 +52,7 @@ TerminalWidget::TerminalWidget(QString working_directory, QWidget* parent)
     output_view_ = new QPlainTextEdit{this};
     output_view_->setObjectName(QStringLiteral("terminalOutput"));
     output_view_->setReadOnly(true);
-    output_view_->setFont(QFont{QStringLiteral("Courier New"), 10});
+    output_view_->setFont(design::monoFont(10));
     output_view_->setLineWrapMode(QPlainTextEdit::NoWrap);
     output_view_->setAccessibleName(tr("Terminal Output"));
     output_view_->setPlaceholderText(
@@ -60,7 +61,7 @@ TerminalWidget::TerminalWidget(QString working_directory, QWidget* parent)
 
     input_ = new QLineEdit{this};
     input_->setObjectName(QStringLiteral("terminalInput"));
-    input_->setFont(QFont{QStringLiteral("Courier New"), 10});
+    input_->setFont(design::monoFont(10));
     input_->setAccessibleName(tr("Terminal Command"));
     input_->setPlaceholderText(tr("Type a command and press Enter"));
     connect(input_, &QLineEdit::returnPressed, this, &TerminalWidget::submitInput);
@@ -71,7 +72,7 @@ TerminalWidget::TerminalWidget(QString working_directory, QWidget* parent)
 
     auto* input_row = new QHBoxLayout;
     auto* prompt = new QLabel{QStringLiteral(">"), this};
-    prompt->setFont(QFont{QStringLiteral("Courier New"), 10});
+    prompt->setFont(design::monoFont(10));
     input_row->addWidget(prompt);
     input_row->addWidget(input_, 1);
 

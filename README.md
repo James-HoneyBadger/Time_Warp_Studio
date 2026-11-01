@@ -6,7 +6,7 @@ one editor, one debugger and a live turtle canvas.
 [![Languages](https://img.shields.io/badge/languages-10-blue)](#ten-interpreters-one-per-era)
 [![Platform](https://img.shields.io/badge/platform-Linux-green)](docs/INSTALLATION.md)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/Version-28.0.0-orange)](https://github.com/James-HoneyBadger/Time_Warp_Studio)
+[![Version](https://img.shields.io/badge/Version-28.1.0-orange)](https://github.com/James-HoneyBadger/Time_Warp_Studio)
 
 Time Warp Studio is a C++20 / Qt 6 application for Linux. Ten interpreters are linked
 into it as libraries: BASIC, APL, Logo, PILOT, FOCAL, Forth, Scheme, COMAL, REXX and

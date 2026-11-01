@@ -48,7 +48,7 @@ void test_lesson_panel_contract() {
     TW_CHECK(panel->minimumSizeHint().width() >= LessonPanel::kMinimumWidth);
 
     TW_CHECK(window->rightTabs()->widget(4) == panel);
-    TW_CHECK_EQ(window->rightTabs()->tabText(4), QString::fromUtf8("\U0001F393 Lessons"));
+    TW_CHECK_EQ(window->rightTabs()->tabText(4), QStringLiteral("Lessons"));
 }
 
 // Opening the Lessons tab loads the curriculum *in process*. This is the test
@@ -155,7 +155,7 @@ void test_classroom_panel_contract() {
 
     TW_CHECK_EQ(panel->objectName(), QStringLiteral("classroomPanel"));
     TW_CHECK(window->rightTabs()->widget(5) == panel);
-    TW_CHECK_EQ(window->rightTabs()->tabText(5), QString::fromUtf8("\U0001F3EB Classroom"));
+    TW_CHECK_EQ(window->rightTabs()->tabText(5), QStringLiteral("Classroom"));
 
     // No class list is the state a fresh installation is in, and it has to say so
     // rather than show an empty table that looks like a class of nobody.
@@ -925,8 +925,7 @@ void test_assistant_panel_contract() {
     // The reference page sits between Database and the assistant, so the assistant
     // is the ninth page and the reference is the eighth.
     TW_CHECK(window.rightTabs()->widget(8) == panel);
-    TW_CHECK_EQ(window.rightTabs()->tabText(8),
-                QString::fromUtf8("\U0001F916 Assistant"));
+    TW_CHECK_EQ(window.rightTabs()->tabText(8), QStringLiteral("Assistant"));
 
     // A fresh profile has no endpoint: the panel says what to do about it, and
     // there is nothing to press that would send anything.

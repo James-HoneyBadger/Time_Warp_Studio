@@ -2,6 +2,8 @@
 
 #include "timewarp/ui/project_panel.hpp"
 
+#include "timewarp/ui/icons.hpp"
+
 #include <QAbstractItemView>
 #include <QAction>
 #include <QApplication>
@@ -145,30 +147,33 @@ void ProjectPanel::buildUi() {
     tools->setContentsMargins(0, 0, 0, 0);
     tools->setSpacing(2);
 
-    const auto tool = [this, tools](const QString& text, const QString& tip,
+    // Glyphs rather than five word-buttons: "+ Project Open + Files + Folder +
+    // Group" in one row reads as a sentence and leaves no room for the tree below
+    // it. The words are still there, in the tooltips and the status bar.
+    const auto tool = [this, tools](icons::Glyph glyph, const QString& tip,
                                     const QString& name, auto&& slot) {
         auto* button = new QToolButton;
         button->setObjectName(name);
-        button->setText(text);
+        button->setIcon(icons::glyph(glyph));
         button->setToolTip(tip);
+        button->setStatusTip(tip);
         button->setAutoRaise(true);
-        button->setToolButtonStyle(Qt::ToolButtonTextOnly);
+        button->setToolButtonStyle(Qt::ToolButtonIconOnly);
         connect(button, &QToolButton::clicked, this, std::forward<decltype(slot)>(slot));
         tools->addWidget(button);
         return button;
     };
-    tool(QStringLiteral("+ Project"), tr("Create a project"), QStringLiteral("projectNew"),
+    tool(icons::Glyph::New, tr("Create a project"), QStringLiteral("projectNew"),
          [this] { emit newProjectRequested(); });
-    tool(QStringLiteral("Open"), tr("Open a project"), QStringLiteral("projectOpen"),
+    tool(icons::Glyph::Open, tr("Open a project"), QStringLiteral("projectOpen"),
          [this] { emit openProjectRequested(); });
-    tool(QStringLiteral("+ Files"), tr("Add programs to the project"),
+    tool(icons::Glyph::File, tr("Add programs to the project"),
          QStringLiteral("projectAddFiles"), [this] { emit addFilesRequested(QString{}); });
-    tool(QStringLiteral("+ Folder"), tr("Add every program under a folder"),
+    tool(icons::Glyph::Folder, tr("Add every program under a folder"),
          QStringLiteral("projectAddFolder"), [this] { emit addFolderRequested(); });
-    tool(QStringLiteral("+ Group"), tr("Create a group"), QStringLiteral("projectAddGroup"),
+    tool(icons::Glyph::Gallery, tr("Create a group"), QStringLiteral("projectAddGroup"),
          [this] { emit addGroupRequested(); });
-    run_button_ = tool(QStringLiteral("\u25B6 Run"),
-                       tr("Run the project's entry point"),
+    run_button_ = tool(icons::Glyph::Run, tr("Run the project's entry point"),
                        QStringLiteral("projectRun"),
                        [this] { emit runProjectRequested(); });
     tools->addStretch(1);

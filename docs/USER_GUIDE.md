@@ -41,15 +41,15 @@ from the desktop menu, or run the `time_warp_ide` binary directly.
   editor -- `-` for what restoring takes away, `+` for what it brings back -- because
   "restore this" is a decision about the difference, not about one version.
 - **Output and Graphics** — the console, the error list, the turtle log and the
-  canvas. A program that prints and draws keeps both in view. The 🐢 Turtle Log
+  canvas. A program that prints and draws keeps both in view. The Turtle Log
   tab lists every drawing command the canvas received, numbered and spelled with
   its arguments, so a picture that came out wrong can be read back; a pose strip
   under the canvas shows where the turtle is, which way it faces, what the pen is
   doing and how many commands the run has sent. A program that makes a sound keeps
   it too: **File > Export Audio as WAV…** writes the run's `SOUND` and `PLAY` notes
   to one file, and it records even on a machine with no player installed.
-- **Right-column tabs** — Variables, Telemetry HUD, Debug, Lessons, Classroom,
-  Database, 📖 Reference and Assistant (see [section 8](#8-the-ai-assistant)).
+- **Right-column tabs** — Variables, Telemetry, Debug, Lessons, Classroom,
+  Database, Reference and Assistant (see [section 8](#8-the-ai-assistant)).
   **Reference** lists every command for the selected language with the smallest
   program that runs it and what it does, read from the same table the command gate
   drives; **Try it** puts a row's program in a new document. It follows the language
@@ -92,9 +92,9 @@ empty.
 
 | Action | How |
 | --- | --- |
-| Run | **F9** or the ▶ Run toolbar button |
+| Run | **F9** or the **Run** button in the toolbar |
 | Run only the selection | `Ctrl+F9` |
-| Stop | `Shift+F9` or the Stop button |
+| Stop | `Shift+F9` or the Stop glyph in the toolbar |
 | Reset the canvas and output | `Ctrl+Shift+F9` |
 | Answer an input prompt | Type it into the dialog and press Return |
 | Open a file | **File → Open** (`Ctrl+O`) or pass it on the command line |
@@ -336,7 +336,7 @@ BASIC's memory window, and the IDE's wall clock and delivered ink. Use it to tel
 
 ## 5. SQL and the Database tab
 
-The Studio embeds SQLite. The 🗄 **Database** tab opens or
+The Studio embeds SQLite. The **Database** tab opens or
 creates a database file, lists its tables, shows a table's `CREATE` statement, and
 runs one statement or a whole script. **Run** is `Ctrl+Return`; results appear in a
 grid, with the change count and an error message when the statement fails. The
@@ -369,7 +369,7 @@ produced by `twc` link it too and accept `--db FILE`.
 
 ## 6. The embedded terminal
 
-**Settings > Workspace > Enable the embedded terminal** adds a 💻 Terminal tab beside
+**Settings > Workspace > Enable the embedded terminal** adds a Terminal tab beside
 the console. It is off until you tick it, and it is a real terminal: the shell runs
 on a pseudo-terminal of its own, so it prints its prompt, colours its output, keeps
 job control and answers a program that asks how wide the window is. Each line you
@@ -443,14 +443,14 @@ smaller alternative for a program that needs no window at all.
 
 ## 8. The AI assistant
 
-The 🤖 Assistant tab asks a service you configure about the program in front of you.
+The Assistant tab asks a service you configure about the program in front of you.
 It is off until you set it up, and nothing is sent until you press a button.
 
 - **Tools > AI Settings…** chooses the service: OpenAI, DeepSeek, Anthropic, Ollama or
   LM Studio on this machine, OpenRouter, or any endpoint that speaks one of the two
   request shapes. **Test connection** proves the key and the model before you ask a
   question.
-- **Tools > 🤖 Assistant** (`Ctrl+Shift+A`) raises the page. **Explain**, **Fix**,
+- **Tools > Assistant** (`Ctrl+Shift+A`) raises the page. **Explain**, **Fix**,
   **Comment**, **Translate** and **Write** are the one-click questions; the box takes
   anything else, and `Ctrl+Enter` sends it.
 - **Insert** puts the answer's code into the editor at the cursor, and **Run** (F9)
@@ -508,17 +508,19 @@ an `ostream`, which is how the tests drive it without a process.
 
 ## 10. Lessons, classroom and appearance
 
-- **Lessons** — the 🎓 Lessons tab lists the curriculum and checks the document in
+- **Lessons** — the Lessons tab lists the curriculum and checks the document in
   front against the current checkpoint, and **Hand In** writes it into the class
   folder under the checkpoint's handout name, which is where marking reads it.
   Progress lives in `~/.time_warp/progress.json`; `native/tools/learn.cpp` reads the
   same file.
-- **Classroom** — the 🏫 Classroom tab shows a roster, assignments and marks, and
+- **Classroom** — the Classroom tab shows a roster, assignments and marks, and
   moves a whole class as a ZIP bundle. `native/tools/teach.cpp` is the teacher's CLI
   over the same files; see [lessons/teacher-guide.md](lessons/teacher-guide.md).
 - **Themes** — View → Theme chooses one of the 35 themes; View → Next Theme
   (`Shift+F10`) cycles them. High Contrast derives a maximum-contrast variant of
-  the current theme.
+  the current theme. Every theme drives the whole window, not just the code: the
+  toolbar, tabs, docks, menus and fields are derived from the theme's colours, so
+  a retro set changes the chrome as well as the syntax.
 - **Presentation** — View → Presentation Mode (`Shift+F11`) hides the authoring
   chrome for a projector; Escape leaves it. Focus Mode (`F11`) is the quieter
   single-window variant.

@@ -12,20 +12,19 @@ void test_tool_bar_configuration() {
     announce("tool bar");
     MainWindow window;
     QToolBar* bar = window.mainToolBar();
-    QToolBar* display = window.secondaryToolBar();
 
     // A non-empty objectName is required for saveState() to persist the toolbar
     // at all: Qt skips unnamed tool bars silently.
     TW_CHECK_EQ(bar->objectName(), QStringLiteral("mainToolBar"));
     TW_CHECK(!bar->isMovable());
     TW_CHECK_EQ(bar->toolButtonStyle(), Qt::ToolButtonTextBesideIcon);
-    TW_CHECK_EQ(bar->minimumHeight(), 44);
+    TW_CHECK_EQ(bar->minimumHeight(), 40);
 
-    // Two rows, because one row of thirteen controls does not fit a 1400px window
-    // and Qt hides the overflow behind a chevron rather than making it reachable.
-    TW_CHECK_EQ(display->objectName(), QStringLiteral("secondaryToolBar"));
-    TW_CHECK(!display->isMovable());
-    TW_CHECK_EQ(display->minimumHeight(), 44);
+    // One bar. The display controls sit at its right-hand end, past a spacer, so
+    // there is no second row to check and no second bar to keep in step with the
+    // first when a mode hides the chrome.
+    TW_CHECK_EQ(window.findChildren<QToolBar*>().size(), 1);
+    TW_CHECK(bar->findChild<QWidget*>(QStringLiteral("toolBarSpacer")) != nullptr);
 
     // Run carries a menu of variants; the others are plain actions.
     auto* run = bar->findChild<QToolButton*>(QStringLiteral("runButton"));
@@ -35,13 +34,11 @@ void test_tool_bar_configuration() {
         TW_CHECK_EQ(run->popupMode(), QToolButton::MenuButtonPopup);
     }
     TW_CHECK(bar->findChild<QComboBox*>(QStringLiteral("languageSelector")) != nullptr);
-    // The display controls belong to the second row, and only to the second row.
     // The turtle-speed slider was removed rather than finished: nothing animates
-    // the display list, so it controlled an ability the application does not
-    // have. The Settings button that took its place is on the second row.
-    TW_CHECK(display->findChild<QSlider*>(QStringLiteral("turtleSpeedSlider")) == nullptr);
+    // the display list, so it controlled an ability the application does not have.
+    // The Settings button that took its place is at the right-hand end.
     TW_CHECK(bar->findChild<QSlider*>(QStringLiteral("turtleSpeedSlider")) == nullptr);
-    TW_CHECK(display->findChild<QAction*>(QStringLiteral("preferencesAction")) != nullptr);
+    TW_CHECK(bar->findChild<QAction*>(QStringLiteral("preferencesAction")) != nullptr);
 
     // The language selector has to actually offer the languages; an empty combo is
     // a control that promises a choice and gives none.
@@ -68,10 +65,8 @@ void test_tool_bar_configuration() {
         }
         return count;
     };
-    // The file, language and run groups on the first row.
-    TW_CHECK(countButtons(bar) >= 8);
-    // Clear Output, Clear Canvas and A+ on the second.
-    TW_CHECK(countButtons(display) >= 3);
+    // The file, language and run groups, and the display strip at the end.
+    TW_CHECK(countButtons(bar) >= 11);
 }
 
 
@@ -604,7 +599,7 @@ void test_no_enabled_control_is_inert() {
     // Every action the tool bars show and enable must have been given a tooltip,
     // because that is the one place the wiring is visible from the outside: the
     // controls that are not wired are disabled and explain themselves there.
-    const QList<QToolBar*> bars{window.mainToolBar(), window.secondaryToolBar()};
+    const QList<QToolBar*> bars{window.mainToolBar()};
     for (QToolBar* bar : bars) {
         for (const QAction* action : bar->actions()) {
             if (action->isSeparator() || !action->isEnabled() ||
@@ -625,7 +620,7 @@ void test_unported_controls_say_so_instead_of_doing_nothing() {
     // Trace now drive a run, so like Snippets below they are asserted the other
     // way round -- enabled, and describing what they do rather than excusing
     // themselves.
-    const QList<QToolBar*> bars{window.mainToolBar(), window.secondaryToolBar()};
+    const QList<QToolBar*> bars{window.mainToolBar()};
     for (const char* name : {"debugAction", "continueAction", "traceAction"}) {
         auto* action = window.findChild<QAction*>(QString::fromLatin1(name));
         TW_CHECK(action != nullptr);

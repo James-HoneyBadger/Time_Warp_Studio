@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 
 #include "timewarp/ui/code_editor.hpp"
+#include "timewarp/ui/design.hpp"
 
 #include <algorithm>
 #include <cmath>
@@ -141,6 +142,11 @@ CodeEditor::CodeEditor(QWidget* parent) : QPlainTextEdit(parent) {
     lint_timer_->setSingleShot(true);
     lint_timer_->setInterval(kLintDelayMilliseconds);
     connect(lint_timer_, &QTimer::timeout, this, &CodeEditor::revalidate);
+    // The map is laid out beside the scroll bar, and the bar appears and
+    // disappears with the content, so its width is not a fact settled at resize
+    // time alone.
+    connect(verticalScrollBar(), &QScrollBar::rangeChanged, this,
+            [this] { updateMinimapGeometry(); });
 
     completer_ = new QCompleter{this};
     completer_->setWidget(this);
@@ -545,7 +551,11 @@ int CodeEditor::lineNumberAreaWidth() const {
 
 void CodeEditor::paintLineNumbers(QPaintEvent* event) {
     QPainter painter(gutter_);
-    painter.fillRect(event->rect(), palette().color(QPalette::AlternateBase));
+    const QColor margin = palette().color(QPalette::AlternateBase);
+    painter.fillRect(event->rect(),
+                     margin == palette().color(QPalette::Base)
+                         ? design::blend(margin, palette().color(QPalette::Text), 0.04)
+                         : margin);
 
     QTextBlock block = firstVisibleBlock();
     int blockNumber = block.blockNumber();
@@ -714,8 +724,13 @@ void CodeEditor::updateMinimapGeometry() {
         return;
     }
     const QRect contents = contentsRect();
-    minimap_->setGeometry(QRect{contents.right() - width + 1, contents.top(), width,
-                                contents.height()});
+    // The strip sits *inside* the margin `setViewportMargins` reserved for it,
+    // which is also where the vertical scroll bar lives: without this the bar is
+    // painted over the right-hand column of the map.
+    const QScrollBar* bar = verticalScrollBar();
+    const int bar_width = bar != nullptr && bar->isVisible() ? bar->width() : 0;
+    minimap_->setGeometry(QRect{contents.right() - bar_width - width + 1, contents.top(),
+                                width, contents.height()});
 }
 
 int CodeEditor::scrollValueForMinimapY(int y) const {
@@ -735,8 +750,11 @@ void CodeEditor::paintMinimap(QPaintEvent* /*event*/) {
     }
     QPainter painter{minimap_};
     const QRect area = minimap_->rect();
-    // The page colour, dimmed: the strip is a map, not a second view of the text.
-    painter.fillRect(area, palette().base().color().darker(115));
+    // The gutter's colour, so the strip reads as a margin rather than a second
+    // page, with a hairline on its inner edge.
+    painter.fillRect(area, palette().color(QPalette::AlternateBase));
+    painter.setPen(QPen{palette().color(QPalette::Mid), 1});
+    painter.drawLine(area.topLeft(), area.bottomLeft());
 
     const QTextDocument* doc = document();
     const int blocks = doc->blockCount();
@@ -744,28 +762,53 @@ void CodeEditor::paintMinimap(QPaintEvent* /*event*/) {
         return;
     }
 
-    // One row per pixel, and each row stands for the line (or run of lines) that
-    // falls in it. Sampling rather than scaling: a 5000-line file must cost the
-    // height of the strip, not the length of the document.
-    const double per_row = double(blocks) / double(area.height());
-    const QColor ink = palette().text().color();
+    // The quiet rank, at low alpha: the map is a hint about the shape of the file,
+    // and full-strength text colour made it the brightest thing in the window.
+    QColor ink = palette().color(QPalette::Mid);
+    ink.setAlpha(120);
     painter.setPen(Qt::NoPen);
-    for (int row = 0; row < area.height(); ++row) {
-        const int first = int(row * per_row);
-        const int last = std::max(first, int((row + 1) * per_row) - 1);
-        int longest = 0;
-        for (int block = first; block <= last && block < blocks; ++block) {
-            longest = std::max(longest, doc->findBlockByNumber(block).length());
+    // 80 columns fills the strip; anything longer is simply full width.
+    const int usable = std::max(1, area.width() - 8);
+    const auto bar_width = [usable](int length) {
+        return std::clamp(int((double(length) / 80.0) * usable), 2, usable);
+    };
+
+    // A line gets its own row while there is room for one; past that, each row of
+    // the strip stands for the run of lines that falls in it. Sampling rather than
+    // scaling keeps a 5000-line file costing the height of the strip and not the
+    // length of the document -- but a two-line file stretched across that same
+    // height is not a map, it is two grey blocks, which is what it used to draw.
+    const double pitch = double(area.height()) / double(blocks);
+    if (pitch >= 2.0) {
+        // A bar per line, but never a thick one: the pitch is only there to space
+        // three lines down a 600-pixel strip, not to stretch each of them to a
+        // hundred pixels tall.
+        const int row_height = std::clamp(int(pitch) - 1, 1, 3);
+        for (int block = 0; block < blocks; ++block) {
+            const int length = doc->findBlockByNumber(block).length();
+            if (length <= 1) {
+                continue;
+            }
+            painter.fillRect(QRect(area.left() + 4, area.top() + int(block * pitch),
+                                   bar_width(length), row_height),
+                             ink);
         }
-        if (longest <= 1) {
-            continue;  // an empty line is a gap in the map, not a mark
+    } else {
+        const double per_row = double(blocks) / double(area.height());
+        for (int row = 0; row < area.height(); ++row) {
+            const int first = int(row * per_row);
+            const int last = std::max(first, int((row + 1) * per_row) - 1);
+            int longest = 0;
+            for (int block = first; block <= last && block < blocks; ++block) {
+                longest = std::max(longest, doc->findBlockByNumber(block).length());
+            }
+            if (longest <= 1) {
+                continue;  // an empty line is a gap in the map, not a mark
+            }
+            painter.fillRect(QRect(area.left() + 4, area.top() + row,
+                                   bar_width(longest), 1),
+                             ink);
         }
-        // 80 columns fills the strip; anything longer is simply full width.
-        const int usable = std::max(1, area.width() - 8);
-        const int span = std::clamp(int((double(longest) / 80.0) * usable), 2, usable);
-        QColor row_colour = ink;
-        row_colour.setAlpha(150);
-        painter.fillRect(QRect(area.left() + 4, area.top() + row, span, 1), row_colour);
     }
 
     // What is on screen right now. The block cursor is enough: a range of
@@ -776,9 +819,19 @@ void CodeEditor::paintMinimap(QPaintEvent* /*event*/) {
     const int visible = std::max(2, int(double(viewport()->height()) / double(fontMetrics().height())));
     const int mark = std::clamp(int(double(visible) / double(blocks) * area.height()), 2,
                                 std::max(2, area.height() / 3));
-    painter.setPen(QPen{palette().highlight().color(), 1});
-    painter.setBrush(Qt::NoBrush);
-    painter.drawRect(QRect(area.left(), top, area.width() - 1, mark));
+    // A band, not an outline. The old rectangle was a one-pixel box in the
+    // selection colour, which on a two-line document drew a bright frame around
+    // nothing; a wash with a hairline reads as "you are here" at any document
+    // length, and disappears when there is nothing to scroll.
+    if (blocks > visible) {
+        QColor band = palette().highlight().color();
+        band.setAlpha(46);
+        painter.setPen(QPen{design::faded(palette().highlight().color(), 120), 1});
+        painter.setBrush(band);
+        painter.drawRoundedRect(QRectF{area.left() + 0.5, top + 0.5, area.width() - 1.0,
+                                       double(mark)},
+                                2.0, 2.0);
+    }
 }
 
 
@@ -814,7 +867,12 @@ void CodeEditor::refreshExtraSelections() {
     // than being painted out by it.
     if (settings_.highlight_current_line && !isReadOnly()) {
         QTextEdit::ExtraSelection band;
-        band.format.setBackground(palette().color(QPalette::AlternateBase));
+        // Derived rather than borrowed: `AlternateBase` is the gutter's colour and
+        // differs from the page by a hair on most themes, which made the current
+        // line a band nobody could see. A small step toward the text colour is
+        // visible in both directions.
+        band.format.setBackground(design::blend(palette().color(QPalette::Base),
+                                                palette().color(QPalette::Text), 0.06));
         band.format.setProperty(QTextFormat::FullWidthSelection, true);
         band.cursor = textCursor();
         band.cursor.clearSelection();

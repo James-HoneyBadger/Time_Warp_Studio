@@ -2,6 +2,7 @@
 
 #include "main_window_internal.hpp"
 
+#include "timewarp/ui/icons.hpp"
 #include "timewarp/ui/main_window.hpp"
 
 #include "timewarp/lang/executor.hpp"
@@ -857,11 +858,11 @@ void MainWindow::updateTabLabel(CodeEditor* editor) {
 }
 
 void MainWindow::refreshDocumentState() {
-    const QString base = tr("\U0001F3A8 Time Warp Studio v%1").arg(TIME_WARP_VERSION);
+    const QString base = tr("Time Warp Studio v%1").arg(TIME_WARP_VERSION);
     CodeEditor* editor = currentEditor();
     if (editor == nullptr) {
         setWindowTitle(base);
-        language_badge_->setText(QStringLiteral("\U0001F522 \u2014"));
+        language_badge_->setText(QStringLiteral("\u2014"));
         position_badge_->setText(QString{});
         breadcrumb_->setText(QString{});
         if (find_bar_ != nullptr) {
@@ -887,7 +888,7 @@ void MainWindow::refreshDocumentState() {
                        ? tr("%1 \u2014 %2*").arg(base, nameOf(editor))
                        : tr("%1 \u2014 %2").arg(base, nameOf(editor)));
     language_badge_->setText(
-        tr("\U0001F522 %1").arg(displayName(languageOf(editor))));
+        displayName(languageOf(editor)));
     // The highlighter follows the document's language. Done here, in the one
     // place that already answers "what language is this document?", so a rename
     // that changes the language cannot recolour every tab but this one.

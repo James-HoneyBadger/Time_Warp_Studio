@@ -8,6 +8,7 @@
 
 #include "main_window_internal.hpp"
 
+#include "timewarp/ui/icons.hpp"
 #include "timewarp/ui/main_window.hpp"
 
 #include "timewarp/ui/desktop_notification.hpp"
@@ -815,7 +816,8 @@ void MainWindow::announceFinishedRun(bool completed, const QString& error) {
 
 void MainWindow::buildCommandReference() {
     reference_panel_ = new CommandReferencePanel{right_tabs_};
-    right_tabs_->addTab(reference_panel_, tr("\U0001F4D6 Reference"));
+    right_tabs_->addTab(reference_panel_, icons::glyph(icons::Glyph::Reference),
+                        tr("Reference"));
     // **Try it** opens the row's program in a new document, through the same path a
     // lesson's starting program takes: a language override and an untitled label,
     // so the editor highlights and runs it without a file extension to guess from.
@@ -843,7 +845,8 @@ void MainWindow::buildAiPanel() {
     ai_panel_ = new AiPanel{right_tabs_};
     ai_panel_->setContextProvider([this] { return aiContext(); });
     ai_panel_->setConfig(ai_config_);
-    right_tabs_->addTab(ai_panel_, tr("\U0001F916 Assistant"));
+    right_tabs_->addTab(ai_panel_, icons::glyph(icons::Glyph::Assistant),
+                        tr("Assistant"));
 
     connect(ai_panel_, &AiPanel::configureRequested, this, &MainWindow::showAiSettings);
     connect(ai_panel_, &AiPanel::insertRequested, this, &MainWindow::insertAssistantCode);

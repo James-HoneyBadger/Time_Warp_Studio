@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: MIT
 
+#include "timewarp/ui/design.hpp"
 #include "timewarp/ui/command_reference.hpp"
 
 #include "timewarp/core/share_files.hpp"
@@ -134,6 +135,9 @@ void CommandReferencePanel::buildUi() {
     detail_ = new QPlainTextEdit{this};
     detail_->setObjectName(QStringLiteral("commandReferenceSource"));
     detail_->setReadOnly(true);
+    // A program is shown as a program: the few lines under a command are read for
+    // their spacing and their literals.
+    detail_->setFont(design::monoFont(9));
     detail_->setLineWrapMode(QPlainTextEdit::NoWrap);
     detail_->setMaximumHeight(96);
     detail_->setAccessibleName(tr("The smallest program that runs it"));

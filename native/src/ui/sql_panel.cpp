@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: MIT
 
 #include "timewarp/core/qt_names.hpp"
+#include "timewarp/ui/design.hpp"
 #include "timewarp/ui/sql_panel.hpp"
 
 #include <QDir>
-#include <QFontDatabase>
 #include <QKeySequence>
 #include <QHBoxLayout>
 #include <QHeaderView>
@@ -49,6 +49,11 @@ void SqlPanel::buildUi() {
     path_->setObjectName(QStringLiteral("sqlDatabasePath"));
     path_->setWordWrap(false);
     path_->setTextInteractionFlags(Qt::TextSelectableByMouse);
+    // Ignored, not Preferred: a long path is a wide minimum, and it pushed the
+    // three buttons beside it off the edge of a dock, which is how "Recent" came to
+    // be drawn as "Recen".
+    path_->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Preferred);
+    path_->setMinimumWidth(0);
     header->addWidget(path_, 1);
     auto* open = new QPushButton{tr("Open...")};
     open->setObjectName(QStringLiteral("sqlOpenDatabase"));
@@ -69,21 +74,16 @@ void SqlPanel::buildUi() {
     empty_state_ = new QWidget;
     auto* empty_layout = new QVBoxLayout{empty_state_};
     empty_layout->setContentsMargins(0, 12, 0, 0);
+    // The actions are the header's, one row up and always visible; a second pair
+    // of buttons saying the same thing was the empty state arguing with its own
+    // toolbar.
     auto* empty_text = new QLabel(
         tr("No database is open.\n\nOpen a SQLite file or create one, then run "
            "SQL here or from a program with `SQL SELECT ...`."));
+    empty_text->setObjectName(QStringLiteral("sqlEmptyState"));
     empty_text->setWordWrap(true);
     empty_layout->addWidget(empty_text);
-    auto* empty_row = new QHBoxLayout;
-    auto* empty_open = new QPushButton{tr("Open Database...")};
-    auto* empty_new = new QPushButton{tr("New Database...")};
-    empty_row->addWidget(empty_open);
-    empty_row->addWidget(empty_new);
-    empty_row->addStretch(1);
-    empty_layout->addLayout(empty_row);
     empty_layout->addStretch(1);
-    connect(empty_open, &QPushButton::clicked, this, &SqlPanel::openDatabaseRequested);
-    connect(empty_new, &QPushButton::clicked, this, &SqlPanel::newDatabaseRequested);
     layout->addWidget(empty_state_, 1);
 
     work_area_ = new QWidget;
@@ -122,8 +122,7 @@ void SqlPanel::buildUi() {
     editor_->setObjectName(QStringLiteral("sqlEditor"));
     editor_->setPlaceholderText(
         tr("SELECT * FROM scores;\nCREATE TABLE scores (name TEXT, score INTEGER);"));
-    QFont mono = QFontDatabase::systemFont(QFontDatabase::FixedFont);
-    editor_->setFont(mono);
+    editor_->setFont(design::monoFont());
     editor_->setMaximumHeight(110);
     right_layout->addWidget(editor_);
     auto* run_row = new QHBoxLayout;

@@ -505,9 +505,6 @@ bool MainWindow::openStandaloneProgram(const QString& languageKey,
     if (tool_bar_ != nullptr) {
         tool_bar_->setVisible(false);
     }
-    if (tool_bar_secondary_ != nullptr) {
-        tool_bar_secondary_->setVisible(false);
-    }
     if (function_key_bar_ != nullptr) {
         function_key_bar_->setVisible(false);
     }

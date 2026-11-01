@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: MIT
 
+#include "timewarp/ui/design.hpp"
 #include "timewarp/ui/snippet_dialog.hpp"
 
 #include <QComboBox>
@@ -46,6 +47,7 @@ SnippetDialog::SnippetDialog(QWidget* parent) : QDialog{parent} {
     description_->setWordWrap(true);
 
     preview_ = new QPlainTextEdit{this};
+    preview_->setFont(design::monoFont());
     preview_->setObjectName(QStringLiteral("snippetPreview"));
     preview_->setReadOnly(true);
     preview_->setLineWrapMode(QPlainTextEdit::NoWrap);

@@ -3,6 +3,7 @@
 #include "main_window_internal.hpp"
 
 #include "timewarp/core/qt_names.hpp"
+#include "timewarp/ui/icons.hpp"
 #include "timewarp/ui/main_window.hpp"
 
 #include "timewarp/lang/executor.hpp"
@@ -67,6 +68,7 @@
 #include "timewarp/ui/themes.hpp"
 #include "timewarp/ui/turtle_canvas.hpp"
 #include "timewarp/ui/version_history.hpp"
+#include "timewarp/ui/design.hpp"
 #include "timewarp/ui/ui_style.hpp"
 
 // Supplied by CMake from the repository's VERSION file, so the window title and
@@ -121,9 +123,13 @@ void MainWindow::applyTheme(const QString& name) {
     if (auto* app = qobject_cast<QApplication*>(QCoreApplication::instance())) {
         app->setPalette(themes::paletteFor(theme, high_contrast_));
     }
-    // The base sheet reads `palette(...)`, so it follows the palette above; the
-    // theme's own block adds what a role cannot express.
-    setStyleSheet(style::window() + themes::stylesheetFor(theme, high_contrast_));
+    // The sheet is built from tokens derived from the theme rather than from
+    // `palette(...)` roles: a palette can name a body colour, but not that a
+    // toolbar is the window lifted six percent or that a hover is the accent at
+    // 14% alpha. The palette above is still set, because dialogs, message boxes
+    // and the native parts of the controls read it.
+    setStyleSheet(style::sheet(design::tokens(themes::resolve(theme, high_contrast_),
+                                              high_contrast_)));
 
     if (theme_menu_ != nullptr) {
         for (QAction* action : theme_menu_->actions()) {
@@ -308,8 +314,7 @@ void MainWindow::setFocusMode(bool on) {
     if (on) {
         // Only what was actually visible is recorded, so leaving does not pop up a
         // panel the user had closed before entering the mode.
-        QList<QWidget*> chrome{tool_bar_, tool_bar_secondary_, function_key_bar_,
-                               statusBar()};
+        QList<QWidget*> chrome{tool_bar_, function_key_bar_, statusBar()};
         // Docks are the panels, and their titles are part of the chrome.
         for (QDockWidget* dock : findChildren<QDockWidget*>()) {
             chrome.append(dock);
@@ -405,8 +410,7 @@ void MainWindow::setPresentationMode(bool on) {
     if (on) {
         // The menu bar goes too: focus mode keeps it for the person at the
         // keyboard, but a room does not need File and Edit above the lesson.
-        QList<QWidget*> chrome{menuBar(),         tool_bar_, tool_bar_secondary_,
-                               function_key_bar_, statusBar()};
+        QList<QWidget*> chrome{menuBar(), tool_bar_, function_key_bar_, statusBar()};
         for (QDockWidget* dock : findChildren<QDockWidget*>()) {
             chrome.append(dock);
         }
@@ -671,7 +675,9 @@ void MainWindow::refreshTerminalTab() {
     }
     if (output_sub_tabs_->indexOf(terminal_widget_) < 0) {
         const int index =
-            output_sub_tabs_->addTab(terminal_widget_, tr("\U0001F4BB Terminal"));
+            output_sub_tabs_->addTab(terminal_widget_,
+                                     icons::glyph(icons::Glyph::Terminal),
+                                     tr("Terminal"));
         output_sub_tabs_->setTabToolTip(
             index, tr("Commands run through your shell in this document's folder. "
                       "Nothing here is sandboxed."));
