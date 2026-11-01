@@ -99,7 +99,7 @@ void test_contents_come_from_the_index() {
             saw_tutorials = true;
             // One row per language, counted from the language table rather than
             // from a number here: the table was pinned at ten, and Forth was in
-            // `docs/tutorials/` and missing from this section for three releases.
+            // `docs/languages/tutorials/` and missing from this section for three releases.
             TW_CHECK_EQ(section.topics.size(),
                         timewarp::ui::allLanguages().size());
         }
@@ -164,22 +164,20 @@ void test_the_dialog_lists_and_opens_pages() {
         TW_CHECK(tree->topLevelItemCount() > 0);
     }
 
-    const QString faq = QDir{root}.filePath(QStringLiteral("FAQ.md"));
+    const QString faq = QDir{root}.filePath(QStringLiteral("user/faq.md"));
     TW_CHECK(dialog.openTopic(faq));
-    TW_CHECK(dialog.page()->toPlainText().contains(
-        QStringLiteral("Frequently Asked Questions")));
+    TW_CHECK(dialog.page()->toPlainText().contains(QStringLiteral("Questions")));
     // Rendered, not dumped: `setSource` selects the Markdown resource.
     TW_CHECK(dialog.page()->toHtml().contains(QStringLiteral("<h1")));
     if (tree != nullptr && tree->currentItem() != nullptr) {
         TW_CHECK(tree->currentItem()->data(0, Qt::UserRole)
                      .toString()
-                     .endsWith(QStringLiteral("FAQ.md")));
+                     .endsWith(QStringLiteral("user/faq.md")));
     }
 
     // A page that does not exist is refused, and the FAQ stays on screen.
     TW_CHECK(!dialog.openTopic(QDir{root}.filePath(QStringLiteral("missing.md"))));
-    TW_CHECK(dialog.page()->toPlainText().contains(
-        QStringLiteral("Frequently Asked Questions")));
+    TW_CHECK(dialog.page()->toPlainText().contains(QStringLiteral("Questions")));
     TW_CHECK(!dialog.openTopic(QString{}));
 }
 
@@ -194,7 +192,7 @@ void test_guide_topics_follow_the_languages() {
     for (const timewarp::ui::Language language : timewarp::ui::allLanguages()) {
         const QString topic = timewarp::ui::guideTopic(language);
         TW_CHECK_EQ(topic.toStdString(),
-                    QStringLiteral("tutorials/%1.md")
+                    QStringLiteral("languages/tutorials/%1.md")
                         .arg(timewarp::ui::settingsKey(language))
                         .toStdString());
         TW_CHECK(QFileInfo{QDir{root}.filePath(topic)}.isFile());
@@ -265,7 +263,8 @@ void test_find_in_page_selects_a_whole_word() {
         return;
     }
     timewarp::ui::HelpBrowserDialog dialog;
-    TW_CHECK(dialog.openTopic(QDir{root}.filePath(QStringLiteral("tutorials/logo.md"))));
+    TW_CHECK(dialog.openTopic(
+        QDir{root}.filePath(QStringLiteral("languages/tutorials/logo.md"))));
     TW_CHECK(dialog.findInPage(QStringLiteral("FORWARD")));
     // Case-insensitively, because the guide's first mention is "Move forward".
     TW_CHECK_EQ(dialog.page()->textCursor().selectedText().toUpper().toStdString(),

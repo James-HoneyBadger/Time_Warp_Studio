@@ -1,691 +1,212 @@
-# Contributing to Time Warp Studio
+# Contributing
 
-This guide covers what a change to this repository is expected to look like: the
-workflow, the checks it has to pass, and the recipes for the changes made most often.
+Time Warp Studio is a C++20 and Qt 6 application for Linux, and a documentation set with
+gates that hold the two together. What a change has to satisfy here is mostly mechanical:
+build, run the gates, and say what you changed.
 
----
-
-## Code of Conduct
-
-This project is committed to providing a welcoming and inclusive environment. All contributors must follow our code of conduct.
-
----
-
-## Ways to Contribute
-
-### 1. Report Bugs
-
-Found a bug? Use the
-[bug report form](https://github.com/James-HoneyBadger/Time_Warp_Studio/issues/new?template=bug_report.yml).
-It asks for the four things needed to reproduce a problem, because a prose issue
-usually leaves one of them out:
-
-1. **Check [docs/ROADMAP.md](docs/ROADMAP.md) first.** A dedicated player target,
-   an automatic update check and Flatpak/Snap packaging are
-   deliberately not built yet, so a missing feature from that list is a feature
-   request rather than a regression.
-2. **Check existing issues** — it may already be reported.
-3. **Fill in the form.** The environment it asks for (built from source or
-   installed, and the platform) changes where to look: the two take different
-   paths to the bridge.
-
-### 2. Suggest Features
-
-Use the [feature request form](https://github.com/James-HoneyBadger/Time_Warp_Studio/issues/new?template=feature_request.yml).
-The question it is really asking is **what are you trying to do?** — the situation
-rather than the solution, because that leaves room for a better answer than either
-of us had in mind.
-
-For a **new language**, use the
-[language request form](https://github.com/James-HoneyBadger/Time_Warp_Studio/issues/new?template=language_request.yml).
-It asks what gap the language fills and what it costs, because a language is not
-one file: an executor, the enum and registry entry, the IDE's language table, an
-example, command-table rows, a tutorial, a reference section and two lessons.
-
-### 3. Improve Documentation
-
-Documentation needs constant improvement:
-
-- Fix typos and unclear explanations
-- Add examples and clarifications  
-- Create tutorials for common tasks
-- Improve README and guides
-
-### 4. Write Code
-
-Three recipes cover most contributions:
-
-- **A language.** The procedure is in
-  [ARCHITECTURE.md § Adding a language](docs/ARCHITECTURE.md#adding-a-language) and
-  [FORMAT.md § 9](docs/lessons/FORMAT.md#9-adding-lessons-for-a-new-language). A
-  language is not finished until every item exists, and a PR that stops halfway
-  leaves a language the IDE knows but the lesson panel cannot teach: the executor,
-  its cases in `executor_for` and in the IDE's table in `native/src/ui/language.cpp`,
-  an example under `Examples/`, command rows, a tutorial, a reference section, and
-  two lessons.
-- **A command.** Add it to the executor, add a row to the `rows` list in
-  `native/share/command_rows.json`, and run `make command-matrix`. The row is what
-  proves the command
-  produces output, drawing or a reported error — silence is this project's
-  characteristic bug. If a row's label is prose, name the command the inventory
-  knows in `also=(...)`, or it is reported as untested forever.
-- **A lesson.** `./native/build/time_warp_teach new <id> --language NAME` prints a
-  skeleton the loader accepts, `--append` adds it to the curriculum, and
-  `time_warp_teach validate` says what is still missing. It refuses a solution that does
-  not pass its own checkpoint and a starter that already passes, unless
-  `starter_is_broken` records that the failure *is* the lesson. Then regenerate
-  the plans with `time_warp_teach plans --write docs/lessons/plans`.
-- **Documentation.** `.github/workflows/docs.yml` enforces the parts that can be
-  checked: every guide [docs/INDEX.md](docs/INDEX.md) promises exists, every
-  relative link and `#anchor` resolves (`make doc-links`), every language has a
-  tutorial, and the lesson plans match the curriculum. Each fact has one home, and
-  the guides link to it rather than restating it — see the documentation map in
-  [copilot-instructions.md](.github/copilot-instructions.md).
-
-A change that alters a program's output is a documentation change too: the guides
-and the lessons contain transcripts of what programs print.
-
-### 5. Write Tests
-
-Help improve code quality:
-
-- Write unit tests
-- Write integration tests
-- Improve test coverage
-- Find and document edge cases
+[CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) is the standard expected of everyone in the
+project. [.github/SUPPORT.md](.github/SUPPORT.md) says where to ask a question;
+[SECURITY.md](SECURITY.md) says where to report a vulnerability, privately.
 
 ---
 
-## Development Setup
+## Ways to contribute
 
-### Prerequisites
+**A bug report** is most useful with a program that shows it. Paste the program, say what
+happened and what you expected, and name the language and the version from **Help >
+About**. A turtle drawing that came out wrong is worth a screenshot; the Turtle Log under
+the canvas lists the drawing commands the canvas actually received, and that is usually
+where the answer is.
 
-The application is C++20 and Qt6, and so is everything that tests it: there is no
-interpreter in the tree, so a checkout needs a compiler and nothing else.
+**A feature request** should start from what you cannot do. The
+[roadmap](docs/maintainer/roadmap.md) records what is deliberately not built, so a request
+that one of those five items explains is a design difference rather than a gap.
 
-| To work on | You need |
-| ---------- | -------- |
-| The IDE and the C++ suites | A C++20 compiler (GCC 11+ or Clang 14+), CMake 3.20+, Qt6 (Widgets, Core, Gui; Svg optional for SVG export, PrintSupport optional for printing) and the SQLite 3 development package |
-| The gates (`make smoke`, `command-matrix`, `repl-matrix`, `golden-check`, `tree-check`) | The same build: they are `time_warp_gates`, built with the product |
-| The documentation gates (`make doc-links`, `doc-claims`) | A C++20 compiler. `time_warp_docs` is its own small project with no Qt |
-| `make lint-md` | A C++20 compiler: it is `time_warp_docs md`, built with the documentation tools |
-| Any of it | Git and a command line |
+**A documentation change** needs the same gate run as a code change, because
+`make doc-claims` reads the guides and fails when one describes a path, a target or a name
+that is not there.
 
-### Clone Repository
+**Code** arrives as a pull request against `main`. Read the two sections below first: the
+gates are the review, and a change that runs them all has very little left to argue about.
+
+---
+
+## Setting up
 
 ```bash
 git clone https://github.com/James-HoneyBadger/Time_Warp_Studio.git
 cd Time_Warp_Studio
-```
-
-### Configure and build
-
-The application needs no dependency step: Qt6, CMake and a C++20 compiler are all it
-takes. Configure once, then build.
-
-```bash
 cmake -S native -B native/build -DCMAKE_BUILD_TYPE=Release
 cmake --build native/build -j
 ```
 
-The gates and the documentation tools are built the same way — `make smoke` and
-`make doc-links` build what they need first. There is no virtual environment, no
-`pip install` and no interpreter to provide.
+The requirements, the per-distribution install lines and what to do when Qt is not found
+are in [getting started](docs/user/getting-started.md).
 
-### Verify Setup
+### Install the hooks
 
-```bash
-# Build and run the IDE
-make -C native run
-
-# The 27 C++ suites
-make test
-```
-
-Both should work without errors.
-
-### Install the Git hooks
+`.githooks/pre-commit` runs `detect-secrets` against `.secrets.baseline`, so a credential
+cannot reach GitHub in a commit:
 
 ```bash
-pipx install pre-commit    # the hook runner itself, which needs Python to install
-pre-commit install
+pip install detect-secrets            # or your distribution's package
+pre-commit install --install-hooks    # if you use pre-commit
+git config core.hooksPath .githooks   # if you do not
 ```
 
-That installs one hook: `detect-secrets` fails the commit when a file contains
-something shaped like a credential. There is no Python linter any more, because
-there is no Python: the build is compiled `-Werror`, and `make tree-check` fails if
-a `.py` file or a Python tool's config file comes back.
-
-`detect-secrets` compares against the committed baseline in `.secrets.baseline`,
-which records what the tree already holds. That is deliberate: without it every
-historical false positive would be re-reported on each run, and a hook that cries
-wolf gets switched off. With it, only a secret added *since* the baseline stops
-the commit — which is the case worth stopping.
-
-The reason to care is not tidiness. A key that reaches GitHub is world-readable,
-and deleting it in a later commit does not remove it: the blob stays in history
-and in every fork and clone, so recovery means rewriting history *and* rotating
-the key.
-
-When the hook flags a false positive, silence that one line rather than
-weakening the detection:
-
-```text
-EXAMPLE_TOKEN = "not-a-real-token"  # pragma: allowlist secret
-```
-
-When a real value is removed from a file, or the baseline is audited and the
-finding is intentional, regenerate it and review the diff:
-
-```bash
-detect-secrets scan --baseline .secrets.baseline
-```
+The baseline is what the hook compares against, so it reports only what has been added
+since. A false positive is silenced by adding its line to `.secrets.baseline`, in the same
+commit that explains why.
 
 ---
 
-## Code Style
+## The gates
 
-### C++ Code Standards
-
-- **Standard**: C++20, matching the style of the file you are editing
-- **Warnings are errors**: the build carries `-Wall -Wextra -Wpedantic -Wshadow
-  -Wcast-qual -Wuseless-cast -Wlogical-op -Wnull-dereference` with `-Werror`
-  (disable with `-DTIME_WARP_EXPR_WERROR=OFF` while experimenting)
-- **Comments explain why.** The unusual decisions in this codebase — the turtle's
-  compass heading, the bridge protocol, the coalescing canvas queue — are
-  documented where they are made; match that
-
-### The gates
-
-The harnesses are `time_warp_gates`, one binary built with the product: `smoke`
-runs every example, `commands` runs every row of the command table, `repl` runs the
-same rows through the API, and `golden` compares the ports with the frozen corpora.
-The rows are data in `native/share/command_rows.json`, and the inventory that
-measures their coverage reads the executors' own sources
-(`native/tools/gates/inventory.cpp`).
-
-The documentation gates are `time_warp_docs` (`native/tools/docs`, one small
-project with no Qt): `links`, `claims`, `version` and `md`, the Markdown lint. `time_warp_icon` writes the
-packaged icons. None of them is part of the product, and nothing installed contains
-them — there is no Python in the tree at all, which `make tree-check` enforces.
-
-Two things in the application are not executors and break just as easily: the lesson
-curriculum (`native/share/lessons.json`) and the teacher's side
-(`classroom.cpp`). A checkpoint is checked by *running* the learner's program, so an
-executor change can fail a lesson without touching the lesson -- which is why
-`make teach-check` is part of `make test-all` rather than something a contributor
-remembers to run.
+Everything is C++ built from this tree. There is no interpreter to install and none to run;
+`make tree-check` fails if a `.py` file or a Python tool's configuration file reappears.
 
 ```bash
-make lint        # the build, which is warning-free by construction
-make lint-md     # every tracked Markdown file against the house rules
-make doc-claims  # every path, name and make target the guides name exists
+make test              # the 24 C++ suites
+make test-all          # test, smoke, both command matrices, the corpus, curriculum and docs
+make smoke             # every example program through the native engines
+make command-matrix    # every command-table row as a program
+make repl-matrix       # the same rows through a REPL session
+make golden-check      # the ports against the frozen corpus, 634 programs
+make teach-check       # every lesson solution, and every starter
+make doc-links doc-claims # the guides: links, anchors, and the facts they claim
+make lint-md           # the house Markdown rules
+make tree-check        # no Python, no second toolchain
 ```
 
-### Example Code Standards
+`make test-all` is what CI runs, and what a pull request should be able to say it passed.
+`make help` lists every target with a line on each. The suites, the parity corpora and what
+each gate is worth are in [testing](docs/maintainer/testing.md).
 
-```python
-def calculate_sum(numbers: list[int]) -> int:
-    """
-    Sum a list of integers.
-    
-    Args:
-        numbers: List of integers to sum
-        
-    Returns:
-        Sum of all numbers
-        
-    Raises:
-        TypeError: If numbers is not a list of integers
-    """
-    if not isinstance(numbers, list):
-        raise TypeError("numbers must be a list")
-    
-    total = 0
-    for num in numbers:
-        total += num
-    
-    return total
-```
+**Warnings are errors.** Every target compiles with `-Wall -Wextra -Wpedantic -Wshadow
+-Wcast-qual -Wuseless-cast -Wlogical-op -Wnull-dereference` and `-Werror`;
+`-DTIME_WARP_EXPR_WERROR=OFF` exists for experimenting and is not for a pull request.
 
 ---
 
-## Git Workflow
+## House rules for code
 
-### 1. Create Feature Branch
+- **C++20, matching the file you are editing.** No new dependency without a decision
+  recorded in the pull request.
+- **Comments explain why.** The unusual decisions — the turtle's compass heading, the
+  canvas command queue, the corpus's documented divergences — are documented where they are
+  made, and a comment that restates the code is noise beside them.
+- **An executor is a function, not a class.** Its contract is what
+  `timewarp/lang/turtle_host.hpp` documents: it returns the text to display, with the
+  message prefixes, and it never throws out. All UI state lives in the Qt application.
+- **A new control ships working.** A menu entry is added when it does something; until
+  then it does not exist. The one exception is an action that reports why it cannot act,
+  and even that is a decision to write down.
+- **One fact, one home.** The language table is `native/include/timewarp/lang/registry.hpp`
+  and nothing else; `make registry-check` enforces it. A guide links to a fact rather than
+  restating it.
+- **A behaviour change edits the corpus in the same commit.** The parity gate compares with
+  a recording, so a deliberate change is a corpus edit, and a recording that quietly
+  disagrees with the code is the failure the gate exists to catch.
 
-```bash
-git checkout -b feature/your-feature-name
+### Message prefixes
 
-# Or for bug fixes
-git checkout -b fix/your-bug-name
-```
+Every string an engine returns carries a prefix, and the IDE's presentation depends on it:
+`❌` for an error, `✅` for a success confirmation, `ℹ️` for information, `🎨` for a theme
+or display change, `🚀` for an execution event, `🐢` for a drawing action, `📝` for an input
+prompt. This is the output convention and it is the only place emoji remain: an interface
+control carries a drawn icon (`icons::glyph()`) and a word, never an emoji.
 
-Branch naming:
+### Prose
 
-- Feature: `feature/description`
-- Bug: `fix/description`
-- Docs: `docs/description`<!-- doc-claims: ignore -->
-- Test: `test/description`
-
-### 2. Make Changes
-
-- Keep commits focused and clear
-- Write descriptive commit messages
-- One logical change per commit
-
-```bash
-# Good commit message
-git commit -m "Add BASIC integer division operator (/)"
-
-# Bad commit message
-git commit -m "Fixed stuff"
-```
-
-### 3. Run Tests & Validation
-
-```bash
-# Run test suite (offscreen Qt)
-make test
-
-# Check code style
-make lint
-
-# Every example program, through the reference engine
-make smoke
-
-# One C++ suite by name
-ctest --test-dir native/build -R turtle_canvas_tests --output-on-failure
-```
-
-All must pass before submitting a PR. CI (`native.yml`) builds the application and
-runs the suites in Release, Debug, AddressSanitizer and UndefinedBehaviorSanitizer
-configurations, the differential gates, the example corpus, and the engine's
-own tests.
-
-### 4. Push to Your Fork
-
-```bash
-git push -u origin feature/your-feature-name
-```
-
-### 5. Create Pull Request
-
-On GitHub:
-
-1. Click "New Pull Request"
-2. Select your feature branch
-3. Fill in the form GitHub shows you. It is
-   [.github/pull_request_template.md](.github/pull_request_template.md), and every
-   item on it is either a gate that must have been run or a decision no gate can
-   make. There is a table for the gate results; fill in what you ran.
-
-Example PR description:
-
-```markdown
-## Description
-Adds support for integer division operator in BASIC language.
-
-## Changes
-- Add `/` operator parsing to BASIC executor
-- 5 / 2 returns 2 (integer division)
-- Add tests for division edge cases
-
-## Why
-Requested by Issue #42 - BASIC language completeness.
-
-## Testing
-- Unit tests: 3 new tests added
-- Integration: Tested with demo_basic.bas
-- Edge cases: Zero division handled
-
-## Checklist
-- [x] Tests pass
-- [x] style follows PEP 8
-- [x] Documentation added
-- [x] No breaking changes
-```
-
-### 6. Code Review
-
-- Maintainer reviews your PR
-- Requests changes if needed
-- Approves and merges when ready
+The manuals are part of the product. British spelling, plain declarative technical prose,
+second person only in a procedure, em dashes sparingly, no exclamation marks, no whimsy.
+A claim in a guide is a claim a gate will check, so write what the code does and not what
+it nearly does. `make lint-md` is the mechanical half of that rule, and review is the rest.
 
 ---
 
-## Testing Requirements
+## Recipes
 
-### Run Test Suite
+### Adding a command to an existing language
 
-```bash
-# The 21 C++ suites
-make test
+1. Implement it in the language's executor under `native/src/lang/`.
+2. Add a row to `native/share/command_rows.json`: the language's protocol key, the
+   command, a program that exercises it, and what that program must produce.
+3. If the command is one a guide describes, add it to
+   [the reference](docs/languages/reference.md).
+4. `make command-matrix repl-matrix golden-check` — the corpus needs an entry for a
+   command whose output is now pinned.
 
-# One suite, by name
-ctest --test-dir native/build -R turtle_canvas_tests --output-on-failure
+### Adding a language
 
-# The other build trees
-make test-debug
-make asan
+The order matters, because the native implementation is the only implementation there is.
 
-# Every example program, through the native engines
-make smoke
+1. **The registry** — `native/include/timewarp/lang/registry.hpp` gains a row: the enum
+   member, the protocol key, the display name and the extensions. It is the one table;
+   `make registry-check` fails if a second list appears.
+2. **The executor** — an `execute_x` in `native/src/lang/`, registered in `executor_for`
+   and, if it runs its own loop, in `is_whole_program`. A line-by-line language gets one
+   function per statement; a whole-program one gets the source and runs to completion.
+3. **The Qt side** — `native/src/ui/language.cpp` maps the enum by position, with a
+   `static_assert` against the registry.
+4. **Coverage** — an example under `Examples/<language>/`, rows in `command_rows.json` for
+   every command, a tutorial in `docs/languages/tutorials/` (the Help pane builds its
+   per-language guide link from the settings key), a section in
+   [the reference](docs/languages/reference.md), and a corpus entry.
+5. **Teaching** — `time_warp_teach new <id> --language NAME` prints a lesson skeleton the
+   loader accepts, and `time_warp_teach validate` is the test.
+6. **The index** — add the tutorial to the `Language tutorials` table in
+   [docs/INDEX.md](docs/INDEX.md). `help_browser_tests` fails when that section stops
+   listing one tutorial per language.
 
-# All of the above, plus lint
-make test-all && make lint
+### Adding a lesson
 
-# The Markdown: every tracked .md file, against the rules in time_warp_docs md
-make lint-md
-```
+`time_warp_teach new` then `validate`, then regenerate the plans with
+`time_warp_teach plans --write docs/lessons/plans`. The plans are generated: editing one by
+hand fails CI. [The curriculum](docs/lessons/README.md) has the details and
+[the format](docs/lessons/FORMAT.md) the fields.
 
-### Writing Tests
+### Adding a theme
 
-C++ tests live in `native/tests/` as `*_tests.cpp`, one executable per suite, each
-registered with CTest in `native/CMakeLists.txt`. They use the tiny assertion
-helpers in `native/tests/check.hpp`.
+A record in `native/src/ui/theme_table.inc` and, if it needs one, a high-contrast variant.
+Everything else is derived: the toolbar, tabs, docks and menus come from the theme's colours
+through `design::tokens()`, so a theme is its palette and not a stylesheet.
+`ui_layout_tests` pins the count and the colour roles a theme must supply.
 
-```cpp
-// File: native/tests/my_feature_tests.cpp
+### Changing a guide
 
-#include "check.hpp"
-#include "timewarp/canvas/command_queue.hpp"
-from time_warp.graphics.turtle_state import TurtleState
+The documentation has four audiences and an index that is also the application's Help tree:
 
-class TestMyFeature:
-    """Test my new feature"""
-
-    def setup_method(self):
-        """Setup before each test"""
-        self.interpreter = Interpreter()
-        self.turtle = TurtleState()
-
-    def test_feature_works(self):
-        """Test that feature works"""
-        self.interpreter.load_program('PRINT 5 / 2', 'BASIC')
-        result = self.interpreter.execute(self.turtle)
-        assert "2" in "\n".join(result)
-
-    def test_feature_edge_case(self):
-        """Test edge case"""
-        self.interpreter.load_program('PRINT 5 / 0', 'BASIC')
-        result = self.interpreter.execute(self.turtle)
-        assert any("\u274c" in line for line in result)
-```
-
-### Test Coverage
-
-Add assertions to the relevant `native/tests/*_tests.cpp`. There is no coverage
-tool in the tree: a suite that fails when a claim is broken is the measure this
-project uses, and every fix is expected to arrive with one.
-
----
-
-## Documentation
-
-### When documentation changes with the code
-
-A change to behaviour is a documentation change in the same commit, not a follow-up:
-
-| Change | Document |
+| Directory | Audience |
 | --- | --- |
-| Anything a user sees | `README.md`, and the section of `docs/USER_GUIDE.md` it belongs to |
-| Internal structure, a new library, a changed thread or process contract | `docs/ARCHITECTURE.md`, and `native/README.md` for the design note |
-| Build, dependency or packaging steps | `docs/INSTALLATION.md` |
-| A command, an operand or an error message | `docs/LANGUAGE_GUIDE.md` and, if the language has one, its tutorial |
-| A gate, a suite or a harness | `docs/README_TESTING.md` |
-| A planned item landing or being deferred | `docs/ROADMAP.md`, and `native/share/unbuilt.txt` |
-| Anything at all | `CHANGELOG.md` |
+| `docs/user/` | Someone using the Studio |
+| `docs/languages/` | Someone learning or looking up a language |
+| `docs/maintainer/` | Someone working on the code |
+| `docs/project/` | The archive, and where the project's records live |
+| `docs/lessons/` | A learner or a teacher following the curriculum |
 
-A program's output appears verbatim in the guides and in the lesson transcripts, so a
-change to what a program prints is a documentation change even when no sentence
-mentions the feature by name.
+`docs/INDEX.md` lists every page inside the documentation root; a row that points outside
+it is dropped from the Help pane, and `help_browser_tests` asserts that every row resolves.
+Then run `make doc-links doc-claims lint-md`.
 
-### Documentation standard
-
-The house voice is a technical manual written by someone who knows the system: a
-datasheet's precision with a hobbyist's patience. Concretely:
-
-- **State what is true.** Present tense, indicative. No selling, no superlatives, no
-  rhetorical questions, no addressing the reader's feelings.
-- **Prefer the specific to the impressive.** Name the file, the function, the number,
-  the limit. "Ten seconds and two million statements" beats "a robust budget".
-- **Say what it does not do**, in the same voice and the same place. A limit stated
-  once is worth more than a claim dressed up to hide it.
-- **Keep the history out of the instructions.** Where old behaviour explains current
-  shape, say so in one sentence, or mark the passage `<!-- history -->` …
-  `<!-- /history -->` so the claims gate stops checking it as current fact.
-- **Second person for procedures only.** "Press `F9`" in a procedure; nowhere else.
-- **Em dashes sparingly, colon or full stop otherwise.** No emoji in prose, and
-  none in a control's label either: interface icons are drawn by `icons::glyph()`,
-  so a label carries words and the icon carries the picture.
-- **No whimsy in the manuals.** A joke in a guide costs a reader a second look at a
-  sentence that was supposed to be a fact. The product's name is the one piece of
-  character the text carries; the rest earns its place by being accurate.
-
-```markdown
-# Feature title
-
-What it is, in one or two sentences, with the reason it exists.
-
-## Using it
-
-Steps, with the exact menu path or command.
-
-## Limits
-
-What it does not do, and why.
-```
-
-`make lint-md` checks the mechanical part of this (headings, list markers, line
-length, single trailing newline); `make doc-links` and `make doc-claims` check that
-every path and name a sentence mentions exists. The rest is a reading matter.
+A claim you cannot make true yet can be marked: `<!-- doc-claims: ignore -->` after the
+statement, or a region between `<!-- history -->` and `<!-- /history -->` for text about how
+things used to be. Both are decisions to write down, not escapes from the gate.
 
 ---
 
-## Adding a New Language
+## Commits and pull requests
 
-The procedure is in
-[ARCHITECTURE.md § Adding a language](docs/ARCHITECTURE.md#adding-a-language); this
-is the checklist it implies. A language is a feature rather than a file: the IDE
-has to know it, the corpus has to exercise it, and the lesson panel has to be able
-to teach it. Stopping after step 2 leaves a language the tests know and the IDE
-cannot open.
+**Commit messages** say what changed and why, in the imperative, with the reasoning in the
+body. A commit that fixes a defect says how it was found; one that changes behaviour says
+what the old behaviour was.
 
-### 1. Create the executor
+**Branches** are `feature/…`, `fix/…` or `docs/…` off `main`. Nothing else is required: the
+project does not use a release branch, and a release is a tag on `main`.
 
-File: `native/src/lang/newlang.cpp`<!-- doc-claims: ignore -->, with its header in
-`native/include/timewarp/lang/`<!-- doc-claims: ignore -->
+**A pull request** answers the questions in
+[the template](.github/pull_request_template.md), of which the two that matter are what the
+change does to a user and which of the gates were run. If a gate could not be run, say so
+and why — a claim that a suite passed is worth having only if it did.
 
-```cpp
-std::string execute_newlang(Interpreter& interpreter, std::string_view source,
-                            TurtleHost& turtle) {
-    // A statement at a time (the line-by-line shape) or the whole source at once
-    // (the whole-program shape). Either way: return the text, never throw out of
-    // the executor, and prefix a failure with the error emoji.
-    return "❌ NewLang: not implemented yet\n";
-}
-```
-
-Errors are *returned as a line beginning with the error emoji*, never raised out of
-the executor: the interpreter, the canvas and the lesson checker all read the
-returned text.
-
-### 2. Register it
-
-Every table a language has to be in, and each one a compile error or a test failure
-if you miss it:
-
-- `native/src/lang/language.cpp` — the `Language` enum member, `display_name`,
-  `key`, `all_languages`, `is_whole_program` and `executor_for`
-- `native/src/ui/language.cpp` — the Qt adapter over that table: display name,
-  settings key and extensions
-- the switches that have a case per language: `syntax_highlighter.cpp`, `lint.cpp`,
-  `outline.cpp`, `native_runner.cpp` and `curriculum.cpp` (the extension)
-- `native/CMakeLists.txt` — the source file
-
-The build is `-Werror` with switch-exhaustiveness warnings, so a missing case is a
-build failure rather than a language that silently does nothing.
-
-### 3. Test it
-
-Assertions go in `native/tests/lang_tests.cpp`<!-- doc-claims: ignore -->, through the
-same `Interpreter` the IDE runs:
-
-```cpp
-void test_newlang_prints_hello() {
-    RecordingHost host;
-    Interpreter interpreter{Language::NewLang, host};
-    interpreter.load_program("print \"Hello\"");
-    interpreter.run();
-    TW_CHECK_EQ(interpreter.output().at(0), std::string{"Hello"});
-}
-```
-
-Then add a row per command to the `rows` list in `native/share/command_rows.json` and
-run `make command-matrix`: it fails on a row that has no effect and on a command in
-the inventory that has no row.
-
-### 4. Add examples
-
-Directory: `Examples/newlang/`, starting with `hello`.<!-- doc-claims: ignore --> Add any program that draws
-to `drawingExamples()` in `native/tools/gates/smoke.cpp`, or a program that draws
-nothing passes by being silent.
-
-### 5. Teach it
-
-Two lessons in `native/share/lessons.json`:
-`./native/build/time_warp_teach new <id> --language NEWLANG` prints a skeleton the
-loader accepts. Then run `time_warp_teach validate`, which refuses a solution that does
-not pass its own checkpoint, a starter that already passes, and a starter that
-fails unless `starter_is_broken` says the failure is the lesson.
-
-### 6. Document it
-
-- `docs/LANGUAGE_GUIDE.md` — a reference section
-- `docs/tutorials/newlang.md` — a tutorial<!-- doc-claims: ignore -->; `.github/workflows/docs.yml` requires
-  one per language
-- `README.md` — the row in the language table
-- `Examples/CATALOG.md` — one line per example
-
----
-
-## Submitting Changes
-
-### Before Submitting
-
-```bash
-# 1. Update to latest main
-git fetch origin
-git rebase origin/main
-
-# 2. Run the full test suite, all build trees, the corpus gate and lint
-make test-all && make lint && make lint-md
-
-# 3. Update docs
-# - README
-# - docs/ARCHITECTURE.md and docs/INSTALLATION.md
-# - native/README.md for design decisions
-```
-
-### Submission Checklist
-
-- [ ] Feature/fix complete
-- [ ] Tests written and passing
-- [ ] Build is warning-free (`-Werror`)
-- [ ] No `.py` file and no Python tool's config file was added (`make tree-check`)
-- [ ] `make smoke` is unchanged — every example still runs, and the 54 that must draw still draw
-- [ ] Lesson changes pass `./native/build/time_warp_teach validate`
-- [ ] Documentation updated, including anything the change made untrue
-- [ ] No breaking changes (or documented)
-- [ ] Commit messages clear
-- [ ] Branch based on latest main
-- [ ] Ready for code review
-
-### After Submission
-
-- Respond to review comments
-- Make requested changes
-- Re-run test suite
-- Update PR description if needed
-- Be patient - maintainers volunteer
-
----
-
-## Project Structure
-
-Understanding the codebase:
-
-```text
-Time_Warp_Studio/
-├── native/                       # THE APPLICATION (C++20 / Qt6)
-│   ├── CMakeLists.txt
-│   ├── include/ src/             # ui/, canvas/, scheme/, lang/, lessons/,
-│   │                             #   debugger/, project/, sql/, api/
-│   ├── tests/                    # 26 CTest suites, and the golden corpora
-│   ├── share/                    # lessons.json, snippets.json, command_rows.json
-│   └── tools/                    # time_warp_ide.cpp, time_warp_api.cpp
-│                                 #   and the commands and gates: time_warp_check,
-│                                 #   time_warp_learn, time_warp_teach,
-│                                 #   time_warp_gates (smoke, commands, repl,
-│                                 #   golden, tree, in gates/), time_warp_docs
-│                                 #   (links, claims, version, in docs/),
-│                                 #   time_warp_icon (the packaged icons)
-├── Examples/                     # 68 example programs across the 10 languages
-├── docs/                         # the guides
-│   ├── USER_GUIDE.md             #   the IDE manual (projects, REPL, SQL, API)
-│   ├── API.md                    #   JSON-RPC methods and libraries
-│   ├── tutorials/                #   one tutorial per language
-│   └── lessons/                  #   the curriculum, both guides and the plans
-├── run.sh                        # build (if needed) and launch the IDE
-├── twc                           # compile one program to an executable
-├── api                           # JSON-RPC on stdin/stdout
-├── Makefile                      # Convenience targets (delegate to native/)
-└── [Root docs]                   # README, CONTRIBUTING, SECURITY, LICENSE
-```
-
-See docs/ARCHITECTURE.md for detailed structure.
-
----
-
-## Getting Help
-
-### Questions?
-
-[.github/SUPPORT.md](.github/SUPPORT.md) is the authority on where to ask and on
-what is supported. In short:
-
-- **Bugs and ideas**: the issue forms linked above
-- **Documentation**: start at [docs/INDEX.md](docs/INDEX.md)
-- **Email**: <james@honey-badger.org>
-- **Security problems**: [SECURITY.md](SECURITY.md) — please do not open a public issue
-
-### Still Confused?
-
-- Look at existing PRs
-- Check similar code as reference
-- Ask in an issue *before* starting something large — a new language or a new
-  panel is a lot of work to find out it is not wanted
-
----
-
-## Recognition
-
-Contributors are recognized in:
-
-- Commit history
-- GitHub contributors page
-- Project changelog
-
-Thank you for contributing!
-
----
-
-**Resources:**
-
-- [ARCHITECTURE.md](docs/ARCHITECTURE.md) - Technical design and the extension points
-- [docs/INDEX.md](docs/INDEX.md) - Every guide, and which to read when
-- [README.md](README.md) - Project overview
-- [SUPPORT.md](.github/SUPPORT.md) - Where to ask, and what is supported
-- [SECURITY.md](SECURITY.md) - How to report a vulnerability
-- [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) - Expected behavior
+Reviews are about the code and the claim it makes. The gates cover the rest.

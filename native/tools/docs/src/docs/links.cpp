@@ -24,6 +24,12 @@ namespace {
 
 namespace fs = std::filesystem;
 
+/// A file that is a record from top to bottom, marked the way the claim checker
+/// marks one. Its links describe what existed when the entry was written, so a
+/// release note naming a manual that has since been removed is the archive working
+/// rather than a dead link.
+constexpr std::string_view kWholeFileMarker = "<!-- history: all -->";
+
 /// `^[a-zA-Z][a-zA-Z0-9+.-]*:` -- http, https, mailto and anything else with a
 /// scheme. A network check belongs in CI's own step, not in a gate a contributor
 /// runs offline, so these are counted as neither checked nor broken.
@@ -169,6 +175,11 @@ int run_links_command(const timewarp::cli::Invocation& invocation) {
             continue;
         }
         const std::optional<std::string> content = read_text(document);
+        if (content &&
+            content->substr(0, content->size() < 1000 ? content->size() : 1000)
+                    .find(kWholeFileMarker) != std::string::npos) {
+            continue;
+        }
         if (!content) {
             // The Python lets `read_text` raise here; the verdict is the same --
             // the run fails -- without the traceback.

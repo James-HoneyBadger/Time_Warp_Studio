@@ -418,8 +418,8 @@ jobs:
           2.39 or newer — Ubuntu 24.04 and later, or a distribution of similar age;
           on anything older, use the package for it.
 
-          See [CHANGELOG.md](CHANGELOG.md) for what changed and
-          [docs/INSTALLATION.md](docs/INSTALLATION.md) for requirements.
+          See [the history](docs/project/history.md) for what changed and
+          [getting started](docs/user/getting-started.md) for requirements.
 
           EOF
             echo "---"

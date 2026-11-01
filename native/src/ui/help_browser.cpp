@@ -144,7 +144,7 @@ QString guideTopic(Language language) {
     }
     // One tutorial per language, named by the same settings key the highlighter
     // and the bridge use.
-    return QStringLiteral("tutorials/%1.md").arg(settingsKey(language));
+    return QStringLiteral("languages/tutorials/%1.md").arg(settingsKey(language));
 }
 
 namespace {
@@ -158,7 +158,7 @@ namespace {
         return {};
     }
     static QHash<QString, QString> cache;
-    const QString path = QDir{root}.filePath(QStringLiteral("LANGUAGE_GUIDE.md"));
+    const QString path = QDir{root}.filePath(QStringLiteral("languages/reference.md"));
     if (const auto found = cache.constFind(path); found != cache.cend()) {
         return *found;
     }
@@ -249,11 +249,17 @@ QString guideDescription(Language language, const QString& keyword) {
                                                        return word.match(cell).hasMatch();
                                                    });
             if (names_keyword) {
-                for (qsizetype cell = cells.size() - 2; cell >= 1; --cell) {
+                // The column after the command is the meaning, whether the table has
+                // two columns (command, meaning) or three (command, meaning, example):
+                // scanning from the end returned the example -- "FD 50" as the
+                // description of FD -- and skipping any cell that contains the word
+                // returned nothing for "Move 100 units forward".
+                for (qsizetype cell = 2; cell + 1 < cells.size(); ++cell) {
                     QString meaning = cells.at(cell).trimmed();
                     meaning.remove(QLatin1Char('`'));
                     meaning.remove(QLatin1Char('*'));
-                    if (!meaning.isEmpty() && !word.match(meaning).hasMatch()) {
+                    if (!meaning.isEmpty() &&
+                        meaning.compare(keyword, Qt::CaseInsensitive) != 0) {
                         return meaning;
                     }
                 }

@@ -2,7 +2,8 @@
 
 One plan per language, generated from the curriculum by
 `time_warp_teach plans --write docs/lessons/plans`. For the
-learner's view of the same material see the tutorials in `docs/tutorials/`,
+learner's view of the same material see the tutorials in
+`docs/languages/tutorials/`,
 and for how the material is delivered see `docs/lessons/README.md`.
 
 | Language | Lessons | Checkpoints | Plan |

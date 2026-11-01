@@ -141,9 +141,17 @@ each demonstrate one idea.
 ## Validation
 
 The example gate runs every program through the engines the IDE ships
-(`time_warp_check`) and reports syntax and execution failures, and fails when a
-program listed as drawing produces no ink. Run it from the repository root with:
+(`time_warp_check`), reports syntax and execution failures, and fails when a program
+listed as drawing produces no ink. From the repository root:
 
 ```bash
-make smoke
+make smoke     # 67 of the 68
 ```
+
+`basic/star_patrol.bas` is the sixty-eighth: it uses what the native port added and the
+reference never had, so `lang_tests` runs it and asserts that it draws, which is the same
+gate on the other side of the port.
+
+The same programs are what **File > Examples Gallery…** shows, each with the drawing it
+makes as its face, because the thumbnail is the program run headlessly rather than a picture
+of it.

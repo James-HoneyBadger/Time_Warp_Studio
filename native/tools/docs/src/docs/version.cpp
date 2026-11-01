@@ -86,13 +86,16 @@ std::vector<Copy> copies_of(const fs::path& root) {
         // error below is for: a copy target that outlives its text stops the
         // release rather than passing unnoticed.
         {root / "README.md", "README version badge", true},
-        {root / "docs" / "ARCHITECTURE.md", "architecture guide title", false},
+        {root / "docs" / "maintainer" / "architecture.md", "architecture guide title", false},
     };
 }
 
-std::vector<Requirement> requirements_of(const fs::path& root, std::string_view version) {
-    return {{root / "CHANGELOG.md",
-             "a changelog section headed '## [" + std::string(version) + "] - <date>'"}};
+std::vector<Requirement> requirements_of(const fs::path& root, std::string_view /*version*/) {
+    // The release record lives in the history archive. It is a heading of any
+    // level there, because it sits under the part that owns it, so the check is
+    // "a heading whose text is [version] - date" rather than "a level-two heading".
+    return {{root / "docs" / "project" / "history.md",
+             "a release section headed '[X.Y.Z] - <date>'"}};
 }
 
 /// The copy's new text, or the same text when it already agrees. `badge` selects
@@ -158,12 +161,25 @@ std::optional<std::string> updated_text(const Copy& copy, const std::string& con
 }
 
 bool has_changelog_section(std::string_view content, std::string_view version) {
-    const std::string heading = "## [" + std::string(version) + "] - ";
-    for (std::size_t at = content.find(heading); at != std::string_view::npos;
-         at = content.find(heading, at + 1)) {
-        if (at == 0 || content[at - 1] == '\n') {
-            return true;
+    // Any heading level: the archive nests the release record under a part
+    // heading, and a check that insisted on `##` would be a check on the layout
+    // of one file rather than on the presence of the release.
+    const std::string wanted = "[" + std::string(version) + "] - ";
+    std::size_t at = 0;
+    while (at <= content.size()) {
+        const std::size_t end = content.find('\n', at);
+        const std::string_view line =
+            content.substr(at, end == std::string_view::npos ? content.size() - at : end - at);
+        if (!line.empty() && line.front() == '#') {
+            std::size_t text = line.find_first_not_of("# \t");
+            if (text != std::string_view::npos && line.compare(text, wanted.size(), wanted) == 0) {
+                return true;
+            }
         }
+        if (end == std::string_view::npos) {
+            break;
+        }
+        at = end + 1;
     }
     return false;
 }

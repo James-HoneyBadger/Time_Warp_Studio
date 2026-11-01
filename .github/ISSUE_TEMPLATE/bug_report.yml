@@ -13,7 +13,7 @@ body:
       value: |
         Thanks for taking the time to report this.
 
-        **Before you file:** [docs/ROADMAP.md](https://github.com/James-HoneyBadger/Time_Warp_Studio/blob/main/docs/ROADMAP.md)
+        **Before you file:** [the roadmap](https://github.com/James-HoneyBadger/Time_Warp_Studio/blob/main/docs/maintainer/roadmap.md)
         lists what is deliberately not built — a web build, Snap, an arm64 AppImage,
         calling one language from another — and the proposals that are still open. A
         missing feature from those lists is a feature request, not a regression.
@@ -136,7 +136,7 @@ body:
     attributes:
       label: Before submitting
       options:
-        - label: I read [docs/ROADMAP.md](https://github.com/James-HoneyBadger/Time_Warp_Studio/blob/main/docs/ROADMAP.md), and this is not on the list of known gaps.
+        - label: I read [the roadmap](https://github.com/James-HoneyBadger/Time_Warp_Studio/blob/main/docs/maintainer/roadmap.md), and this is not on the list of known gaps.
           required: true
         - label: I searched the existing issues for the same problem.
           required: true

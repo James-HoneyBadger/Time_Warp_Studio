@@ -3,8 +3,7 @@
 The curriculum, how a checkpoint is checked down to the detail, where progress is
 kept, and the protocol the IDE drives it with.
 
-Readers who want to *use* the lessons want the [student guide](student-guide.md)
-or the [teacher guide](teacher-guide.md) instead.
+Readers who want to *use* the lessons want [the curriculum](README.md) instead.
 
 ---
 
@@ -24,7 +23,7 @@ native/src/lessons/  the library that reads it:
 paid for at least once:
 
 - the panels and tools that show the curriculum can be replaced without touching
-  it, which is how the same twenty-two lessons are reachable from a terminal, from the
+  it, which is how the same twenty lessons are reachable from a terminal, from the
   IDE, and from a printed plan;
 - a teacher can author a lesson without editing C++;
 - **the whole corpus can be verified in one pass**, which is what

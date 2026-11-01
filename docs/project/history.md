@@ -1,8 +1,112 @@
-# Changelog
+# History
 
 <!-- history: all -->
 
-## [28.1.0] - 2026-11-01
+This page is the project's archive. It holds two records, because they answer the same
+kind of question and there is no reason to look in two places for the answer:
+
+- **the port** — what the removed PySide6 application had, what replaced it, and the test
+  that proves each replacement;
+- **the releases** — what each version changed, newest first.
+
+Everything below describes the past. What the application does now is the
+[documentation set](../INDEX.md); what it does not do yet is the
+[roadmap](../maintainer/roadmap.md).
+
+Both records are exempt from the claim checker, and deliberately so: a release entry that
+says "the toolbar is in two rows" was true when it was written and stays true as a
+statement about that release. A guide that said it today would be a lie.
+
+---
+
+## Part one: the port
+
+Time Warp Studio was a Python application built with PySide6. It was removed at commit
+`c30e76a` — 36 modules under `Platforms/Python/time_warp/ui/`, 15 under `features/`, about
+17.5k lines of interface — and replaced by the Qt application in `native/`. Every language
+was then reimplemented in C++, and the Python reference engine that the ports were judged
+against was deleted at 18.0.
+
+The port was planned as nine phases, each naming the suite and the assertion that would
+prove it. A phase that could not meet its own test did not ship. The plan is complete: every
+phase landed with its test, and this is the record of what was ported, in what order, and
+why each decision was made.
+
+### Ground rules the port worked to
+
+1. **A feature arrives with its test.** A port without one is a port nobody can tell from a
+   regression.
+2. **No control ships before it works.** A menu entry is added when it does something; until
+   then the action reports itself in the status bar instead of doing nothing.
+3. **The old file is the specification, not the standard.** Three old behaviours were wrong
+   and were corrected rather than copied: a polyglot shared variable bus that let two
+   programs interfere, an automatic update poll that was a network request nobody asked for,
+   and a formatter that restored the cursor to the document rather than to the line.
+4. **No new dependency without a decision.**
+5. **Settings and data follow the existing conventions**: preferences in `QSettings`, user
+   data under the directory `TIME_WARP_DATA_DIR` moves, so a test never writes a learner's
+   real files.
+6. **Documentation lands in the same commit** as the change it describes.
+
+### The phases
+
+| # | Phase | What it brought | Size |
+| --- | --- | --- | --- |
+| 0 | Foundations | the data directory, panel registration, test fixtures | S |
+| 1 | Editor completion | find in files, format code, snippets, whitespace rendering, the minimap, run history, run selection, reset | M |
+| 2 | Data safety | autosave, version history | M |
+| 3 | Help and learnability | the documentation browser, F1 context help, the keyword inspector, the guided tour | M |
+| 4 | Canvas time travel | the scrubber, GIF recording, SVG export | M |
+| 5 | Export and print | PDF of the code, print code and drawing, a session as HTML | M |
+| 6 | Debugging breadth | breakpoints everywhere, pause and step for the line-by-line languages, then for the whole-program ones, the profiler | L |
+| 7 | Workspace | the document outline, the terminal, the split editor, run both panes | M |
+| 8 | Accessibility and display | high contrast, the font-scale presets, focus mode, the CRT settings, the screen-mode presets | S–M |
+| 9 | Classroom | the roster panel, presentation mode, lesson session export, class bundles | M |
+
+Size was estimated in sessions of part-time work: **S** about one, **M** two or three, **L**
+about a week.
+
+### What was deliberately not ported
+
+Eleven modules in the old tree were never imported by anything — no menu entry, no dock, no
+timer. Porting them would have been building new features, not restoring lost ones:
+`project_tree.py`, `cics_panel.py`, `dbms_window.py`, `sql_panel.py`, `terminal_3278.py`,
+`error_explorer.py`, `feature_panels.py`, `feature_integration.py`,
+`phase_vii_x_panels.py`, `boot_screen.py` and `collaboration_client.py`.
+
+The old application's Python threading machinery — `REPLThread`, `InterpreterThread`,
+`feature_integration` — was replaced by the C++ runners rather than ported, and no
+user-facing behaviour went with it.
+
+### What the port carried and later gave up
+
+The port brought the three emulated machines with it: the HB-1 home computer, the HB-2 of
+1992 and the CHIP-8 virtual machine, with the language that ran on the last of them. All
+three were removed at 28.0, because they were a second product inside the first — their own
+clocks, storage, manuals and manuals' worth of caveats. The 28.0.0 entry below is that
+removal, and the text above about them is the record of a port rather than a description of
+what ships.
+
+### How parity was measured, and then what replaced it
+
+While the Python reference existed, the C++ engines were compared against it by running both
+and diffing. When it was deleted, that gate could no longer run, so its answers were frozen
+into a corpus: 442 language programs and 192 Scheme programs, each with the program text,
+what it printed, every drawing call in order, and the variables it left. `make golden-check`
+compares the ports with those answers and imports no Python to do it.
+
+The trade is stated plainly in [testing](../maintainer/testing.md): a recording cannot
+notice a mistake in the recording, so a deliberate behaviour change edits the corpus entry in
+the same commit that changes the behaviour.
+
+---
+
+## Part two: the releases
+
+Newest first. The headings are the release numbers; the text under each one is what that
+release changed, in the words it was shipped with.
+
+### [28.1.0] - 2026-11-01
 
 **A renewed interface: drawn icons, one toolbar, and a design system underneath.**
 The window had three colour languages (grey chrome, white editor, navy status bar),
@@ -12,7 +116,7 @@ weight, in colours that ignore the theme. This release replaces all three: the
 interface is built from a small set of design tokens derived from the active theme,
 its icons are drawn, and its chrome is one row.
 
-### Added
+#### Added
 
 - **A vector icon set.** `icons.hpp`/`icons.cpp` carry 31 glyphs on a 16-unit grid
   (1.5-unit strokes, round caps, one colour), painted through a `QIconEngine` that
@@ -35,7 +139,7 @@ its icons are drawn, and its chrome is one row.
   drop-down subcontrol is styled, and QSS cannot draw a shape, so the arrow is a
   small PNG rendered per theme into the cache directory.
 
-### Changed
+#### Changed
 
 - **One toolbar.** The display controls moved out of the second row and onto the
   right-hand end of the first, past an expanding spacer: words for the document
@@ -65,13 +169,13 @@ its icons are drawn, and its chrome is one row.
   transport as glyphs. The database page's path elides instead of pushing its
   buttons off the edge, and its empty state no longer repeats the toolbar's buttons.
 
-### Removed
+#### Removed
 
 - `MainWindow::secondaryToolBar()`, the `secondaryToolBar` widget itself, and the
   "Language" label in front of the language selector -- which cost 66 pixels of a
   bar that has to hold fourteen controls at 900 pixels wide.
 
-## [28.0.0] - 2026-11-01
+### [28.0.0] - 2026-11-01
 
 **The IDE and the languages, and nothing else: the machines are removed.**
 Three emulated computers lived inside the application -- the HB-1 home computer,
@@ -81,7 +185,7 @@ release removes them, and with them the language that ran on the last one. What 
 left is what the application is for: writing a program, running it, watching it
 draw, stopping it, and reading why.
 
-### Removed
+#### Removed
 
 - **The HB-1.** `RetroComputerWindow` with its ROM socket, prompt, screen modes,
   CONFIG dialog, phosphor palettes and CRT glass; **HB DOS 1.0** (`HbDos`, a
@@ -110,7 +214,7 @@ draw, stopping it, and reading why.
 - **The manuals**: `docs/MACHINES.md`, `docs/hb1/`, `docs/hb2/`, `docs/chip8/`, the
   CHIP-8 tutorial, its lesson plan and its two lessons.
 
-### Changed
+#### Changed
 
 - **The statement budget is now enforced as documented:** two million statements, one
   constant, and a cut-off run reported as cut off. See Fixed.
@@ -124,7 +228,7 @@ draw, stopping it, and reading why.
   sentence and the whole-program list the machines were in.
 - **`time_warp_ide --help` no longer offers `--computer`, `--machine` or `--hb2`.**
 
-### Fixed
+#### Fixed
 
 - **A Scheme program could run forever.** `Machine::set_step_limit` had no caller, and
   `execute()` — which the check tool, the JSON-RPC API, the example gallery, a notebook
@@ -144,7 +248,7 @@ draw, stopping it, and reading why.
   branch that always answered "needs a machine with a processor attached"; it is gone,
   and `SYS 49152` is now reported as an unknown command like any other.
 
-### Verified
+#### Verified
 
 - `ctest --test-dir native/build` -- 24 suites, all green. The four machine suites
   (`chip8_emulator_tests`, `hb2_tests`, `retro_computer_tests` and the CHIP-8 cases in
@@ -163,14 +267,14 @@ draw, stopping it, and reading why.
 
 ---
 
-## [27.0.0] - 2026-10-31
+### [27.0.0] - 2026-10-31
 
 **The HB-2's own gaps are closed: a language on its hardware, a cassette, a joystick.**
 26.1.0 shipped the window and the manual, and the manual's status section named three
 things it did not have. This release builds them, and fixes the assembler defect that
 building them exposed.
 
-### Added
+#### Added
 
 - **The ROM socket.** Nine of the editor's engines -- BASIC, APL, Logo, PILOT, FOCAL,
   COMAL, REXX, Smalltalk and Forth -- run on the HB-2's own bus, chosen with the
@@ -200,7 +304,7 @@ building them exposed.
   is in the hand -- and answer without `JOYINIT`, because the stick is in the machine
   rather than in a host device that has to be opened.
 
-### Changed
+#### Changed
 
 - **`POKE` and `PEEK` reach the machine's whole address space.** The range comes from
   the map instead of a constant, so `POKE 1048576, 5` is the first pixel of the
@@ -210,7 +314,7 @@ building them exposed.
   lowest byte it places. A listing may put a message above its code and still run the
   code; `Assembly::entry` says where the processor starts.
 
-### Fixed
+#### Fixed
 
 - **An `ORG` below the image base padded by four gigabytes.** The subtraction wrapped,
   so any listing with two `ORG` directives in the wrong order asked for a four-gigabyte
@@ -224,7 +328,7 @@ building them exposed.
 - **`RUN` at the prompt used the shell's copy of the listing** rather than the machine's
   editor, so a program edited and then run could run the previous one.
 
-### Documentation
+#### Documentation
 
 - **A whole-set accuracy pass**, because sixteen months of features had outrun the
   prose: the front page said two machines and its table had two columns, the index said
@@ -250,13 +354,13 @@ building them exposed.
   machines; [the proposal](docs/hb1/model-92.md) records the status, and
   [the roadmap](docs/ROADMAP.md) no longer calls the machine headless.
 
-## [26.1.0] - 2026-10-31
+### [26.1.0] - 2026-10-31
 
 **The HB-2 is a machine you can sit in front of.** 26.0.0 shipped it headless: a bus, a
 chip set, a processor and a harness, with no window and no disk. This release finishes
 the machine and removes the last of the other platforms' installation paths.
 
-### Added
+#### Added
 
 - **An HB-2 window.** Tools > **HB-2 Model 92…** (`Ctrl+Alt+2`), or `time_warp_ide
   --hb2`: the glass, the keyboard, the prompt, the monitor and the machine's own
@@ -289,7 +393,7 @@ the machine and removes the last of the other platforms' installation paths.
 - **Three more demonstration programs**: two HB-OS processes and a starter listing in
   the window.
 
-### Changed
+#### Changed
 
 - **The Studio is Linux only, and says so.** The stale instructions for building a
   Windows 7 artifact with a second Qt, the Windows version-resource scaffolding in the
@@ -297,7 +401,7 @@ the machine and removes the last of the other platforms' installation paths.
   README, the support page, the FAQ, the roadmap and the architecture guide now state
   one platform and one Qt.
 
-## [26.0.0] - 2026-10-31
+### [26.0.0] - 2026-10-31
 
 **The HB-2 exists.** The
 [Model 92 proposal](docs/hb1/model-92.md) -- the machine the same company would have
@@ -305,7 +409,7 @@ shipped ten years after the HB-1 -- was written as a specification for after 25.
 five of its eight proposals are now a machine with a suite, a harness and six
 demonstration programs.
 
-### Added
+#### Added
 
 - **A bus, and a map that is one table.** `devices.inc` holds every region; the bus
   routes with it, `time_warp_gates hb --map` prints it, and
@@ -346,25 +450,25 @@ demonstration programs.
   `make hb-check`: `palette`, `blitter`, `sprite`, `hello` (the 1982 text map written
   by hand), `chord` and `desktop`.
 
-### Changed
+#### Changed
 
 - **The guides say three machines**, because there are: `README.md`,
   `docs/MACHINES.md`, `docs/INDEX.md` and the rest now introduce the HB-2 beside the
   HB-1 and the CHIP-8, and the proposal page says which of its eight parts are built.
 
-### Notes
+#### Notes
 
 The HB-2 is **headless**: it has no panel in the IDE, and its pixels are drawn by a
 chip no window is looking at yet. HB DOS 2.0, the round-robin scheduler and the module
 bay remain proposals. [The manual](docs/hb2/README.md#what-is-built-and-what-is-not)
 lists exactly what is and is not there, so no page promises a machine that is not.
 
-## [25.0.3] - 2026-10-31
+### [25.0.3] - 2026-10-31
 
 The same reading of the tree, once more in the same place: the editor has two panes,
 and a surprising amount of the window still knew about one of them.
 
-### Fixed
+#### Fixed
 
 - **Closing the window asks about the split's documents too.** `closeEvent` walked
   the main pane's tab list, so an edited program in the right-hand pane was discarded
@@ -400,13 +504,13 @@ and a surprising amount of the window still knew about one of them.
 `docs/USER_GUIDE.md` describes the whole context menu now, including what bits of
 the window do and do not cover the split.
 
-## [25.0.2] - 2026-10-31
+### [25.0.2] - 2026-10-31
 
 The same reading of the tree that found 25.0.1's bugs, continued for another hour:
 two of the three ways to close a document were wired to nothing, and the number in
 every guide that says how many programs ship was two releases out of date.
 
-### Fixed
+#### Fixed
 
 - **Close Other Tabs and Close All Tabs did nothing.** The tab's context menu emits
   `closeOthersRequested` and `closeAllRequested`, and nothing has connected either
@@ -429,7 +533,7 @@ every guide that says how many programs ship was two releases out of date.
   current tab, so with the cursor in the split's right-hand pane it closed the wrong
   document.
 
-### Changed
+#### Changed
 
 - **The guides state the tree's own counts.** The example count had been 63 in two
   places and 82 in three since the machines' twelve programs landed at 25.0.1: it is
@@ -456,13 +560,13 @@ every guide that says how many programs ship was two releases out of date.
   recordings are what cover it; `Examples/CATALOG.md` describes the smoke gate rather
   than a subprocess verifier that was removed with the interpreter.
 
-## [25.0.1] - 2026-10-31
+### [25.0.1] - 2026-10-31
 
 The first release after the unfreeze, and the review of 25.0.0's own change set —
 1 342 new lines in eleven files — found three things that mattered and a handful that
 did not, all of them fixed here.
 
-### Added
+#### Added
 
 - **Twelve programs to learn the machines from.** Six CHIP-8 listings: `catch`, a
   small arcade game with a BCD scoreboard, and `bounce`, `countdown`, `maze`,
@@ -478,7 +582,7 @@ did not, all of them fixed here.
   as programs, but that is the engine with no machine attached, where `POKE 32768`
   lands in a map nothing paints.
 
-### Fixed
+#### Fixed
 
 - **`SOUND` no longer drives the audio player from the runner thread.** The note went
   straight from the executing program into a `SoundPlayer` owned by the GUI thread,
@@ -522,7 +626,7 @@ did not, all of them fixed here.
 - **A paragraph in `docs/FAQ.md`** ended with literal `\n` sequences, which rendered
   as backslash-n rather than as a line break.
 
-## [25.0.0] - 2026-10-30
+### [25.0.0] - 2026-10-30
 
 *Timey wimey wibbly wobbly, time & multiuniverse travel computing.*
 
@@ -554,7 +658,7 @@ Gatekeeper's question, and four platform conditionals in the source that no gate
 this machine could run. 24.0's Windows, macOS and Windows 7 artifacts stay on that
 release page; nothing after it is built or tested for either system.
 
-### Added
+#### Added
 
 - **A real pseudo-terminal in the Terminal tab.** The tab was a `QProcess` pipe: a
   shell on a pipe prints no prompt, colours nothing and cannot be asked how wide it
@@ -603,7 +707,7 @@ release page; nothing after it is built or tested for either system.
   `.deb` alike. Built here and installed from the bundle: one launcher, one icon,
   and `time_warp_ide --version` answers from inside the sandbox.
 
-### Fixed
+#### Fixed
 
 - **An optional dependency that is declared but absent no longer stops a
   configure.** A `.pc` file naming an include directory that is not in the tree being
@@ -627,7 +731,7 @@ release page; nothing after it is built or tested for either system.
   the message a person reads, and that a `CALL` that does name a `SUB` or a
   `FUNCTION` still finds it.
 
-### Removed
+#### Removed
 
 - **The Windows and macOS builds.** `-DTIME_WARP_QT5=ON` and
   `-DTIME_WARP_WIN7=ON`, the `WIN32` and `MACOSX_BUNDLE` targets, `windeployqt` and
@@ -650,7 +754,7 @@ release page; nothing after it is built or tested for either system.
   and `.icns` encoders with their size tables. `time_warp_icon` writes the desktop
   entry's PNG, which is held to byte equality exactly as before.
 
-### Changed
+#### Changed
 
 - **24.0 is archived and 25.0.0 is the version.** `VERSION` says 25.0.0, and the two
   hand-written copies — the README's badge and the architecture guide's title — say
@@ -668,7 +772,7 @@ release page; nothing after it is built or tested for either system.
   (`TIME_WARP_VERSION`) rather than a literal `24.0`, so the string cannot go stale
   in a header that nothing checks.
 
-## [24.0.0] - 2026-10-29
+### [24.0.0] - 2026-10-29
 
 CHIP-8 can be walked back. It could already stop: a gutter breakpoint fires before
 the instruction on its listing line, and a step moves one opcode at a time. What it
@@ -684,7 +788,7 @@ carried to the other surface rather than a second mechanism.
 > matrices, the frozen parity corpora, the curriculum and every documentation gate
 > passed on that tree.
 
-### Added
+#### Added
 
 - **A CHIP-8 checkpoint.** Registers, memory, the stack, `I`, both timers, the RPL
   flags, halt and key-wait state, the cycle and collision counts, the screen mode,
@@ -719,7 +823,7 @@ carried to the other surface rather than a second mechanism.
   side; window breakpoints, an instruction trace, memory watch, state files and a
   library manifest on the other — each with the test that would prove it.
 
-### Changed
+#### Changed
 
 - **The checkpoint is only taken when a history was asked for.** An ordinary Run
   copies nothing, because there is nowhere for the copy to go; with **History** set,
@@ -730,7 +834,7 @@ carried to the other surface rather than a second mechanism.
   checkpoint — its heap is an object graph with identity, and copying it is the next
   release's problem rather than this one's.
 
-### Fixed
+#### Fixed
 
 - **The `.deb` and the container image were missing the assistant's Qt library.**
   The IDE now links `timewarp_ai`, which links Qt Network, so `time_warp_ide` needs
@@ -745,14 +849,14 @@ carried to the other surface rather than a second mechanism.
   The `.rpm` needed neither: it names `qt6-qtbase-gui`, which requires
   `qt6-qtbase`, and that is where Fedora puts `libQt6Network.so.6`.
 
-## [23.9.0] - 2026-10-29
+### [23.9.0] - 2026-10-29
 
 Forth joins the debugger, and can be walked back. It was the one language that could
 not stop at all: its interpreter loop had no pause point, so a breakpoint set in a
 `.fs` file never fired and nothing in the UI said why. The loop now pauses before each
 token and hands over a checkpoint, so Forth is both steppable and rewindable.
 
-### Added
+#### Added
 
 - **Forth pauses at a token.** The unit is the token, which is what a Forth programmer
   steps through; `BYE`, the two defining words and the compile state all still work,
@@ -767,7 +871,7 @@ token and hands over a checkpoint, so Forth is both steppable and rewindable.
   before the rewind did not survive it: the answer is `3 7 `, and it would be `3 3 7 `
   if the checkpoint's output were not restored.
 
-### Changed
+#### Changed
 
 - **`run()` resumes from the position it is given** rather than starting over, and the
   token list is tokenised once and kept, so only the position in it travels.
@@ -776,7 +880,7 @@ token and hands over a checkpoint, so Forth is both steppable and rewindable.
   that identity — so it is not a one-release change; CHIP-8's copy is memory plus
   registers and waits until someone debugs a ROM step by step.
 
-## [23.8.0] - 2026-10-29
+### [23.8.0] - 2026-10-29
 
 Logo joins the languages that can be walked back. It runs its own statement loop, so
 the interpreter had no place to record its position — the snapshot machinery only ever
@@ -784,7 +888,7 @@ reached the six line-by-line languages. The fix is not a second mechanism but a
 generic one: the pause point a whole-program executor already calls now takes the
 executor's own checkpoint, records it, and hands a restored one back.
 
-### Added
+#### Added
 
 - **`Interpreter::whole_program_pause(line, checkpoint)`**, replacing the whole-program
   use of `pause_if_requested`. It publishes the checkpoint as the run's own state,
@@ -803,7 +907,7 @@ executor's own checkpoint, records it, and hands a restored one back.
   `api_tests` does the same over JSON-RPC and checks that the session's own transcript
   rolls back with it.
 
-### Changed
+#### Changed
 
 - **The API's `output` rolls back with a rewind.** The session kept its copy of the
   stream, so a client read the lines the run had already printed and then read them
@@ -814,13 +918,13 @@ executor's own checkpoint, records it, and hands a restored one back.
   statement(s)` line marks the seam. Smalltalk, Forth and CHIP-8 are not walkable yet
   and say so, rather than offering a button whose only answer would be "unmoved".
 
-## [23.7.0] - 2026-10-28
+### [23.7.0] - 2026-10-28
 
 The controls. 23.6 made a run able to go back; nothing offered it. This release puts
 the depth and the buttons in the Debug tab, and finishes the engine work the buttons
 needed to be honest.
 
-### Added
+#### Added
 
 - **History and Back in the Debug tab.** A **History** depth — off, 100, 500 or 2000
   statements, remembered between sessions — decides how much the next run keeps.
@@ -835,7 +939,7 @@ needed to be honest.
   line 10 where `A` is unset, and the button dead there rather than pressed into a
   no-op.
 
-### Changed
+#### Changed
 
 - **A rewind goes as far back as the run kept, and never forward.** 23.6 refused a
   rewind deeper than the history and left the position alone, which meant a run
@@ -851,14 +955,14 @@ needed to be honest.
   anything else is reported rather than passed off as a rewind that happened to land
   where it already was.
 
-## [23.6.0] - 2026-10-28
+### [23.6.0] - 2026-10-28
 
 A run can be walked backwards. The debugger could stop a program and look at it; it could
 not go back to a statement it had already passed and show what was true there. That is
 the engine half of the version-24 claim, and it is in the engine and over the API now —
 the strip that offers it to a person is the next release.
 
-### Added
+#### Added
 
 - **Snapshots.** `Interpreter::snapshot()` copies where a run is: the statement, every
   binding, the text printed so far, the drawing count and the language's own scratch
@@ -878,7 +982,7 @@ the strip that offers it to a person is the next release.
   semantics, the rewind-and-replay property through BASIC's loop, and a session that
   steps to line 20, rewinds, and lands on line 10 with the variable it had there unset.
 
-### Changed
+#### Changed
 
 - **The limits are documented where they are met, not discovered later.** The canvas
   keeps the ink it has already been given — the drawing half of a rewind belongs to the
@@ -887,14 +991,14 @@ the strip that offers it to a person is the next release.
   are in [docs/API.md](docs/API.md), and the roadmap says which release offers the strip
   and which adds Logo and Forth.
 
-## [23.5.0] - 2026-10-28
+### [23.5.0] - 2026-10-28
 
 The debt before the claim. A major release is a sentence this project has to be able to
 prove, and three of the things it would want to say were not yet true: one of the eleven
 languages had no recorded corpus, three console features the roadmap already called
 built did not exist, and four pages disagreed with the tree about what was missing.
 
-### Added
+#### Added
 
 - **Forth is in the parity corpus.** Three programs, recorded from this engine because
   no reference run exists for a language that arrived after the reference was deleted.
@@ -917,7 +1021,7 @@ built did not exist, and four pages disagreed with the tree about what was missi
   not move under later edits. A paragraph separator is refused rather than removed, and
   an extra caret carries no selection of its own.
 
-### Changed
+#### Changed
 
 - **What is not built is now a file a gate reads.** `native/share/unbuilt.txt` lists
   each missing feature with the path whose existence would mean it shipped and the pages
@@ -928,7 +1032,7 @@ built did not exist, and four pages disagreed with the tree about what was missi
 - **The figures are corrected** where they are quoted: 479 language programs, 671 with
   Scheme, 476 agreeing and 3 written down.
 
-### Notes
+#### Notes
 
 - **The three divergences stay, re-argued.** Each is the reference's own bug — a `STR$`
   of an array element that it could not print, and a `SPRITE` it acknowledged without
@@ -940,7 +1044,7 @@ built did not exist, and four pages disagreed with the tree about what was missi
 - **The notes say what shipped.** The roadmap's smaller-items list named a Smalltalk call
   stack and an HB-1 beeper as future work; both shipped in 23.3.0 and 20.2.0.
 
-## [23.4.0] - 2026-10-28
+### [23.4.0] - 2026-10-28
 
 The assistant stops being a page with four gaps around it: an answer now arrives as it
 is written and can be stopped, a failure in the Console can be asked about, a suggested
@@ -949,7 +1053,7 @@ where the operating system keeps secrets, and the two machines can ask about the
 programs. Each one is the same page, so the settings, the limits and the privacy note
 did not grow a second copy.
 
-### Added
+#### Added
 
 - **Every endpoint streams, and Stop ends a half-written answer.** Hosted services were
   asked for the whole answer because the panel reports token counts and one finished
@@ -989,13 +1093,13 @@ did not grow a second copy.
   else -- not the screen, the memory or the disk. One dialog per window, raised rather
   than duplicated.
 
-### Changed
+#### Changed
 
 - **`is_local_endpoint` is now the privacy question rather than the streaming one.**
   The note beside the question box says "nothing leaves the computer" for a server on
   this machine, which is the configuration to recommend to a classroom.
 
-### Notes
+#### Notes
 
 - **The tests pin the key store to the settings file.** `TIME_WARP_AI_KEYRING=file` is
   set by `ai_tests`, so no case can write to the keychain of the person running it, and
@@ -1009,14 +1113,14 @@ did not grow a second copy.
   first and a suggestion is not shown while its popup is open, so the assistant never
   interrupts a learner typing `PRINT`.
 
-## [23.3.0] - 2026-10-28
+### [23.3.0] - 2026-10-28
 
 The tranche that finished the list: the assistant gains a wire method and a stream,
 the Studio gains the two documents it was missing, and the last open language defect
 closes. Each one arrived as a behaviour a person can see with a free function behind
 it, and each one's verification is in its own commit.
 
-### Added
+#### Added
 
 - **Notebooks.** A `.twnb` holds cells -- prose or a program with a language each --
   and its window runs them one at a time or all the way down, with a cell's output
@@ -1064,7 +1168,7 @@ it, and each one's verification is in its own commit.
   top-level chunk is `DoIt`, and recursion shows up as frames rather than a counter.
   The chain reaches every reporter through `Interpreter::set_call_stack_probe`.
 
-### Changed
+#### Changed
 
 - **A COMAL `FUNC` body runs as statements.** It was a sequence of `LOCAL`
   declarations, assignments and one `RETURN`, so an `IF` was impossible inside a
@@ -1083,7 +1187,7 @@ it, and each one's verification is in its own commit.
   the gallery and a notebook's drawing cell both call, so a cell's picture and its
   gallery face cannot disagree.
 
-### Notes
+#### Notes
 
 - **The RPC handler leaks a `QCoreApplication` on purpose.** This process never had
   one; Qt's application object tears the network stack down on the way out and the
@@ -1094,13 +1198,13 @@ it, and each one's verification is in its own commit.
   beside the rule that `distribute` never overwrites: work a learner hands in lands
   where marking reads.
 
-## [23.2.0] - 2026-10-27
+### [23.2.0] - 2026-10-27
 
 Six gaps in features that were otherwise finished -- and one in a machine -- closed
 in the same shape: the behaviour a person can see, a free function behind it that a
 test can drive without a window, and the reasoning written down where the code is.
 
-### Added
+#### Added
 
 - **Version History shows what changed.** It could list copies and preview one of
   them, which answers "what did it look like" and never "what did I change since".
@@ -1154,7 +1258,7 @@ test can drive without a window, and the reasoning written down where the code i
   automatic probe when the endpoint is on this machine, and `time_warp_ai models` from
   a shell.
 
-### Changed
+#### Changed
 
 - **COMAL `FUNC` bodies can declare `LOCAL`.** A function could not hold a variable of
   its own: every name it touched was the caller's. `LOCAL T` now gives it one, and the
@@ -1179,7 +1283,7 @@ test can drive without a window, and the reasoning written down where the code i
   cannot require knowing one, so the client and the dialog check the first and a
   question checks the second.
 
-### Notes
+#### Notes
 
 - **Two bulk operations now write to a person's files** -- Replace All and the HB-1's
   paper -- and both are testable without a window: the rules are free functions, and
@@ -1194,14 +1298,14 @@ test can drive without a window, and the reasoning written down where the code i
   caller's variable coming back when a `FUNC` body throws included. The language
   corpus goes from 470 programs to 475 and the table from 560 rows to 565.
 
-## [23.1.0] - 2026-10-27
+### [23.1.0] - 2026-10-27
 
 An AI assistant you configure yourself: a page beside the editor that can explain a
 program, find what is wrong with it, comment it, translate it or write a new one
 through a service you choose. Off on a fresh install, nothing sent until a button is
 pressed, and the key need never touch the disk.
 
-### Added
+#### Added
 
 - **The Assistant page.** The eighth page of the right column, beside Output,
   Variables, Telemetry, Debug, Lessons, Classroom and Database, because the questions
@@ -1240,7 +1344,7 @@ pressed, and the key need never touch the disk.
   machine, and what each error means. The user guide has a section, the FAQ answers
   "does it send my code anywhere?", and the API page lists the library.
 
-### Changed
+#### Changed
 
 - **The right column has eight pages**, so `MainWindow::showPanel` accepts `ai` and
   `panelKeys()` lists it. The layout suite asserts the count, the order and the title,
@@ -1252,7 +1356,7 @@ pressed, and the key need never touch the disk.
 - **`docs/USER_GUIDE.md` has a section 8 and the later sections moved down one.** The
   anchor references in `README.md`, `docs/API.md` and `docs/FAQ.md` moved with them.
 
-### Notes
+#### Notes
 
 - **The key is treated as a secret, not a setting.** `TIME_WARP_AI_API_KEY` wins over
   anything stored and is never written; unticking **Keep the key on this machine**
@@ -1268,7 +1372,7 @@ pressed, and the key need never touch the disk.
   components, applied one step earlier because a client with no transport is not a
   smaller client.
 
-## [23.0.1] - 2026-10-22
+### [23.0.1] - 2026-10-22
 
 Two dangling references the sanitizer found once the tree was split, a tube that
 leaked a font on every text-size change, and the last of the prose that still
@@ -1279,7 +1383,7 @@ use-after-free in Forth, and both were the same mistake in different clothes: a
 reference into storage that had moved or died before it was written through. The
 leak check then failed `retro_computer_tests` on the machine's own screen.
 
-### Fixed
+#### Fixed
 
 - **Forth wrote through a frame the call stack had moved.** `run_code` kept a
   `Frame&` into `std::vector<Frame>` for the whole loop body, and a `Call` pushes a
@@ -1297,7 +1401,7 @@ leak check then failed `retro_computer_tests` on the machine's own screen.
   failing suite in `make asan`. The font is a value member now, which is what a
   member that is gone when its owner is should always have been.
 
-### Changed
+#### Changed
 
 - **The language count, everywhere it is prose.** `docs/INDEX.md`,
   `docs/MACHINES.md`, `docs/ROADMAP.md`, `docs/FAQ.md`, `docs/LANGUAGE_GUIDE.md`
@@ -1313,7 +1417,7 @@ leak check then failed `retro_computer_tests` on the machine's own screen.
   language except CHIP-8 *and Forth*; Forth never had the statement, so the
   exception list was incomplete rather than the count.
 
-### Notes
+#### Notes
 
 - **This is the first tag since `v16.4.4`.** The 26 versions from `17.0.0` to
   `23.0.1` were written down here as they were made, but none of them was tagged,
@@ -1324,7 +1428,7 @@ leak check then failed `retro_computer_tests` on the machine's own screen.
   What changed in them is recorded below, in full; `23.0.1` is the release that
   carries all of it.
 
-## [23.0.0] - 2026-10-22
+### [23.0.0] - 2026-10-22
 
 The infrastructure, made modular: one home for the language table, a build that is
 read one part at a time, three libraries where there was one doing twelve jobs, every
@@ -1332,7 +1436,7 @@ monolith in the tree split along the sections that were already commented inside
 the two largest suites split one file per subject, and one command-line vocabulary for
 the five tools. Two new gates keep each of those from growing back.
 
-### Changed
+#### Changed
 
 - **One language table.** The eleven languages were described twice -- display name,
   key and extensions in `src/ui/language.cpp`, switches over the same names in
@@ -1417,7 +1521,7 @@ the five tools. Two new gates keep each of those from growing back.
   a `cli::Report` that prints findings as prose or as one JSON object. The documentation
   gates' own argument parser is gone with it.
 
-### Added
+#### Added
 
 - **`time_warp_gates registry`** fails if any C++ line names a language's display name
   and its key together -- a table row by another name. It found ten in its first run,
@@ -1431,7 +1535,7 @@ the five tools. Two new gates keep each of those from growing back.
   options do not come back as positionals.
 - The three gates are in `make test-all`, and `structure`'s waiver list is now **empty**.
 
-### Fixed
+#### Fixed
 
 - `ui::languageFromKey` stays case-sensitive and `lang::language_from_key` stays
   lenient: the first version of the registry broke all 560 command rows by making the
@@ -1444,12 +1548,12 @@ the five tools. Two new gates keep each of those from growing back.
   called, so `test_basic_sprite_statements_refuse_a_name_they_never_captured` had been
   dead since it was written. It is registered, and it passes.
 
-## [22.4.1] - 2026-10-22
+### [22.4.1] - 2026-10-22
 
 Eight defects in the interpreters, found by writing programs rather than by reading
 code, and fixed. Two of them were documented features that could not be used at all.
 
-### Fixed
+#### Fixed
 
 - **BASIC's `FUNCTION ... END FUNCTION` could not be called.** The definition parsed
   and the call threw `Unknown function: TWICE`, in either order. A function body is
@@ -1475,7 +1579,7 @@ code, and fixed. Two of them were documented features that could not be used at 
   in the fix itself -- a `;` inside a string made the splitter recurse on the whole
   statement -- which the same example caught before it left the machine.
 
-### Changed
+#### Changed
 
 - Twelve command rows and 560 in the table, run as programs and through the REPL.
   `docs/LANGUAGE_GUIDE.md` documents block functions, named subroutines and `EXIT`,
@@ -1488,13 +1592,13 @@ code, and fixed. Two of them were documented features that could not be used at 
   element and every row was an error line, so the port's complete table is a
   difference worth writing down rather than a regression to chase.
 
-## [22.4.0] - 2026-10-22
+### [22.4.0] - 2026-10-22
 
 The examples were the part of the tree nobody had asked whether it was good. Six new
 programs, in the five languages whose sets were thin, and four interpreter defects
 that only writing them could find.
 
-### Added
+#### Added
 
 - **`rexx/log_analysis.rexx`** -- a web log triaged: PARSE VAR, an `ELSE IF` chain,
   padded columns, internal subroutines reading `ARG(n)`, and a verdict rather than
@@ -1513,7 +1617,7 @@ that only writing them could find.
 - **`basic/gradebook.bas`** -- a class report: two parallel arrays, a ranked table
   built with `FORMAT$`, and a bar chart drawn with `LINE ... BF`.
 
-### Fixed
+#### Fixed
 
 - **REXX's `IF ... THEN` with the statement on the next line ran the statement
   whether or not the condition held.** The shape most REXX is written in was wrong:
@@ -1531,7 +1635,7 @@ that only writing them could find.
 - Four command rows and one REPL waiver cover the above: the next-line body, the
   `ELSE IF` chain, padding, and `ARG(n)`.
 
-### Changed
+#### Changed
 
 - `make smoke` runs 69 programs (was 63) and asserts ink for 37 of them; the command
   table is 550 rows (was 546); `Examples/CATALOG.md` describes all 69.
@@ -1542,13 +1646,13 @@ that only writing them could find.
   point -- a language the IDE offers should not have a documented feature that cannot
   be used, and a known gap in a list is a gap somebody can close.
 
-## [22.3.2] - 2026-10-22
+### [22.3.2] - 2026-10-22
 
 No identifier or file in the tree is named after Python any more. `MersenneRandom`
 was the first; this is the rest, and the gate that should have caught them was
 matching only the extension.
 
-### Changed
+#### Changed
 
 - **Every Python-named helper renamed** for what it reproduces rather than what it
   was recorded from: `python_number_text` and `python_float_or_zero` in the BASIC
@@ -1559,7 +1663,7 @@ matching only the extension.
   `is_whitespace_char`. Behaviour is unchecked by that difference -- the frozen
   corpus agrees on all 468 programs as before.
 
-### Fixed
+#### Fixed
 
 - **`pytest.ini` was still tracked**, configuring a test runner for
   `native/bridge/time_warp/tests`, deleted five releases ago. `make tree-check`
@@ -1591,7 +1695,7 @@ reproduces ("Python's `int()` truncates toward zero") and the record of what was
 removed. Those are citations, and they make a reader's understanding better, not a
 claim that Python is here.
 
-## [22.3.1] - 2026-10-22
+### [22.3.1] - 2026-10-22
 
 `PythonRandom` was the last thing in the tree named after a language the project no
 longer contains. It is `MersenneRandom` in `mersenne_random.{hpp,cpp}`: the class
@@ -1609,7 +1713,7 @@ different numbers.
 The sequence itself is unchanged: `lang_tests` still answers with the same three
 draws for seed 1, and all 24 suites, the corpora and the gates are green.
 
-## [22.3.0] - 2026-10-22
+### [22.3.0] - 2026-10-22
 
 An audit of 19.1 to 22.2 against the tree as it now stands, and the fixes it asked
 for. The releases were each honest when they landed; what had drifted since was the
@@ -1617,7 +1721,7 @@ for. The releases were each honest when they landed; what had drifted since was 
 were here, counts that moved, and one feature that shipped with no documentation at
 all.
 
-### Added
+#### Added
 
 - **Run Project is documented.** `.twproject` format 2 added an `entry` at 22.0.0
   and no guide mentioned it: not the Projects chapter, not the file-on-disk
@@ -1629,7 +1733,7 @@ all.
   field and the automation surface did not, so a build script could not ask which
   program a project means. Asserted in `api_tests`.
 
-### Fixed
+#### Fixed
 
 - **`executor_for()`'s Scheme comment named the Python bridge**, which was deleted
   at 18.0. Its present-tense claim ("still driven by the Python bridge") was the one
@@ -1660,7 +1764,7 @@ all.
   and `.github/copilot-instructions.md` still listed ten languages and pointed the
   turtle state at `graphics/turtle_state.py`.
 
-### Changed
+#### Changed
 
 - **The canvas vocabulary gate derives its expected count.** The test that asserts
   every declared command draws compared `kEveryKind` against a hand-written `43`, so
@@ -1671,7 +1775,7 @@ all.
   local `test-all` skipped. `tree-check` is declared phony, and the help text names
   every gate, `repl-matrix` included.
 
-## [22.2.0] - 2026-10-22
+### [22.2.0] - 2026-10-22
 
 The Markdown lint is the project's own, and it found a bug in the shared scanner.
 
@@ -1681,7 +1785,7 @@ machine there is no `npx` at all, so the target had never run — which makes th
 `docs/DEPLOYMENT.md` claim that "`make lint-md` reports nothing" a claim about a
 report nobody had seen. It has now run, and it had things to say.
 
-### Added
+#### Added
 
 - **`time_warp_docs md`** — the Markdown lint as C++, in the documentation-tools
   project that needs a compiler and nothing else. Twenty-eight rules from
@@ -1695,7 +1799,7 @@ report nobody had seen. It has now run, and it had things to say.
   indent and marker spacing, fence, table row — which is what to reach for when a
   rule disagrees with a reader.
 
-### Fixed
+#### Fixed
 
 - **A line was split in the middle of an emoji.** The shared `split_lines` treated a
   bare `0x85` byte as Unicode NEL, and `✅` is `e2 9c 85`: every bulleted line in
@@ -1712,7 +1816,7 @@ report nobody had seen. It has now run, and it had things to say.
   between. Rejoined, and the chip8 paragraph that still described the deleted
   reference engine now describes the corpus.
 
-### Changed
+#### Changed
 
 - **The markdown-lint CI job is now a gate.** It was one `super-linter` invocation
   with `continue-on-error`, which could not fail a pull request and did not run at
@@ -1722,12 +1826,12 @@ report nobody had seen. It has now run, and it had things to say.
 - **`.markdownlint.json` is gone.** The rules live in `md.cpp`, one statement of
   them rather than a config file and an implementation that could drift.
 
-## [22.1.0] - 2026-10-22
+### [22.1.0] - 2026-10-22
 
 No Python. The last five scripts are C++, and the tree holds none at all — which is
 a claim a gate now enforces rather than a claim a reader has to trust.
 
-### Added
+#### Added
 
 - **`time_warp_docs`** (`native/tools/docs/`) — the two documentation gates and the
   version tool as one dependency-free C++ project: `links`, `claims [--self-test]`,
@@ -1744,7 +1848,7 @@ a claim a gate now enforces rather than a claim a reader has to trust.
   needed a gate for the same reason every other claim here has one: a deletion that
   nothing enforces grows back.
 
-### Removed
+#### Removed
 
 - **Five scripts and their scaffolding**: `check_doc_links.py`,
   `check_doc_claims.py`, `version_sync.py`, `generate_icon.py`, `twc.py`, plus
@@ -1756,7 +1860,7 @@ a claim a gate now enforces rather than a claim a reader has to trust.
   same feature natively, so the script was a second implementation of one thing.
   `./twc program.bas -o name` still works, and `--output` works too.
 
-### Changed
+#### Changed
 
 - **The documentation jobs build a tool instead of needing an interpreter.**
   `docs.yml`, `version.yml` and `release.yml` each configure and build
@@ -1767,7 +1871,7 @@ a claim a gate now enforces rather than a claim a reader has to trust.
   it to lint, and every target is compiled `-Werror`, so the target now says that
   rather than shelling out to a tool that is not installed.
 
-### Notes for a reader checking the port
+#### Notes for a reader checking the port
 
 - Both ports were checked the way the harness port was: old and new run on the same
   tree, output compared, then the new one made to fail on purpose. The documentation
@@ -1780,7 +1884,7 @@ a claim a gate now enforces rather than a claim a reader has to trust.
   not skip fenced blocks, and a trailing `/` in a target — both fixed against the
   Python's behaviour rather than against a guess.
 
-## [22.0.0] - 2026-10-22
+### [22.0.0] - 2026-10-22
 
 The harnesses are C++, and a project runs as a project. Two sentences, both about
 the same thing: the tree should not need a language the product does not use, and a
@@ -1792,7 +1896,7 @@ checks were the reason the tree still needed an interpreter: a contributor could
 run `make command-matrix` without one, and the CI jobs that answer "does every
 example still draw" depended on a language the product does not use.
 
-### A project runs as a project
+#### A project runs as a project
 
 - **`.twproject` has an entry point** (format 2, and a format 1 file still loads).
   **Project > Set Current File as Entry Point**, the dock's ▶ **Run** button, the
@@ -1808,7 +1912,7 @@ example still draw" depended on a language the product does not use.
   unprojected file. `time_warp_check` and the corpora are unchanged: no base set
   means the process's directory, as before.
 
-### Added
+#### Added
 
 - **`time_warp_gates`** — one binary, four questions, built with the product:
   - `smoke`: every `Examples/**` program through the native engines, with the ones
@@ -1824,14 +1928,14 @@ example still draw" depended on a language the product does not use.
   one waiver, and the rules a row follows. It was `command_table.py`, which was
   data wearing a Python extension.
 
-### Removed
+#### Removed
 
 - **Seven scripts**: `harness.py`, `example_smoke.py`, `command_matrix.py`,
   `command_table.py`, `command_inventory.py`, `repl_matrix.py`, `golden_check.py`.
   The `make` targets keep their names — `smoke`, `command-matrix`, `repl-matrix`,
   `golden-check` — so every guide that names one still points at something real.
 
-### Notes for a reader checking the port
+#### Notes for a reader checking the port
 
 - The port was verified by running both sides on the same tree and comparing the
   text: the example corpus agrees to the stroke (63 programs, 5,712 strokes in
@@ -1846,14 +1950,14 @@ example still draw" depended on a language the product does not use.
   wrong expected text, and a corpus entry given the wrong recorded answer. Both were
   caught, with exit status 1, and both files restored byte-identically.
 
-## [21.0.0] - 2026-10-22
+### [21.0.0] - 2026-10-22
 
 The eleventh language, and a palette that means one thing. Forth is a whole language
 in about a thousand lines, which is the reason it was invented; the palette fix is
 the kind of defect that hides behind a passing test, and it was found by drawing with
 the new language.
 
-### Added
+#### Added
 
 - **Forth.** The eleventh language, and the first stack machine in the studio: a data
   stack, a dictionary, colon definitions (`: SQUARE DUP * ;`), the three control
@@ -1881,7 +1985,7 @@ the new language.
   invisible to the coverage report. `command_inventory.py` now sees 74 command-shaped
   words and 0 are untested.
 
-### Fixed
+#### Fixed
 
 - **A palette slot meant a different colour in every language.** `SETPC 1` in Logo, a
   bare `1` in BASIC and `1 SETPC` in Forth all name palette slot 1, and the reference
@@ -1903,7 +2007,7 @@ the new language.
 - **`IMMEDIATE` was only accepted while compiling**, so the ordinary
   `: F 1 ; IMMEDIATE` — the form a book shows — was an undefined word.
 
-### A gate that says what it does not know
+#### A gate that says what it does not know
 
 - The golden corpus is what the *reference engine* answered, and the reference never
   had Forth, so a ported language with no recorded programs used to look covered by a
@@ -1911,12 +2015,12 @@ the new language.
   says nothing about it; the command matrix and lang_tests do`. A blind spot is stated
   rather than implied by silence.
 
-## [20.2.0] - 2026-10-22
+### [20.2.0] - 2026-10-22
 
 The machine has a clock, a voice and a switch. Three things a window cannot do: keep
 time, make a noise nobody asked for, and be *off*.
 
-### Added
+#### Added
 
 - **`MachineVoice`** — the five sounds an HB-1 makes by itself: a two-note chirp at
   power-on (and at a ROM change), a click per prompt line, the disk head stepping for
@@ -1937,7 +2041,7 @@ time, make a noise nobody asked for, and be *off*.
 - **The POWER lamp is a switch.** Off is off: the tube goes dark, the prompt stops
   answering, the clock stops and a run is stopped with it. On is a cold boot.
 
-### Fixed
+#### Fixed
 
 - **`SLEEP` did not sleep.** It printed "ℹ️ SLEEP 0.1s" and returned — the same
   acknowledged-nothing defect `LOCATE` and `SPRITE` had, and the reason a program that
@@ -1952,7 +2056,7 @@ time, make a noise nobody asked for, and be *off*.
   the RAM walk. It now tests first and prints afterwards, and puts the RAM back the way
   it found it.
 
-### Deferred, with the reason
+#### Deferred, with the reason
 
 **`CONT` is not in this release.** A real `CONT` needs the run to *pause* at a
 statement and resume with its control stacks intact, which is `DebugSession`'s
@@ -1961,14 +2065,14 @@ same work as 20.3's `MONITOR`, where it also buys a machine-code debugger. A `CO
 built out of "run it again from the next line" would lose a `FOR` frame and be a lie in
 the one case that matters.
 
-## [20.1.0] - 2026-10-22
+### [20.1.0] - 2026-10-22
 
 The 64K is real, and the screen is memory. Until this release `POKE` wrote into a map
 nothing read, `LOCATE` validated its arguments and returned, and `MEM 64K` on the
 status line was a string literal: a machine whose memory is inert is a costume with a
 keyboard.
 
-### Added
+#### Added
 
 - **`HbMemory`** — one 64 KiB address space with a documented map: 32K of free RAM,
   2000 screen cells at `$8000`, a nibble pair of ink and paper per cell at `$9000`, a
@@ -1992,7 +2096,7 @@ keyboard.
   `MEM` on the status line reports the free RAM the map actually has (32K) instead of
   a badge.
 
-### Fixed
+#### Fixed
 
 - **`POKE` and `PEEK` took literals, not expressions.** `POKE 32768 + 4 * 80 + 5, 65`
   was an error on every machine that ever had a POKE; a program that computes the cell
@@ -2005,7 +2109,7 @@ keyboard.
   `ScreenMode`: 0 TEXT, 1 GRAPHICS, 2 SPLIT). Corrected in the manual, and the image
   round-trip test pins it.
 
-### Fixed (second pass, found by looking at the screen)
+#### Fixed (second pass, found by looking at the screen)
 
 - **Program output could be written after the `POKE`s that followed it.** Output
   reached the tube through a queued GUI callback while `POKE` wrote memory from the
@@ -2014,7 +2118,7 @@ keyboard.
   and the queued signal only fills the scrollback -- which is what a machine's
   teletype did: print when the program says it.
 
-### Anachronisms, stated
+#### Anachronisms, stated
 
 - **The scrollback.** A 25-row tube of 1982 ate everything above it. This one keeps the
   rows it has written, because a learner reading a listing needs them, and the manual
@@ -2024,7 +2128,7 @@ keyboard.
   hyphen -- exactly what a machine of the period did with a character it could not
   spell.
 
-## [20.0.0] - 2026-10-22
+### [20.0.0] - 2026-10-22
 
 The HB-1's line editor, which is the part of a 1982 BASIC people actually spent their
 evenings in. The machine had numbered lines and nothing else: no `AUTO`, no `RENUM`,
@@ -2034,7 +2138,7 @@ This is the first release of **HB-1 2.0** — the series that makes the machine'
 load-bearing rather than decorative. See `docs/ROADMAP.md` for the ladder and
 `docs/hb1/inside.md` for what the machine is made of.
 
-### Added
+#### Added
 
 - **`AUTO [start[, step]]`** — the next line number is *in the prompt*, so the line a
   reader types already carries it and the ordinary numbered-line path stores it. AUTO
@@ -2056,13 +2160,13 @@ load-bearing rather than decorative. See `docs/ROADMAP.md` for the ladder and
   `Interpreter::set_tracing` is the engine half: one flag, no second channel and no second
   thread, and the IDE can have a trace panel later for the same price.
 
-### Fixed
+#### Fixed
 
 - **`RESTORED 0 LINE(S)`** in the first draft of `UNDO`: the count was taken from the
   PROGRAM page, which is empty by definition at that moment, instead of from the listing
   being put back. The test asserts the number, which is what caught it.
 
-### Note on the series
+#### Note on the series
 
 HB-1 2.0 lands as **20.0–20.2** first — the editor, then real memory and a
 memory-mapped screen, then the clock, the voice and the power switch — before the V20
@@ -2070,7 +2174,7 @@ workshop items (Forth, i18n, the quality floor, packaging, the documentation boo
 to 21.0. The machine work continues afterwards with the processor, the tape, the printer
 and the second drive.
 
-## [19.3.0] - 2026-10-22
+### [19.3.0] - 2026-10-22
 
 The HB-1 is a file you can hand to somebody.
 
@@ -2079,7 +2183,7 @@ program in the settings too — the right shape for a machine you own and the wr
 for a machine you give away. That is now one document: the ROM it is left in, the
 screen, every ROM's program, the phosphor and configuration, and the volume.
 
-### Added
+#### Added
 
 - **`SAVE MACHINE "NAME"` and `LOAD MACHINE "NAME"`** at the machine's prompt (also
   spelled `SAVEMACHINE`). A bare name is `<data dir>/machines/<NAME>.hb1`; a name
@@ -2096,14 +2200,14 @@ screen, every ROM's program, the phosphor and configuration, and the volume.
 - The CONFIG help page lists the two new words, and `docs/hb1/README.md` documents the
   format with an example a reader can edit by hand.
 
-### Fixed
+#### Fixed
 
 - **`SAVE MACHINE "HV"` wrote `MACHINE.hb1`.** The argument reader starts after the
   first word, so the two-word spelling handed `MACHINE` to the file name and the name
   that was typed went nowhere. The test asserts the file exists at the path the name
   asks for, which is what caught it.
 
-### Refused, deliberately
+#### Refused, deliberately
 
 - A machine image from a **newer** build is refused with both format numbers in the
   sentence rather than half-read. A machine that silently dropped the fields it did
@@ -2115,12 +2219,12 @@ screen, every ROM's program, the phosphor and configuration, and the volume.
   a machine subsystem split out of the UI. The IDE takes `--machine` instead, so the
   feature exists and the player stays the size it was.
 
-## [19.2.0] - 2026-10-22
+### [19.2.0] - 2026-10-22
 
 Every command the canvas declares, a program can now ask for — and three statements
 that said they had done something now do it.
 
-### The claim
+#### The claim
 
 The canvas has drawn fills, gradients, bezier curves, sprite objects and palette
 cycling since 19.0, and until now exactly one of those had a word in any language.
@@ -2129,7 +2233,7 @@ release closes the gap from the other side: `BEZIER` for Logo, `SPRITE`,
 `SPRITEMOVE`, `SPRITESHOW`, `SPRITEHIDE`, `GRADIENT` and `ELLIPSEGRADIENT` for BASIC.
 The vocabulary walk stands at **43 declared kinds, 43 drawn, no waivers**.
 
-### Added
+#### Added
 
 - **`BEZIER cx1 cy1 cx2 cy2 x y`** in Logo: a cubic curve from where the turtle
   stands, ending with the turtle on the curve's end point facing along its final
@@ -2148,7 +2252,7 @@ The vocabulary walk stands at **43 declared kinds, 43 drawn, no waivers**.
 - **`SETPC n`** with a bare number sets the pen to that palette slot, which is what
   the reference's own examples mean by it.
 
-### Fixed
+#### Fixed
 
 - **`SPRITE` printed "🎮 Sprite SHIP at (10, 20) size 30x40" and drew nothing.** A
   statement that acknowledges work it did not do is the exact failure the example
@@ -2167,14 +2271,14 @@ The vocabulary walk stands at **43 declared kinds, 43 drawn, no waivers**.
   placing a sprite and none for the other three. Each placement now remembers the
   pixels it covered, so hiding one puts them back rather than leaving a hole.
 
-### Removed
+#### Removed
 
 - **`CanvasCommandKind::ClearSvgaMode`**, for the same reason `Pitch`/`Roll` went in
   19.1: nothing emitted it. `Reset` already returns the surface to fitting its ink
   and clears the fixed extent with it, so a second way to say so was vocabulary
   nothing could ask for.
 
-### Notes
+#### Notes
 
 - The golden corpus keeps the **reference's** answers, and `SPRITE` is the one place
   the port deliberately differs from them: the two affected rows carry a
@@ -2184,14 +2288,14 @@ The vocabulary walk stands at **43 declared kinds, 43 drawn, no waivers**.
 - The command table's `SPRITE` rows had to grow a `SCREEN 1` line, because capturing
   a bitmap needs a bitmap to capture from. 460 rows, all of them behaving.
 
-## [19.1.0] - 2026-10-22
+### [19.1.0] - 2026-10-22
 
 The vocabulary closes: **44 declared commands, 44 drawn, no waivers**. The last two —
 `Pitch` and `Roll` — were deleted rather than implemented, because the third dimension
 turned out to belong to the host and not to the canvas; and the two things the canvas
 learned in 19.0 that a program could not reach are now reachable.
 
-### Removed
+#### Removed
 
 - **`CanvasCommandKind::Pitch` and `Roll`.** The 3-D turtle already works: `TurtlePose`
   holds the orientation basis, rotates it on pitch/roll, and **projects before it
@@ -2201,7 +2305,7 @@ learned in 19.0 that a program could not reach are now reachable.
   a second camera. The waiver table in `turtle_canvas_tests` is now empty, which is a
   stronger claim than a table with two honest excuses.
 
-### Added
+#### Added
 
 - **`PENSTYLE n [, length]` in Logo** — 0 solid, 1 dashed, 2 dotted, 3 dash-dot,
   4 invisible — with a command-table row, a guide section and a test that drives it
@@ -2212,7 +2316,7 @@ learned in 19.0 that a program could not reach are now reachable.
   palette is not wrong to ignore them; `NativeCanvasHost` and `RecordingHost` override
   both.
 
-### Fixed
+#### Fixed
 
 - **`PALETTE CYCLE` in BASIC moved a palette nobody was looking at.** The statement
   rotated the engine's own raster palette and never told the canvas, so the printed
@@ -2222,7 +2326,7 @@ learned in 19.0 that a program could not reach are now reachable.
   command-table row passed throughout, because it asks whether the statement *said*
   something.
 
-### Still open, and stated
+#### Still open, and stated
 
 The other five kinds the canvas learned in 19.0 — gradients, bezier curves, sprite
 objects, fills from a program, and the virtual screen — still have no language syntax.
@@ -2231,7 +2335,7 @@ reference. Inventing five more statements (in which languages, with what argumen
 shapes) is a design decision worth making deliberately rather than as the tail of a
 release, so it is written here rather than guessed at.
 
-## [19.0.0] - 2026-10-22
+### [19.0.0] - 2026-10-22
 
 The canvas now draws everything the vocabulary declares. Of the 46 commands the
 command stream can carry, 28 were drawn and **18 fell into a `default:` that counted
@@ -2241,7 +2345,7 @@ eighteen, and no engine emitted any of them, so nothing was broken *today* and n
 could be built, either: the vocabulary made a promise the surface could not keep, and
 no gate noticed.
 
-### Added
+#### Added
 
 - **Sixteen of the eighteen now draw.** Fills (`BeginFill`/`EndFill` as the
   reference's polygon walk, not a paint bucket, plus `FillLastShape`), pen styles
@@ -2264,7 +2368,7 @@ no gate noticed.
   workstream W19.2.
 - **A pixel test for fill colour**, because "a shape exists" was already true.
 
-### Fixed
+#### Fixed
 
 - **A filled polygon was painted in the pen's colour, not its own.** `FILLED "red"
   [fd 100 rt 90 …]` carries the fill in `b` beside the flag that says there is one, and
@@ -2273,7 +2377,7 @@ no gate noticed.
   something, not what colour it did it in. Both paint paths now use the requested fill,
   and the new test fails against the old line.
 
-### Changed
+#### Changed
 
 - The raster path (a program that names a `SCREEN`) learns the same shapes, so a screen
   program is not silently lossy where a drawing one is not: gradients, ellipses, sprite
@@ -2281,7 +2385,7 @@ no gate noticed.
 - `reset()` clears the pen style, the palette, the sprite definitions and the virtual
   screen, so a program cannot inherit the previous one's dash pattern or palette slots.
 
-### Still open, and stated
+#### Still open, and stated
 
 - **The engines do not emit the new kinds yet.** There is no `PENSTYLE`, `GRADIENT`,
   `BEZIER` or sprite-object syntax in any of the ten languages, and `TurtleHost` has no
@@ -2290,7 +2394,7 @@ no gate noticed.
   fixes is the part the surface was lying about.
 - `Pitch`/`Roll` stay undrawn, in `kNotDrawn`, until W19.2.
 
-## [18.1.0] - 2026-10-22
+### [18.1.0] - 2026-10-22
 
 A program now leaves the workshop as a program. `--compile` writes a copy of
 **`time_warp_player`** — the canvas, the runner, the sound and the palette, and nothing
@@ -2302,7 +2406,7 @@ The version after the engine deletion rather than part of it, for the reason the
 are the same argument: an artifact is a copy of a player that links the engines the
 product ships, and there is no longer a second interpreter for it to compete with.
 
-### Added
+#### Added
 
 - **`time_warp_player`** (`native/tools/player.cpp`): a program leaves the workshop as
   a program. `--compile` writes a 2.3MB copy of it rather than a 4.7MB copy of the IDE
@@ -2329,7 +2433,7 @@ product ships, and there is no longer a second interpreter for it to compete wit
   than two colours in it; a compiled artifact, run as its own executable, draws; a text
   file is refused with exit code 2 and a sentence; `--version` prints.
 
-### Changed
+#### Changed
 
 - `time_warp_player` is installed beside the IDE, because `--compile` looks for it
   there. A package that shipped only the IDE would compile every program into a copy of
@@ -2337,7 +2441,7 @@ product ships, and there is no longer a second interpreter for it to compete wit
 - `docs/ROADMAP.md`'s "Distributing a program", `docs/USER_GUIDE.md` and `README.md`
   describe the artifact as a player copy and name the format-2 fields.
 
-## [18.0.0] - 2026-10-22
+### [18.0.0] - 2026-10-22
 
 The Python engine is gone. One language builds this repository, tests it and gates it:
 C++ for the product, and a `python3` for the harness scripts, which drive the engines
@@ -2360,7 +2464,7 @@ now lists twelve scripts: nine in `native/tools/` (the harnesses, the curated co
 table and the two documentation gates), `twc.py`, and two in `Scripts/` — and nothing
 else.
 
-### Removed
+#### Removed
 
 - **`native/bridge/`** — the reference engine: the ten executors, the expression
   evaluator, the validators, the lesson curriculum reader, the classroom and the
@@ -2376,7 +2480,7 @@ else.
 - **The Windows CI step that drove `worker.py`** directly, and the three
   `PYTHONPATH: native/bridge` environment blocks.
 
-### Added
+#### Added
 
 - **`native/tools/golden_check.py`** — the parity gate, in one command
   (`make golden-check`). It compares the ports with 470 recorded language programs
@@ -2417,7 +2521,7 @@ else.
 - **`native/tools/pyproject.toml`** — ruff and mypy configuration, moved with the
   scripts it configures. `make lint` checks `native/tools` now.
 
-### Changed
+#### Changed
 
 - **`command_inventory.py` reads the C++ executors.** It parsed the Python ones with
   `ast`; the engines that ship are in `native/src/lang/`, so measuring completeness
@@ -2435,7 +2539,7 @@ else.
 - **The curriculum gate moved to `native.yml`**, the job that has built
   `time_warp_teach`; `docs.yml` keeps the text checks that need no compiler.
 
-### Fixed
+#### Fixed
 
 - **The documentation gate earned its keep on this change.** Deleting the engine
   falsified thirty-one sentences across thirteen files — `docs/ARCHITECTURE.md`
@@ -2446,7 +2550,7 @@ else.
   deleted scripts. `check_doc_claims.py` found all of them, and the two that were
   genuinely history are wrapped in `<!-- history -->` regions rather than deleted.
 
-### The trade, stated
+#### The trade, stated
 
 A live differential is stronger than a recording: it notices a mistake in *both*
 engines at once. Comparing with a frozen corpus cannot say the recording is right, so
@@ -2454,7 +2558,7 @@ a deliberate behaviour change edits the corpus entry in the same commit that cha
 the behaviour. What that buys is a gate that runs against the engines the product
 ships, needs no second interpreter, and cannot rot when one drifts.
 
-## [17.3.0] - 2026-10-22
+### [17.3.0] - 2026-10-22
 
 The teacher's command has every verb the Python one had, and the Python one is gone.
 Ten commands were missing from `time_warp_teach` — `outline`, `plans`, `answers`,
@@ -2462,7 +2566,7 @@ Ten commands were missing from `time_warp_teach` — `outline`, `plans`, `answer
 which is why `teach.py` had to stay. Twelve hundred lines of Python across the two
 CLIs are now none.
 
-### Added
+#### Added
 
 - **`time_warp_teach plans --write <dir>`**, and the renderer behind it
   (`timewarp::lessons::render_plans`, `native/src/lessons/plans.cpp`). It is verified
@@ -2479,13 +2583,13 @@ CLIs are now none.
   given command compares.
 - `time_warp_teach validate --quiet`, which is what the CI step asks for.
 
-### Removed
+#### Removed
 
 - `native/tools/teach.py` and `native/tools/learn.py` (1,284 lines). Nothing in the
   build, the workflows or the guides names them; `time_warp_teach` and
   `time_warp_learn` are the commands.
 
-### Changed
+#### Changed
 
 - **The curriculum gate moved to the job that has the tool.** `docs.yml` used to run
   `teach.py validate` and regenerate the plans with nothing but `python3`, which is
@@ -2493,7 +2597,7 @@ CLIs are now none.
   `native.yml` beside the build, and the documentation job keeps the text checks
   (index, links, claims, tutorials) that need no compiler.
 
-## [17.2.1] - 2026-10-22
+### [17.2.1] - 2026-10-22
 
 The documentation gate checked links, and a link that resolves can still be a false
 claim: `docs/ARCHITECTURE.md` documented `locateWorker()`, a function 17.0 deleted;
@@ -2502,7 +2606,7 @@ claim: `docs/ARCHITECTURE.md` documented `locateWorker()`, a function 17.0 delet
 releases; and every generated lesson plan named the curriculum at its pre-17.0 path.
 None of that was reachable by a link checker.
 
-### Added
+#### Added
 
 - **`native/tools/check_doc_claims.py`** (`make doc-claims`, `.github/workflows/docs.yml`):
   three rules that settle a class of defect a machine can settle — a repository path
@@ -2514,7 +2618,7 @@ None of that was reachable by a link checker.
   `--self-test` proves the rules fire and both escapes suppress them, which is the
   only way to know a checker that passes is not a checker that cannot fail.
 
-### Fixed
+#### Fixed
 
 Thirty false claims, found by the new gate on its first run:
 
@@ -2534,7 +2638,7 @@ Thirty false claims, found by the new gate on its first run:
 - `.github/DEPLOYMENT.md` said the docs job watches the moved curriculum path and that
   `native.yml` runs examples "through the reference engine".
 
-## [17.2.0] - 2026-10-22
+### [17.2.0] - 2026-10-22
 
 `make smoke` and `make command-matrix` used to ask `native/bridge/worker.py` what a
 program did, which made a Python interpreter part of this repository's test suite
@@ -2544,7 +2648,7 @@ native engines, through the same recorder the API and the lesson check use.
 The change immediately earned its keep: it found a BASIC bug that two releases of
 green gates had not.
 
-### Added
+#### Added
 
 - **`time_warp_check`** (`native/tools/check.cpp`): runs one program through the
   native engines and reports what it printed and what it drew — as text, or as the
@@ -2556,7 +2660,7 @@ green gates had not.
   checkout?", so the two harnesses cannot disagree about it.
 - `make check` builds the tool; `make smoke` and `make command-matrix` depend on it.
 
-### Fixed
+#### Fixed
 
 - **A lowercase array name was a different array.** `DIM dat(3)` then
   `PRINT dat(0)` answered `Unknown function: dat`, while `PRINT DAT(0)` worked:
@@ -2566,7 +2670,7 @@ green gates had not.
   is written in lower case, which meant the example had only ever run because the
   smoke harness ran it through the reference engine. `lang_tests` has the case.
 
-### Changed
+#### Changed
 
 - The example gate's ink total for Scheme and Logo moved slightly (85 against 121,
   7868 against 7885). It now counts what the canvas recorder recorded rather than
@@ -2574,7 +2678,7 @@ green gates had not.
   change the drawing without adding to it. Every program that must draw still
   draws, which is what the gate is for; the numbers are a trend, not a contract.
 
-## [17.1.1] - 2026-10-22
+### [17.1.1] - 2026-10-22
 
 A program confined to a directory could reach a sibling of it. `OPEN` resolved a
 name against the working directory and then checked that the answer *began with*
@@ -2588,7 +2692,7 @@ thirty programs written by other people, unattended. This is a fence around one
 directory, not a privilege boundary — the threat model in `SECURITY.md` says so in
 the terms the code actually implements.
 
-## [17.1.0] - 2026-10-22
+### [17.1.0] - 2026-10-22
 
 Two things a program could do but a user could not watch. A `SCREEN` was a picture
 you pressed Play on: the wheel and the click did nothing, so a 160x100 sprite was
@@ -2596,7 +2700,7 @@ whatever size the window happened to make it and "what colour is that pixel?" ha
 no answer short of editing the source. And sound was real on Linux and macOS and
 silent on Windows, which is where most of the games are run.
 
-### Added
+#### Added
 
 - **The screen is interactive.** `TurtleCanvas::framebufferTarget()` is now the
   one place the screen's placement is decided — whole-number fit times the zoom,
@@ -2620,7 +2724,7 @@ silent on Windows, which is where most of the games are run.
   PowerShell literal with its own quote doubled: a path under
   `C:\Users\O'Brien\` stays one token, and `ui_layout_tests` pins that.
 
-## [17.0.0] - 2026-10-22
+### [17.0.0] - 2026-10-22
 
 The product contains no Python. The engine that decided whether a learner's program
 satisfied a checkpoint — and the classroom behind it — was the last thing the
@@ -2629,7 +2733,7 @@ are gone, and `cmake --install` produces a payload with no Python file in it. Th
 other half of the claim is what 16.5 and 16.6 built: a program can name a screen,
 read a pixel back, capture a sprite, and sound two voices at once.
 
-### Added
+#### Added
 
 - **`timewarp_classroom`** (`native/src/lessons/classroom.hpp`): the roster, the
   assignment, handing out starters, collecting and marking, the class's
@@ -2680,7 +2784,7 @@ read a pixel back, capture a sprite, and sound two voices at once.
   in" stays different from "handed in and wrong", marking writes no progress, and a
   bundle round-trips between two classrooms.
 
-### Fixed
+#### Fixed
 
 - **A jump to the line already executing ended the program.** The run loop detects
   a jump by comparing the program counter before and after a statement, so
@@ -2691,7 +2795,7 @@ read a pixel back, capture a sprite, and sound two voices at once.
   and the `NEXT` workaround is gone. Fixed in both engines, with a unit test in each
   and a budget test that pins it.
 
-### Changed
+#### Changed
 
 - **Both panels are views over the library.** Opening the Lessons tab loads the
   curriculum in process and a check runs in process; the Classroom page reads the
@@ -2702,7 +2806,7 @@ read a pixel back, capture a sprite, and sound two voices at once.
 - **`time_warp_teach` and `time_warp_learn` are installed** beside the IDE, so the
   claim that the panel and the tools give one answer holds outside a checkout.
 
-### Fixed
+#### Fixed
 
 - **Marking a class no longer freezes the window.** The Classroom page marks
   every handed-in file, and a mark runs the learner's program: a runaway handout
@@ -2715,7 +2819,7 @@ read a pixel back, capture a sprite, and sound two voices at once.
   the reference. A literal `~` directory would have put a learner's work somewhere
   nobody looks.
 
-### Packaging
+#### Packaging
 
 - **`zlib` is a declared dependency, and `python3` no longer is.** The Debian and
   RPM packages named `python3` for a lesson check that no longer runs there, and
@@ -2724,7 +2828,7 @@ read a pixel back, capture a sprite, and sound two voices at once.
   vcpkg beside SQLite, because MSVC has no system copy and Qt does not expose the
   one it links privately. The requirements table and the security policy name it.
 
-### Notes and limits
+#### Notes and limits
 
 - `native/bridge/` remains in the checkout as development tooling: it is the
   fixture the parity corpus was recorded from, and what `example_smoke.py`,
@@ -2737,14 +2841,14 @@ read a pixel back, capture a sprite, and sound two voices at once.
   checkpoint says `🏆 Lesson complete:` again, and hints are counted per request and
   clamped to the last one, which is what `FORMAT.md` documents.
 
-## [16.6.0] - 2026-10-22
+### [16.6.0] - 2026-10-22
 
 Sound gains a second voice. `SOUND` had been a single tone: a new note stopped the
 one before it, because the machine played one WAV through one player process. That
 is right for a tune and wrong for a game, where the laser has to be audible over
 the engine.
 
-### Added
+#### Added
 
 - **A mixer** (`timewarp::audio::Mixer`, `native/src/audio/mixer.cpp`): up to
   eight voices, summed sample by sample, with the synth's own attack and release
@@ -2760,7 +2864,7 @@ the engine.
   reported rather than silently dropping a sound, rests, deterministic noise, and
   the render time limit. 22 suites in all.
 
-### Notes
+#### Notes
 
 - `PLAY` is still a tune: a note list stops the mix and plays its notes in order,
   because that is what a note list means. Chord syntax (`[CEG]`) is not parsed;
@@ -2771,7 +2875,7 @@ the engine.
   so — the honest version of "this machine has no sound", rather than a feature
   that pretends.
 
-## [16.5.0] - 2026-10-22
+### [16.5.0] - 2026-10-22
 
 The machine gets a screen it can read, and a screen it can show. `SCREEN 1` had
 been a mode name since the port — it recorded a width and a height and drew nothing
@@ -2782,7 +2886,7 @@ reference's backend was an optional import it never shipped. And the drawing
 surface was still a picture that fitted itself to its ink, which is the opposite of
 what a game needs.
 
-### Added
+#### Added
 
 - **A pixel surface behind `SCREEN 1`** (`timewarp::lang::Raster`): a fixed
   800x600-by-default buffer with clipping, Bresenham lines, filled and outlined
@@ -2836,7 +2940,7 @@ what a game needs.
   than as an engine mismatch. See
   [README_TESTING.md](docs/README_TESTING.md).
 
-### Fixed
+#### Fixed
 
 - **A loop with an empty body ended its outer loop.** `FOR I = 1 TO 4 : NEXT I` is
   legal BASIC, and its `NEXT` sits at the line the loop returns to — so "go back to
@@ -2861,7 +2965,7 @@ what a game needs.
   answer depends on the machine: the reference says "no gamepad" on every machine
   and the port finds the one that is plugged in.
 
-### Notes
+#### Notes
 
 - The raster is the program's memory of what it drew; the framebuffer is what the
   canvas shows when a program asks for one. Both exist because the two jobs are
@@ -2876,14 +2980,14 @@ what a game needs.
   capture, so running it there would measure the reference's gaps. Its gate is
   `lang_tests`, which runs it natively.
 
-## [16.4.4] - 2026-10-21
+### [16.4.4] - 2026-10-21
 
 The canvas explains itself. The Turtle Log tab had been there since the window was
 first built and nothing ever wrote to it — a placeholder that looked finished — and
 the one thing the roadmap still listed as missing from the canvas was a way to see
 what the turtle had been told and where it ended up.
 
-### Added
+#### Added
 
 - **The 🐢 Turtle Log lists the drawing.** Every command the canvas receives is
   appended, numbered and spelled with its arguments — `FORWARD 100`,
@@ -2903,7 +3007,7 @@ refreshed from `TurtleCanvas::turtleStateChanged`, and the log is filled by the 
 call that applies the command to the canvas — `MainWindow::applyCanvasCommand`, the
 bridge's sink — so the two cannot disagree about what was drawn.
 
-### Fixed
+#### Fixed
 
 - **`turtleStateChanged` reported less than it promised.** The canvas emits it for
   "moved, turned, or changed pen", but `apply()` compared only position and
@@ -2914,7 +3018,7 @@ bridge's sink — so the two cannot disagree about what was drawn.
   turned the turtle without moving it emitted nothing, which left the marker tilted
   by a heading no readout had been told about.
 
-### Documentation and tests
+#### Documentation and tests
 
 - **The input round trip has automated coverage**, which the roadmap had recorded
   as impossible because the prompt is modal. The dialog is; everything on either
@@ -2927,9 +3031,9 @@ bridge's sink — so the two cannot disagree about what was drawn.
 - `docs/ROADMAP.md` and `docs/USER_GUIDE.md` describe the log and the strip, and
   the roadmap's "still missing" list no longer names them.
 
-## [16.4.3] - 2026-10-21
+### [16.4.3] - 2026-10-21
 
-### Packaging
+#### Packaging
 
 - **The container image runs natively on arm64.** Every tag was amd64, because
   Arch -- the distribution the project is developed on -- publishes no arm64 image.
@@ -2946,9 +3050,9 @@ bridge's sink — so the two cannot disagree about what was drawn.
   library the stage does not carry, naming what is missing. A dropped Qt plugin or
   SQLite driver is a failed release rather than a user's first `docker run`.
 
-## [16.4.2] - 2026-10-21
+### [16.4.2] - 2026-10-21
 
-### Packaging
+#### Packaging
 
 - **The container image is published under the name the guide prints.** Releases
   pushed `ghcr.io/<owner>/time_warp_studio` -- the repository's name, lowercased --
@@ -2960,14 +3064,14 @@ bridge's sink — so the two cannot disagree about what was drawn.
   pushed to the repository's name with it, so the notes of the releases before
   this one keep resolving -- to this build rather than to a leftover.
 
-## [16.4.1] - 2026-10-20
+### [16.4.1] - 2026-10-20
 
 The release 16.4.0 described below could not be built: its macOS job stopped on a
 bundle that could not load Qt from inside itself, and then on the disk image it
 had just made. This is that release with the packaging that finishes, so nothing
 it lists has changed.
 
-### Packaging
+#### Packaging
 
 - **The macOS bundle loads its own frameworks.** The installed bundle now carries
   `@executable_path/../Frameworks` as its rpath. The install step stripped the
@@ -2986,7 +3090,7 @@ it lists has changed.
   install rather than a path the build tree never produced, and every action the
   pipeline uses is pinned to a major that runs on Node 24.
 
-## [16.4.0] - 2026-10-20
+### [16.4.0] - 2026-10-20
 
 The Studio leaves Linux: a release now carries a native Windows installer and a
 universal macOS disk image beside the Linux packages, built and tested on all
@@ -2996,7 +3100,7 @@ requires Windows 10 and Qt 5.15 does not. Getting there meant compiling the same
 sources against both Qt versions, which is now a configure option rather than a
 fork.
 
-### Added
+#### Added
 
 - **Windows and macOS packages.** A release now carries a native Windows installer
   (`time-warp-studio-<version>-win64.exe`) and a portable ZIP, and a universal macOS
@@ -3029,7 +3133,7 @@ fork.
   joins the theme table as the thirty-fifth: the glass frame's pale chrome, the
   Aero selection blue, and Visual Studio 2010's syntax colours.
 
-### Fixed
+#### Fixed
 
 - **A light theme drew white ink on white paper.** The pen a program starts with
   was the reference's white whatever the theme, so Windows 2000 -- and High
@@ -3072,7 +3176,7 @@ fork.
   fallback on a machine that has the real thing, and every differential gate passes
   through it.
 
-### Changed
+#### Changed
 
 - `cpack` now produces the platform's native artifact: `NSIS` and `ZIP` on
   Windows, `DragNDrop` on macOS, `DEB` on Linux. Both new generators package the
@@ -3092,14 +3196,14 @@ fork.
   job that sits there until the runner tires of it. That is how the deadlock above
   was found.
 
-## [16.3.0] - 2026-10-20
+### [16.3.0] - 2026-10-20
 
 The HB-1 arrives: a bespoke 1982 home computer inside the Studio, with a
 ten-language ROM socket, its own CONFIG screen and HB DOS on a 512-sector volume.
 The machines get their own manual set, the README is reframed for retro-computing
 hobbyists, and CHIP-8 clears its hi-res screen correctly.
 
-### Added
+#### Added
 
 - **The HB-1.** Tools > HB-1 Computer… (`Ctrl+Alt+W`, or
   `./run.sh --computer`) opens a self-contained home computer: a boot intro at the
@@ -3128,7 +3232,7 @@ hobbyists, and CHIP-8 clears its hi-res screen correctly.
   rather than the editor, so a script captures the boot screen and the drawing the
   program made on the machine's canvas.
 
-### Documentation
+#### Documentation
 
 - **The machines have books.** [docs/MACHINES.md](docs/MACHINES.md) states the
   premise — a system from a parallel universe — what the HB-1 and the CHIP-8
@@ -3155,7 +3259,7 @@ hobbyists, and CHIP-8 clears its hi-res screen correctly.
   `Examples/CATALOG.md`; the workflow now also requires the machine books to
   exist and runs when the checker changes.
 
-### Fixed
+#### Fixed
 
 - **CHIP-8 `CLS` in hi-res.** Clearing the screen used the lores buffer size, so a
   `00E0` after `00FF` truncated the 128x64 framebuffer; the next `DRW` could write
@@ -3168,14 +3272,14 @@ hobbyists, and CHIP-8 clears its hi-res screen correctly.
   The build now uses whichever name the module provides, keeping the CMake 3.20
   floor working without the warning.
 
-## [16.2.0] - 2026-10-20
+### [16.2.0] - 2026-10-20
 
 Projects, a persistent REPL with BASIC direct mode, SQL, watch expressions and
 data breakpoints, a JSON-RPC automation API, and terminal compilation join the
 IDE. These are additive changes; existing languages, programs, settings and
 lesson ids are unchanged.
 
-### Added
+#### Added
 
 - **A showcase program for every language.** `Examples/<language>/showcase.<ext>`
   is one program per language that walks through that language's whole surface —
@@ -3226,7 +3330,7 @@ lesson ids are unchanged.
   the source, linking the engine, writing a drawing as SVG and taking `--db FILE`
   for a program that uses SQL.
 
-### Fixed
+#### Fixed
 
 - The command and REPL matrices accept the documented “not available” refusal
   from an optional backend (BASIC `SAY`/`SPEAK`), so the gates pass on a machine
@@ -3235,7 +3339,7 @@ lesson ids are unchanged.
   `--python` option lets the command matrix choose the worker interpreter, which
   is how both the backed and unbacked paths are exercised.
 
-## [16.1.0] - 2026-10-19
+### [16.1.0] - 2026-10-19
 
 The port is finished: every feature the removed PySide6 application had is back,
 each landed with the test that proves it, and `docs/PORTING_PLAN.md` records the
@@ -3245,7 +3349,7 @@ any of the ten languages, and handed to a class as a bundle, a lesson session or
 presentation. Nothing is removed and no promise changes, so this is a minor
 release.
 
-### Added
+#### Added
 
 - **SVG drawing export.** File > Export Drawing (Ctrl+E) and `--export` gain
   `.svg` in a build that finds Qt6::Svg: `QSvgGenerator` paints the same ink the
@@ -3498,7 +3602,7 @@ release.
   pretending to format. Ported from `utils/code_formatter.py`, with the bug that
   left every `ELSE` body one level out fixed.
 
-## [16.0.0] - 2026-10-18
+### [16.0.0] - 2026-10-18
 
 All ten languages now run in C++: nothing is routed to the Python engine at run
 time, and it has been demoted to the reference the parity gates compare against.
@@ -3512,7 +3616,7 @@ language lineup and the run-time dependency are the project's central claim, and
 `SERIAL`/`PARALLEL` put device nodes within a program's reach — which is why they
 are allow-listed, and why that is a security surface rather than a feature.
 
-### Added
+#### Added
 
 - **The 33 themes are back.** The removed PySide6 application shipped 33 named
   colour schemes — the retro sets (Amber Lab, Turbo Vision, NeXTSTEP, Amiga
@@ -3601,7 +3705,7 @@ are allow-listed, and why that is a security surface rather than a feature.
   dependencies and put the binary, engine, desktop entry and icon where the system
   expects them.
 
-### Fixed
+#### Fixed
 
 - **The X on a tab closed nothing.** `setTabsClosable(true)` draws the button and
   then emits `QTabWidget::tabCloseRequested`, which nothing was connected to: the
@@ -3624,7 +3728,7 @@ are allow-listed, and why that is a security surface rather than a feature.
   display list, so it controlled an ability the application does not have. The
   Settings button that replaced it opens the editor preferences.
 
-### Added: the language ports
+#### Added: the language ports
 
 - **BASIC runs in C++.** The largest port, in five files: `basic.cpp` (variables,
   the load-time scan, the drawing helpers), `basic_statements.cpp` (the dispatch),
@@ -3674,7 +3778,7 @@ are allow-listed, and why that is a security surface rather than a feature.
   with **0 differences**, and seven cases join `lang_tests`. Smalltalk is no
   longer bridged.
 
-### Fixed: the language ports
+#### Fixed: the language ports
 
 - **FOCAL** — `ASK`'s answer never reached the program: the statement wrote to a
   private dictionary while the engine substituted from `interpreter.variables`, so
@@ -3717,7 +3821,7 @@ are allow-listed, and why that is a security surface rather than a feature.
 - **Logo `OUTPUT` reaches its caller.** `PRINT DOUBLE 21` prints 42 and `SHOW P`
   prints the value, in both engines.
 
-### Lessons, for students and teachers
+#### Lessons, for students and teachers
 
 - **Twenty lessons, sixty checkpoints** — two for each of the ten languages, with a
   plan, a worked answer and hints for every checkpoint.
@@ -3748,7 +3852,7 @@ are allow-listed, and why that is a security surface rather than a feature.
   exists because a test recorded lesson hints into a real learner's `progress.json` —
   the hint counter being cumulative is how the leak surfaced.
 
-### For contributors, and for the repository itself
+#### For contributors, and for the repository itself
 
 - **Community files.** Issue forms for a bug, a feature and a language, a pull-request
   template, `SUPPORT.md`, `CODEOWNERS` and a deployment guide, so the questions a
@@ -3776,7 +3880,7 @@ are allow-listed, and why that is a security surface rather than a feature.
   `scheme_differential_check.py`, and an ambiguous `l` in `teach.py`. Both are fixed
   rather than excluded, so `pre-commit run --all-files` is green.
 
-### Syntax colouring in the editor
+#### Syntax colouring in the editor
 
 - **Per-language highlighting** — `native/src/ui/syntax_highlighter.cpp`, one rule
   table per language. The ten disagree about what a comment is: REXX has `--` and
@@ -3790,7 +3894,7 @@ are allow-listed, and why that is a security surface rather than a feature.
   and asserts the colour at a named position. That is the only kind of check that
   works here: coloured text one token out of place still looks like a working editor.
 
-### Find, replace and go-to-line
+#### Find, replace and go-to-line
 
 - **`FindBar`** — a bar under the editor tabs, hidden until Edit > Find asks for it.
   Replace is the same bar with a second row. Enter finds the next match, Shift+Enter
@@ -3804,7 +3908,7 @@ are allow-listed, and why that is a security surface rather than a feature.
   on one key is an ambiguous shortcut that Qt resolves by guessing.
 - The About box now names all ten languages instead of the original six.
 
-### The last session comes back
+#### The last session comes back
 
 - **Recent files** — File > Open Recent lists the last ten paths, most recent first,
   with a Clear Menu entry. Opening a file that is already open bumps it to the top
@@ -3818,7 +3922,7 @@ are allow-listed, and why that is a security surface rather than a feature.
 - **`saveLayout` and `saveSession` are separate** — `--reset-layout` puts the window
   back to its defaults without forgetting what was being edited.
 
-### Save the drawing
+#### Save the drawing
 
 - **File > Export Drawing** (Ctrl+E) writes PNG, JPEG or BMP; **Edit > Copy Drawing**
   (Ctrl+Shift+C) puts it on the clipboard; and `time_warp_ide --run program.logo
@@ -3834,7 +3938,7 @@ are allow-listed, and why that is a security surface rather than a feature.
 - Exporting an empty canvas says so in the status bar rather than writing a blank
   picture.
 
-### What a run actually did: Variables, Telemetry and Debug
+#### What a run actually did: Variables, Telemetry and Debug
 
 The right column's three remaining placeholders are real panels now. Both
 inspection panels read data the engine always had and nobody had asked it for.
@@ -3862,7 +3966,7 @@ inspection panels read data the engine always had and nobody had asked it for.
 - The three panels are emptied at the start of every run: a previous run's numbers
   sitting in a HUD while a new one starts read as this run's.
 
-### FOCAL, PILOT, COMAL, CHIP-8 and Logo run in C++, and the engine for the rest
+#### FOCAL, PILOT, COMAL, CHIP-8 and Logo run in C++, and the engine for the rest
 
 Five languages have left the bridge. The change that matters is not the ports
 themselves but the seam they establish: an executor is now a C++ function, and the
@@ -3935,21 +4039,21 @@ IDE asks `executor_for(language)` whether it can run in process.
 
 ---
 
-## [15.0.0] - 2026-10-16
+### [15.0.0] - 2026-10-16
 
 The implementation was replaced wholesale: Time Warp Studio is now a C++20 / Qt6
 desktop application, and the language lineup and packaging that went with the previous
 implementation are gone. Both changes were made after `v14.1.2` and shipped together,
 so both are recorded here.
 
-### The Qt application is now the product
+#### The Qt application is now the product
 
 Time Warp Studio is a **C++20 / Qt6 desktop application** (`native/`). The PySide6
 implementation that came before it has been **removed**; what remains of Python is a
 temporary bridge the Qt application spawns for the five languages that are not ported
 yet.
 
-#### Added
+##### Added
 
 - **Qt application** (`native/`) — `time_warp_ide`: documents and tabs, code editor
   with line-number gutter and current-line highlight, streaming output console with
@@ -3969,13 +4073,13 @@ yet.
   table for completeness.
 - **CI** (`.github/workflows/native.yml`) covering the build, the suites and the gates.
 
-#### Removed
+##### Removed
 
 - The entire PySide6 application, its launchers (`run.py`, `run.sh`), its Docker and
   developer tooling, and the workflows that packaged and published it.
 - The C, Pascal, Prolog, Forth, Brainfuck and Python executors.
 
-#### Fixed during the port's examination
+##### Fixed during the port's examination
 
 Examining every documented command through the real bridge turned up defects that no
 gate had been looking for:
@@ -3999,14 +4103,14 @@ gate had been looking for:
 - **`JOYINIT`** reported an absent *optional* backend with the error prefix, which the
   IDE presents as the program failing.
 
-### Language lineup change — six active languages
+#### Language lineup change — six active languages
 
 Time Warp Studio now ships exactly **six** languages: **BASIC, PILOT, Logo,
 COMAL, REXX, and Scheme**. The C, Pascal, Prolog, Forth, Brainfuck, and Python
 executors have been removed from the product, along with their examples,
 tutorials, snippets, lessons, and tests.
 
-#### Added
+##### Added
 
 - **COMAL** executor (`languages/comal.py`) — structured BASIC with
   `IF/ELIF/ELSE/ENDIF`, `FOR/NEXT`, `WHILE/ENDWHILE`, `REPEAT/UNTIL`,
@@ -4025,14 +4129,14 @@ tutorials, snippets, lessons, and tests.
   programs (`Examples/comal/`, `Examples/rexx/`, `Examples/scheme/`), code
   snippets, and two guided lessons per new language.
 
-#### Removed
+##### Removed
 
 - Executors: `brainfuck.py`, `c_lang_fixed.py`, `forth.py`, `pascal.py`,
   `prolog.py`, `python_lang.py`, plus their tests, examples, and tutorials.
 - `Language` enum members `C`, `PASCAL`, `PROLOG`, `FORTH`, `BRAINFUCK` and
   `PYTHON_LANG`.
 
-#### Changed
+##### Changed
 
 - `_WHOLE_PROGRAM_EXECUTORS` now contains Scheme only; the subprocess sandbox
   applies to Scheme.
@@ -4051,31 +4155,31 @@ All notable changes to Time Warp Studio will be documented in this file.
 > been removed from `time_warp/languages/` and are no longer part of the
 > product. These entries are kept as historical record only.
 
-## [14.1.2] - 2026-10-15
+### [14.1.2] - 2026-10-15
 
-### Packaging
+#### Packaging
 
 - Matched the Python distribution name to the existing PyPI project `timewarp-ide`.
 
-## [14.1.1] - 2026-10-15
+### [14.1.1] - 2026-10-15
 
-### Packaging
+#### Packaging
 
 - Included the desktop and standalone editor entry-point modules in the Python wheel.
 - Documented installation directly from the GitHub Release wheel.
 
-## [14.1.0] - 2026-10-15
+### [14.1.0] - 2026-10-15
 
-### Studio Improvements
+#### Studio Improvements
 
 - Added a lessons dock with built-in lessons and checkpoint verification.
 - Added a Borland Turbo-style keymap and live Function-Key Bar.
 - Expanded graphics, sound, and Prolog capabilities.
 - Removed obsolete prototypes and aligned documentation and packaging with the supported Studio.
 
-## [14.0.0] - 2026-10-01
+### [14.0.0] - 2026-10-01
 
-### Editor and Workflow Improvements
+#### Editor and Workflow Improvements
 
 - Added Go to Line navigation, clickable error locations, and error-only output filtering.
 - Added a searchable document outline for supported procedure and function declarations.
@@ -4083,9 +4187,9 @@ All notable changes to Time Warp Studio will be documented in this file.
 - Made lesson authoring and file-dialog filters use the canonical nine-language registry.
 - Corrected current release documentation and package metadata to match the active language set.
 
-## [13.0.0] - 2026-06-01
+### [13.0.0] - 2026-06-01
 
-### New Languages
+#### New Languages
 
 - **Smalltalk executor** (`languages/smalltalk.py`) — Smalltalk-80 interpreter (~830 lines) supporting:
   - `Transcript show:/showCr:/print:` for output; temp variable declarations `| x y |`
@@ -4098,13 +4202,13 @@ All notable changes to Time Warp Studio will be documented in this file.
   - Turtle graphics via `Turtle forward:`, `Turtle right:`, etc.
   - 31/31 tests passing; 5 example programs in `Examples/smalltalk/`
 
-### Syntax Highlighting
+#### Syntax Highlighting
 
 - **Smalltalk** — keyword/unary/binary message highlighting, `"..."` comment style, string literals
 
-## [12.0.0] - 2026-06-01
+### [12.0.0] - 2026-06-01
 
-### New Languages
+#### New Languages
 
 - **Perl 5 executor** (`languages/perl.py`) — full Perl 5 interpreter (~2450 lines) supporting:
   - Scalar, array, and hash variables with proper scoping (`my`, `our`, `local`)
@@ -4119,7 +4223,7 @@ All notable changes to Time Warp Studio will be documented in this file.
   - Turtle graphics: `forward`, `backward`, `left`, `right`, `penup`, `pendown`, `color`, `setheading`, `home`
   - 36/36 tests passing; 5 example programs in `Examples/perl/`
 
-### Bug Fixes
+#### Bug Fixes
 
 - **Perl executor** — fixed 8 bugs found during test development:
   - `$i++` incorrectly parsed as binary `+` → infinite loops in `while` and C-style `for`
@@ -4131,9 +4235,9 @@ All notable changes to Time Warp Studio will be documented in this file.
   - `split(/,/, $str)` failed because `/,/` was split at the comma by `_split_by_comma`
   - `_emit` split on `\n` eagerly → partial-line `print "$i "` calls produced separate output lines instead of accumulating
 
-## [11.0.0] - 2026-06-01
+### [11.0.0] - 2026-06-01
 
-### Major Features
+#### Major Features
 
 - **Project File-Tree Panel** (`ui/project_tree.py`) — new `ProjectTreePanel` docked on the far left of the main window. Shows all tracked project files with language emoji icons; double-click to open in a new tab; right-click context menu: Add File, Remove from Project, Set as Main File. Auto-populates when a `.twsproj` project is opened and saves on any change.
 
@@ -4147,13 +4251,13 @@ All notable changes to Time Warp Studio will be documented in this file.
 
 - **Persistent Terminal History** (`ui/terminal_widget.py`) — shell commands are now appended to `~/.time_warp/terminal_history` (plain text, one per line). On next launch the history is pre-loaded into the up/down arrow history buffer (up to 200 entries in memory, unlimited on disk).
 
-### Previously Completed (v10.x)
+#### Previously Completed (v10.x)
 
 - **Assembly 6502 executor** (`languages/asm6502.py`) — 2-pass assembler, 64 KB virtual machine, 40+ opcodes, all addressing modes
 - **Code folding** (`ui/editor.py`) — ▼/▶ gutter glyphs, `toggle_fold()`, hides/shows QTextBlock ranges
 - **Split editor** (`ui/main_window.py`) — `QSplitter`-based dual-pane editing (View → Split Editor)
 
-### Bug Fixes
+#### Bug Fixes
 
 - **Ruby executor** (`languages/ruby.py`) — full initial implementation with extensive bug fixes:
   - `_rfind_op` now guards against treating `<<` (append operator) as two separate `<` operators — `r << x` no longer mis-splits into `r <` and `x`
@@ -4180,14 +4284,14 @@ All notable changes to Time Warp Studio will be documented in this file.
 - **Erlang executor** — fixed boolean pattern matching: atoms `true`/`false` in `case` clauses now match Python `True`/`False` from built-in functions like `is_prime/1`
 - **Erlang executor** — fixed `_split_fun_clauses` infinite loop caused by semicolons inside `if...end` blocks being incorrectly treated as clause separators; keyword-depth tracking (`if/case/begin/receive...end`) now prevents this
 
-### Demo Program Fixes (timeout → 0 timeouts)
+#### Demo Program Fixes (timeout → 0 timeouts)
 
 - **`Examples/erlang/number_theory.erl`** — reduced amicable-pairs search range (2000→300) and perfect-numbers loop (1..50→1..30) to complete within the 15-second test budget
 - **`Examples/forth/mathematical_wonders.forth`** — fixed `SIEVE-MARK` stack corruption (`DUP *` → `DUP DUP *`), removed erroneous `ELSE DROP` in `BUILD-SIEVE`, added `4DUP` word definition, added `FVARIABLE`/`F@`/`F!`/`F+!` support to the Forth executor, reduced Hanoi threshold to avoid deep Python recursion
 - **`Examples/lua/turtle_patterns.lua`** — reduced all spiral/curve step counts 10× (3000→300, 5000→500, etc.)
 - **`Examples/hypertalk/adventure_game.htalk`** — resolved via the HyperTalk executor bug fixes above
 
-### New Language Features
+#### New Language Features
 
 - **HyperTalk** — `find [whole|partial|string|chars|word] <text> [in <container>]` command: searches a variable or the output buffer and stores the match in `it` (roadmap Q2 2026)
 - **HyperTalk** — `go [to] <card|next|prev|first|last>` navigation command (logs destination; no-op in desktop mode)
@@ -4196,14 +4300,14 @@ All notable changes to Time Warp Studio will be documented in this file.
 - **Prolog** — new built-ins: `format/2` (with `~w`/`~d`/`~a`/`~n` directives), `string_concat/3`, `number_string/2`, `split_string/4`, `string_length/2`, `string_lower/2`, `string_upper/2`
 - **Forth executor** — `FVARIABLE`, `F@`, `F!`, `F+!` for float variable storage
 
-### Infrastructure
+#### Infrastructure
 
 - **`run.py`** — launcher now installs core deps (PySide6, Pillow) first; if the full `requirements.txt` install fails (e.g. `asyncpg` compilation issues on some platforms), a warning is shown and the desktop IDE still launches successfully
 - **`Examples/CATALOG.md`** — added `javascript/functional.js` and `javascript/async_patterns.js`
 
-## [10.1.0] - 2026-04-25
+### [10.1.0] - 2026-04-25
 
-### Examples (Round 2 — 20 new showcase programs)
+#### Examples (Round 2 — 20 new showcase programs)
 
 - **BASIC** — `space_simulation.bas`: Solar system explorer with planetary data table, Kepler's third law, light travel times, escape velocities, and turtle orbital graphics
 - **Logo** — `geometric_artistry.logo`: Koch snowflake grid, Islamic 8-star pattern, rosette mandala, hexagonal tiling, and optical art spiral
@@ -4224,18 +4328,18 @@ All notable changes to Time Warp Studio will be documented in this file.
 - **Rust** — `game_of_life.rs`: Conway's Game of Life with `Grid` struct/impl, toroidal boundaries, 7 classic patterns, period detection, and simulation statistics
 - **Perl** — `text_analytics.pl`: Text analytics — Flesch-Kincaid readability, word frequency with bar chart, bigram/trigram n-grams, sentence statistics, KWIC concordance
 
-### Documentation
+#### Documentation
 
 - **Examples/CATALOG.md**: Updated from 87 to 107 programs; added all 20 Round 2 entries under each language section
 - **README.md**: Updated Examples project tree from 67/19-language counts to 107/20-language counts with accurate per-language file totals
 
-## [10.0.0] - 2026-04-25
+### [10.0.0] - 2026-04-25
 
-### New Languages
+#### New Languages
 
 - **Perl 5** — scalars/arrays/hashes, regex (`=~`, `s///`, `qw()`), subroutines, turtle graphics commands (`forward`, `back`, `left`, `right`, `penup`, `pendown`, `pencolor`, `setpos`, `circle`)
 
-### Graphics Enhancements
+#### Graphics Enhancements
 
 - **SVGA mode** — `set_svga_mode(width, height)` on `TurtleState` enables a fixed-resolution virtual canvas (default 800×600) rendered with full anti-aliasing inside a chrome bezel; `clear_svga_mode()` returns to unlimited coordinates
 - **Cubic Bezier curves** — `bezier_curve(cp1x, cp1y, cp2x, cp2y, end_x, end_y)` draws a smooth vector path from the current turtle position
@@ -4245,7 +4349,7 @@ All notable changes to Time Warp Studio will be documented in this file.
 - **Z-ordering** — shapes are now sorted by `z_order` before rendering; higher numbers paint on top
 - Canvas: added `QLinearGradient`/`QRadialGradient`/`QPainterPath`/`QPolygonF` rendering paths; gradient-fill support extended to polygons and ellipses; sprite shape type rendered with per-pixel alpha, scale, and rotation transforms
 
-### Sound / Music Enhancements
+#### Sound / Music Enhancements
 
 - **ADSR envelopes** — new `ADSREnvelope` dataclass with `attack_ms`, `decay_ms`, `sustain_level`, `release_ms`; automatically shapes amplitude for each note
 - **New waveforms** — `pulse` (configurable duty cycle, `@Pn` MML command) and `noise` (white noise, `@W5`)
@@ -4253,24 +4357,24 @@ All notable changes to Time Warp Studio will be documented in this file.
 - **Extended MML syntax** — `@Wn` (waveform 0–5), `@Datk,dcy,sus,rel` (ADSR), `@Pn` (pulse duty %), `@Cn` (channel 0–3), `[CEG]` chord notation for simultaneous notes
 - 4 new built-in sound effects: `DRONE`, `BUZZ`, `STATIC`, `BEEP2`
 
-### Language Executor Improvements
+#### Language Executor Improvements
 
 - **APL**: outer product operator (`∘.fn` e.g. `A ∘.× B`), format `⍕`, execute `⍎`
 - **C**: `struct`/`union` type definitions, struct variable declarations, member access (`p.x`), `typedef` for scalar types
 
-### UI Improvements
+#### UI Improvements
 
 - **Canvas**: Added "Export SVG…" (🖼) toolbar button alongside existing "Save PNG…"
 - SVG export via `PySide6.QtSvg.QSvgGenerator` with antialiasing and full turtle graphics rendering
 
-### Examples & Documentation
+#### Examples & Documentation
 
 - Added Ruby examples: `Examples/ruby/hello.rb`, `Examples/ruby/oop_demo.rb`
 - Added Erlang examples: `Examples/erlang/hello.erl`, `Examples/erlang/pattern_match.erl`
 - Added Rust examples: `Examples/rust/hello.rs`, `Examples/rust/structs.rs`
 - Added tutorial docs: `docs/tutorials/ruby.md`, `docs/tutorials/erlang.md`, `docs/tutorials/rust.md`
 
-### UI & Learning Experience
+#### UI & Learning Experience
 
 - Added a new Learning Hub with guided challenge launchers, remix actions, quick access to reference material, and one-click tutor help
 - Added a Project Explorer with recent-project tracking, persistent workspace roots, and direct file opening from the IDE
@@ -4278,16 +4382,16 @@ All notable changes to Time Warp Studio will be documented in this file.
 - Improved the AI Assistant with beginner-friendly tutor summaries for the current code context
 - Updated welcome/help surfaces to highlight the new learning and project workflows
 
-## [9.0.0] - 2026-03-28
+### [9.0.0] - 2026-03-28
 
-### Security
+#### Security
 
 - **Dockerfile**: Removed hardcoded `DATABASE_URL` and `REDIS_URL` credentials; environment variables now injected at runtime
 - **Dockerfile.backend**: Added non-root `appuser` (UID 1000) with `USER` directive
 - **Docker build stages**: Fixed lowercase `as` to uppercase `AS` per Dockerfile best practices
 - **Docker Compose**: Removed deprecated `version` fields from `docker-compose.yml` and `docker/docker-compose.backend.yml`
 
-### Code Quality
+#### Code Quality
 
 - **Interpreter**: Fixed 25 type annotation errors in `core/interpreter.py`
   - `__init__` signature now uses `Optional[Language] = None`
@@ -4297,7 +4401,7 @@ All notable changes to Time Warp Studio will be documented in this file.
   - Removed unused `datetime` import
 - **Version label**: Updated Dockerfile `VERSION` label from 8.0.0 to 9.0.0
 
-### Documentation
+#### Documentation
 
 - **ARCHITECTURE.md**: Rewrote Module Overview with all subpackages (core, languages, UI, graphics, features, utils, tests, tools)
 - **README.md**: Fixed theme count (25→28), rewrote project structure tree to match actual layout
@@ -4305,39 +4409,39 @@ All notable changes to Time Warp Studio will be documented in this file.
 - **CHANGELOG.md**: Expanded 9.0.0 entry with detailed change descriptions
 - **ROADMAP.md**: Rewrote with concrete milestones replacing generic filler content
 
-### Infrastructure
+#### Infrastructure
 
 - Added `*.log` pattern to `.gitignore`
 - Removed stray `interpreter.log` files from repository
 - Updated GitHub repository description and topics via API
 
-## [8.1.0] - 2025-06-15
+### [8.1.0] - 2025-06-15
 
-### Security
+#### Security
 
 - **Pascal executor**: Replaced unsafe `eval()` with `ExpressionEvaluator` for safe math expression evaluation
 - **JavaScript executor**: Fixed 8 bare `except:` clauses with specific exception types (`ValueError`, `TypeError`, `KeyError`, etc.)
 - **Lua executor**: Fixed bare `except:` clause with specific exception types
 
-### Interpreter Enhancements
+#### Interpreter Enhancements
 
 - **HyperTalk**: Added `add/subtract/multiply/divide` math commands, `do`, `wait`, `visual effect`, `sort`, `beep`, `exit repeat`, `next repeat`, chunk expression ranges (`char i to j of`), built-in properties (`the date`, `the time`, `the ticks`, `the random`), new math functions (`average`, `sum`, `ln`, `log2`, `exp`, `atan`, `annuity`, `compound`)
 - **PILOT**: Added `?` single-character wildcard and substring matching (SuperPILOT), match variables (`$LEFT`, `$MATCH`, `$RIGHT`), string functions (`LEN`, `UPPER`, `LOWER`, `TRIM`, `LEFT`, `RIGHT`, `MID`, `CONCAT`, `REPLACE`, `REVERSE`), enhanced graphics commands (`SETHEADING`, `HIDETURTLE`, `SHOWTURTLE`, `ARC`, `FILL`, `DOT`, `STAMP`, `TEXT`, `SPEED`), `H:` hint and `N:` no-match commands, tab support in `T:`
 - **Lua**: Replaced stub coroutine implementation with threading-based yield/resume cycling using `threading.Event` synchronization with 5-second timeout
 - **JavaScript**: Added `Symbol.hasInstance` and `Symbol.toPrimitive` support, fixed Symbol transpiler stripping
 
-### UI Improvements
+#### UI Improvements
 
 - **Find & Replace**: Added case sensitivity, regex, and whole word matching checkboxes; live match highlighting with match count display; regex-aware find and replace
 - **Auto-Completion**: Enhanced to extract identifiers from the current document in addition to language keywords
 - **Themes**: Added **Catppuccin Mocha** and **Gruvbox Dark** themes (28 themes total)
 
-### Code Quality
+#### Code Quality
 
 - Removed 5 leftover debug print comments from BASIC and Logo executors
 - All bare `except:` clauses replaced with specific exception types
 
-### Demo Programs (new examples)
+#### Demo Programs (new examples)
 
 - **BASIC**: Maze generator with recursive backtracking
 - **Logo**: Spirograph / hypotrochoid mathematical art
@@ -4351,16 +4455,16 @@ All notable changes to Time Warp Studio will be documented in this file.
 - **HyperTalk**: Interactive quiz builder
 - **Lua**: Traffic light state machine
 
-### Documentation
+#### Documentation
 
 - Updated README with v8.1.0 features
 - Created CHANGELOG.md
 
 ---
 
-## [8.0.0] - 2025-06-01
+### [8.0.0] - 2025-06-01
 
-### Initial Release
+#### Initial Release
 
 - 12 programming language executors: BASIC, PILOT, Logo, COMAL, REXX, and Scheme, JavaScript, Lua, HyperTalk, Erlang
 - PySide6 (Qt6) desktop IDE with editor, canvas, and output panels

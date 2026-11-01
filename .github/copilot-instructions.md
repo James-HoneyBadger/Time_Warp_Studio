@@ -1,421 +1,146 @@
-# Time Warp Studio - AI Coding Agent Instructions
+# Time Warp Studio — notes for coding agents
 
-**Project:** Time Warp Studio - an old-school programming environment: ten languages and an IDE  
-**Maintainer:** James Temple <james@honey-badger.org>  
-**Last Updated:** November 2026
+**Project:** an old-school programming environment: ten interpreters from 1964–1980, one
+IDE, a debugger in every language, and a turtle canvas. Retro-computing hobbyists are the
+first audience; the checked curriculum ships for teaching but the product does not assume it.
+
+**Stack:** C++20 and Qt 6, Linux only. There is one Qt and one platform: nothing in the tree
+may be conditioned on Windows or macOS, and nothing needs an interpreter to build, test or
+check. `make tree-check` fails if a `.py` file or a Python tool's configuration file comes
+back.
 
 ---
 
-## Project Overview
-
-Time Warp Studio is a desktop programming environment built with **C++20 and Qt 6** for Linux: one IDE for ten interpreters of the 1964–1980 period, with turtle graphics and a debugger in every language. A checked lesson curriculum ships for teaching, but the product is aimed at retro-computing hobbyists first. The application is the IDE and the languages; there is no emulator in it.
-
-**Supported Languages:** BASIC, APL, Logo, PILOT, FOCAL, Scheme, COMAL, REXX, Smalltalk and Forth.
-
-**Current State:** The Qt desktop application in `native/` is the product, and all
-ten languages run in C++ inside it. The PySide6 implementation that came before it
-has been **removed**, and so has the Python engine the ports were judged against:
-the parity gate compares with a recorded corpus, and the harnesses drive
-`time_warp_check` (see "The gates").
-
-## Architecture: The Big Picture
-
-### Implementation
-
-- **Qt application (C++20)** — the product, and the only maintained UI.
-  - Entry point: `native/tools/time_warp_ide.cpp`
-  - Build: `cmake -S native -B native/build -DCMAKE_BUILD_TYPE=Release && cmake --build native/build -j`
-  - Shell: `native/src/ui/main_window_*.cpp`, one file per section (construction,
-    menus, appearance, actions, chrome, SQL and projects, session, execution) over
-    the shared keys and helpers in `main_window_internal.hpp`; canvas
-    `native/src/ui/turtle_canvas_*.cpp`; editor `native/src/ui/code_editor.cpp`;
-    languages `native/src/ui/language.cpp`, a Qt adapter over the one table in
-    `native/include/timewarp/lang/registry.hpp`
-  - Every language is native: Scheme (`timewarp_scheme`, an explicit-stack CEK
-    machine, dispatched in-process) and Logo, Smalltalk and Forth
-    (whole-program) plus BASIC, FOCAL, PILOT, COMAL, APL and REXX (line-by-line)
-    on `timewarp_lang`, the shared interpreter loop plus one executor each, and
-    the expression evaluator (`timewarp_expr`, linked into `timewarp_lang` and
-    used by every arithmetic evaluator the executors share).
-- **The workspace libraries** — `timewarp_project` (`.twproject` groups),
-  `timewarp_sql` (one SQLite connection), `timewarp_ai` (the assistant's
-  configuration, prompts and one Qt Network client) and `timewarp_api` (JSON-RPC
-  with no transport of its own). The IDE's Projects dock, Database tab, Assistant
-  page and `./api` are views over these; `./twc` links the language engines into a
-  standalone executable.
-- **The frozen parity corpus** — `native/tests/golden/lang_corpus.json.gz`.
-  - The Python reference engine was deleted at 18.0. The corpus is what remains of
-    it: 442 programs, each with the program text, what it printed, every drawing
-    call and the variables it left. `make golden-check` compares the ports with
-    those answers and imports no Python to do it.
-  - It is a weaker gate than the live differential it replaced and says so: a
-    recording cannot notice a mistake in the recording, so a deliberate behaviour
-    change edits the corpus entry in the same commit that changes the behaviour.
-  - `time_warp_check` (`native/tools/check.cpp`) is what answers "what did this
-    program do?" now, from the engines the product ships.
-
-**Critical Design Decision:** Language executors are stateless command processors returning text output. All UI state (turtle canvas, output display, themes) lives in the Qt application, not in an interpreter. Drawing crosses the thread boundary as commands on a `CanvasCommandQueue`, which the GUI thread drains into `TurtleCanvas`.
-
-## Language Executor Pattern
-
-Each language executor is a **function**, not a class, and its contract is the one
-`TurtleHost` documents in `native/include/timewarp/lang/turtle_host.hpp`:
-
-```cpp
-std::string execute_my_lang(Interpreter& interpreter, std::string_view source,
-                            TurtleHost& turtle);
-// Returns the text to display, with the emoji prefixes; never throws out of the
-// executor, because every caller reads the returned text.
-```
-
-**Two execution modes:**
-
-- **Whole-program executors** (four languages: Scheme, Logo, Smalltalk and
-  Forth): receive the entire source at once. `is_whole_program` in
-  `native/src/lang/language.cpp` is the one list.
-- **Line-by-line executors** (six languages: BASIC, APL, PILOT, FOCAL, COMAL and
-  REXX): the interpreter iterates lines and calls the executor per statement.
-
-`executor_for` in the same file answers with the executor for every language; adding
-one also requires the enum, the extension, the IDE table and the tests.
-
-## Critical Workflows
-
-### Running the Desktop IDE
-
-```bash
-# Build once
-cmake -S native -B native/build -DCMAKE_BUILD_TYPE=Release
-cmake --build native/build -j
-
-# Run it
-./native/build/time_warp_ide                 # empty workspace
-./native/build/time_warp_ide Examples/logo/mandala.logo
-./native/build/time_warp_ide --run Examples/logo/mandala.logo
-./native/build/time_warp_ide --run Examples/logo/mandala.logo --export mandala.png
-./native/build/time_warp_ide --help          # all options
-
-# Or through the Makefile
-make -C native run
-```
-
-**System Requirements**
-
-- Qt6 (Widgets, Core, Gui), CMake 3.20+, a C++20 compiler
-- Linux. There is one Qt and one platform: no Windows build, no macOS build and no
-  installer for either, so nothing in the tree may be conditioned on one.
-- No interpreter of any kind. Every language runs in process, and the gates and
-  documentation tools are C++ built from this tree; `make tree-check` fails if a
-  `.py` comes back, or the config file of a Python tool (`pytest.ini` outlived the
-  removal because that gate only matched the extension).
-
-### Testing Strategy
-
-```bash
-# The Qt suites (26 of them)
-ctest --test-dir native/build --output-on-failure
-make -C native test-debug     # Debug tree
-make -C native asan           # AddressSanitizer; ASAN=undefined for UBSan
-
-# The whole example corpus, through the native engines
-./native/build/time_warp_gates smoke
-./native/build/time_warp_gates commands  # every command row as a program
-./native/build/time_warp_gates repl      # every command row through the REPL
-./run.sh --help                       # build if needed, then launch the IDE
-./twc Examples/basic/hello.bas -o hello
-./api                                 # JSON-RPC on stdin/stdout; docs/API.md
-
-# The parity gate: the ports against the corpus recorded from the reference engine
-# before it was deleted. 0 differences is the verdict.
-make golden-check     # both corpora: 442 language programs and 192 Scheme ones
-
-# The curriculum and the documentation gates
-./native/build/time_warp_teach validate
-make doc-links doc-claims
-```
-
-**Test Organization:**
-
-- `native/tests/*_tests.cpp` = the C++ suites (lexer, evaluator, scheme, native
-  languages, audio, canvas queue, canvas bridge, debug, debugger runner, lessons,
-  classroom, ui layout, ui document, turtle canvas, syntax highlighter, media, editor
-  services, help browser, project, sql, api)
-- `native/tools/gates/` = `time_warp_gates`, one binary with a subcommand per
-  harness: `smoke` (every `Examples/**` program through the native engines, with the
-  programs that must draw listed in `smoke.cpp`), `commands` (one row per command,
-  from `native/share/command_rows.json`, plus the waivers for what cannot be
-  exercised automatically), `repl` (the same rows through the API) and `golden` (the
-  frozen corpora)
-
-### Adding a New Language
-
-The order is the native one first, because that is the only implementation there is:
-
-1. Add the `Language` member (`native/include/timewarp/lang/language.hpp`), its key,
-   its display name and its extensions in `native/src/lang/language.cpp`.
-
-2. Implement the executor in `native/src/lang/` and register it in `executor_for`.
-   A line-by-line language gets one `execute_x` per statement; a whole-program one
-   gets the source and runs to completion. Either way it returns text with an emoji
-   prefix and keeps no UI state.
-
-3. Record what it does for the parity gate: add rows to
-   `native/share/command_rows.json` and an example under `Examples/`, then run
-   `make golden-check` — the corpus is
-   recorded answers, so a new language's entries are added to
-   `native/tests/golden/lang_corpus.json.gz` by hand, with the behaviour in the same
-   commit.
-
-4. Register it in the Qt side so the IDE knows its settings key and extensions:
-   `native/src/ui/language.cpp` (`kLanguages`). The display name is what the lesson
-   documents and panels show, and using the enum member's spelling where the display
-   name belongs puts a wrong name in the one place it is written down.
-
-5. Add an example under `Examples/my_lang/`<!-- doc-claims: ignore --> and a row to
-   `native/share/command_rows.json` so every new command is covered by
-   `time_warp_gates commands`. A row's `language` string is the protocol key
-   (`Language[key.upper()]`), so Forth's rows read `FORTH`; a row labelled with prose
-   needs `also=(...)` naming the command the inventory knows, or it is reported as
-   untested forever.
-
-6. Add at least one lesson to `native/share/lessons.json`
-   (`./native/build/time_warp_teach new <id> --language NAME` prints a skeleton the loader
-   accepts) and run `time_warp_teach validate` until it is silent. The lessons panel and
-   `time_warp_learn` both read that one file, so nothing else needs registering.
-
-## Project-Specific Conventions
-
-### Emoji Prefixes (Universal Pattern)
-
-- `❌` = Errors/exceptions
-- `✅` = Success confirmations
-- `ℹ️` = Informational messages
-- `🎨` = Theme/UI changes
-- `🚀` = Execution/run events
-- `🐢` = Turtle graphics actions
-- `📝` = Input prompts
-
-### Safe Expression Evaluation
-
-There is no `eval()` anywhere in the tree. Arithmetic a language needs goes through
-`timewarp_expr` (`native/src/token.cpp`, `lexer.cpp`, `evaluator.cpp`), reached from
-an executor as `interpreter.evaluate_expression(...)` with the program's variables
-supplied — the same evaluator every language shares, and the one the corpus pins.
-
-## Integration Points to Watch
-
-### Turtle Graphics State
-
-- Turtle state is managed by
-  `TurtleCanvas` in the Qt application, which owns the display list
-- Graphics rendered with the Qt painter with zoom/pan support in `native/src/ui/turtle_canvas_*.cpp`
-- Canvas clearing happens in the Qt UI, not in an executor
-- The reference's conventions are unusual and asserted in `turtle_canvas_tests`:
-  heading 0 is **north** and increases clockwise; `forward` is
-  `x += d*sin(h), y += d*cos(h)`; `circle` is a polygon walk
-
-### Theme System
-
-`native/src/ui/ui_style.cpp` owns the Qt styling and `native/src/ui/themes.cpp` applies
-the 35 themes carried as data in `native/src/ui/theme_table.inc` — the same schemes the
-removed PySide6 implementation had. View > Theme selects one, View > Next Theme
-(`Shift+F10`) cycles, and the choice persists in QSettings. High Contrast derives a
-maximum-contrast variant of the active theme; it does not replace it.
-
-## Common Pitfalls
-
-1. **Executor statelessness** - Don't store UI refs in executors; return strings only.
-2. **Test isolation** - Use fixtures for interpreter instances; don't share state.
-3. **A program that runs and draws nothing is the bug users report.** Never assume a
-   silent success is a success: `time_warp_gates smoke` exists because 5 languages
-   once ran "successfully" and produced no ink at all.
-4. **A path search that guesses fails at run time, not at build time.** That is why the
-   launcher this build used to need was an *ordered* list rather than a clever search,
-   and why `native/tools/gates/locate.cpp` is the single place the harnesses ask where
-   `time_warp_check` is.
-5. **Deleting Python needs a dependency check that an import trace cannot give you.**
-   The engine reaches `any(Features)` through imports *inside functions* (BASIC's
-   SOUND/SAY/GAMEPAD, and the evaluator's TIMER), so a module can be invisible to a
-   real run yet still load-bearing. Scan for imports below module level before cutting.
-
-## File Structure at a Glance
+## Where things are
 
 ```text
-native/                        - the Qt application (the product)
-  CMakeLists.txt
+native/                     the Qt application (the product)
   include/ src/ tests/ tools/
-    lang/                      - the ten executors and the shared loop
-    scheme/                    - the explicit-stack Scheme machine
-    lessons/                   - curriculum, verifier, progress, classroom
-    debugger/ project/ sql/ api/ canvas/
-  share/                       - lessons.json, snippets.json, command_rows.json
+    lang/                   the ten executors and the shared interpreter loop
+    scheme/                 the explicit-stack Scheme machine
+    lessons/                curriculum, verifier, progress, classroom
+    debugger/ project/ sql/ api/ ai/ canvas/
+  share/                    lessons.json, snippets.json, command_rows.json
   tools/
-    gates/                     - time_warp_gates: smoke, commands, repl, golden, tree
-    docs/                      - time_warp_docs: links, claims, version (no Qt)
-    icon/                      - time_warp_icon: the packaged icons (zlib only)
-Examples/                      - 68 example programs across the 10 active languages
-docs/                          - USER_GUIDE, API, language guide and tutorials
+    gates/                  time_warp_gates: smoke, commands, repl, golden, tree
+    docs/                   time_warp_docs: links, claims, version, md (no Qt)
+    icon/                   time_warp_icon: the packaged icons
+Examples/                   68 programs across the ten languages
+docs/                       the documentation set, by audience (see the table below)
 ```
+
+The build is `cmake -S native -B native/build -DCMAKE_BUILD_TYPE=Release && cmake --build
+native/build -j`. The IDE is `native/build/time_warp_ide`; `./run.sh` builds if needed and
+launches it.
 
 ---
 
-**When in doubt:** Read `native/src/lang/interpreter.cpp` (the dispatch, and
-`is_whole_program`), and run `make help` for the checks this tree has. Nothing here
-needs an interpreter: if a guide names a `python3` command it is out of date, and
-`make tree-check` is the gate that says so.
+## The shape of the code
 
-### Key Components
+- **The language registry is one table**: `native/include/timewarp/lang/registry.hpp`. The Qt
+  side maps it by position in `native/src/ui/language.cpp` with a `static_assert`, and
+  `make registry-check` enforces that no second list appears.
+- **An executor is a function, not a class**, and its contract is what
+  `native/include/timewarp/lang/turtle_host.hpp` documents: it returns the text to display
+  with the message prefixes, and it never throws out. All UI state lives in the Qt
+  application, and drawing crosses the thread boundary as commands on a `CanvasCommandQueue`
+  that the GUI thread drains into `TurtleCanvas`.
+- **Two execution modes.** Whole-program: Scheme, Logo, Smalltalk, Forth. Line-by-line: BASIC,
+  APL, PILOT, FOCAL, COMAL, REXX, called once per statement by the shared loop. The distinction
+  is real — it decides whether the debugger can pause between statements, and where a pause may
+  land in a whole-program language.
+- **One expression evaluator** (`timewarp_expr`) serves every arithmetic a language needs, and
+  there is no `eval()` anywhere in the tree.
+- **One styling system.** `design::tokens()` derives the interface's colours and metrics from
+  the active theme, `style::sheet()` builds the stylesheet from those tokens, and
+  `icons::glyph()` draws the icons with an icon engine that follows the palette. All 35 themes
+  are data in `native/src/ui/theme_table.inc`.
 
-- **Qt shell**: `native/src/ui/main_window_*.cpp` — documents, tabs, menus, status bar,
-  a file per section, over `main_window_internal.hpp`
-- **TurtleCanvas**: `native/src/ui/turtle_canvas_*.cpp` — the display list and the painter
-- **Terminal**: `native/src/ui/terminal_widget.cpp` over `pty_session.cpp` (a real
-  pseudo-terminal) and `terminal_text.cpp` (escapes stripped, `\r` applied); opt-in
-  in Settings and absent in presentation and player modes
-- **CodeEditor**: `native/src/ui/code_editor.cpp` — gutter, current line, tab stops,
-  syntax colouring and the search that `FindBar` drives
-- **Language table**: `native/src/ui/language.cpp` — names, settings keys, extensions
-- **Lessons**: `native/src/lessons/` (`timewarp_lessons`: the curriculum, the verifier,
-  progress, and the classroom with rosters, handouts, marking and bundles),
-  `native/src/ui/panels_lessons.cpp` (`LessonPanel`), and the two commands
-  `native/tools/{learn,teach}.cpp`
-- **The AI assistant**: `native/src/ai/` (`timewarp_ai`: `config.cpp` for the
-  endpoint, model and key, `prompt.cpp` for what the model is told about the ten
-  languages, `client.cpp` for the one request in flight), `native/src/ui/ai_panel.cpp`
-  (the 🤖 Assistant page) and `ai_settings.cpp` (presets, limits, **Test
-  connection**), plus `native/tools/ai_cli.cpp` (`time_warp_ai`, the same thing from
-  a shell). Off until configured; two wire shapes — OpenAI-compatible and
-  Anthropic's Messages API — so a vendor such as DeepSeek is a preset holding an
-  endpoint and a model, not a protocol. The key comes from
-  `TIME_WARP_AI_API_KEY` before the settings file and is stripped from every
-  message by `redact()`. A build with no Qt Network has no assistant at all, which
-  is what `TIME_WARP_HAVE_AI` gates in `main_window_panels.cpp` and the Tools menu.
-  `docs/AI.md` is the manual. **Voices** (`ai/persona`) are no persona, 1974's
-  lecturer, 1984's bedroom programmer or 2026's machine: each is appended to the
-  same standing rules, and every one of them says the voice is not licence to
-  invent a command.
-- **The run report**: `native/tools/check.cpp` (`time_warp_check`) — one program through
-  the native engines, with what it printed and what it drew. This is what the example
-  and command harnesses drive, and what a person at a terminal can ask.
-- **Inspection panels**: `native/src/ui/panels_inspectors.cpp` — `VariablesPanel`,
-  `TelemetryPanel`, `DebugPanel` and the turtle inspector. The native runners report both tables to the window
-  before `finished`. Scheme has no executor in that path, so its tables come from
-  `DebuggerRunner::snapshot()` — including the final snapshot taken when a run ends
-  without pausing. `DebugPanel`'s buttons forward to whichever runner is paused:
-  Scheme through `DebuggerRunner`, every other language through `NativeRunner` and the
-  shared `DebugSession` (a statement, a Logo top-level statement, a Smalltalk message
-  send, a Forth token). The terminal is a real opt-in `TerminalWidget`, and the
-  outline dock is a real `OutlinePanel`; nothing in the window is a `PlaceholderPanel`.
-- **Engine**: `timewarp_lang` dispatches through `executor_for`; the ten executors are
-  stateless functions returning text with an emoji prefix
-- **Expression evaluator**: native C++ (`timewarp_expr`), gated by the recorded corpus
-- **Scheme**: native C++ explicit-stack machine (`timewarp_scheme`)
+---
 
-## Dependencies
+## Commands that matter
 
-The Qt application: Qt6 (Widgets, Core, Gui), CMake 3.20+, a C++20 compiler.
-`Svg` and `PrintSupport` are optional components: they enable SVG drawing export and
-the two Print entries, and the build hides those features when they are absent.
+```bash
+make -C native run         # build if needed, then launch
+make test                  # the 24 C++ suites
+make test-all              # every gate CI runs
+make smoke                 # every example program through the native engines
+make command-matrix        # one row per command, from native/share/command_rows.json
+make repl-matrix           # the same rows through a REPL session
+make golden-check          # the ports against the frozen corpus, 634 programs
+make teach-check           # every lesson solution and starter
+make lint-md doc-links doc-claims tree-check registry-check
 
-There is one Qt: 6. The Windows and macOS ports, and the Qt 5.15 configuration that
-existed to build the Windows 7 artifact, were removed after 24.0 for a Linux-only
-target. The build still spells Qt `${TIME_WARP_QT}::` in the module files, and
-`native/include/timewarp/core/qt_names.hpp` holds the two spellings used at many
-call sites (`fromUtf8` for the registry's `string_view`s, `keySequence` for the
-menu shortcuts).
+./native/build/time_warp_check Examples/basic/hello.bas   # what a program printed and drew
+./twc Examples/basic/hello.bas -o hello                   # a standalone executable
+./api                                                     # JSON-RPC on stdin/stdout
+```
 
-Nothing in this tree needs an interpreter. The harnesses are C++ tools built from
-`native/`: `time_warp_gates`, `time_warp_teach`, `time_warp_docs`, and the
-`time_warp_*` commands beside them.
+`make test-all` is what a change has to survive. A warning is an error: every target compiles
+with `-Wall -Wextra -Wpedantic -Wshadow -Wcast-qual -Wuseless-cast -Wlogical-op
+-Wnull-dereference` and `-Werror`.
 
-The removed PySide6 application's dependencies are no longer installed or referenced.
+---
 
-### File Naming Conventions
+## Conventions
 
-- **Test files**: `native/tests/*_tests.cpp`, one suite per area
-- **Language demos**: `*.bas`, `*.logo`, `*.pilot`, `*.fs`, etc. in `Examples/`
-- **Language executors**: Named after the language in `time_warp/languages/`
+**Message prefixes.** Every string an engine returns carries one: `❌` error, `✅` success,
+`ℹ️` information, `🎨` theme or display change, `🚀` execution event, `🐢` drawing action, `📝`
+input prompt. That is the output convention and the only place emoji remain — an interface
+control carries a drawn icon and a word.
 
-### Configuration Management
+**Comments explain why.** The unusual decisions are documented where they are made; a comment
+that restates the code is noise beside them.
 
-- User settings stored via Qt QSettings; lesson progress in `~/.time_warp/progress.json`
-  and a class in `~/.time_warp/classroom`. `TIME_WARP_DATA_DIR` moves all of it, which is
-  how a test avoids writing a learner's real file
-- Theme preferences persist between sessions via QSettings
-- Virtual environment used for Python dependencies
+**A failure that is silent is the characteristic bug here.** A program that runs and draws
+nothing, a command that returns nothing, a lesson whose answer does not work: `smoke` and
+`commands` exist because five languages once "succeeded" and produced no ink.
 
-### Error Handling Patterns
+**Prose in the manuals** is British, declarative, second person only in procedures, no
+whimsy, no emoji. A claim in a guide is a claim `make doc-claims` will check.
 
-All interpreter errors are returned as strings with emoji prefixes:
+**A behaviour change edits the parity corpus in the same commit.** The gate compares with a
+recording, so a deliberate change is a corpus edit.
 
-- `❌` for errors
-- `ℹ️` for info messages
-- `🎨` for theme changes
+---
 
-### Theme Development
+## Documentation
 
-The 35 themes — including the retro CRT sets (Amber, Green, C64, Apple II) — are
-carried as data in `native/src/ui/theme_table.inc` and applied through
-`native/src/ui/themes.cpp` plus the QSS in `native/src/ui/ui_style.cpp`. Add a theme
-by adding its record to the table and, if it needs one, a high-contrast variant;
-`ui_layout_tests` pins the count and the required colour roles.
+Each fact has one home. The set is organised by audience:
 
-## Critical Integration Points
-
-- Keep communication concise and focused.
-- Follow development best practices.
-
-### Interpreter-UI Communication
-
-- Commands executed through `Interpreter.execute()` method
-- Results displayed via Qt widgets and canvas
-- Error handling centralized through status messages
-- Input prompts handled through Qt input widgets
-
-### Turtle Graphics Integration
-
-- Turtle state is `TurtlePose`/`TurtleHost` in `native/include/timewarp/lang/turtle_host.hpp`;
-  the reference's 16-colour palette is `reference_palette_colour()` there, the one table
-  every host and BASIC use
-- Graphics rendered using Qt painter with zoom/pan support in `native/src/ui/turtle_canvas_*.cpp`
-- Canvas clearing and setup handled automatically per execution
-- Compatible with existing turtle graphics commands
-
-### Screen Mode Management
-
-- **Text**: Text mode with configurable cols/rows via `ScreenConfig`
-- **Graphics**: Full canvas with 2D drawing using Qt painter
-- **Turtle Graphics**: Integrated with canvas
-
-## Code Style and Conventions
-
-- Use descriptive docstrings for all classes and functions
-- Error messages prefixed with emoji indicators (`❌`, `ℹ️`, `🎨`, `🚀`)
-- Graceful degradation for optional dependencies
-- Consistent Python formatting (PEP 8)
-
-## Documentation map
-
-Each fact has one home; the other guides link to it rather than restating it.
-
-| Book | Owns |
+| Directory | Owns |
 | --- | --- |
-| `docs/USER_GUIDE.md` | The IDE: projects, the REPL bar, debugging, SQL, the assistant, terminal, automation, appearance |
-| `docs/AI.md` | The AI assistant: presets, the key, and exactly what is sent |
-| `docs/LANGUAGE_GUIDE.md`, `docs/tutorials/` | Every command, and how to learn each language |
-| `docs/lessons/` | The curriculum, and the student and teacher guides |
-| `docs/ARCHITECTURE.md`, `native/README.md` | How it is built and why |
-| `docs/API.md` | The JSON-RPC automation surface |
+| `docs/user/` | Getting started, the Studio's window and panels, the assistant, the automation API, questions |
+| `docs/languages/` | The ten languages, their reference, and one tutorial per language |
+| `docs/lessons/` | The curriculum, the lesson format, and the generated plans |
+| `docs/maintainer/` | Architecture, decisions, testing, roadmap, release |
+| `docs/project/` | The history archive: the PySide6 port, and every release |
+| `docs/INDEX.md` | The map. It is also the table of contents of **Help > Documentation**, built by `native/src/ui/help_browser.cpp` from its headings and tables |
 
-`README.md` is the front door and carries the capability inventory that links into
-all of the above. `.github/workflows/docs.yml` gates the set: every promised file
-must exist, every lesson plan must match the curriculum, and (with
-`time_warp_docs links`) every relative link and anchor must resolve.
+Root and `.github/`: `README.md` (the front door), `CONTRIBUTING.md`, `SECURITY.md`,
+`CODE_OF_CONDUCT.md`, `.github/SUPPORT.md`, `.github/DEPLOYMENT.md` (the workflows),
+`.github/pull_request_template.md`.
 
-## GitHub surfaces
+The gates: `time_warp_docs links` (every relative link and anchor resolves), `claims` (every
+path, target and name a guide states exists), `version` (the copies of the version agree),
+`md` (the house Markdown rules). `docs/INDEX.md` is load-bearing twice: CI checks that every
+guide it promises exists, and the application parses it into the Help tree.
 
-`.github/` is documentation as much as configuration, because GitHub renders it as
-UI: `ISSUE_TEMPLATE/{config,bug_report,feature_request,language_request}.yml`,
-`pull_request_template.md`, `SUPPORT.md`, `CODEOWNERS`, `DEPLOYMENT.md` (what each
-workflow checks, and why) and `RELEASE_CHECKLIST.md`. A change to what the project
-promises belongs in those files as much as in `docs/`.
+---
+
+## Pitfalls
+
+1. **Executor statelessness.** No UI references in an executor; return a string.
+2. **A path search that guesses fails at run time.** `native/tools/gates/locate.cpp` is the
+   single place the harnesses ask where `time_warp_check` is.
+3. **The corpus is weaker than the differential it replaced.** A recording cannot notice a
+   mistake in the recording, which is why behaviour changes are corpus edits.
+4. **Building outside the checkout breaks two suites** (`classroom_tests`, `ui_layout_tests`)
+   because the curriculum resolves relative to the executable. Build in `native/build`.
+5. **`$?` after a pipeline measures the last command.** Redirect rather than piping when
+   checking an exit code.
+6. **The window's minimum is 900 pixels wide**, and the toolbar is built to fit every control
+   at that width. Adding a control means checking it at 900.
+
+When in doubt, read `native/src/lang/interpreter.cpp` (the dispatch) and `make help` (the
+checks this tree has).

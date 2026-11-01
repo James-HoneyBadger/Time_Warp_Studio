@@ -9,7 +9,7 @@ body:
   - type: markdown
     attributes:
       value: |
-        **Before you file:** [docs/ROADMAP.md](https://github.com/James-HoneyBadger/Time_Warp_Studio/blob/main/docs/ROADMAP.md)
+        **Before you file:** [the roadmap](https://github.com/James-HoneyBadger/Time_Warp_Studio/blob/main/docs/maintainer/roadmap.md)
         is the list of what is already planned and what is deliberately out of scope.
         Something on that list does not need an issue — although a comment on *why* it
         matters to you is welcome, because it changes the order.
@@ -62,7 +62,7 @@ body:
     attributes:
       label: Before submitting
       options:
-        - label: I read [docs/ROADMAP.md](https://github.com/James-HoneyBadger/Time_Warp_Studio/blob/main/docs/ROADMAP.md), and this is not already planned or ruled out.
+        - label: I read [the roadmap](https://github.com/James-HoneyBadger/Time_Warp_Studio/blob/main/docs/maintainer/roadmap.md), and this is not already planned or ruled out.
           required: true
         - label: I searched the existing issues for the same suggestion.
           required: true

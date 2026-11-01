@@ -282,10 +282,10 @@ void test_context_help_follows_the_document_language() {
     }
     editor->setLanguage(timewarp::ui::Language::Logo);
     TW_CHECK_EQ(window.contextHelpTopic().toStdString(),
-                std::string{"tutorials/logo.md"});
+                std::string{"languages/tutorials/logo.md"});
     editor->setLanguage(timewarp::ui::Language::Basic);
     TW_CHECK_EQ(window.contextHelpTopic().toStdString(),
-                std::string{"tutorials/basic.md"});
+                std::string{"languages/tutorials/basic.md"});
     editor->setLanguage(timewarp::ui::Language::Unknown);
     TW_CHECK(window.contextHelpTopic().isEmpty());
 }

@@ -1,86 +1,115 @@
-# Time Warp Studio — Documentation Index
+# Documentation
 
-Time Warp Studio is a desktop programming environment for ten interpreters of the
-1964–1980 period, built with C++20 and Qt 6 for Linux. This page is the map of its
-documentation; every guide below is installed with the application and readable from
-**Help > Documentation**.
+Time Warp Studio is a desktop programming environment for ten interpreters of the 1964–1980
+period, built with C++20 and Qt 6 for Linux.
 
-> New here? Build and run it from the [README](../README.md), then open
-> `Examples/logo/mandala.logo` and press **F9**.
+This page is the map, and it is also the table of contents of **Help > Documentation**
+inside the application: the Help pane is built from the headings and tables below, so a page
+listed here is a page you can read from inside the Studio, and one that is not listed is a
+page the Help pane does not know about.
+
+The set is organised by who is reading, because the four audiences want different things
+from the same application.
 
 ---
 
-## The guides
+## Using the Studio
 
-| Document | What it covers |
+For someone with a program to write.
+
+| Guide | What it covers |
 | --- | --- |
-| [INSTALLATION.md](INSTALLATION.md) | Requirements, building, installing, packaging, troubleshooting a build |
-| [ARCHITECTURE.md](ARCHITECTURE.md) | Process and thread model, the canvas queue, the engine libraries, extension points, the test gates |
-| [USER_GUIDE.md](USER_GUIDE.md) | The IDE: projects, the REPL bar, debugging, SQL, the embedded terminal, the assistant, automation, appearance |
-| [AI.md](AI.md) | The assistant: the services it speaks to, how to configure one, and exactly what is sent |
-| [LANGUAGE_GUIDE.md](LANGUAGE_GUIDE.md) | Command reference for all ten languages |
-| [lessons/](lessons/README.md) | The curriculum, and the student and teacher guides |
-| [README_TESTING.md](README_TESTING.md) | The suites, the example gate, the command matrix and the parity gate |
-| [ROADMAP.md](ROADMAP.md) | What is built, what is next, what was deliberately deferred |
-| [API.md](API.md) | The JSON-RPC automation API and the linkable C++ libraries |
-| [PORTING_PLAN.md](PORTING_PLAN.md) | The completed record of the PySide6 port: what the old application had, and the test that proves each replacement |
-| [FAQ.md](FAQ.md) | Short answers to specific questions |
-| [`native/README.md`](../native/README.md) | The application itself: design notes, decisions, tests |
-| [`native/tests/golden/`](../native/tests/golden/) | The frozen corpus: the reference engine's answers to 442 programs, against which `make golden-check` compares the engines |
-
----
+| [Getting started](user/getting-started.md) | Requirements, building, installing, and the first program |
+| [The Studio](user/the-studio.md) | Documents, projects, the REPL bar, debugging, SQL, the terminal, appearance and shortcuts |
+| [The assistant](user/assistant.md) | The one network call: how to configure it, and exactly what it sends |
+| [Automation](user/automation.md) | The JSON-RPC API, the linkable C++ libraries, and compiling a program |
+| [Questions](user/faq.md) | Short answers, with a pointer to the long one |
 
 ## Language tutorials
 
-One per language, each written to be worked through in order:
+One per language, each written to be worked through in order. The application's Help pane
+links the tutorial for the language in front, so these rows are also what makes that link
+work.
 
 | Tutorial | Language |
 | --- | --- |
-| [basic.md](tutorials/basic.md) | BASIC — line-numbered imperative programming |
-| [logo.md](tutorials/logo.md) | Logo — turtle graphics and procedures |
-| [pilot.md](tutorials/pilot.md) | PILOT — computer-aided instruction |
-| [comal.md](tutorials/comal.md) | COMAL — structured BASIC |
-| [rexx.md](tutorials/rexx.md) | REXX — string processing and scripting |
-| [scheme.md](tutorials/scheme.md) | Scheme — functional programming |
-| [apl.md](tutorials/apl.md) | APL — arrays, and no operator precedence |
-| [focal.md](tutorials/focal.md) | FOCAL — line labels and sign branching |
-| [smalltalk.md](tutorials/smalltalk.md) | Smalltalk — objects and messages |
-| [forth.md](tutorials/forth.md) | Forth — stack, dictionary, words |
+| [BASIC](languages/tutorials/basic.md) | Line-numbered imperative programming |
+| [APL](languages/tutorials/apl.md) | Arrays, and no operator precedence |
+| [Logo](languages/tutorials/logo.md) | Turtle graphics and procedures |
+| [PILOT](languages/tutorials/pilot.md) | Computer-aided instruction |
+| [FOCAL](languages/tutorials/focal.md) | Line labels and sign branching |
+| [Scheme](languages/tutorials/scheme.md) | Functional programming |
+| [COMAL](languages/tutorials/comal.md) | Structured BASIC |
+| [REXX](languages/tutorials/rexx.md) | String processing and scripting |
+| [Smalltalk](languages/tutorials/smalltalk.md) | Objects and messages |
+| [Forth](languages/tutorials/forth.md) | Stack, dictionary, words |
+
+## The languages
+
+| Guide | What it covers |
+| --- | --- |
+| [The ten languages](languages/README.md) | What each one is, how they differ, and how to choose a first |
+| [Language reference](languages/reference.md) | Every command of every language, and the limits that stop a run |
+
+## The curriculum
+
+| Guide | What it covers |
+| --- | --- |
+| [Lessons](lessons/README.md) | The twenty lessons, the sixty checkpoints, how one is checked, and how to run a class |
+| [Lesson format](lessons/FORMAT.md) | The fields a lesson file carries |
+| [Lesson plans](lessons/plans/README.md) | Objectives, notes and worked answers per lesson, generated from the curriculum |
+
+## Working on the code
+
+| Guide | What it covers |
+| --- | --- |
+| [Architecture](maintainer/architecture.md) | The process and thread model, the libraries, the canvas queue, the extension points |
+| [Decisions](maintainer/decisions.md) | Why the code is shaped the way it is, and what was tried and removed |
+| [Testing](maintainer/testing.md) | The suites, the example and command gates, the parity corpora, and what each is worth |
+| [Roadmap](maintainer/roadmap.md) | What is built, what is deliberately not, and what is known to be wrong |
+| [Release](maintainer/release.md) | The version, the procedure, and what a release contains |
+
+## The project
+
+| Guide | What it covers |
+| --- | --- |
+| [History](project/history.md) | The archive: what the PySide6 port replaced, and every release |
+| [Contributing](../CONTRIBUTING.md) | Setup, the gates, and the recipes for a language, a command or a lesson |
+| [Security policy](../SECURITY.md) | The threat model, and how to report a problem privately |
+| [Code of conduct](../CODE_OF_CONDUCT.md) | What is expected in this project's spaces |
+| [Support](../.github/SUPPORT.md) | Where to ask, and what is supported |
+| [CI and deployment](../.github/DEPLOYMENT.md) | What each workflow checks, and the settings it needs |
+| [Examples](../Examples/CATALOG.md) | The 68 programs that ship, and the gate that runs them |
 
 ---
 
 ## Where to start
 
-| Goal | Document |
+| Goal | Start here |
 | --- | --- |
-| Build and run the IDE | [README](../README.md), then [INSTALLATION.md](INSTALLATION.md) |
-| Diagnose a build or Qt problem | [INSTALLATION.md](INSTALLATION.md#5-troubleshooting) |
-| Use projects, the REPL, debugging, SQL or the API | [USER_GUIDE.md](USER_GUIDE.md) |
-| Ask an assistant to explain or fix a program | [AI.md](AI.md) |
-| Learn a language's commands | [LANGUAGE_GUIDE.md](LANGUAGE_GUIDE.md) |
-| Understand the design | [ARCHITECTURE.md](ARCHITECTURE.md) |
-| Add or change a language | [ARCHITECTURE.md](ARCHITECTURE.md#adding-a-language), then [`native/README.md`](../native/README.md) |
-| Run or extend the test gates | [README_TESTING.md](README_TESTING.md) |
-| Contribute | [CONTRIBUTING.md](../CONTRIBUTING.md) |
-| Ask a question, report a bug, request a feature | [`.github/SUPPORT.md`](../.github/SUPPORT.md), then the issue forms |
+| Write a program in one of the languages | [Getting started](user/getting-started.md), then the tutorial for that language above |
+| Learn a language's commands | [The reference](languages/reference.md) |
+| Use the editor, the debugger, SQL or the terminal | [The Studio](user/the-studio.md) |
+| Ask an assistant about a program | [The assistant](user/assistant.md) |
+| Drive the Studio from a script | [Automation](user/automation.md) |
+| Teach with it | [The curriculum](lessons/README.md) |
+| Understand or change the code | [Architecture](maintainer/architecture.md), then [testing](maintainer/testing.md) |
+| Report a bug or ask for a feature | [.github/SUPPORT.md](../.github/SUPPORT.md) |
 | Report a security problem | [SECURITY.md](../SECURITY.md), privately |
-| Read example programs | [`Examples/CATALOG.md`](../Examples/CATALOG.md) |
+| Read about the removed machines | [History](project/history.md), where the 28.0 release records their removal |
 
 ---
 
-## Documentation that was removed
+## What became of the earlier documentation
 
-Time Warp Studio was previously implemented in Python with PySide6. That application
-and the Python reference engine were removed; the Qt application is the product, every
-language runs in C++, and parity is measured against a frozen corpus of recorded
-answers. The guides describing the old interface — its user guide, progressive how-to
-guides, shortcut reference, debugger guide and troubleshooting guide — were removed with
-it rather than left to mislead. [USER_GUIDE.md](USER_GUIDE.md) replaces them.
+Two removals are worth knowing about, because both changed the shape of this set.
 
-A second removal is recorded rather than reversed. The three emulated machines that
-earlier releases carried — the HB-1 home computer, its 1992 successor the HB-2, and the
-CHIP-8 virtual machine — were removed in 28.0, together with the language that ran on
-the last of them and the manuals that documented them. What remains is the IDE and the
-ten languages. The [changelog](../CHANGELOG.md) records both removals entry by entry,
-and [PORTING_PLAN.md](PORTING_PLAN.md) is the completed record of the port that preceded
-them.
+**The PySide6 application** was replaced by the Qt application in `native/`, and the guides
+describing the old interface — its user guide, its how-to guides, its shortcut reference, its
+debugger and troubleshooting guides — were removed with it rather than left to mislead. The
+port's record, and what replaced each feature, is in [the history](project/history.md).
+
+**The three emulated machines** — the HB-1 home computer, the HB-2 of 1992 and the CHIP-8
+virtual machine — were removed at 28.0, with the language that ran on the last of them and
+the four manuals that documented them. What remains is the IDE and the ten languages. The
+release entry that records it, and the reasoning, are in [the history](project/history.md).

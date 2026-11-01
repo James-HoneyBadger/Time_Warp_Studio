@@ -213,7 +213,8 @@ std::string render_plans_index(const std::vector<PlanGroup>& groups) {
     append(out, "");
     append(out, "One plan per language, generated from the curriculum by");
     append(out, "`time_warp_teach plans --write docs/lessons/plans`. For the");
-    append(out, "learner's view of the same material see the tutorials in `docs/tutorials/`,");
+    append(out, "learner's view of the same material see the tutorials in");
+    append(out, "`docs/languages/tutorials/`,");
     append(out, "and for how the material is delivered see `docs/lessons/README.md`.");
     append(out, "");
     append(out, "| Language | Lessons | Checkpoints | Plan |");

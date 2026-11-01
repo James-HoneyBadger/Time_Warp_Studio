@@ -23,7 +23,7 @@ body:
         empty, and what would a learner understand after it that they do not
         understand now?**
 
-        See [docs/LANGUAGE_GUIDE.md](https://github.com/James-HoneyBadger/Time_Warp_Studio/blob/main/docs/LANGUAGE_GUIDE.md)
+        See [the language reference](https://github.com/James-HoneyBadger/Time_Warp_Studio/blob/main/docs/languages/reference.md)
         for what each language is taught for.
 
   - type: input

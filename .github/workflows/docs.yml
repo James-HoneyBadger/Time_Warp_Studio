@@ -50,17 +50,20 @@ jobs:
           missing=0
           for required in \
             docs/INDEX.md \
-            docs/ARCHITECTURE.md \
-            docs/INSTALLATION.md \
-            docs/USER_GUIDE.md \
-            docs/API.md \
-            docs/LANGUAGE_GUIDE.md \
-            docs/FAQ.md \
-            docs/ROADMAP.md \
-            docs/README_TESTING.md \
+            docs/user/getting-started.md \
+            docs/user/the-studio.md \
+            docs/user/assistant.md \
+            docs/user/automation.md \
+            docs/user/faq.md \
+            docs/languages/README.md \
+            docs/languages/reference.md \
+            docs/maintainer/architecture.md \
+            docs/maintainer/decisions.md \
+            docs/maintainer/testing.md \
+            docs/maintainer/roadmap.md \
+            docs/maintainer/release.md \
+            docs/project/history.md \
             docs/lessons/README.md \
-            docs/lessons/student-guide.md \
-            docs/lessons/teacher-guide.md \
             docs/lessons/FORMAT.md \
             docs/lessons/plans/README.md \
           do
@@ -80,13 +83,13 @@ jobs:
           missing=0
           for language in basic pilot logo comal rexx scheme focal apl smalltalk forth
           do
-            if [ ! -f "docs/tutorials/$language.md" ]; then
-              echo "::error::no tutorial for $language (docs/tutorials/$language.md)"
+            if [ ! -f "docs/languages/tutorials/$language.md" ]; then
+              echo "::error::no tutorial for $language (docs/languages/tutorials/$language.md)"
               missing=1
             fi
           done
           test "$missing" -eq 0
-          echo "$(find docs/tutorials -maxdepth 1 -name '*.md' | wc -l) tutorials present."
+          echo "$(find docs/languages/tutorials -maxdepth 1 -name '*.md' | wc -l) tutorials present."
 
       # The two gates below are `time_warp_docs`, built here rather than shipped:
       # its project is `native/tools/docs`, which needs a compiler and nothing else,

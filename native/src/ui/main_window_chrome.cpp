@@ -108,16 +108,17 @@ void MainWindow::buildToolBar() {
     // platform, so the same code produces Cmd+N on macOS. The tooltip keeps the
     // Linux spelling the user is reading here.
     //
-    // The F-key alternates are the Python's: F2 saves and F3 opens. They are part
-    // of the interface the tooltips advertise, so an action whose tooltip says
-    // "F3" has to answer to F3.
+    // F2 saves, as the function-key bar advertises. It used to say F3 opened a file
+    // as well, and F3 is Find Next -- the bar's own caption -- so two actions
+    // claimed one key and Qt, seeing an ambiguous shortcut, ran neither. A key
+    // promised to two commands is a key that does nothing.
     auto addFileAction = [this](icons::Glyph glyph, const QString& text,
                                 QKeySequence::StandardKey key, const Qt::Key alternate,
                                 const QString& tip, const QString& statusTip,
                                 const std::function<void()>& slot) {
         QAction* action = tool_bar_->addAction(icons::glyph(glyph), text);
         // The standard key first, then the F-key alternate the tooltip promises.
-        // A toolbar action whose tooltip says "F3" has to answer to F3.
+        // A toolbar action whose tooltip names a key has to answer to that key.
         QList<QKeySequence> shortcuts{QKeySequence{key}};
         if (alternate != Qt::Key_unknown) {
             shortcuts << QKeySequence{alternate};
@@ -131,8 +132,8 @@ void MainWindow::buildToolBar() {
     addFileAction(icons::Glyph::New, tr("New"), QKeySequence::New, Qt::Key_unknown,
                   tr("Create a new file (Ctrl+N)"),
                   tr("Create a new editor tab"), [this] { newFile(); });
-    addFileAction(icons::Glyph::Open, tr("Open"), QKeySequence::Open, Qt::Key_F3,
-                  tr("Open an existing file (F3 / Ctrl+O)"),
+    addFileAction(icons::Glyph::Open, tr("Open"), QKeySequence::Open, Qt::Key_unknown,
+                  tr("Open an existing file (Ctrl+O)"),
                   tr("Open a file from disk"), [this] { openFileDialog(); });
     addFileAction(icons::Glyph::Save, tr("Save"), QKeySequence::Save, Qt::Key_F2,
                   tr("Save the current file (F2 / Ctrl+S)"),

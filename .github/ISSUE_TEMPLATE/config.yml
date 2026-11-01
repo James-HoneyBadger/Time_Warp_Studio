@@ -11,10 +11,10 @@ contact_links:
     url: https://github.com/James-HoneyBadger/Time_Warp_Studio/blob/main/docs/INDEX.md
     about: "Index of every guide: installation, the language reference, tutorials, lessons and architecture."
   - name: Is it already known?
-    url: https://github.com/James-HoneyBadger/Time_Warp_Studio/blob/main/docs/ROADMAP.md
+    url: https://github.com/James-HoneyBadger/Time_Warp_Studio/blob/main/docs/maintainer/roadmap.md
     about: What is deliberately not built, and the proposals that are still open -- a web build, Snap, an arm64 AppImage, calling one language from another.
   - name: Install, build and run
-    url: https://github.com/James-HoneyBadger/Time_Warp_Studio/blob/main/docs/INSTALLATION.md
+    url: https://github.com/James-HoneyBadger/Time_Warp_Studio/blob/main/docs/user/getting-started.md
     about: Requirements, building from source, and what a troubleshooting failure usually means.
   - name: Questions and help
     url: https://github.com/James-HoneyBadger/Time_Warp_Studio/blob/main/.github/SUPPORT.md

@@ -1,15 +1,14 @@
 <!--
-The PR template asks for the things the gates cannot check.
+The template asks for the things the gates cannot check.
 
-Every checkbox below is either a gate that has to have been run (`make test`,
-`make engine-test`, `make smoke`) or a decision no gate can make (whether a failure
-was reported rather than swallowed, whether a document that overstates the product
-was left alone). Nothing here is a formality: a PR that skips the engine suite can
-break the lessons, and a PR that adds a language without a lesson is a language the
-panel cannot offer.
+Every row below is either a gate that has to have been run or a decision no gate can
+make: whether a failure was reported rather than swallowed, whether a document that
+overstates the product was left alone. A pull request that skips the engine suites can
+break the lessons, and one that adds a language without a lesson is a language the panel
+cannot offer.
 
-Keep the headings. They are what `CONTRIBUTING.md` tells contributors to fill in,
-and what a reader of the merged history scrolls to.
+Keep the headings: CONTRIBUTING.md tells contributors to fill them in, and they are what
+a reader of the merged history scrolls to.
 -->
 
 # Description
@@ -25,26 +24,29 @@ and what a reader of the merged history scrolls to.
 <!-- How you know it works. Name the commands you ran and what they said. -->
 
 | Gate | Command | Result |
-| ---- | ------- | ------ |
-| C++ suites | `make -C native test` | <!-- 24/24 --> |
-| Debug tree | `make -C native test-debug` | <!-- 21/21, or "not run — no C++ changed" --> |
-| Engine tests | `make engine-test` | <!-- N passed, 1 xfailed --> |
-| Example corpus | `make smoke` | <!-- all 63, stroke counts unmoved --> |
-| Command coverage | `make command-matrix` | <!-- 546 rows, 0 failed, 0 gaps --> |
-| REPL coverage | `make repl-matrix` | <!-- 546 rows, 0 failed --> |
-| Lesson curriculum | `./native/build/time_warp_teach validate` | <!-- clean, or "not run — no lesson changed" --> |
+| --- | --- | --- |
+| C++ suites | `make test` | <!-- 24/24 --> |
+| Debug tree | `make test-debug` | <!-- 24/24, or "not run: no C++ changed" --> |
+| Sanitizers | `make asan` | <!-- clean, or "not run: no C++ changed" --> |
+| Example corpus | `make smoke` | <!-- all 67, stroke counts unmoved --> |
+| Command coverage | `make command-matrix` | <!-- 532 rows, 0 failed, 0 gaps --> |
+| REPL coverage | `make repl-matrix` | <!-- 532 rows, 0 failed --> |
+| Parity | `make golden-check` | <!-- 0 differences, or which corpus entries you changed and why --> |
+| Lesson curriculum | `./native/build/time_warp_teach validate` | <!-- clean, or "not run: no lesson changed" --> |
 | Documentation lint | `make lint-md` | <!-- 0 issues --> |
-| Documentation links | `make doc-links` | <!-- 0 broken --> |
+| Documentation links | `make doc-links` | <!-- 275 checked, all resolve --> |
+| Documentation claims | `make doc-claims` | <!-- no false claims --> |
 
 ## Checklist
 
-- [ ] **The build is warning-free.** The C++ is compiled with `-Werror` and a wide warning set, so a warning fails the build rather than scrolling past.
-- [ ] **A failure that used to be silent is now reported.** Silence is this project's characteristic bug: a language that ran successfully and drew nothing, a command that returns nothing at all, a lesson whose answer did not work. If you fixed one, say which.
-- [ ] **Every failure is reported in the console with the right prefix** (`❌`, `ℹ️`, `✅`) rather than swallowed or turned into a bare exception.
-- [ ] **Anything a document claims is true.** If a feature is partial, unported or unreachable, the document says so and `docs/ROADMAP.md` records it. This has been wrong before: a README claimed an in-process evaluator that nothing links.
-- [ ] **A new language or command has been added everywhere it is listed**, not only where it was easiest. `docs/LANGUAGE_GUIDE.md` has the list: enum, registry, the IDE's language table, an example, command-table rows, a tutorial, a lesson, a reference section.
-- [ ] **A new lesson passes `time_warp_teach validate`**, which runs every checkpoint's own solution *and* its starter — so a solution that does not pass, or a starter that already does, is caught before a learner meets it.
-- [ ] **New code is free of the removal's leftovers: no Python, and no reference to the deleted bridge's tooling.**
+- [ ] **The build is warning-free.** Every target compiles with `-Werror` and a wide warning set, so a warning fails the build rather than scrolling past.
+- [ ] **A failure that used to be silent is now reported.** Silence is this project's characteristic bug: a language that ran successfully and drew nothing, a command that returns nothing, a lesson whose answer did not work. If you fixed one, say which.
+- [ ] **Every failure reaches the console with the right prefix** (`❌`, `✅`, `ℹ️`) rather than being swallowed or thrown out of an executor.
+- [ ] **Anything a document claims is true.** If a feature is partial or unreachable, the document says so and [the roadmap](../docs/maintainer/roadmap.md) records it. This has been wrong before: a README claimed an evaluator nothing linked to.
+- [ ] **A new language or command is added everywhere it is listed**, not only where it was easiest. [CONTRIBUTING.md](../CONTRIBUTING.md) has the list: registry row, executor, the Qt language table, an example, command-table rows, a tutorial, a reference section, a lesson, a corpus entry.
+- [ ] **A behaviour change edits the parity corpus in the same commit**, because the gate compares with a recording rather than with a live reference.
+- [ ] **A new lesson passes `time_warp_teach validate`** — every solution *and* every starter — and the generated plans have been regenerated.
+- [ ] **`docs/INDEX.md` is updated** for a new page, because it is also the application's Help tree and `help_browser_tests` fails when a row does not resolve.
 - [ ] **Tests were added for the behaviour**, not only for the code path. A regression test for a fixed bug is expected.
 - [ ] **No unrelated changes.** A reformat, a rename or a reordered list makes the actual change hard to read.
 
