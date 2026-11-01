@@ -742,7 +742,7 @@ TurtleInspector::TurtleInspector(QWidget* parent) : QFrame(parent) {
 
     auto* row = new QHBoxLayout{this};
     row->setContentsMargins(6, 1, 6, 1);
-    row->setSpacing(14);
+    row->setSpacing(11);
 
     pose_ = new QLabel{this};
     pose_->setObjectName(QStringLiteral("turtlePose"));
@@ -757,6 +757,14 @@ TurtleInspector::TurtleInspector(QWidget* parent) : QFrame(parent) {
     screen_label_->setObjectName(QStringLiteral("turtleScreen"));
     screen_label_->setAccessibleName(tr("Screen mode"));
 
+    // The count is the field that gives way when the canvas is narrow: a pose cut
+    // to "Hea" says nothing, while a missing command count is a number the reader
+    // can get from the scrubber beside it.
+    pose_->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Preferred);
+    pen_->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Preferred);
+    screen_label_->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Preferred);
+    commands_label_->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Preferred);
+    commands_label_->setMinimumWidth(0);
     row->addWidget(pose_);
     row->addWidget(pen_);
     row->addWidget(screen_label_);
