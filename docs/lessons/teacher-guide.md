@@ -239,16 +239,12 @@ re-reads the class it has just changed.
 
 ## 6. Teaching from the front
 
-The machines were made for a projector. The [HB-1](../hb1/README.md) boots
-into the language you are teaching (`CONFIG`, or the ROM selector), keeps a real
-editor on its PROGRAM page, and its prompt is a live session — so "what does
-`PRINT 6 * 7` do?" can be asked and answered without leaving the example. The
-[CHIP-8](../chip8/README.md) is the opposite lesson: open the emulator, single-step
-one instruction and watch a register change. Presentation Mode (`Shift+F11`)
-in the IDE, the machine's own text sizes and the four phosphor palettes all make
-the text readable from the back of the room.
+The IDE is built to be projected. The editor, the canvas as it is drawn and the
+Console are all readable at a size the room can follow. Presentation Mode
+(`Shift+F11`) hides the authoring chrome, and the A+ text sizes and the CRT settings
+make the text readable from the back of the room.
 
-Both manuals are installed with the application and listed under Help >
+The guides are installed with the application and listed under Help >
 Documentation, so a class can follow along on its own copies.
 
 ```text

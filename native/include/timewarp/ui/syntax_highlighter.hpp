@@ -2,7 +2,7 @@
 //
 // Syntax highlighting, one rule table per language.
 //
-// The eleven languages are not conventionally coloured text, so a single shared
+// The ten languages are not conventionally coloured text, so a single shared
 // approximation with a keyword list bolted on gets several of them wrong:
 //
 //   * FOCAL has no comment syntax at all -- an unrecognised command is an error,
@@ -13,7 +13,6 @@
 //     single-quoted one, which is the reverse of everything else here.
 //   * PILOT's units are a single letter and a colon at the start of a line
 //     (`T:`, `A:`, `M:`), which is a shape, not a word.
-//   * CHIP-8 is a bytecode listing: opcodes, hex literals and labels.
 //
 // So the rules are data per language. The keyword lists come from the engine: the
 // names `native/tools/gates/inventory.cpp` extracts from the executors, which is
@@ -44,14 +43,14 @@ namespace timewarp::ui {
 
 /// The colours a document is painted in.
 ///
-/// Five roles, because that is how many distinctions the eleven languages need
+/// Five roles, because that is how many distinctions the ten languages need
 /// between them.
 struct SyntaxColors {
     QColor keyword;
     QColor comment;
     QColor string;
     QColor number;
-    /// PILOT's unit letters, CHIP-8's labels, Scheme's `#t`/`#f`.
+    /// PILOT's unit letters, Scheme's `#t`/`#f`.
     QColor directive;
 
     /// Colours that read on the palette the application actually applies.
@@ -87,7 +86,7 @@ public:
     }
 
     /// Whether this language matches keywords without regard to case. Seven of the
-    /// eleven do, and the engine uppercases before every lookup.
+    /// engines do, and the engine uppercases before every lookup.
     [[nodiscard]] bool keywordsAreCaseInsensitive() const noexcept {
         return case_insensitive_;
     }

@@ -216,7 +216,7 @@ struct Statement {
 }
 
 /// Reads a line as a statement, skipping the parts that are not one: a BASIC or
-/// FOCAL line number, a Logo or CHIP-8 label, indentation.
+/// FOCAL line number, a Logo label, indentation.
 [[nodiscard]] Statement parseStatement(const QString& code, bool insensitive) {
     Statement statement;
     int offset = 0;
@@ -445,7 +445,7 @@ constexpr BlockRule kRexxBlocks[] = {
 
 /// Brackets, across the whole program.
 ///
-/// Every one of the eleven languages pairs them, and in every one of them a bracket
+/// Every one of the ten languages pairs them, and in every one of them a bracket
 /// left open means the rest of the program is misread -- which is the single most
 /// common beginner mistake and the one worth reporting at the bracket rather than
 /// at the end of the file.
@@ -636,32 +636,6 @@ void checkPilotShape(const QList<ScannedLine>& original, Findings* findings) {
     }
 }
 
-/// CHIP-8: a listing is words and hex, so a word that is neither is a typo.
-void checkChip8(const QList<ScannedLine>& lines, const Vocabulary& vocabulary,
-                Findings* findings) {
-    static const QRegularExpression hex{QStringLiteral(R"(^[0-9A-Fa-fxX$]+$)")};
-    for (int index = 0; index < lines.size(); ++index) {
-        const Statement statement = parseStatement(lines.at(index).code, true);
-        if (statement.first.isEmpty()) {
-            continue;
-        }
-        if (hex.match(statement.first).hasMatch() || vocabulary.knows(statement.first)) {
-            continue;
-        }
-        const QString suggestion = nearestKeyword(statement.first, vocabulary);
-        findings->add(index + 1, statement.column,
-                      static_cast<int>(statement.first.size()),
-                      Diagnostic::Severity::Warning,
-                      suggestion.isEmpty()
-                          ? QStringLiteral("`%1` is not a CHIP-8 opcode or a hex value")
-                                .arg(statement.first)
-                          : QStringLiteral("`%1` is not a CHIP-8 opcode \u2014 did you "
-                                           "mean `%2`?")
-                                .arg(statement.first, suggestion),
-                      QStringLiteral("typo.chip8"));
-    }
-}
-
 }  // namespace
 
 QList<Diagnostic> lintText(Language language, const QString& text) {
@@ -729,9 +703,6 @@ QList<Diagnostic> lintText(Language language, const QString& text) {
         case Language::Pilot:
             checkPilotShape(lines, &findings);
             break;
-        case Language::Chip8:
-            checkChip8(lines, vocabulary, &findings);
-            break;
         case Language::Logo:
         case Language::Scheme:
         case Language::Focal:
@@ -750,7 +721,7 @@ QList<Diagnostic> lintText(Language language, const QString& text) {
         if (statement.first.isEmpty()) {
             continue;
         }
-        if (language != Language::Pilot && language != Language::Chip8) {
+        if (language != Language::Pilot) {
             checkProbableTypo(index + 1, statement, vocabulary, language_id, &findings);
         }
         if (language == Language::Basic || language == Language::Comal) {

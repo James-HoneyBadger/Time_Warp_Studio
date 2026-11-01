@@ -51,7 +51,6 @@ void test_user_data_lives_where_the_environment_says();
 void test_a_snippet_is_inserted_at_the_cursor();
 void test_run_selection_and_history();
 void test_autosave_keeps_unsaved_work();
-void test_a_binary_chip8_rom_opens_read_only();
 void test_word_at_cursor();
 void test_context_help_follows_the_document_language();
 void test_restoring_a_copy_opens_a_new_tab();

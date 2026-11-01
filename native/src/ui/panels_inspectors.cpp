@@ -446,8 +446,8 @@ void DebugPanel::setPaused(bool paused, int line, const QString& procedure) {
         }
         return;
     }
-    // Line 0 means the program has no source line for the next unit (a binary
-    // CHIP-8 ROM), so there is nothing to number.
+    // Line 0 means the engine's position is not a source line, so there is
+    // nothing to number.
     const QString where =
         procedure.isEmpty() ? tr("paused at line %1").arg(line)
                             : tr("paused at line %1 in %2").arg(line).arg(procedure);

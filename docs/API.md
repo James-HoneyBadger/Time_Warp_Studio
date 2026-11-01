@@ -47,7 +47,7 @@ No parameters.
 ```json
 {
   "apiVersion": "1.0",
-  "version": "<version, e.g. 27.0.0>",
+  "version": "<version, e.g. 28.0.0>",
   "languages": [{"key":"basic","display":"BASIC","wholeProgram":false}, ...],
   "features": {"repl":true,"sql":true,"projects":true,
                "watchExpressions":true,"dataBreakpoints":true,
@@ -67,9 +67,8 @@ Returns `true` and ends the process after the response.
 
 | Parameter | Type | |
 | --- | --- | --- |
-| `language` | string | `basic`, `pilot`, `logo`, `comal`, `rexx`, `scheme`, `focal`, `chip8`, `apl`, `smalltalk`, `forth` |
+| `language` | string | `basic`, `pilot`, `logo`, `comal`, `rexx`, `scheme`, `focal`, `apl`, `smalltalk`, `forth` |
 | `source` | string | the program text |
-| `sourceBase64` | string | alternative to `source`, for a binary CHIP-8 ROM |
 | `inputs` | array of strings | answers to `ASK`/`INPUT` prompts, in order; an exhausted list answers empty |
 
 Result:
@@ -233,7 +232,7 @@ stands in the program's own body, because nothing is waiting then. Smalltalk fil
 it with its message sends (`Counter>>bump`, or `DoIt` for a top-level block),
 Scheme with its procedure activations, and a line-loop language with the calls it
 is inside: a `PROGRAM` frame at the line that called, then one per `GOSUB`, `CALL`,
-`PROC`, `DO` group or PILOT unit. Logo and CHIP-8 keep no return stack, so they
+`PROC`, `DO` group or PILOT unit. Logo and Forth keep no return stack, so they
 report none.
 `line` is the program's own source line where it has one — a BASIC program with
 `20 LET Y = 2` on the second line reports 20 — so a client that echoes it back as a
@@ -263,8 +262,7 @@ hands its position (`pc`, procedures, words, lists, pen, pose and seeded generat
 to the whole-program pause point with every statement, Forth, which hands over
 its position in the token list, both stacks, the dictionary, the compile state and
 the text printed so far (with the 64K data space only when a program has written to
-it), and CHIP-8, which hands over the machine itself — registers, memory, screen,
-timers and the frame count — before each instruction. Smalltalk pauses at its chunk
+it). Smalltalk pauses at its chunk
 boundaries but has no checkpoint yet, so `history` keeps nothing for it and
 `debug.rewind` answers `unmoved`. A Scheme program cannot be
 rewound at all, because its state is an arena and a continuation chain rather than

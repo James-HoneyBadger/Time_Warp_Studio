@@ -60,7 +60,7 @@ QList<Snippet> loadSnippets(QString* error) {
 
     const QJsonObject languages = document.object().value(QStringLiteral("languages")).toObject();
     for (auto entry = languages.begin(); entry != languages.end(); ++entry) {
-        // The key is the settings key ("chip8"), so the display name and the
+        // The key is the settings key ("smalltalk"), so the display name and the
         // Language value come from the one table that holds them.
         const Language language = languageFromKey(entry.key());
         if (language == Language::Unknown) {

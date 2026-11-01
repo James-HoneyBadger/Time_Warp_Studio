@@ -4,8 +4,8 @@
   The AppStream file the software centres read and Flathub requires. The id is the
   Flatpak id, and the file is named after it.
 
-  Everything here is true of the program as it ships: the languages, the two
-  machines, and the fact that it makes no network call of its own. The URLs are the
+  Everything here is true of the program as it ships: the languages, and the fact
+  that it makes no network call of its own. The URLs are the
   project's own; a screenshot is the one thing a listing wants that this file does
   not carry yet, because a repository screenshot is a file that goes stale silently
   and the release page is where the current ones are.
@@ -13,7 +13,7 @@
 <component type="desktop-application">
   <id>org.honeybadger.TimeWarpStudio</id>
   <name>Time Warp Studio</name>
-  <summary>An old-school programming environment with eleven languages</summary>
+  <summary>An old-school programming environment with ten languages</summary>
 
   <metadata_license>MIT</metadata_license>
   <project_license>MIT</project_license>
@@ -21,22 +21,14 @@
   <description>
     <p>
       Time Warp Studio is a workbench for old-school programming: BASIC, APL, Logo,
-      PILOT, FOCAL, Scheme, CHIP-8, COMAL, REXX, Smalltalk and Forth in one window,
-      each with an editor, a debugger and turtle graphics.
+      PILOT, FOCAL, Scheme, COMAL, REXX, Smalltalk and Forth in one window, each
+      with an editor, a debugger and turtle graphics. Every language runs natively
+      inside the application.
     </p>
     <p>
-      Inside it are three complete machines rather than three themes: the HB-1, a
-      home computer of 1982 with an eleven-language ROM socket, a CRT and its own
-      disk operating system; a live CHIP-8 with an assembler, a keypad and a
-      register inspector; and the HB-2, a 1992 workstation with a processor of its
-      own, a framebuffer with a blitter, four channels of sampled audio, a disk, a
-      cassette and eight programs on a desktop.
-    </p>
-    <p>
-      A checked curriculum of 22 lessons and 66 checkpoints ships with it for
+      A checked curriculum of 20 lessons and 60 checkpoints ships with it for
       teaching, and the whole application is offline: it makes no network call of
-      its own unless you configure the assistant or ask it to fetch the
-      public-domain CHIP-8 homebrew archive.
+      its own unless you configure the assistant.
     </p>
   </description>
 
@@ -66,16 +58,24 @@
     <keyword>PILOT</keyword>
     <keyword>FOCAL</keyword>
     <keyword>Scheme</keyword>
-    <keyword>CHIP-8</keyword>
     <keyword>COMAL</keyword>
     <keyword>REXX</keyword>
     <keyword>Smalltalk</keyword>
     <keyword>Forth</keyword>
     <keyword>retro computing</keyword>
-    <keyword>emulator</keyword>
   </keywords>
 
   <releases>
+    <release version="28.0.0" date="2026-11-01">
+      <description>
+        <p>The IDE and the languages, and nothing else. The three emulated machines
+        are removed — the HB-1 home computer, the HB-2 of 1992 and the CHIP-8
+        virtual machine, with the language that ran on it — along with their
+        windows, their manuals, their examples, their test suites and their gates.
+        The ten languages, the editor, the turtle canvas, the debugger, the lessons,
+        the assistant and the automation surface are unchanged.</p>
+      </description>
+    </release>
     <release version="27.0.0" date="2026-10-31">
       <description>
         <p>The HB-2's last three gaps close. Nine of the Studio's languages run on the

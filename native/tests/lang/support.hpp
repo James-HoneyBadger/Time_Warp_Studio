@@ -4,8 +4,8 @@
 //
 // `lang_tests.cpp` was 3,150 lines and every executor's cases lived in it. The
 // cases are now one file per machine or language, in `lang/`; this header is the
-// recording turtle host they all draw into, the CHIP-8 assembly helpers, and a
-// `run_*` per language so a case reads as a program and an assertion.
+// recording turtle host they all draw into, and a `run_*` per language so a case
+// reads as a program and an assertion.
 //
 // No Qt and no display: `RecordingHost` is the drawing surface, so a case can
 // assert what was drawn without a window.
@@ -32,7 +32,6 @@
 
 #include "check.hpp"
 #include "timewarp/core/charconv.hpp"
-#include "timewarp/lang/chip8.hpp"
 #include "timewarp/io/gamepad.hpp"
 #include "timewarp/lang/debug.hpp"
 #include "timewarp/lang/interpreter.hpp"
@@ -43,13 +42,11 @@
 #include "timewarp/graphics/recording_host.hpp"
 #include "timewarp/lang/watch.hpp"
 // The suite is one file's worth of cases split across `lang/*.cpp`, one file per
-// machine or language; this header is what they share: the recording turtle host,
-// the assembling helper and a `run_*` per language.
+// language; this header is what they share: the recording turtle host and a
+// `run_*` per language.
 
 namespace tw::lang_tests {
 
-using timewarp::lang::Chip8Machine;
-using timewarp::lang::Chip8Program;
 using timewarp::lang::Interpreter;
 using timewarp::lang::Language;
 using timewarp::lang::MersenneRandom;
@@ -212,36 +209,6 @@ inline bool any_error(const std::vector<std::string>& output) {
     return std::any_of(output.begin(), output.end(), [](const std::string& line) {
         return line.rfind("❌", 0) == 0;
     });
-}
-
-inline Chip8Program assemble(std::string_view source) {
-    return timewarp::lang::assemble_chip8(source);
-}
-
-inline Chip8Machine run_to_halt(std::string_view source, unsigned keys = 0) {
-    Chip8Program program = assemble(source);
-    Chip8Machine machine{std::move(program.memory), program.entry, keys};
-    int guard = 0;
-    while (!machine.halted()) {
-        machine.step();
-        if (++guard > 100'000) {
-            throw std::runtime_error("the program did not halt");
-        }
-    }
-    return machine;
-}
-
-inline std::size_t lit_pixels(const Chip8Machine& machine) {
-    return static_cast<std::size_t>(
-        std::count(machine.framebuffer().begin(), machine.framebuffer().end(), 1));
-}
-
-inline std::vector<std::string> run_chip8(std::string_view source) {
-    RecordingHost host;
-    Interpreter interpreter{Language::Chip8, host};
-    interpreter.load_program(source);
-    interpreter.run();
-    return interpreter.output();
 }
 
 }  // namespace tw::lang_tests

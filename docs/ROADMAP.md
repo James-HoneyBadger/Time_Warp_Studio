@@ -1,8 +1,8 @@
 # Roadmap
 
-Time Warp Studio is an old-school programming environment for eleven languages and three machines. This page is
-the honest state of it: what works, what is next, and what is deliberately not
-being built.
+Time Warp Studio is an old-school programming environment for ten languages. This
+page is the honest state of it: what works, what is next, and what is deliberately
+not being built.
 
 The PySide6 implementation that came before this one has been **removed**. Where
 this page says a feature is "not ported", it existed there and does not exist here
@@ -16,31 +16,23 @@ derived rather than remembered.
 
 ---
 
-## 24.0 is archived, and 27.0 is the current design
+## 24.0 is archived, and 28.0 is the current design
 
 **Version 24.0 is archived.** It was the golden release, and it is kept exactly as it
 was built on its own release page and will not change again. Nothing here removes it:
 an archive is a thing you keep.
 
-**Version 27.0 is the current design.** The eleven languages, the IDE, three machines,
-the curriculum and the documentation set are complete, and the gates in
+**Version 28.0 is the current design.** The ten languages, the IDE, the curriculum
+and the documentation set are complete, and the gates in
 [README_TESTING.md](README_TESTING.md) prove it on every push. The feature set is
 **not frozen**: a release after this one takes fixes and features alike, and each
 arrives with the test that proves it. What 25.0, 26.0, 26.1 and 27.0 each added is in
 [the ladder](#the-ladder) below and in the [changelog](../CHANGELOG.md).
 
-The Model 92 -- [the same company's 1992 computer](hb1/model-92.md) -- was written here
-as a proposal and is now the **HB-2** that ships. What comes after is written down
-rather than wished for:
-
-| For | Proposal |
-| --- | --- |
-| The HB-1 | [hb1/enhancements.md](hb1/enhancements.md) — a tape drive, a monitor and `SYS`, programmable function keys, sprites, RAM size, HB DOS 1.1, autoboot |
-| The CHIP-8 | [chip8/enhancements.md](chip8/enhancements.md) — breakpoints in the window, an instruction trace, memory watch, state files, a library manifest, the rest of the SuperChip subset |
-
-Each proposal states what it is, why the machine wants it in period terms, and what
-would count as proof, so a later release has a specification to build to instead of
-a memory of a conversation.
+**28.0 removed the machines.** The HB-1 home computer, the HB-2 of 1992 and the
+CHIP-8 virtual machine are gone, and so is the language that ran on the last of
+them. What is left is the IDE and the ten languages, which is what the application
+was for. What comes after is written down rather than wished for, below.
 
 ---
 
@@ -51,27 +43,24 @@ a memory of a conversation.
 | Shell | Documents and tabs, menus, toolbars, status bar, settings persistence, the last session's files restored at launch |
 | Editor | Line-number gutter, current-line highlight, per-language syntax colouring, find/replace, find in files, go-to-line, tab stops, fonts, error squiggles with gutter markers, completion, auto-indent, Format Code, minimap, outline |
 | Projects | `.twproject` files, named groups, files and folders added to a project, drag-and-drop grouping, missing-file reporting, recent projects and session restore |
-| REPL | A persistent session per language under the editor; Scheme keeps definitions and echoes values, the line-loop languages and Logo keep bindings (Logo's variables survive an entry, its procedures do not), while Smalltalk, CHIP-8 and Forth carry nothing from one entry to the next |
+| REPL | A persistent session per language under the editor; Scheme keeps definitions and echoes values, the line-loop languages and Logo keep bindings (Logo's variables survive an entry, its procedures do not), while Smalltalk and Forth carry nothing from one entry to the next |
 | Console | Streaming output, interpreter errors in their own tab, clickable line links (`[12]`, `❌ [line 30]`, `at line 30:`) that go to the line the program numbers, an errors-only filter, and **File > Save Output As…** |
 | Canvas | Live drawing, zoom, pan, grid, auto-fit, turtle marker, scrubber playback, animated GIF recording, raster and SVG export, the pose strip and the command log, and a fixed-coordinate screen mode (`SCREEN`) with sprites, pixel read-back and a game example; in screen mode the wheel zooms the screen about the pointer and a click reads back the pixel under it |
 | Display | 35 themes, high contrast, A+ text sizes (100/125/150%), focus mode, CRT settings, four Monitor presets |
 | Execution | Run (F9) and Stop; one program at a time; unsaved-change prompts |
 | Input | A program can ask for a line and wait for it — `INPUT`, FOCAL's `ASK`, PILOT's `ACCEPT`, REXX's `PULL` — on whichever engine runs it; BASIC's round trip is asserted on the engine, on `NativeRunner`, and through the API |
-| HB-1 machine | Tools > HB-1 Computer (`Ctrl+Alt+W`): one CRT with a boot intro, a language ROM socket for all eleven languages, TEXT/SPLIT/GRAPHICS modes, a program editor, a turtle canvas, and a prompt with BASIC direct mode; CONFIG (`Ctrl+,`) sets the boot ROM and screen, start-up message, phosphor palette, text sizes and CRT glass; each ROM's program, the ROM, the screen mode and the configuration persist; HB DOS 1.0 stores programs on a 512-sector volume with an Apple DOS-style catalogue, lock bits and a two-step INIT. Manuals: [the machines](MACHINES.md), [HB-1](hb1/README.md) |
-| CHIP-8 machine | Tools > CHIP-8 Emulator (`Ctrl+Shift+M`): a live 60 Hz CHIP-8 with a 64×32 screen (128×64 hi-res), keypad, Run/Pause/Step/Reset, 1–2000 opcodes per frame, register/memory/listing inspector, sound, and a ROM library the user points at a folder. It assembles listings and loads binary ROMs; the editor's CHIP-8 Run is the whole-program path. Manuals: [machine](chip8/README.md), [assembler](chip8/assembly.md), [instruction set](chip8/instruction-set.md) |
-| HB-2 machine | Tools > HB-2 Model 92 (`Ctrl+Alt+2`), or `time_warp_gates hb`: a bus with the 1982 map as `MODE 0`, a 640 × 480 framebuffer with a blitter and sixteen sprites, four channels of 22 050 Hz audio, a pointer, a keyboard, a clock, a serial port, the `INT` services, a cassette, and a ROM socket that runs nine of the engines on the machine's own bus (`SYS` calls HB-16 from a program). HB-16 with its assembler, disassembler and monitor, HB DOS 2.0 and HB-OS with a desktop. Manuals: [HB-2](hb2/README.md), [HB-16](hb2/instruction-set.md) |
-| Languages | 11 languages, 95 example programs, nine of them written for the HB-1 |
+| Languages | 10 languages, 68 example programs |
 | Native engines | Expression evaluator (`timewarp_expr`) and Scheme (`timewarp_scheme`) |
 | Bridged engines | None. Every language runs in process, nothing the product runs starts Python, and the reference engine itself is deleted — the parity gate compares against a frozen corpus instead |
-| Native executors | All eleven — BASIC, FOCAL, PILOT, COMAL, APL and REXX line-by-line; CHIP-8, Logo, Smalltalk, Scheme and Forth whole-program |
+| Native executors | All ten — BASIC, FOCAL, PILOT, COMAL, APL and REXX line-by-line; Logo, Smalltalk, Scheme and Forth whole-program |
 | Printing | File > Print Code (Ctrl+P) and Print Drawing, through the optional Qt6 PrintSupport |
 | Profiling | View > Profile Run times every statement in the line-by-line languages and ends with a per-line report, longest first |
 | Terminal | Opt-in in Settings > Workspace: a shell on a real pseudo-terminal in the document's folder, absent in presentation and player modes |
-| Debugging | Breakpoints, Pause, Continue and Trace in all eleven languages; a run can be walked back in every language but Smalltalk, whose heap is an object graph, and Scheme, whose state is an arena; Scheme adds a stack and frame bindings, and Smalltalk reports its own message-send chain; watch expressions and data breakpoints in the Debug panel |
-| Database | A SQLite-backed Database tab, the shared `SQL` statement in nine languages, scripts, tables and schema; compiled programs link SQLite |
+| Debugging | Breakpoints, Pause, Continue and Trace in all ten languages; a run can be walked back in every language but Smalltalk, whose heap is an object graph, and Scheme, whose state is an arena; Scheme adds a stack and frame bindings, and Smalltalk reports its own message-send chain; watch expressions and data breakpoints in the Debug panel |
+| Database | A SQLite-backed Database tab, the shared `SQL` statement in eight languages, scripts, tables and schema; compiled programs link SQLite |
 | Automation | JSON-RPC over stdin/stdout (`language.run`, `repl.*`, `debug.*`, `sql.*`, `project.*`, `watch.evaluate`) and the `twc` terminal compiler |
 | Packaging | `make install`; tagged releases build `.deb`, `.rpm`, AppImage, tarball and container artifacts for Linux |
-| Quality gates | 27 CTest suites in 4 build configurations, on Linux; the frozen-corpus gate over 671 programs (479 language, 192 Scheme); 566 command rows run as programs and through the REPL; 94 example programs through the smoke gate; and the documentation gates (links, claims, version, Markdown lint) |
+| Quality gates | 24 CTest suites in 4 build configurations, on Linux; the frozen-corpus gate over 634 programs (442 language, 192 Scheme); 532 command rows run as programs and through the REPL; 67 example programs through the smoke gate; and the documentation gates (links, claims, version, Markdown lint) |
 
 ---
 
@@ -181,9 +170,9 @@ unit test)
   nested-display path, which reads a number as the character with that code, so `⍕42`
   answered `*`. The keyword spellings `+REDUCE` and `+SCAN` also failed: the operator
   split compared raw tokens, so only the glyph forms derived a function.
-- **CHIP-8's `JP V0, addr` encoded the register into the address.** The high nibble of
-  the jump table's base came from `V0` rather than from the instruction, so the jump
-  landed at address 6.
+- **CHIP-8's `JP V0, addr` encoded the register into the address** (found before the
+  language was removed at 28.0). The high nibble of the jump table's base came from
+  `V0` rather than from the instruction, so the jump landed at address 6.
 - **PILOT's `LINK`/`LOAD` could never run.** A line beginning `L:` is the *label
   declaration* -- the loader registers it as one -- so the Link/Load unit returned
   before it was reached, and the long forms remapped to exactly such a line. It is now
@@ -251,13 +240,13 @@ libraries.
 
 ## The four newest languages are complete
 
-**APL, FOCAL, CHIP-8 and Smalltalk** arrived after the original six. Each now has
+**APL, FOCAL, Smalltalk and Forth** arrived after the original six. Each now has
 everything the others have:
 
 - a native **executor** in `native/src/lang/`, and rows in the recorded parity
   corpus that `make golden-check` compares it with,
 - a **worked example** under `Examples/` that `make smoke` runs and checks for ink
-  (all four draw),
+  (they all draw),
 - a **command reference** in `docs/LANGUAGE_GUIDE.md` and a **tutorial** in
   `docs/tutorials/`,
 - **command rows** covering every literal the inventory
@@ -267,35 +256,22 @@ everything the others have:
 Writing those rows is what turned the inventory's counts into the list of defects
 above: nine of them were found by a row that had no answer, not by reading the code.
 
-**Lessons now cover all eleven languages.** Every language has two, three checkpoints
-each: sixty-six in all, with a plan, a worked answer and hints for every checkpoint,
+**Lessons now cover all ten languages.** Every language has two, three checkpoints
+each: sixty in all, with a plan, a worked answer and hints for every checkpoint,
 reachable from a terminal (`time_warp_learn`) and from the 🎓 Lessons panel in the IDE.
 
-The curriculum is data, and `time_warp_teach validate` **runs all sixty-six solutions through the
-engine** and checks that none of the sixty-six starters already passes. That pass is what makes
+The curriculum is data, and `time_warp_teach validate` **runs all sixty solutions through the
+engine** and checks that none of the sixty starters already passes. That pass is what makes
 a curriculum maintainable: without it, a lesson whose answer does not work would sit in
 the tree looking correct, because data is not exercised by anything unless something
 exercises it deliberately. See `docs/lessons/FORMAT.md`.
 
-**CHIP-8 runs SuperChip hi-res.** The C++ machine implements the 1.1 core — the
-reference did too, which is why the recordings cover it — 64x32 and 128x64 modes, 00Cn/00FB/00FC scrolls, 00FD
-exit, DXY0's 16x16 sprite, FX30's 8x10 font and the FX75/FX85 flags -- so the
-hi-res and SuperChip ROMs a collection brings can run. MegaChip's planes and audio
-are not implemented and are reported as unknown opcodes rather than half-drawn.
-The emulator's **ROM Library...** browses a folder the user supplies; the studio
-ships no ROMs, because most circulating CHIP-8 programs are somebody else's
-copyright and several are unlicensed ports of games that still are.
-
-Four limits are recorded rather than left to be discovered:
+Three limits are recorded rather than left to be discovered:
 
 - **FOCAL's `!` suppresses the newline inside one TYPE, not across statements.** The
   engine logs each statement's output separately, so a trailing newline is added by
   the logger rather than by the statement. This is an engine-level constraint, not a
   gap in the executor.
-- **CHIP-8 run as a program has no interactive keypad.** The whole-program
-  executor runs to completion inside one call and never yields control, so `LD Vx, K`
-  reads the first key held according to the listing's `; keys` directive, or 0. The
-  Tools > CHIP-8 Emulator window is the interactive path, with a live keypad.
 - **APL's turtle position is `TX`, `TY` and `THETA`.** Deliberately two letters:
   `X`, `Y` and `H` are ordinary APL variables, and taking them would break the most
   natural line anyone writes.
@@ -313,7 +289,7 @@ Every language runs in C++ now, and the Python engine those ports were judged
 against has been deleted. The three jobs it kept have each been taken over:
 
 1. **The parity gate** compares each port with a *recording* —
-   `native/tests/golden/lang_corpus.json.gz`, the reference's answers to 479
+   `native/tests/golden/lang_corpus.json.gz`, the reference's answers to 442
    programs, which carry the program text so the corpus outlives the engine.
 2. **`make command-matrix` and `make smoke`** (`time_warp_gates commands` and
    `smoke`) drive the native engines, so a language that runs and draws nothing is
@@ -399,7 +375,7 @@ curriculum from `native/share/lessons.json` — the file moved out of the refere
 package, so a package and a checkout teach the same course — and judges a program
 through the engines with `RecordingHost` as the surface, which is what makes a
 lesson checkable on a machine with no window. `time_warp_teach validate` runs all
-sixty-six worked answers and all sixty-six starters through it: every answer passes, every
+sixty worked answers and all sixty starters through it: every answer passes, every
 starter fails, every language is taught. `time_warp_learn` is the learner's side of
 the same library — `list`, `show`, `start`, `check`, `hint`, `solution`,
 `progress`, `reset` — so a learner at a terminal and a learner in the panel are
@@ -491,16 +467,15 @@ measuring the wrong machine.
 
 | 25.0 ✓ | The IDE finishes and 24.0 becomes an archive: a real pseudo-terminal, three historical voices for the assistant, a run that can announce itself on the desktop, a five-page CHIP-8 tour, twelve CC0 homebrew programs fetched by one button, and a Flatpak that carries its own Qt |
 | 25.0.1–25.0.3 ✓ | Twelve programs to learn the machines from (six CHIP-8, six HB-1) with a gate that runs each one on a real machine; `SOUND` handed to the player's own thread; typing in the terminal no longer able to freeze the window; and the tab context menu, Close Other Tabs, Duplicate Tab and the split pane's bookkeeping |
-| 26.0.0 ✓ | The HB-2, from [Model 92](hb1/model-92.md): a bus whose map is one table, a video chip with three modes and a blitter, four channels of sampled audio, the peripherals, HB-16 with its assembler, disassembler and monitor, `INT` services, HB DOS 2.0, HB-OS with a desktop, a module bay, a prompt, a snapshot, and `time_warp_gates hb` with six demonstration programs |
+| 26.0.0 ✓ | The HB-2, from the Model 92 proposal: a bus whose map is one table, a video chip with three modes and a blitter, four channels of sampled audio, the peripherals, HB-16 with its assembler, disassembler and monitor, `INT` services, HB DOS 2.0, HB-OS with a desktop, a module bay, a prompt, a snapshot, and `time_warp_gates hb` with six demonstration programs |
 | 26.1.0 ✓ | The HB-2 becomes a machine you can use: a window with the screen, the prompt, the monitor and a listing page; text through a ROM font on every video mode; HB DOS 2.0 with directories and a sector map; eight processes on a desktop; a monitor; the module bay; the prompt; PCM playback; and the Studio is Linux only, with no installer for any other system |
 | 27.0.0 ✓ | The HB-2's own gaps close: nine of the engines run on its bus through a ROM socket (`SYS` calls HB-16, `POKE` writes video memory, `STICK` reads the machine's joystick), a cassette with `INT 20`–`23`, the joystick fed from the IDE's gamepad, the module bay's fourth kind (a package of processes booted onto a running machine), and the assembler no longer able to turn a two-`ORG` listing into a four-gigabyte allocation |
+| 28.0.0 ✓ | The machines are removed: the HB-1, the HB-2 and the CHIP-8, with the language that ran on it, its windows, its manuals, its examples, its suites and its gates. The IDE and the ten languages are what remains, and every remaining gate still passes — 442 parity programs, 532 command rows, 67 example programs |
 
 Smaller items belong in one of those releases rather than a release of their own:
 Snap and an arm64 AppImage, and the distribution work described under
 [Packaging](#packaging). What used to be listed here shipped: Smalltalk reports its
-call stack as frames rather than a Program Counter (23.3.0), and the HB-1 has its own
-voice — boot tone, key click, disk rattle, error buzz and tape motor — through
-`MachineVoice` (20.2).
+call stack as frames rather than a Program Counter (23.3.0).
 
 ---
 
@@ -512,8 +487,8 @@ breakpoints, the line, the procedure, the call stack and the frame's bindings.
 The six line-by-line languages (BASIC, FOCAL, PILOT, COMAL, APL, REXX) stop at a
 statement through a `DebugSession` in the shared interpreter loop; the whole-program
 languages stop at their own natural boundary — Logo at a top-level statement,
-Smalltalk at a message send, Forth at a token, CHIP-8 before an instruction (the
-listing line is kept per opcode address). Forth was the last to join (23.9): its
+Smalltalk at a message send and Forth at a token. Forth was the last to join
+(23.9): its
 interpreter had no pause point at all, so a breakpoint in a `.fs` file could not
 fire and nothing said so. Gutter breakpoints are persisted per file and pruned when the
 file is gone, and the panel's buttons drive whichever runner is paused. **Watch
@@ -538,7 +513,7 @@ points they are pushed and popped, and a pause reports them outermost first unde
 `PROGRAM` frame that waits at the line its first call was made from. A `DO` group's
 lines run inside the `DO` statement rather than through the loop, so that is also
 the only place a breakpoint inside a group can be honoured — which it now is, and
-did not use to be. Logo and CHIP-8 keep no return stack, so they report no chain.
+did not use to be. Logo and Forth keep no return stack, so they report no chain.
 
 **A run can be walked backwards, in the engine and over the API.** `Interpreter`
 can copy where it is — the statement, every binding, the text printed so far, the
@@ -568,12 +543,7 @@ know.
 at all, so a breakpoint in a `.fs` file could never fire. A token is now the unit,
 the checkpoint carries both stacks, the dictionary, the compile state and the text
 printed so far, and the 64K data space is copied only when a program has written
-to it. **CHIP-8 followed in 24.0**: the machine already had one value for its whole
-state, so the checkpoint is that value — registers, memory, timers, the frame count,
-the instruction's slot within the frame and the framebuffer — taken before each
-instruction and only when a history was asked for, and a rewind repaints the
-restored screen so the pause shows the pixels the instruction it returned to was
-drawn on. Smalltalk is the one still out: its heap is an object graph with identity,
+to it. Smalltalk is the one still out: its heap is an object graph with identity,
 which a rewind would have to copy without losing.
 
 **Logo joined them (23.8), and the mechanism is the general one.** A whole-program

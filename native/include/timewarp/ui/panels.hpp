@@ -363,7 +363,7 @@ private:
 /// Unlike everything else in this header, this one is **not** a placeholder. The
 /// Python implementation shipped a working lesson panel, and the panel is the one
 /// part of the teaching side that has to exist in the application rather than
-/// only in a tool: a learner of eleven should not have to open a terminal.
+/// only in a tool: a learner should not have to open a terminal.
 ///
 /// The panel is a *view* and nothing more. It asks and it displays; it does not
 /// read the curriculum, run a program, or decide whether an answer is right. All
@@ -406,7 +406,7 @@ public:
     [[nodiscard]] int currentCheckpoint() const;
     /// The starting program for the current checkpoint, for the window to open.
     [[nodiscard]] QString currentStarter() const;
-    /// The language key of the current lesson, e.g. "CHIP8".
+    /// The language key of the current lesson, e.g. "smalltalk".
     [[nodiscard]] QString currentLanguageKey() const;
     /// The verdict text, so a test can assert what the learner is told.
     [[nodiscard]] QString verdictText() const;

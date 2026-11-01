@@ -209,7 +209,6 @@ add_library(tw_lang_logo OBJECT
     src/lang/logo_control.cpp
     src/lang/logo_data.cpp
 )
-add_library(tw_lang_chip8 OBJECT src/lang/chip8.cpp)
 add_library(tw_lang_focal OBJECT src/lang/focal.cpp)
 add_library(tw_lang_pilot OBJECT src/lang/pilot.cpp)
 add_library(tw_lang_comal OBJECT src/lang/comal.cpp)
@@ -237,7 +236,6 @@ set(TIME_WARP_LANGUAGE_OBJECTS
     tw_lang_core
     tw_lang_basic
     tw_lang_logo
-    tw_lang_chip8
     tw_lang_focal
     tw_lang_pilot
     tw_lang_comal
@@ -283,8 +281,7 @@ if(TIME_WARP_EXPR_BUILD_TESTS)
         tests/lang_tests.cpp
         tests/lang_apl_rexx_smalltalk_tests.cpp
         tests/lang_basic_tests.cpp
-        tests/lang_chip8_assembler_tests.cpp
-        tests/lang_chip8_machine_tests.cpp
+        tests/lang_debugging_tests.cpp
         tests/lang_focal_pilot_comal_tests.cpp
         tests/lang_forth_tests.cpp
         tests/lang_logo_tests.cpp
@@ -332,54 +329,6 @@ timewarp_enable_warnings(lang_cli)
 add_executable(expr_bench tools/bench.cpp)
 target_link_libraries(expr_bench PRIVATE timewarp::expr)
 timewarp_enable_warnings(expr_bench)
-
-# ---------------------------------------------------------------------------
-# HB-2, the machine
-#
-# The Model 92's bus, video chip, sound chip, clock, peripherals and HB-16
-# processor: Qt-free on purpose, because the harness that proves the machine
-# (`time_warp_gates hb`) and its suite must be able to run one without a display.
-# The window that shows it is a later proposal; this is the machine.
-# ---------------------------------------------------------------------------
-
-add_library(timewarp_hb2
-    src/hb2/asm.cpp
-    src/hb2/audio.cpp
-    src/hb2/bus.cpp
-    src/hb2/cpu.cpp
-    src/hb2/device.cpp
-    src/hb2/dos.cpp
-    src/hb2/hbos.cpp
-    src/hb2/machine.cpp
-    src/hb2/monitor.cpp
-    src/hb2/modules.cpp
-    src/hb2/peripherals.cpp
-    src/hb2/rom.cpp
-    src/hb2/shell.cpp
-    src/hb2/tape.cpp
-    src/hb2/video.cpp
-)
-add_library(timewarp::hb2 ALIAS timewarp_hb2)
-target_include_directories(timewarp_hb2
-    PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-)
-target_compile_features(timewarp_hb2 PUBLIC cxx_std_20)
-# The machine's ROM socket runs the native engines, so it links them: a language on
-# the HB-2 is the same executor the editor runs, with the machine's bus underneath it.
-target_link_libraries(timewarp_hb2 PUBLIC timewarp::lang)
-timewarp_enable_warnings(timewarp_hb2)
-
-if(TIME_WARP_EXPR_BUILD_TESTS)
-    add_executable(hb2_tests tests/hb2_tests.cpp)
-    target_link_libraries(hb2_tests PRIVATE timewarp::hb2)
-    target_include_directories(hb2_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/tests)
-    # The demonstration listings are a gate as well as samples, so the suite reads
-    # them from the checkout wherever the build tree is.
-    target_compile_definitions(hb2_tests PRIVATE
-        HB2_EXAMPLES="${CMAKE_CURRENT_SOURCE_DIR}/../Examples/hb2")
-    timewarp_enable_warnings(hb2_tests)
-    add_test(NAME hb2_tests COMMAND hb2_tests)
-endif()
 
 # ---------------------------------------------------------------------------
 # Canvas command queue (Qt-free core)

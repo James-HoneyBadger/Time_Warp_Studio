@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 //
-// The tests `editor_services_tests.cpp` calls: the pty's byte stream, the finish
-// notification's wording, and the homebrew catalogue.
+// The tests `editor_services_tests.cpp` calls: the pty's byte stream and the finish
+// notification's wording.
 //
 // No window and no shell: a byte stream in, a list of edits out, so each rule can
 // be checked without a pseudo-terminal to produce it.
@@ -22,7 +22,6 @@
 #include <vector>
 
 #include "check.hpp"
-#include "timewarp/ui/chip8_archive.hpp"
 #include "timewarp/ui/desktop_notification.hpp"
 #include "timewarp/ui/terminal_text.hpp"
 
@@ -128,86 +127,5 @@ void test_the_finish_notification_says_one_thing() {
              QStringLiteral("notifications/onFinish"));
 }
 
-
-// ---------------------------------------------------------------------------
-// The homebrew catalogue
-//
-// The catalogue is the legal gate, not the button: every entry was cleared one at
-// a time, and the file is what a reviewer reads to check that. These cases assert
-// the properties a reviewer would check, plus the ones that keep a downloaded name
-// inside the directory it is written to.
-// ---------------------------------------------------------------------------
-
-void test_the_archive_catalogue_is_a_cleared_list() {
-    announce("archive: the catalogue");
-    QString error;
-    const std::optional<timewarp::ui::ArchiveCatalogue> catalogue =
-        timewarp::ui::loadArchiveCatalogue(QStringLiteral(TIME_WARP_TEST_ARCHIVE), &error);
-    TW_CHECK_EQ(error, QString{});
-    TW_CHECK(catalogue.has_value());
-    if (!catalogue) {
-        return;
-    }
-    TW_CHECK_EQ(catalogue->repository, QStringLiteral("JohnEarnest/chip8Archive"));
-    // A pinned commit, or the bytes can change under a running application.
-    TW_CHECK_EQ(catalogue->commit.size(), 40);
-    TW_CHECK(catalogue->base_url.contains(catalogue->commit));
-    TW_CHECK(catalogue->base_url.endsWith(QStringLiteral("/roms/")));
-    // The licence is stated once for the source and once per program: the second is
-    // what a reviewer reads when they ask about one file.
-    TW_CHECK_EQ(catalogue->licence, QStringLiteral("CC0-1.0"));
-    TW_CHECK(!catalogue->programs.isEmpty());
-    TW_CHECK(catalogue->programs.size() >= 10);
-
-    QSet<QString> files;
-    for (const timewarp::ui::ArchiveProgram& program : catalogue->programs) {
-        TW_CHECK(program.file.endsWith(QStringLiteral(".ch8")));
-        TW_CHECK(!program.title.isEmpty());
-        TW_CHECK(!program.authors.isEmpty());
-        TW_CHECK_EQ(program.licence, catalogue->licence);
-        // A file name is a name, never a path: this is what stops a catalogue entry
-        // writing outside the folder it was given.
-        TW_CHECK(!program.file.contains(QLatin1Char('/')));
-        TW_CHECK(!program.file.contains(QStringLiteral("..")));
-        TW_CHECK(!files.contains(program.file));
-        files.insert(program.file);
-
-        // The URL a program is fetched from is the source and nothing else.
-        const QUrl url = catalogue->urlFor(program);
-        TW_CHECK(url.isValid());
-        TW_CHECK_EQ(url.toString().toStdString(),
-                    (catalogue->base_url + program.file).toStdString());
-        TW_CHECK(url.toString().startsWith(QStringLiteral("https://")));
-    }
-
-    // A catalogue that is not one is refused rather than half-believed.
-    QTemporaryDir dir;
-    TW_CHECK(dir.isValid());
-    const QString bad = dir.filePath(QStringLiteral("bad.json"));
-    QFile file{bad};
-    TW_CHECK(file.open(QIODevice::WriteOnly));
-    file.write(R"({"programs":[{"file":"x.ch8","title":"X","licence":"CC0-1.0"}]})");
-    file.close();
-    TW_CHECK(!timewarp::ui::loadArchiveCatalogue(bad, &error).has_value());
-    TW_CHECK(!error.isEmpty());
-
-    // A file name that is a path is skipped, not fetched.
-    const QString sneaky = dir.filePath(QStringLiteral("sneaky.json"));
-    QFile other{sneaky};
-    TW_CHECK(other.open(QIODevice::WriteOnly));
-    other.write(R"({"source":{"base_url":"https://example.invalid/roms/","commit":"x"},)"
-                R"("programs":[{"file":"../../etc/passwd","title":"no","authors":["a"],)"
-                R"("licence":"CC0-1.0"}]})");
-    other.close();
-    const std::optional<timewarp::ui::ArchiveCatalogue> refused =
-        timewarp::ui::loadArchiveCatalogue(sneaky, &error);
-    TW_CHECK(!refused.has_value());
-
-    // The fetched programs live in the application's own data directory, never in
-    // the repository.
-    const QString folder = timewarp::ui::archiveFolder();
-    TW_CHECK(folder.endsWith(QStringLiteral("chip8/archive")));
-    TW_CHECK(timewarp::ui::archiveFetchingAvailable());
-}
 
 }  // namespace tw::editor_services

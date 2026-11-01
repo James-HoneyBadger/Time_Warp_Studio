@@ -19,18 +19,17 @@ enum class Language {
     Rexx,
     Scheme,
     Focal,
-    Chip8,
     Apl,
     Smalltalk,
     Forth,
 };
 
 /// The display name, spelled exactly as the IDE and the lessons spell it.
-/// `Chip8` is the identifier; `CHIP-8` is the name a person reads, and using one
-/// where the other belongs puts a wrong name in the one place it is written.
+/// `Smalltalk` is the identifier; `Smalltalk` is the name a person reads, and using
+/// one where the other belongs puts a wrong name in the one place it is written.
 [[nodiscard]] std::string_view display_name(Language language) noexcept;
 
-/// The protocol/settings key: lowercase, no punctuation ("chip8").
+/// The protocol/settings key: lowercase, no punctuation ("smalltalk").
 [[nodiscard]] std::string_view key(Language language) noexcept;
 
 /// The file extensions that select this language, most common first, without dots

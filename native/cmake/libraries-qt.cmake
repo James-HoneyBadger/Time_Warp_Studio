@@ -516,9 +516,6 @@ if(TIME_WARP_QT_FOUND)
         endif()
         # The engines. A player with no interpreter has nothing to play.
         target_link_libraries(timewarp_ui_core PRIVATE timewarp::lang)
-        # The HB-2, which the machine window shows and drives: the machine itself is
-        # Qt-free and the window is the only thing here that knows about pixels.
-        target_link_libraries(timewarp_ui_core PRIVATE timewarp::hb2)
         target_compile_definitions(timewarp_ui_core PRIVATE
             TIME_WARP_VERSION="${TIME_WARP_VERSION}"
         )
@@ -545,11 +542,6 @@ if(TIME_WARP_QT_FOUND)
             src/ui/autosave.cpp
             src/ui/breakpoints.cpp
             src/ui/classroom_marker.cpp
-            src/ui/chip8_archive.cpp
-            src/ui/chip8_emulator.cpp
-            src/ui/chip8_library.cpp
-            src/ui/chip8_screen.cpp
-            src/ui/chip8_window.cpp
             src/ui/code_editor.cpp
             src/ui/console.cpp
             src/ui/command_palette.cpp
@@ -559,18 +551,10 @@ if(TIME_WARP_QT_FOUND)
             src/ui/find_bar.cpp
             src/ui/find_in_files.cpp
             src/ui/gallery.cpp
-            src/ui/hb2_window.cpp
             src/ui/notebook.cpp
             src/ui/notebook_window.cpp
             src/ui/formatter.cpp
             src/ui/gif_encoder.cpp
-            src/ui/hb_bbs.cpp
-            src/ui/hb_dos.cpp
-            src/ui/hb_clock.cpp
-            src/ui/hb_memory.cpp
-            src/ui/hb_tube.cpp
-            src/ui/machine_image.cpp
-            src/ui/machine_voice.cpp
             src/ui/help_browser.cpp
             src/ui/lint.cpp
             src/ui/main_window_construction.cpp
@@ -594,15 +578,6 @@ if(TIME_WARP_QT_FOUND)
             src/ui/project_panel.cpp
             src/ui/repl_runner.cpp
             src/ui/resizable_tab_widget.cpp
-            src/ui/retro_computer_basic.cpp
-            src/ui/retro_computer_bbs.cpp
-            src/ui/retro_computer_boot.cpp
-            src/ui/retro_computer_dos.cpp
-            src/ui/retro_computer_machine.cpp
-            src/ui/retro_computer_settings.cpp
-            src/ui/retro_computer_support.cpp
-            src/ui/retro_computer_ui.cpp
-            src/ui/retro_settings.cpp
             src/ui/scrubber.cpp
             src/ui/snippet_dialog.cpp
             src/ui/snippets.cpp
@@ -619,26 +594,13 @@ if(TIME_WARP_QT_FOUND)
             include/timewarp/ui/benchmark.hpp
             include/timewarp/ui/breakpoints.hpp
             include/timewarp/ui/code_editor.hpp
-            include/timewarp/ui/chip8_emulator.hpp
-            include/timewarp/ui/chip8_archive.hpp
-            include/timewarp/ui/chip8_library.hpp
             include/timewarp/ui/classroom_marker.hpp
-            include/timewarp/ui/chip8_screen.hpp
-            include/timewarp/ui/chip8_window.hpp
-            include/timewarp/ui/hb2_window.hpp
             include/timewarp/ui/command_palette.hpp
             include/timewarp/ui/command_reference.hpp
             include/timewarp/ui/diff.hpp
             include/timewarp/ui/export.hpp
             include/timewarp/ui/find_bar.hpp
             include/timewarp/ui/find_in_files.hpp
-            include/timewarp/ui/hb_bbs.hpp
-            include/timewarp/ui/hb_dos.hpp
-            include/timewarp/ui/hb_clock.hpp
-            include/timewarp/ui/hb_memory.hpp
-            include/timewarp/ui/hb_tube.hpp
-            include/timewarp/ui/machine_image.hpp
-            include/timewarp/ui/machine_voice.hpp
             include/timewarp/ui/help_browser.hpp
             include/timewarp/ui/gallery.hpp
             include/timewarp/ui/notebook.hpp
@@ -652,8 +614,6 @@ if(TIME_WARP_QT_FOUND)
             include/timewarp/ui/project_panel.hpp
             include/timewarp/ui/repl_runner.hpp
             include/timewarp/ui/resizable_tab_widget.hpp
-            include/timewarp/ui/retro_computer.hpp
-            include/timewarp/ui/retro_settings.hpp
             include/timewarp/ui/scrubber.hpp
             include/timewarp/ui/sql_panel.hpp
             include/timewarp/ui/syntax_highlighter.hpp
@@ -740,10 +700,8 @@ if(TIME_WARP_QT_FOUND)
             target_sources(timewarp_ui PRIVATE
                 src/ui/ai_panel.cpp
                 src/ui/ai_settings.cpp
-                src/ui/assistant_dialog.cpp
                 include/timewarp/ui/ai_panel.hpp
                 include/timewarp/ui/ai_settings.hpp
-                include/timewarp/ui/assistant_dialog.hpp
             )
             target_link_libraries(timewarp_ui PRIVATE timewarp::ai)
             target_compile_definitions(timewarp_ui PUBLIC TIME_WARP_HAVE_AI=1
@@ -835,13 +793,6 @@ if(TIME_WARP_QT_FOUND)
             FILES ${CMAKE_CURRENT_SOURCE_DIR}/share/lessons.json
             DESTINATION ${TIME_WARP_SHARE_DIR}/time-warp-studio
         )
-        # The homebrew catalogue: the CHIP-8 window's fetch button reads it, and it
-        # is the allowlist that keeps the application out of the redistribution
-        # question, so it ships with the binary rather than being built in.
-        install(
-            FILES ${CMAKE_CURRENT_SOURCE_DIR}/share/chip8_archive.json
-            DESTINATION ${TIME_WARP_SHARE_DIR}/time-warp-studio
-        )
         # The command table: the Reference page reads it, and it is the same file
         # `time_warp_gates commands` drives, so a package's reference shows what the
         # gate proved. It was development data until the page existed.
@@ -911,7 +862,6 @@ if(TIME_WARP_QT_FOUND)
                 tests/ui_layout_tests.cpp
                 tests/ui_layout_appearance_tests.cpp
                 tests/ui_layout_editor_tests.cpp
-                tests/ui_layout_hb2_tests.cpp
                 tests/ui_layout_menu_tests.cpp
                 tests/ui_layout_panel_tests.cpp
                 tests/ui_layout_run_tests.cpp
@@ -929,8 +879,8 @@ if(TIME_WARP_QT_FOUND)
             # The snippet picker's suite reads the checkout's catalogue. The
             # resolver walks up from the executable, which reaches the checkout
             # from `native/build` but from no other build directory, so the path
-            # is recorded here -- the arrangement chip8_emulator_tests uses for
-            # its Examples. An installed tree still finds its own copy first.
+            # is recorded here -- the arrangement editor_services_tests uses for
+            # the same catalogue. An installed tree still finds its own copy first.
             target_compile_definitions(ui_layout_tests PRIVATE
                 TIME_WARP_TEST_SNIPPETS="${CMAKE_CURRENT_SOURCE_DIR}/share/snippets.json"
                 TIME_WARP_TEST_COMMANDS="${CMAKE_CURRENT_SOURCE_DIR}/share/command_rows.json")
@@ -994,29 +944,9 @@ if(TIME_WARP_QT_FOUND)
             target_include_directories(editor_services_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/tests)
             # The shipped catalogue, from the checkout: see ui_layout_tests.
             target_compile_definitions(editor_services_tests PRIVATE
-                TIME_WARP_TEST_SNIPPETS="${CMAKE_CURRENT_SOURCE_DIR}/share/snippets.json"
-                TIME_WARP_TEST_ARCHIVE="${CMAKE_CURRENT_SOURCE_DIR}/share/chip8_archive.json")
+                TIME_WARP_TEST_SNIPPETS="${CMAKE_CURRENT_SOURCE_DIR}/share/snippets.json")
             timewarp_enable_warnings(editor_services_tests)
             add_test(NAME editor_services_tests COMMAND editor_services_tests)
-
-            # The live CHIP-8 machine and its window: frames, timers, the
-            # keypad that changes while a program runs, pause/step and the
-            # controls. The instruction semantics stay in lang_tests.
-            add_executable(chip8_emulator_tests tests/chip8_emulator_tests.cpp)
-            target_link_libraries(chip8_emulator_tests PRIVATE timewarp::ui)
-            # The homebrew downloader's ceiling is asserted against a loopback stub
-            # that serves a file past it, which needs Qt Network in this binary as
-            # well as in the library.
-            if(TARGET timewarp::ai)
-                target_link_libraries(chip8_emulator_tests PRIVATE ${TIME_WARP_QT}::Network)
-            endif()
-            target_include_directories(chip8_emulator_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/tests)
-            # The bundled-program test reads the checkout's Examples/ whatever
-            # directory CMake put the build in.
-            target_compile_definitions(chip8_emulator_tests PRIVATE
-                TIME_WARP_TEST_EXAMPLES="${CMAKE_CURRENT_SOURCE_DIR}/../Examples")
-            timewarp_enable_warnings(chip8_emulator_tests)
-            add_test(NAME chip8_emulator_tests COMMAND chip8_emulator_tests)
 
             # The help browser is a data-driven document view: the resolver,
             # the index parser and the tree are all testable without a window,
@@ -1031,32 +961,6 @@ if(TIME_WARP_QT_FOUND)
             timewarp_enable_warnings(help_browser_tests)
             add_test(NAME help_browser_tests COMMAND help_browser_tests)
 
-            # The HB-1 is a whole little machine: ROM socket, screen
-            # modes, the prompt's direct mode and the same native engines the
-            # editor runs. It gets its own binary because a failure should name
-            # the machine, not the IDE layout around it.
-            add_executable(retro_computer_tests
-                tests/retro_computer_tests.cpp
-                tests/retro_basic_tests.cpp
-                tests/retro/example_tests.cpp
-                tests/retro/paper_tests.cpp
-                tests/retro/bbs_tests.cpp
-                tests/retro_boot_tests.cpp
-                tests/retro_config_tests.cpp
-                tests/retro_dos_tests.cpp
-                tests/retro_hardware_tests.cpp
-                tests/retro_image_tests.cpp
-                tests/retro_memory_tests.cpp
-            )
-            target_link_libraries(retro_computer_tests PRIVATE timewarp::ui)
-            target_include_directories(retro_computer_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/tests)
-            # One case opens the demo volume shipped in `Examples/hb1`, so the test
-            # needs the checkout it is running from -- the same definition the
-            # player suite uses for the same reason.
-            target_compile_definitions(retro_computer_tests PRIVATE
-                TIME_WARP_TEST_SOURCE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/..")
-            timewarp_enable_warnings(retro_computer_tests)
-            add_test(NAME retro_computer_tests COMMAND retro_computer_tests)
         endif()
     else()
         message(STATUS "${TIME_WARP_QT} Widgets not found: skipping the widget UI")

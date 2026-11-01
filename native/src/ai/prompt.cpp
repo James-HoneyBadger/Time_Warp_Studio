@@ -17,15 +17,14 @@ constexpr int kMaxContextCharacters = 12000;
 /// The standing instructions. Every sentence here is a mistake the assistant
 /// otherwise makes: a Python answer to a Logo question, an invented `CIRCLE` in
 /// Logo, a `pip install`, or a reply that is 80% the user's own code quoted back.
-constexpr auto kSystemPrompt = R"(You are the assistant built into Time Warp Studio, a desktop programming environment for retro computers. The user is working in one of the eleven interpreters it ships, all of which run natively inside the application: BASIC, PILOT, Logo, COMAL, REXX, Scheme, FOCAL, CHIP-8, APL, Smalltalk and Forth.
+constexpr auto kSystemPrompt = R"(You are the assistant built into Time Warp Studio, a desktop programming environment for retro computers. The user is working in one of the ten interpreters it ships, all of which run natively inside the application: BASIC, PILOT, Logo, COMAL, REXX, Scheme, FOCAL, APL, Smalltalk and Forth.
 
 What to keep in mind:
 - Answer in the language the user is working in. Never suggest an import, a module, a package manager or an external library: every program is a single self-contained file run by an interpreter written between 1964 and 1980.
 - Do not invent commands. When you are not certain a command exists in this dialect, say so, and offer a way to do it with commands you are certain of.
-- Programs are plain text. BASIC, COMAL and FOCAL are written as numbered lines; PILOT uses letter-coded units (T:, A:, M:, Y:, N:, ...); Logo, Scheme, Smalltalk, Forth and CHIP-8 are whole programs; APL and REXX are line-oriented.
+- Programs are plain text. BASIC, COMAL and FOCAL are written as numbered lines; PILOT uses letter-coded units (T:, A:, M:, Y:, N:, ...); Logo, Scheme, Smalltalk and Forth are whole programs; APL and REXX are line-oriented.
 - Turtle graphics draw on the canvas beside the editor. The Logo words are FORWARD/FD, BACK/BK, RIGHT/RT, LEFT/LT, HOME, SETXY, SETHEADING, PENUP/PU, PENDOWN/PD, SETPENCOLOR, SETPC, SETPENWIDTH and REPEAT ... [ ... ]; PENSTYLE and BEZIER are extensions of this canvas. BASIC accepts the same words as statements. Heading 0 is north and increases clockwise. Logo has no CIRCLE, RECTANGLE or POLYGON: shapes are built with REPEAT.
-- CHIP-8 programs are assembly for the assembler built into this application, not a high-level language.
-- When you give code, put the whole program in one fenced block labelled with the language key: basic, pilot, logo, comal, rexx, scheme, focal, chip8, apl, smalltalk or forth.
+- When you give code, put the whole program in one fenced block labelled with the language key: basic, pilot, logo, comal, rexx, scheme, focal, apl, smalltalk or forth.
 - Be brief and concrete: a few sentences of explanation, then the code. Do not repeat the user's program back unless you are changing it.)";
 
 [[nodiscard]] QString capped(QString text) {
@@ -46,11 +45,8 @@ What to keep in mind:
             label.append(character.toLower());
         }
     }
-    // "CHIP-8" becomes "chip8", which is the key; "BASIC" becomes "basic". A name
-    // this does not match is left bare rather than guessed at.
-    if (label == QLatin1String("chip")) {
-        label = QStringLiteral("chip8");
-    }
+    // "BASIC" becomes "basic" and "Smalltalk" becomes "smalltalk". A name this does
+    // not match is left bare rather than guessed at.
     return QStringLiteral("```%1\n%2\n```").arg(label, body);
 }
 
@@ -300,7 +296,7 @@ Conversation build_prompt(Task task, const Context& context, Persona persona,
             instruction =
                 words.isEmpty()
                     ? QStringLiteral("Rewrite the following %1 program in whichever of "
-                                     "the eleven languages fits it best, and name that "
+                                     "the ten languages fits it best, and name that "
                                      "language in your first sentence. Return the whole "
                                      "program in one fenced block.")
                           .arg(language)

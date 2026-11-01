@@ -2,9 +2,9 @@
 //
 // One fact, one home: the language table, checked rather than hoped for.
 //
-// The eleven languages used to be described twice -- a display name, a key and two
+// The languages used to be described twice -- a display name, a key and two
 // extensions in `src/ui/language.cpp`, and switches over the same names in
-// `src/lang/language.cpp` -- and CHIP-8's `.ch8`/`.c8` were written out in four
+// `src/lang/language.cpp` -- and one language's extensions were written out in four
 // files besides. Every copy was plausible and one of them was going to be wrong
 // eventually: a language that answers to one extension in the file dialog and
 // another in the smoke gate is a file a person cannot open.

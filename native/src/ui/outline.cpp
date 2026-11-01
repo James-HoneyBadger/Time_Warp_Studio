@@ -162,10 +162,9 @@ QList<OutlineEntry> outlineFor(Language language, const QString& source) {
             return schemeOutline(lines);
         case Language::Apl:
             return aplOutline(lines);
-        // FOCAL groups are numbers, CHIP-8 has no named places, Smalltalk's
-        // outline would need a real parser, and PILOT's labels are covered above.
+        // FOCAL groups are numbers, Smalltalk's outline would need a real parser,
+        // and PILOT's labels are covered above.
         case Language::Focal:
-        case Language::Chip8:
         case Language::Smalltalk:
         // A Forth outline is the list of colon definitions, which needs the same
         // tokeniser the interpreter has; until that is shared, no outline.

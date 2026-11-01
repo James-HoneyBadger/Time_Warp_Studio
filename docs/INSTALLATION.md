@@ -1,6 +1,6 @@
 # Installing and Building Time Warp Studio
 
-Time Warp Studio is a Linux desktop application, built with **C++20 and Qt6**. Everything you need to run all eleven languages is in this
+Time Warp Studio is a Linux desktop application, built with **C++20 and Qt6**. Everything you need to run all ten languages is in this
 repository; nothing has to be downloaded at run time.
 
 ---
@@ -14,7 +14,7 @@ repository; nothing has to be downloaded at run time.
 | Qt6 | 6.2 | Widgets, Core and Gui modules must be installed; the Svg and PrintSupport modules are optional and enable SVG drawing export and printing |
 | SQLite3 | 3.35 | The database manager and the languages' `SQL` statement; the development package (`libsqlite3-dev`) is required to build |
 | zlib | 1.2 | Classroom bundles are zips, read and written with it; `zlib1g-dev` |
-All eleven languages and the lesson check run in C++ inside the application.
+All ten languages and the lesson check run in C++ inside the application.
 Nothing in the product or its validation gates requires Python; the parity gate
 compares against the frozen corpus rather than a live reference. See §6.
 
@@ -134,11 +134,6 @@ make tree-check                                     # no Python in the tree
 All must pass. See [README_TESTING.md](README_TESTING.md) for the full set,
 including the sanitizer builds and the parity gates.
 
-With it built, meet the machines the Studio carries: `Ctrl+Alt+W` for the
-[HB-1](hb1/README.md) and `Ctrl+Shift+M` for the [CHIP-8](chip8/README.md), or
-`./run.sh --computer` for the HB-1 from a terminal. [MACHINES.md](MACHINES.md)
-explains why they are there.
-
 ---
 
 ## 5. Troubleshooting
@@ -170,7 +165,7 @@ date -- `make help` lists the real ones.
 
 ## 6. No interpreter anywhere
 
-All eleven languages run in C++ inside the IDE, and so do the lesson check, the
+All ten languages run in C++ inside the IDE, and so do the lesson check, the
 classroom and every gate. The Python reference engine the ports were judged against
 was deleted in 18.0, its answers are frozen in
 `native/tests/golden/lang_corpus.json.gz`, and the harnesses that compare the ports

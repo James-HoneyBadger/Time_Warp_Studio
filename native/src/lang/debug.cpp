@@ -9,7 +9,7 @@ namespace timewarp::lang {
 
 bool DebugSession::note_line(std::size_t index, int line) {
     // A run with no breakpoints and no step pending must not pay a lock per
-    // statement; CHIP-8 calls a pause point once per opcode.
+    // statement.
     if (!engaged_.load(std::memory_order_acquire)) {
         return true;
     }

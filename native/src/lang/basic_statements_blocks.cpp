@@ -197,7 +197,7 @@ std::string Machine::call(const std::string& args) {
     // `functions` iterator into the variable that held a `subs` one and compare it
     // against the other map's `end()`: comparing iterators from different
     // containers is undefined behaviour, and when it did not compare equal the code
-    // went on to dereference `end()` and crashed. A CHIP-8 listing run as BASIC --
+    // went on to dereference `end()` and crashed. A listing pasted in as BASIC --
     // seven `CALL`s to names that are not subroutines -- was enough to reach it.
     const auto sub = state_.subs.find(name);
     const auto function = state_.functions.find(name);

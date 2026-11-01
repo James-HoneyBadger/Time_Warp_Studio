@@ -116,18 +116,6 @@
         "body": "(define items (list 1 2 3))\n(display (car items)) (newline)\n(display (cdr items)) (newline)\n(display (length items)) (newline)\n$CURSOR$"
       }
     ],
-    "chip8": [
-      {
-        "name": "Draw a digit",
-        "description": "Clear the screen and draw the font glyph for 2.",
-        "body": "start:  CLS\n        LD   V0, 0x04\n        LD   V1, 0x06\n        LD   F, V0\n        DRW  V0, V1, 5\n$CURSOR$"
-      },
-      {
-        "name": "A sprite",
-        "description": "Five rows of eight pixels, as DB lines.",
-        "body": "digit:  DB 0xF0, 0x90, 0x90, 0x90, 0xF0\n$CURSOR$"
-      }
-    ],
     "apl": [
       {
         "name": "Index generator",
@@ -190,7 +178,7 @@
       },
       {
         "name": "Poke the screen",
-        "description": "Write a character cell of the HB-1's tube from Forth",
+        "description": "Write a byte into the program's own memory map from Forth",
         "body": ": TYPE-HI ( -- )\n  72 32768 POKE\n  73 32769 POKE ;\nTYPE-HI\n$CURSOR$"
       }
     ]

@@ -22,33 +22,6 @@
 
 namespace timewarp::lang::basic {
 
-namespace {
-
-/// A bare palette number in a `COLOR` argument. Absent for a colour name or a hex
-/// value, which are the turtle's business rather than the tube's.
-[[nodiscard]] std::optional<int> palette_index(const std::vector<std::string>& parts,
-                                               std::size_t index) {
-    if (index >= parts.size()) {
-        return std::nullopt;
-    }
-    const std::string text = trim(parts[index]);
-    if (text.empty()) {
-        return std::nullopt;
-    }
-    for (const char character : text) {
-        if (!std::isdigit(static_cast<unsigned char>(character))) {
-            return std::nullopt;
-        }
-    }
-    const int value = std::stoi(text);
-    if (value < 0 || value > 255) {
-        return std::nullopt;
-    }
-    return value;
-}
-
-}  // namespace
-
 std::string Machine::screen(const std::string& args) {
     const std::vector<std::string> parts = split_plain(args, ',');
     if (parts.empty()) {
@@ -139,13 +112,6 @@ std::string Machine::locate(const std::string& args) {
         if (column < 1 || column > 80) {
             return "❌ Value " + std::to_string(column) + " for column is outside 1-80\n";
         }
-        // Until 20.1 this validated the range and returned: the statement said it
-        // had positioned the cursor and had not. With a machine attached it moves
-        // the cursor register, and the next PRINT lands there.
-        if (interpreter_.machine_attached()) {
-            interpreter_.machine_locate(static_cast<int>(row) - 1,
-                                        static_cast<int>(column) - 1);
-        }
     } catch (const std::exception& error) {
         return "❌ LOCATE error: " + std::string{error.what()} + "\n";
     }
@@ -161,17 +127,6 @@ std::string Machine::color(const std::string& args) {
     if (!parts.empty() && !trim(parts[0]).empty()) {
         const Rgb colour = resolve_colour(trim(parts[0]), turtle_.pen_colour());
         turtle_.set_color(colour);
-    }
-    // A machine's `COLOR` is two *palette numbers*, because a screen of the period
-    // stored a nibble per cell and not a colour. The turtle colour above is the
-    // drawing surface; these are the tube.
-    if (interpreter_.machine_attached()) {
-        if (const std::optional<int> ink = palette_index(parts, 0); ink.has_value()) {
-            interpreter_.machine_ink(*ink);
-        }
-        if (const std::optional<int> paper = palette_index(parts, 1); paper.has_value()) {
-            interpreter_.machine_paper(*paper);
-        }
     }
     if (parts.size() >= 2 && !trim(parts[1]).empty()) {
         const Rgb background = resolve_colour(trim(parts[1]), Rgb{10, 10, 20});

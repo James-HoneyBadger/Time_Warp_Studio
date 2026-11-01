@@ -30,11 +30,10 @@ a hand-written copy, kept in step by `time_warp_docs version` and checked by the
 - [ ] `make test` — the C++ suites
 - [ ] `make test-debug` and `make asan` — the other build trees
 - [ ] `make golden-check` — the ports against the frozen corpus, reporting only the
-      documented divergences: 479 language programs (476 agree, 3 written down) and
+      documented divergences: 442 language programs (439 agree, 3 written down) and
       192 Scheme programs (168 agree, 24 written down)
 - [ ] `make smoke` — all 94 example programs, through the native engines
-- [ ] `make command-matrix` — every command row as a program (566 rows)
-- [ ] `make hb-check` — the seven HB-2 demonstrations, and two processes on its desktop
+- [ ] `make command-matrix` — every command row as a program (532 rows)
 - [ ] `make repl-matrix` — every command row through the native REPL
 - [ ] `make lint-md`, `make doc-links`, `make doc-claims` and `make tree-check` — the
       documentation gates, and the one that fails if a `.py` comes back

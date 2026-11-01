@@ -18,8 +18,8 @@ namespace {
 ///
 /// The one fact -- display name, key, extensions -- lives in
 /// `timewarp/lang/registry.hpp`. This enum adds `Unknown`, and it maps by position:
-/// the two enumerations list the same eleven languages in the same order, which is
-/// what the `static_assert`s below hold.
+/// the two enumerations list the same ten languages in the same order, which is
+/// what the `static_assert` below holds.
 constexpr timewarp::lang::Language toRegistry(Language language) {
     return static_cast<timewarp::lang::Language>(static_cast<int>(language));
 }
@@ -35,46 +35,9 @@ static_assert(static_cast<int>(Language::Forth) ==
     return timewarp::lang::language_row(toRegistry(language));
 }
 
-/// The bytes a `QTextDocument` would rewrite: `'\r'` becomes `'\n'` and the
-/// no-break space becomes an ordinary space. The private-use range cannot come
-/// from a Latin-1 decode, so each mapping stays a bijection over 0x00-0xFF.
-constexpr char16_t kCarriageReturnCodePoint = 0xE00D;
-constexpr char16_t kNoBreakSpaceCodePoint = 0xE0A0;
-
 }  // namespace
 
 Language defaultLanguage() { return Language::Basic; }
-
-QString romBytesToText(const QByteArray& bytes) {
-    QString text;
-    text.reserve(bytes.size());
-    for (const char raw : bytes) {
-        const auto byte = static_cast<unsigned char>(raw);
-        if (byte == 0x0D) {
-            text.append(QChar{kCarriageReturnCodePoint});
-        } else if (byte == 0xA0) {
-            text.append(QChar{kNoBreakSpaceCodePoint});
-        } else {
-            text.append(QChar{static_cast<char16_t>(byte)});
-        }
-    }
-    return text;
-}
-
-QByteArray romTextToBytes(const QString& text) {
-    QByteArray bytes;
-    bytes.reserve(text.size());
-    for (const QChar character : text) {
-        if (character.unicode() == kCarriageReturnCodePoint) {
-            bytes.append('\r');
-        } else if (character.unicode() == kNoBreakSpaceCodePoint) {
-            bytes.append(static_cast<char>(0xA0));
-        } else {
-            bytes.append(static_cast<char>(character.unicode() & 0xFF));
-        }
-    }
-    return bytes;
-}
 
 QString displayName(Language language) {
     const timewarp::lang::LanguageRow* info = row(language);

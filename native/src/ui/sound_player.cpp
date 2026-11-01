@@ -101,21 +101,6 @@ void SoundPlayer::play(const std::vector<timewarp::audio::Tone>& tones) {
     start(wavFor(tones));
 }
 
-void SoundPlayer::playPcm(const std::vector<std::uint8_t>& samples, int sample_rate) {
-    if (samples.empty()) {
-        return;
-    }
-    // The machine mixes in unsigned bytes, which is what a 1992 DAC had; the WAV
-    // writer takes signed samples, so the midpoint moves rather than the scale.
-    std::vector<std::int16_t> pcm;
-    pcm.reserve(samples.size());
-    for (const std::uint8_t sample : samples) {
-        pcm.push_back(static_cast<std::int16_t>((static_cast<int>(sample) - 128) * 256));
-    }
-    const std::string bytes = timewarp::audio::wav(pcm, sample_rate > 0 ? sample_rate : 22050);
-    start(QByteArray::fromStdString(bytes));
-}
-
 void SoundPlayer::start(const QByteArray& wav) {
     // A directory rather than one fixed path, so two windows (or a test and the
     // IDE) cannot overwrite each other's tune mid-playback.

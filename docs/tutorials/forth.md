@@ -5,12 +5,11 @@ sense — no parentheses around conditions, no statement keywords — only **wor
 **stack**. A word takes what it needs from the top of the stack and leaves what it
 produces there, and a program is a sequence of words.
 
-It is the eleventh language in Time Warp Studio, and the one you can write an
+It is the newest language in Time Warp Studio, and the one you can write an
 interpreter for in an afternoon: that was always the point of it.
 
 Time Warp Studio runs Forth **whole-program**: a file is read, its definitions are
-built into a dictionary, and the words outside definitions run. The HB-1's ROM socket
-boots it like any other ROM, with `ok` as its prompt.
+built into a dictionary, and the words outside definitions run.
 
 ---
 
@@ -128,9 +127,8 @@ COUNT @ .          \ COUNT pushes its address; @ fetches the cell; ! stores one
 is the language's own 64 KiB of data space, allocated upwards from the end of the
 dictionary.
 
-`POKE` and `PEEK` are how a Forth program reaches the *machine*. On the HB-1 the
-character cells of the tube start at 32768, so this writes `HI` on the top line of
-the screen:
+`POKE` and `PEEK` reach the program's own 64 KiB map, which is the one BASIC's
+`POKE` and `PEEK` use: `POKE` is `( value address -- )`, the same order as `!`.
 
 ```forth
 72 32768 POKE
@@ -138,9 +136,7 @@ the screen:
 32768 PEEK .       \ 72
 ```
 
-`POKE` is `( value address -- )`, the same order as `!`. Off the machine — in the IDE
-— the same words read and write a memory map of their own, so a poke and a peek still
-agree.
+A poke and a peek always agree, and neither reaches outside the program.
 
 Numbers can be written in other bases without a `BASE` word: `$FF` is hexadecimal and
 `%1010` is binary.
@@ -149,7 +145,8 @@ Numbers can be written in other bases without a `BASE` word: `$FF` is hexadecima
 
 ## 6. The turtle
 
-The machine has a turtle, so the ROM has turtle words — postfix, like everything else,
+A Forth program has a turtle, so the language has turtle words — postfix, like
+everything else,
 which makes a square read almost like English:
 
 ```forth
@@ -195,5 +192,4 @@ it happened on, not a silent skip.
 ## Where to go next
 
 - [The language guide's Forth section](../LANGUAGE_GUIDE.md#forth) — every word.
-- [The HB-1 manual](../hb1/README.md) — the machine whose ROM socket Forth plugs into.
 - `Examples/forth/` in the repository: `hello.fs`, `turtle.fs` and `showcase.fs`.

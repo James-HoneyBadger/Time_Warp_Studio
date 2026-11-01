@@ -1,13 +1,12 @@
 // SPDX-License-Identifier: MIT
 //
-// The eleven languages, in one place.
+// The ten languages, in one place.
 //
 // This table is the only place a language's display name, protocol key or file
 // extension is written down. It used to be two tables -- one in
 // `src/ui/language.cpp` with a display name, a key and two extensions, and one
-// implied by the switches in `src/lang/language.cpp` -- and CHIP-8's `.ch8`/`.c8`
-// were spelled out in four files besides. Two copies of one fact drift, and the
-// copies that drift are the ones a reader trusts.
+// implied by the switches in `src/lang/language.cpp`. Two copies of one fact drift,
+// and the copies that drift are the ones a reader trusts.
 //
 // Header-only and Qt-free on purpose: the language executors, the Qt shell, the
 // command-line tools and the gates all ask the same table, and none of them should
@@ -33,7 +32,7 @@ namespace timewarp::lang {
 struct LanguageRow {
     /// The identity, matching the `Language` enumerator.
     Language language;
-    /// The name a person reads: "BASIC", "CHIP-8", "Smalltalk".
+    /// The name a person reads: "BASIC", "Logo", "Smalltalk".
     std::string_view display;
     /// The protocol and settings key: lowercase, no punctuation.
     std::string_view key;
@@ -44,7 +43,7 @@ struct LanguageRow {
 };
 
 /// The table, in `Language` order, so a row's index is its enumerator's value.
-inline constexpr std::array<LanguageRow, 11> kLanguageTable{{
+inline constexpr std::array<LanguageRow, 10> kLanguageTable{{
     {Language::Basic, "BASIC", "basic", {"bas", "bsc"}, false},
     {Language::Pilot, "PILOT", "pilot", {"pilot", "plt"}, false},
     {Language::Logo, "Logo", "logo", {"logo", "lg"}, true},
@@ -52,13 +51,12 @@ inline constexpr std::array<LanguageRow, 11> kLanguageTable{{
     {Language::Rexx, "REXX", "rexx", {"rexx", "rex"}, false},
     {Language::Scheme, "Scheme", "scheme", {"scm", "ss", "scheme"}, true},
     {Language::Focal, "FOCAL", "focal", {"foc", "focal"}, false},
-    {Language::Chip8, "CHIP-8", "chip8", {"ch8", "c8"}, true},
     {Language::Apl, "APL", "apl", {"apl", "dyalog"}, false},
     {Language::Smalltalk, "Smalltalk", "smalltalk", {"st", "smalltalk"}, true},
     {Language::Forth, "Forth", "forth", {"fs", "fth"}, true},
 }};
 
-static_assert(kLanguageTable.size() == 11,
+static_assert(kLanguageTable.size() == 10,
               "the table has one row per Language, in enumerator order");
 static_assert(kLanguageTable.front().language == Language::Basic &&
                   kLanguageTable.back().language == Language::Forth,

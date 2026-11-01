@@ -15,6 +15,12 @@ actually built; this records what is intended and why.
 the sections are kept as the record of what was ported, in what order, and why each
 decision was made.
 
+**One thing this plan ported has since been removed.** The CHIP-8 language and the
+tree's three emulated machines — the HB-1, the HB-2 and the CHIP-8 window — were
+ported here and were removed at 28.0, because they were a second product inside the
+first. The paragraphs below that describe them are the record of that port, not a
+description of what ships now. What ships is the IDE and the ten languages.
+
 ---
 
 ## What this plan is not

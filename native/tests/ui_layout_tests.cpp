@@ -26,8 +26,8 @@ int main(int argc, char** argv) {
     // Set before QApplication exists, or Qt tries to open a real display.
     qputenv("QT_QPA_PLATFORM", "offscreen");
     QApplication app{argc, argv};
-    // The HB-2 keeps its disk and cassette under the application's data directory, so
-    // point that at a scratch folder rather than a real machine's.
+    // The IDE keeps progress and settings under the application's data directory,
+    // so point that at a scratch folder rather than a real user's.
     const QString data_dir = QDir::tempPath() + QStringLiteral("/timewarp-ui-layout-tests");
     QDir{data_dir}.removeRecursively();
     qputenv("TIME_WARP_DATA_DIR", data_dir.toUtf8());
@@ -81,7 +81,6 @@ int main(int argc, char** argv) {
     test_assistant_panel_contract();
     test_repl_bar_runs_and_keeps_bindings();
     test_repl_bar_scheme_errors_and_language_switch();
-    test_the_hb2_window_runs_a_listing();
     test_repl_basic_direct_mode();
     test_the_outline_lists_and_jumps();
     test_the_scrubber_appears_only_when_there_is_ink();
@@ -122,7 +121,6 @@ int main(int argc, char** argv) {
     test_the_typing_pause_asks_for_the_text_before_the_caret();
     test_every_right_column_page_has_a_key();
     test_file_menu_new_opens_a_document();
-    test_tools_menu_opens_one_emulator();
     test_the_guided_tour_points_at_real_widgets();
     test_the_guided_tour_is_seen_once_and_rearmable();
     test_the_guided_tour_walks_its_steps();

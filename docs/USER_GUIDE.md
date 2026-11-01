@@ -1,8 +1,8 @@
 # Time Warp Studio — User Guide
 
-This is the manual for the Qt application: how to open it, organise work, meet the
-HB-1 home computer, try commands without writing a program, debug, use SQL, ask an
-AI assistant about a program, and drive the Studio from a script or a terminal. The per-language command
+This is the manual for the Qt application: how to open it, organise work, try
+commands without writing a program, debug, use SQL, ask an AI assistant about a
+program, and drive the Studio from a script or a terminal. The per-language command
 reference is
 [LANGUAGE_GUIDE.md](LANGUAGE_GUIDE.md), and the tutorials start at
 [tutorials/](tutorials/).
@@ -20,7 +20,6 @@ reference is
 ./run.sh --run Examples/basic/hello.bas       # open and run it
 ./run.sh --screenshot window.png --run file   # render the window and exit
 ./run.sh --compile program.bas --output hello # build a standalone artifact
-./run.sh --computer                           # open the HB-1
 ```
 
 `run.sh` builds incrementally with CMake and then replaces itself with the IDE, so
@@ -226,7 +225,6 @@ drawing through the same canvas queue.
 | Logo | `MAKE` variables persist; `TO ... END` procedure definitions do not, because each entry is run as a whole program. |
 | Scheme | The machine persists, so `define` and `set!` survive and expression values are echoed. |
 | Smalltalk | Each entry is a complete program; top-level variables, classes and methods do not carry over. |
-| CHIP-8 | Each entry is an assembly listing that runs as a whole program; memory and registers reset. |
 | Forth | Each entry is a whole program, because a definition spans as many lines as it likes; words defined in one entry are gone by the next, so `: DOUBLE 2 * ;` and `21 DOUBLE .` are two entries only if you retype the definition. |
 
 Practical notes:
@@ -255,220 +253,7 @@ Practical notes:
 
 ---
 
-## 4. The HB-1 computer
-
-Tools > **HB-1 Computer…** (`Ctrl+Alt+W`, or `./run.sh --computer`)
-opens a self-contained home computer: one CRT with text and graphics, a boot
-message at the top, and a prompt underneath. It is the machine the eleven languages
-share, presented the way a 1980s learner would have met them — a 1982 machine from
-a parallel universe, with the last forty years of design sense behind its engines.
-
-This section is the IDE-side tour. The machine has its own books, and they are
-the complete reference:
-
-- **[Owner's Manual](hb1/README.md)** — specifications, first boot, front
-  panel, keys, what the machine remembers, the limits.
-- **[The ROM library](hb1/roms.md)** — all eleven languages as cartridges.
-- **[HB DOS 1.0](hb1/hb-dos.md)** — every disk word, the catalogue, the
-  errors, the image format.
-- **[CONFIG](hb1/config.md)** — every setting and default, the phosphors, the
-  glass.
-- **[Inside the HB-1](hb1/inside.md)** — how it is built.
-- **[The machines](MACHINES.md)** — why the HB-1 and the CHIP-8 are the shape
-  they are.
-
-**The ROM socket.** The **ROM** selector cold-boots the machine into any of the eleven
-languages. The machine name, prompt and boot message change with it:
-
-| ROM | Prompt | Program memory |
-| --- | --- | --- |
-| BASIC | `READY.` | numbered program lines |
-| Logo | `?` | the editor contents |
-| Scheme | `>` | the editor contents |
-| FOCAL | `*` | the editor contents |
-| PILOT | `PILOT:` | the editor contents |
-| COMAL | `]` | the editor contents |
-| REXX | `REXX>` | the editor contents |
-| APL | `APL>` | the editor contents |
-| Smalltalk | `ST>` | the editor contents |
-| CHIP-8 | `CHIP8>` | the editor contents |
-
-Each ROM keeps its own program. Switching away and back restores what that ROM
-was holding, and the selected ROM, screen mode and all eleven program buffers persist
-in QSettings between sessions.
-
-**The screen.** **SCREEN** selects **TEXT**, **SPLIT** (the default) or
-**GRAPHICS**. In SPLIT the text screen is on the left and the turtle canvas on the
-right; a drawing that arrives while TEXT is selected switches to SPLIT once so it
-cannot be drawn out of sight. The text side has two pages:
-
-- **PROGRAM** is a real `CodeEditor`: line numbers, syntax colouring, checking,
-  undo, cursor movement and selection, exactly as in the main editor.
-- **OUTPUT** is the machine's screen: the boot banner, prompt echoes, program output
-  and errors.
-
-The prompt is below the screen. **Up** and **Down** recall earlier entries.
-
-**Prompt commands.** These are the machine's own words; everything else goes to
-the selected language's persistent REPL session.
-
-| Command | Effect |
-| --- | --- |
-| `RUN` | Run the program on the PROGRAM page. F9 does the same. `RUN "NAME"` loads a file from the disk and runs it |
-| `LIST` | Print the program to OUTPUT |
-| `NEW` | Erase the program and reset the REPL bindings |
-| `EDIT` | Move to the PROGRAM page |
-| `TEXT`, `GRAPHICS`/`GFX`, `SPLIT` | Change the screen mode |
-| `CLS`/`CLEAR` | Clear OUTPUT and the drawing (Ctrl+L) |
-| `HELP` or a bare `?` | Print the machine's command list |
-| `ROMS` | List the installed language ROMs |
-| `CONFIG`/`SETUP` | Open the machine's settings screen (Ctrl+, or **CONFIG**) |
-| `Shift+F9` | Stop a running program |
-
-**BASIC direct mode.** In the BASIC ROM a numbered line typed at the prompt is
-stored on the PROGRAM page in numeric order; a later line with the same number
-replaces it, and a bare number deletes it. `?` is shorthand for `PRINT`, so
-`? 6 * 7` prints 42. A line such as `2 + 2` is still an expression, not line 2.
-
-**HB DOS.** The machine has a disk — **HB DOS 1.0**, one 512-sector volume called
-`HBWARP`, in the manner of the DOS a 1980s learner met. It is where a program goes
-when it has to outlive the afternoon; the PROGRAM page itself is only memory.
-
-| Word | What it does |
-| --- | --- |
-| `CATALOG` (`CAT`) | List the disk: lock marker, ROM, sectors, name |
-| `SAVE "NAME"` | Save the program on the PROGRAM page |
-| `LOAD "NAME"` / `RUN "NAME"` | Load a file into memory, or load and run it |
-| `DELETE "NAME"` (`ERA`) | Erase a file; a locked file refuses |
-| `RENAME "OLD","NEW"` | Rename a file |
-| `LOCK`/`UNLOCK "NAME"` | Write-protect a file, or release it |
-| `VERIFY "NAME"` | Compare a file with the program in memory |
-| `TYPE "NAME"` | Print a file to OUTPUT |
-| `STATUS` | Volume, sectors used and free, the image's path |
-| `DIAL` (`BBS`) | Call WARP BOARD, the bulletin board on the other end of the line |
-| `LLIST` | Print the program to the paper tray |
-| `LPRINT "TEXT"` | Print a line to the paper tray |
-| `INIT` | Erase the whole disk; it asks a second time |
-
-**The telephone.** `DIAL` picks up the line and connects to **WARP BOARD**, a
-bulletin board kept in `~/.time_warp/bbs/board.json`. Enter a handle (remembered for
-next time), then `B` lists the messages, `R N` reads one, `P SUBJECT` posts -- type
-the body and a line with a single `.` to end it -- and `BYE` hangs up. The board is on
-the machine rather than on a network, so a class can show what a board *was* without
-a single packet leaving the room. [The board's manual](hb1/bbs.md) has the words and
-the file format.
-
-The **paper tray** is `paper.txt` in `~/.time_warp/print`, appended by `LLIST` and
-`LPRINT` with a headed page each time and named on the console with the line count.
-The machine has no printer port and never did: a file is the same artefact a printer
-produced -- something to keep, read or print elsewhere -- and it is the one output of
-the machine that survives being switched off.
-
-Names are upper-cased and last 30 characters; `SAVE HELLO` and `SAVE "HELLO"` are
-the same request. A program is measured in the 256-byte sectors the catalogue
-counts in, and a file that would not fit is refused rather than truncated
-(`?DISK FULL`). A catalogue looks like this:
-
-```text
-DISK VOLUME 254   HBWARP   512 SECTORS
-
- BASIC      001  HELLO
-*LOGO       001  SQUARE
-
-2 FILES   2 SECTORS USED   510 FREE
-```
-
-The `*` is the lock. A file remembers the ROM that can run it, so `LOAD "SQUARE"`
-cold-boots the machine into Logo before the program arrives. The volume is one
-image file, `~/.time_warp/disks/HBWARP.dsk` (`TIME_WARP_DATA_DIR` moves it), so a
-program saved in one lesson is there in the next, and a teacher can copy the image
-to another machine. The status line shows how many files the disk holds.
-
-Every word's exact refusals, the image format and a worked session are in the
-**[HB DOS reference](hb1/hb-dos.md)**.
-
-The computer's REPL sessions are its own: they do not share bindings with the
-REPL bar in the editor. Running a program stops the prompt session, exactly as
-Run does in the main window, so a program never starts inside a previous
-command's variables.
-
-**Settings.** **CONFIG** in the header, `Ctrl+,`, or `CONFIG` at the prompt
-opens the machine's configuration screen: three pages covering the boot ROM and
-boot screen, the start-up message, prompt history, program memory, the SPLIT
-courtesy, four phosphor palettes, two text sizes and the five glass strengths.
-Everything except the boot settings takes effect at once; **Apply**/**OK** keeps
-it, **Cancel** puts the machine back as it was. The boot ROM and boot screen
-apply at the next power-on rather than switching the machine immediately, so a
-settings change never discards the program being typed.
-
-Every control, its default and its stored key is in the
-**[CONFIG reference](hb1/config.md)**.
-
-**From a terminal.** `./run.sh --computer` opens the machine, booted into the
-first file's language if one is named; `--run` then runs its program.
-`--screenshot` photographs the machine and `--export` saves the drawing on its
-canvas rather than the editor's, so a lesson handout or an automation script sees
-the machine. `--machine <file.hb1>` boots from a **[machine image](hb1/README.md#the-whole-machine-as-one-file)**:
-the ROM, the screen, every ROM's program, the phosphor and the disk as one file,
-written by `SAVE MACHINE` at the machine's own prompt.
-
-### The CHIP-8 machine
-
-The Studio's other machine is the **[CHIP-8](chip8/README.md)** — the 1977
-virtual machine, and the program format the editor's CHIP-8 language runs. Tools >
-**CHIP-8 Emulator…** (`Ctrl+Shift+M`) opens it live:
-
-- a 64×32 screen (128×64 in SuperChip hi-res), sixty frames a second;
-- a clickable keypad mirrored on the PC keyboard (`1`–`4`, `Q`–`R`, `A`–`F`,
-  `Z`–`V`);
-- **Run/Pause**, single **Step**, **Reset**, and a speed from 1 to 2000 opcodes
-  per frame;
-- an inspector with **Registers**, **Memory** and the **Listing**, plus a
-  **ROM Library** that browses a folder you own;
-- sound while the sound timer is non-zero, and a mute;
-- **Rewind**: a strip under the screen that goes back through the last thirty seconds
-  of the machine, a quarter second at a time. Touching it pauses and captures the
-  frame you were looking at, so the right-hand end is exactly where you were;
-  **Run** resumes from where you rewound to and drops the future it would have had.
-  It replays the drawing, not the luck: a program drawing from `RND` gets its
-  registers and pixels back, not its dice roll.
-
-It assembles listings as well as loading binary ROMs, and drag-and-drop works for
-`.ch8` and `.c8` files. The editor's Run still handles CHIP-8 as a whole program
-for lessons and parity checks; the window is the machine with a clock and a
-keypad. The complete reference is in
-[the CHIP-8 manuals](chip8/README.md): the
-[machine manual](chip8/README.md), the
-[assembler](chip8/assembly.md) and the
-[instruction set](chip8/instruction-set.md).
-
-### The HB-2
-
-The third machine is the **[HB-2](hb2/README.md)**, the HB-1's 1992 successor: its own
-processor (HB-16), a 640 x 480 framebuffer with a blitter and sprites, four channels of
-sampled audio, and the 1982 memory map kept whole as `MODE 0`. Tools >
-**HB-2 Model 92…** (`Ctrl+Alt+2`, or `./run.sh --hb2`) opens it:
-
-- **Screen** — the glass, in whichever mode the program chose; click it for the
-  keyboard, and a gamepad the Studio can see is polled into the machine's joystick
-  registers every frame.
-- **Prompt** — the machine's own words (`HELP` lists them): the disk, the cassette
-  (`TAPE`, `CSAVE`, `CLOAD`, `REWIND`), the monitor, the module bay (`MODULE PACK`
-  writes what is running as a package, `MODULE BOOT` starts one onto the desktop), the
-  ROM socket (`ROM BASIC`) and `RUN`.
-- **Monitor** — registers, a disassembly at the program counter, Step, Break and
-  Run-to-breakpoint.
-- **Program** — the listing, and the **ROM socket** above it. `HB-16 ASSEMBLER` runs
-  the listing as machine code; choosing a language runs it through that engine with the
-  machine's bus attached, so `POKE` writes video memory, `LOCATE`/`COLOR` reach the
-  chip, `SYS` calls HB-16 code, and `STICK` reads the machine's joystick.
-
-The complete reference is [the HB-2 manual](hb2/README.md) and
-[the HB-16 instruction set](hb2/instruction-set.md).
-
----
-
-## 5. Debugging
+## 4. Debugging
 
 ### Breakpoints
 
@@ -520,10 +305,8 @@ rather than the run, statements that are re-run print a second time; an `ℹ️ 
 statement(s)` line marks where the repeat starts.
 
 Which languages: all six line-by-line ones (BASIC, FOCAL, PILOT, COMAL, APL, REXX),
-Logo, Forth — whose unit is a token, and whose 64K data space is only copied when a
-program has written to it — and CHIP-8, whose unit is an instruction and whose
-checkpoint is the whole machine, screen included, so a rewind puts the pixels back
-with the registers. Smalltalk stops at its chunk boundaries but cannot be walked
+Logo and Forth — whose unit is a token, and whose 64K data space is only copied when
+a program has written to it. Smalltalk stops at its chunk boundaries but cannot be walked
 back yet, so the buttons are dead for it and say why; Scheme is not offered it at
 all, because that machine's state is an arena and a continuation chain rather than a
 value. History costs one copy per statement while it is on; off costs nothing.
@@ -550,7 +333,7 @@ BASIC's memory window, and the IDE's wall clock and delivered ink. Use it to tel
 
 ---
 
-## 6. SQL and the Database tab
+## 5. SQL and the Database tab
 
 The Studio embeds SQLite. The 🗄 **Database** tab opens or
 creates a database file, lists its tables, shows a table's `CREATE` statement, and
@@ -575,15 +358,15 @@ SQL forms by language:
 
 The shared `SQL` statement works in BASIC, FOCAL, PILOT, COMAL, REXX and APL.
 Logo uses `SQL SELECT ...` as a command; Scheme uses `(sql "...")`; Smalltalk uses
-`SQL run: '...'`. Two languages have no SQL form: CHIP-8, whose bytecode has no
-strings to carry a statement, and Forth.
+`SQL run: '...'`. Two languages have no SQL form: Smalltalk's library reaches the
+database instead of a statement carrying the query, and Forth has no word for it.
 
 SQLite is a build/runtime dependency of the Qt application. The compiled programs
 produced by `twc` link it too and accept `--db FILE`.
 
 ---
 
-## 6a. The embedded terminal
+## 6. The embedded terminal
 
 **Settings > Workspace > Enable the embedded terminal** adds a 💻 Terminal tab beside
 the console. It is off until you tick it, and it is a real terminal: the shell runs
@@ -628,7 +411,7 @@ Builds if necessary and launches the IDE. Arguments pass through, so
 
 `twc` embeds the source as bytes, links the language engine (and SQLite), and
 produces an executable that runs the program without the Studio. It works for all
-eleven languages, including binary CHIP-8 ROMs. Options:
+ten languages. Options:
 
 | Option | Meaning |
 | --- | --- |
@@ -684,10 +467,6 @@ It is off until you set it up, and nothing is sent until you press a button.
 - The key may come from `TIME_WARP_AI_API_KEY` instead of a store, and **Keep the key
   on this machine** unticked leaves it nowhere at all. A stored key goes in the
   system keyring where the build found one, and in the settings file otherwise.
-- The HB-1 and the CHIP-8 each have the same assistant in a dialog -- the HB-1's 🤖
-  button and the CHIP-8's **🤖 Assistant…** -- and it asks about the program that
-  machine is holding. The HB-2 has no assistant of its own; ask about its listing
-  from the editor.
 
 `./native/build/time_warp_ai` is the same assistant from a shell — `check`,
 `explain`, `fix`, `write` and the rest. [AI.md](AI.md) is the manual: what is sent,

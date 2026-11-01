@@ -34,7 +34,7 @@ namespace timewarp::ui {
 /// One row of the table: a command, the smallest program that exercises it, and the
 /// answer the gates expect.
 struct CommandRow {
-    /// The row's language as the table spells it: `BASIC`, `CHIP8`, `SMALLTALK`. It
+    /// The row's language as the table spells it: `BASIC`, `SMALLTALK`, `FORTH`. It
     /// is the enumerator name, so `languageFromKey(language.toLower())` maps it.
     QString language;
     QString command;

@@ -7,7 +7,6 @@
 #include <span>
 
 #include "timewarp/lang/basic.hpp"
-#include "timewarp/lang/chip8.hpp"
 #include "timewarp/lang/comal.hpp"
 #include "timewarp/lang/executor.hpp"
 #include "timewarp/lang/focal.hpp"
@@ -81,8 +80,6 @@ bool is_whole_program(Language language) noexcept {
 Executor executor_for(Language language) noexcept {
     switch (language) {
         // Whole-program executors.
-        case Language::Chip8:
-            return &execute_chip8;
         case Language::Logo:
             return &execute_logo;
         case Language::Smalltalk:

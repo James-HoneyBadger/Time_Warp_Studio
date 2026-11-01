@@ -33,7 +33,6 @@
 #include "timewarp/ui/benchmark.hpp"
 #include "timewarp/ui/console.hpp"
 #include "timewarp/ui/breakpoints.hpp"
-#include "timewarp/ui/chip8_window.hpp"
 #include "timewarp/ui/code_editor.hpp"
 #include "timewarp/ui/classroom_marker.hpp"
 #include "timewarp/ui/command_palette.hpp"
@@ -46,7 +45,6 @@
 #include "timewarp/ui/preferences.hpp"
 #include "timewarp/ui/profile_report.hpp"
 #include "timewarp/ui/project_panel.hpp"
-#include "timewarp/ui/retro_computer.hpp"
 #include "timewarp/ui/repl_runner.hpp"
 #include "timewarp/ui/sql_panel.hpp"
 #include "timewarp/sql/database.hpp"
@@ -930,8 +928,8 @@ void MainWindow::runNatively(CodeEditor* editor, timewarp::lang::Language langua
         }
         // The console says where the run is, because the canvas cannot: a learner
         // needs to know which statement has not happened yet, not that something
-        // happened somewhere. Line 0 means the program has no source lines (a
-        // binary CHIP-8 ROM), so the instruction is named rather than a line.
+        // happened somewhere. Line 0 means the engine's position is not a source
+        // line, so the instruction is named rather than a line.
         setExecutionState(tr("paused"),
                           line > 0 ? tr("Paused before line %1").arg(line)
                                    : tr("Paused before the next instruction"));

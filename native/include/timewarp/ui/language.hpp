@@ -18,7 +18,7 @@
 
 namespace timewarp::ui {
 
-/// One of the six languages the IDE teaches, or `Unknown`.
+/// One of the ten languages the IDE runs, or `Unknown`.
 ///
 /// The order matches the Python enum. New languages are append-only for the same
 /// reason they are there: persisted state and saved sessions reference these by
@@ -31,7 +31,6 @@ enum class Language {
     Rexx,
     Scheme,
     Focal,
-    Chip8,
     Apl,
     Smalltalk,
     Forth,
@@ -71,17 +70,5 @@ enum class Language {
 /// The full name filter for an "open file" dialog, e.g.
 /// `All programs (*.bas *.pilot *.logo *.comal *.rexx *.scm);;BASIC (*.bas);;…`
 [[nodiscard]] QString openFileFilter();
-
-/// Decodes a binary CHIP-8 ROM into the text a `QTextDocument` can hold, and
-/// `romTextToBytes` reverses it.
-///
-/// A `QTextDocument` normalises carriage returns and no-break spaces, so bytes
-/// 0x0D and 0xA0 would be saved and run as 0x0A and 0x20 if the ROM were
-/// decoded as plain Latin-1. Storing each as a private-use code point, which a
-/// Latin-1 decode can never produce, keeps every byte for the writer and the
-/// runner. A listing never passes through here: it contains no NUL and is
-/// edited as ordinary source.
-[[nodiscard]] QString romBytesToText(const QByteArray& bytes);
-[[nodiscard]] QByteArray romTextToBytes(const QString& text);
 
 }  // namespace timewarp::ui

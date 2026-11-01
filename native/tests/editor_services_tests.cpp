@@ -43,7 +43,6 @@
 #include "temp_dir.hpp"
 #include "timewarp/ui/autosave.hpp"
 #include "timewarp/ui/breakpoints.hpp"
-#include "timewarp/ui/chip8_library.hpp"
 #include "timewarp/ui/export.hpp"
 #include "timewarp/ui/find_in_files.hpp"
 #include "timewarp/ui/formatter.hpp"
@@ -52,7 +51,6 @@
 #include "timewarp/ui/snippets.hpp"
 #include "timewarp/ui/console.hpp"
 #include "timewarp/ui/diff.hpp"
-#include "timewarp/ui/chip8_archive.hpp"
 #include "timewarp/ui/desktop_notification.hpp"
 #include "timewarp/ui/language.hpp"
 #include "timewarp/ui/terminal_text.hpp"
@@ -700,44 +698,6 @@ void test_autosave_store_follows_the_data_directory() {
     scratch.restoreDataDir();
 }
 
-void test_the_rom_library_scans_nested_folders() {
-    announce("CHIP-8 ROM library: the scan");
-    const tw::test::TempDir dir;
-    TW_CHECK(dir.valid());
-    dir.write("top.ch8", QByteArray{"\0"});
-    // Uppercase suffixes are found on every filesystem: the scan looks at the
-    // suffix lowercased rather than leaving it to a name filter's case rules.
-    dir.write("games/nested.CH8", QByteArray{"\0"});
-    dir.write("demos/demo.c8", QByteArray{"\0"});
-    dir.write("hires/game.rom", QByteArray{"\0"});
-    dir.write("notes.txt", "not a program");
-    dir.write("games/readme.md", "not a program");
-
-    const QList<timewarp::ui::Chip8Rom> roms = timewarp::ui::chip8RomsIn(dir.path());
-    TW_CHECK_EQ(roms.size(), 4);
-    if (roms.size() == 4) {
-        // Sorted by the path inside the folder, which is the games/ and hires/
-        // grouping a downloaded pack already has.
-        TW_CHECK_EQ(roms.at(0).relative, QStringLiteral("demos/demo.c8"));
-        TW_CHECK_EQ(roms.at(1).relative, QStringLiteral("games/nested.CH8"));
-        TW_CHECK_EQ(roms.at(2).relative, QStringLiteral("hires/game.rom"));
-        TW_CHECK_EQ(roms.at(3).relative, QStringLiteral("top.ch8"));
-        TW_CHECK(roms.at(1).path.endsWith(QStringLiteral("games/nested.CH8")));
-    }
-
-    // A folder that has been moved is empty, not an error.
-    TW_CHECK(timewarp::ui::chip8RomsIn(dir.path() + QStringLiteral("/missing")).isEmpty());
-    TW_CHECK(timewarp::ui::chip8RomsIn(QString{}).isEmpty());
-
-    // The remembered folder round-trips, and an empty string clears it.
-    const QString previous = timewarp::ui::storedChip8RomFolder();
-    timewarp::ui::storeChip8RomFolder(dir.path());
-    TW_CHECK_EQ(timewarp::ui::storedChip8RomFolder(), dir.path());
-    timewarp::ui::storeChip8RomFolder(QString{});
-    TW_CHECK(timewarp::ui::storedChip8RomFolder().isEmpty());
-    timewarp::ui::storeChip8RomFolder(previous);
-}
-
 
 // The diff is what makes a list of saved copies a decision rather than a quiz.
 // Three properties matter: what changed is reported with the right sign, the
@@ -933,7 +893,6 @@ void test_the_outline_finds_named_places() {
     // A language with no outline rules says so by returning nothing, rather than
     // guessing at what a "name" might be.
     TW_CHECK(outlineFor(Language::Focal, QStringLiteral("1.10 T \"HI\"\n")).isEmpty());
-    TW_CHECK(outlineFor(Language::Chip8, QStringLiteral("JP 0x200\n")).isEmpty());
     // And an empty document is empty, not a crash.
     TW_CHECK(outlineFor(Language::Logo, QString{}).isEmpty());
 
@@ -945,28 +904,6 @@ void test_the_outline_finds_named_places() {
     }
 }
 
-void test_rom_bytes_survive_a_document() {
-    announce("CHIP-8: a ROM's bytes survive a document");
-    QByteArray all;
-    for (int byte = 0; byte < 256; ++byte) {
-        all.append(static_cast<char>(byte));
-    }
-    QTextDocument document;
-    document.setPlainText(timewarp::ui::romBytesToText(all));
-    TW_CHECK(timewarp::ui::romTextToBytes(document.toPlainText()) == all);
-
-    // The bytes that motivated the codec: decoded as Latin-1 and put through a
-    // document, 0x0D comes back as 0x0A and 0xA0 as 0x20 -- different programs.
-    const QByteArray carriage_return{"\x0D", 1};
-    const QByteArray line_feed{"\x0A", 1};
-    QTextDocument naive;
-    naive.setPlainText(QString::fromLatin1(carriage_return));
-    TW_CHECK(naive.toPlainText().toLatin1() == line_feed);
-    const QByteArray no_break_space{"\xA0", 1};
-    const QByteArray space{"\x20", 1};
-    naive.setPlainText(QString::fromLatin1(no_break_space));
-    TW_CHECK(naive.toPlainText().toLatin1() == space);
-}
 
 // ---------------------------------------------------------------------------
 // Export
@@ -1396,9 +1333,9 @@ int main(int argc, char** argv) {
     qputenv("QT_QPA_PLATFORM", "offscreen");
     QGuiApplication app{argc, argv};
     // QSettings is the Windows registry here, and a registry path needs an
-    // organization: without one every write is dropped, so the breakpoint and
-    // CHIP-8 folder stores round-tripped to nothing. The other suites already do
-    // this; this one never had a setting to keep before.
+    // organization: without one every write is dropped, so the breakpoint store
+    // round-tripped to nothing. The other suites already do this; this one never
+    // had a setting to keep before.
     QCoreApplication::setOrganizationName(QStringLiteral("TimeWarpTests"));
 
     // See ui_layout_tests: the catalogue comes from the checkout unless the
@@ -1410,7 +1347,6 @@ int main(int argc, char** argv) {
     test_basic_indents_a_loop_body();
     test_basic_else_body_is_indented();
     test_the_console_knows_a_line_link_and_a_failure();
-    tw::editor_services::test_the_archive_catalogue_is_a_cleared_list();
     tw::editor_services::test_the_finish_notification_says_one_thing();
     tw::editor_services::test_terminal_text_strips_escapes();
     tw::editor_services::test_terminal_text_applies_carriage_returns();
@@ -1437,8 +1373,6 @@ int main(int argc, char** argv) {
     test_snippet_insertion_resolves_placeholders();
     test_autosave_store();
     test_autosave_store_follows_the_data_directory();
-    test_rom_bytes_survive_a_document();
-    test_the_rom_library_scans_nested_folders();
     test_code_pdf_export();
     test_printing_reaches_a_paged_device();
     test_session_html_export();

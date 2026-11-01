@@ -59,8 +59,8 @@ public:
     /// whole-program languages: their code is not one statement per line, and
     /// Logo's statement list skips the procedure definition lines.
     ///
-    /// `line` is 1-based; 0 means "no source line" (a binary CHIP-8 ROM), where a
-    /// step still stops but a breakpoint cannot match. A breakpoint pauses once
+    /// `line` is 1-based; 0 means "no source line", where a step still stops but a
+    /// breakpoint cannot match. A breakpoint pauses once
     /// per line: a Smalltalk line can hold several message sends, and a Continue
     /// that stops again on the same line is not a continue. A step still stops
     /// at every send.
@@ -149,7 +149,8 @@ private:
     /// continue, and returning to the line after running another one pauses again.
     int last_seen_line_ = -1;
     /// Fast path for the hot loops: false when there are no breakpoints and no
-    /// step pending, so a CHIP-8 opcode pays one atomic load rather than a lock.
+    /// step pending, so a whole-program pause point pays one atomic load rather than
+    /// a lock.
     std::atomic<bool> engaged_{false};
 };
 

@@ -21,13 +21,10 @@ namespace {
 constexpr int kInComment = 1;
 
 /// The pattern every language uses for a decimal number unless it says
-/// otherwise. The lookarounds are what keep `V0` and `0x1F` from being read as
-/// three numbers and a letter.
+/// otherwise. The lookarounds are what keep an identifier like `H1` from being read
+/// as a letter and two numbers.
 constexpr auto kDecimalNumber =
     R"((?<![A-Za-z0-9_])\d+(?:\.\d+)?(?:[eE][+-]?\d+)?(?![A-Za-z0-9_]))";
-
-/// CHIP-8 writes addresses as `0x1F` or `$1F`, and small literal numbers bare.
-constexpr auto kHexOrDecimal = R"((?<![A-Za-z0-9_])(?:0[xX][0-9A-Fa-f]+|\$[0-9A-Fa-f]+|\d+)(?![A-Za-z0-9_]))";
 
 /// Builds a word list from ASCII literals, which is how every keyword table
 /// below is written.
@@ -55,7 +52,7 @@ struct LanguageRules {
     QStringList strings;
     /// Overrides the default decimal pattern when a language needs to.
     QString numbers;
-    /// Whole-line shapes: PILOT's `T:`, CHIP-8's labels, Scheme's `#t`.
+    /// Whole-line shapes: PILOT's `T:`, Scheme's `#t`.
     QStringList directives;
 };
 
@@ -187,22 +184,6 @@ struct LanguageRules {
             rules.keywords = words({
                 "ASK", "COMMENT", "DO", "ERASE", "FOR", "FPI", "FRAN",
                 "GOTO", "IF", "QUIT", "RETURN", "SET", "TYPE",
-            });
-            break;
-
-        case Language::Chip8:
-            rules.case_insensitive = true;
-            rules.line_comments = words({";"});
-            rules.numbers = QString::fromLatin1(kHexOrDecimal);
-            rules.directives = words({R"(^\s*[A-Za-z_][A-Za-z0-9_]*:)"});
-            rules.keywords = words({
-                "ADD", "AND", "CALL", "CLS", "DB", "DRW", "DW", "HALT", "JP",
-                "LD", "OR", "RET", "RND", "SE", "SHL", "SHR", "SKNP", "SKP",
-                "SNE", "SUB", "SUBN", "XOR",
-                // The registers: a listing names them, so they are coloured even
-                // though no dispatch table holds them.
-                "V0", "V1", "V2", "V3", "V4", "V5", "V6", "V7", "V8", "V9",
-                "VA", "VB", "VC", "VD", "VE", "VF", "I", "DT", "ST", "PC", "SP",
             });
             break;
 

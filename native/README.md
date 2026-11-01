@@ -7,7 +7,7 @@ each one replaced or absorbed its Python original:
 | --- | --- | --- |
 | `timewarp_expr` | `utils/expression_evaluator.py` | the expression lexer/evaluator shared by every language executor |
 | `timewarp_scheme` | `languages/scheme.py` | a tree-walking Scheme interpreter with **no native recursion** |
-| `timewarp_lang` | `languages/*.py` | the shared interpreter loop and all eleven executors: BASIC, FOCAL, PILOT, COMAL, APL and REXX line by line, CHIP-8, Logo, Smalltalk and Forth whole-program |
+| `timewarp_lang` | `languages/*.py` | the shared interpreter loop and all ten executors: BASIC, FOCAL, PILOT, COMAL, APL and REXX line by line, Logo, Smalltalk and Forth whole-program |
 | `timewarp_canvas` | bridging `ui/output.py` and `ui/canvas.py` | a lock-free single-producer/single-consumer canvas command queue, with an optional Qt6 adapter |
 
 `timewarp_expr` came first: a self-contained, hot, allocation-sensitive unit with
@@ -85,8 +85,7 @@ native/
     ├── canvas_queue_bench.cpp        queue throughput and coalescing ratio
     ├── player.cpp                    the standalone audio player
     ├── gates/                        `time_warp_gates`: smoke, commands, repl,
-    │                                 golden, tree, registry, structure and hb --
-    │                                 every program gate, and the HB-2's harness
+    │                                 golden, tree, registry and structure
     ├── docs/                         `time_warp_docs`: links, claims, version, md
     ├── icon/                         `time_warp_icon`: the packaged icons
     └── twc/                          the `./twc` launcher's C++ support
@@ -133,12 +132,8 @@ make golden-check
 ./build/time_warp_gates commands
 ./build/time_warp_gates repl
 
-# The HB-2: assemble a listing, run the machine, and see the registers and the screen
-./build/time_warp_gates hb Examples/hb2/desktop.s --ticks 4 --screen
-./build/time_warp_gates hb --map
-
 # The lessons: the curriculum, and the two tools that drive it
-./build/time_warp_teach validate     # runs all 66 solutions through the engine
+./build/time_warp_teach validate     # runs all 60 solutions through the engine
 ./build/time_warp_teach outline      # the scheme of work
 ./build/time_warp_learn list         # what a learner sees
 
@@ -391,16 +386,10 @@ executors are plain functions. `TurtleHost` is an abstract drawing surface, so t
 engine has no Qt dependency and a test can record what was drawn as text.
 
 Every language is ported: **BASIC**, **FOCAL**, **PILOT**, **COMAL**, **APL** and
-**REXX** line-by-line, and **CHIP-8**, **Logo** and **Smalltalk** whole-program
-(with the CHIP-8 assembler in `chip8.cpp`). Scheme lives in `src/scheme/` on its
-own explicit-stack machine. `Chip8Machine` implements the original machine plus the
-SuperChip 1.1 extensions -- 64x32 and 128x64 modes, the scrolls, DXY0's 16x16
-sprite, FX30's 8x10 font and the FX75/FX85 RPL flags -- and the frozen corpus
-records the reference answering the same set, because the parity gate compares the
-two.
-MegaChip's planes and audio are deliberately out of scope. The emulator window
-browses a user-supplied ROM folder (`chip8_library.{hpp,cpp}`); the studio ships no
-ROMs, because most circulating CHIP-8 programs are somebody else's copyright. The ports are also where the native expression
+**REXX** line-by-line, and **Logo**, **Smalltalk** and **Forth** whole-program.
+Scheme lives in `src/scheme/` on its own explicit-stack machine, and the frozen
+corpus records the reference answering the same set, because the parity gate
+compares the two. The ports are also where the native expression
 evaluator became part of a Run: `Interpreter::evaluate_expression` uses
 `timewarp_expr`, so `C:`, `B:` and BASIC arithmetic are the arithmetic the
 expression library is gated against. `executor_for()` answers for the ten executor
@@ -427,7 +416,7 @@ The port is checked against the reference's own answers, not against a descripti
 of them:
 
 ```bash
-make golden-check     # 479 language programs and 192 Scheme ones, 0 differences
+make golden-check     # 442 language programs and 192 Scheme ones, 0 differences
 ```
 
 That gate runs every command-table row and every example through the native engines
@@ -1144,9 +1133,7 @@ page next to a 60x40 page must still report a 100x100 minimum.
   File > Export Drawing makes, so a script and a teacher get the same picture — and
   renders the whole window to a PNG with `--screenshot <path>`, so the
   result can be looked at without a display -- add `--run` to execute the file
-  first. `--computer` points all three at the HB-1 window, so the boot
-  screen and the machine's own drawing are what a script captures. That is how the
-  findings below were caught; a structural test would have
+  first. That is how the findings below were caught; a structural test would have
   passed either way, and the status bar painting a message on top of the document
   path was visible in exactly one place and nowhere else.
 
@@ -1207,7 +1194,7 @@ wrong name.
 
 ### The canvas, and what runs
 
-**All eleven languages run.** Scheme goes through its own machine on a background
+**All ten languages run.** Scheme goes through its own machine on a background
 thread; the other ten run in process through `timewarp_lang`. No program is sent to
 a Python engine any more, and the engine itself is deleted. Every one of the 81
 examples in the smoke gate executes, and the 48 required to draw produce drawing --
@@ -1336,8 +1323,8 @@ strokes a circle costs.
 * Debug, Continue and Trace are wired for every language: a run stops at a gutter
   breakpoint and the three actions start a run, resume it and step one unit. The unit
   is a statement for the line-loop languages, a top-level statement for Logo, a
-  message send for Smalltalk and an instruction for CHIP-8. Scheme keeps its own
-  debugger and panel. Watch expressions and data breakpoints are part of the same
+  message send for Smalltalk and a token for Forth. Scheme keeps its own debugger
+  and panel. Watch expressions and data breakpoints are part of the same
   Debug panel.
 * **Projects** are the `timewarp_project` model plus the Projects dock: named groups,
   files added individually or by folder, drag-and-drop moves, missing-file reporting,
@@ -1346,28 +1333,6 @@ strokes a circle costs.
   `Machine`), with drawing on the same canvas queue as a normal run. BASIC has a
   direct mode on top: numbered lines are stored in the editor in numeric order,
   `LIST`/`RUN`/`NEW` operate on the document, and `?` is PRINT.
-* **The CHIP-8 machine** is the assembler and `Chip8Machine` in `src/lang/chip8.cpp`
-  — the editor's whole-program executor — plus `Chip8Window` and `Chip8Emulator`
-  for the live path: a 60 Hz `QTimer`, 1–2000 opcodes a frame, the delay and sound
-  timers, a keypad mirrored on the PC keyboard, a snapshot inspector (registers,
-  memory, listing), a file loader that accepts a listing or a binary ROM, and
-  `Chip8LibraryDialog`, which browses a folder the user owns. No ROMs are bundled:
-  most circulating CHIP-8 programs are somebody else's copyright. Manuals:
-  `docs/chip8/README.md`, `docs/chip8/assembly.md`, `docs/chip8/instruction-set.md`.
-* **The HB-1** is `RetroComputerWindow`: one CRT with a boot intro, a
-  prompt, a ROM selector for all eleven languages, TEXT/SPLIT/GRAPHICS modes, a real
-  `CodeEditor` on its PROGRAM page and a `TurtleCanvas` beside it. It owns its own
-  queue, bridge, `ReplRunner` and `NativeRunner`; per-ROM programs, the ROM and the
-  mode persist in QSettings. `retro_settings.{hpp,cpp}` holds its configuration —
-  boot ROM and screen, start-up message, history depth, program memory, the SPLIT
-  rule, the phosphor palette, two text sizes and the CRT strengths — and the dialog
-  that edits it, reached from the header's CONFIG button, `Ctrl+,` or the `CONFIG`
-  command. `hb_dos.{hpp,cpp}` is **HB DOS 1.0**, the machine's disk: one volume of
-  named programs in the style of Apple DOS 3.3, with `CATALOG`/`SAVE`/`LOAD`/`RUN`/
-  `DELETE`/`RENAME`/`LOCK`/`UNLOCK`/`VERIFY`/`TYPE`/`STATUS`/`INIT`, sizes in
-  256-byte sectors and a JSON image under `~/.time_warp/disks`. Its manuals are
-  `docs/hb1/README.md` and the rest of `docs/hb1/`; the premise behind both
-  machines is `docs/MACHINES.md`.
 * **The curriculum** is `timewarp_lessons` (`include/timewarp/lessons/`): it reads
   `share/lessons.json`, judges a learner's program with the engines and a recording
   host, and keeps the learner's place in `~/.time_warp/progress.json`. The Lessons
@@ -1397,5 +1362,5 @@ Landed since this file was first written: the runner bridge (a `QProcess` runnin
 `worker.py`, since removed), the real output console and turtle canvas on top of
 `CanvasCommandQueue`, the two-row toolbar, `native/` under the repository Makefile and
 CI, the function-key row, the lesson and classroom panels, projects, the REPL bar,
-watch expressions and data breakpoints, SQL, the JSON-RPC API, the `twc` compiler and
-the HB-1 computer.
+watch expressions and data breakpoints, SQL, the JSON-RPC API and the `twc`
+compiler.

@@ -44,7 +44,6 @@
 #include "timewarp/ui/app_paths.hpp"
 #include "timewarp/ui/benchmark.hpp"
 #include "timewarp/ui/breakpoints.hpp"
-#include "timewarp/ui/chip8_window.hpp"
 #include "timewarp/ui/code_editor.hpp"
 #include "timewarp/ui/classroom_marker.hpp"
 #include "timewarp/ui/command_palette.hpp"
@@ -59,7 +58,6 @@
 #include "timewarp/ui/preferences.hpp"
 #include "timewarp/ui/profile_report.hpp"
 #include "timewarp/ui/project_panel.hpp"
-#include "timewarp/ui/retro_computer.hpp"
 #include "timewarp/ui/repl_runner.hpp"
 #include "timewarp/ui/sql_panel.hpp"
 #include "timewarp/sql/database.hpp"
@@ -369,9 +367,8 @@ void MainWindow::clearRecentFiles() {
 
 namespace {
 
-/// The examples resolver used to live here. It is in `app_paths.cpp` now because
-/// the CHIP-8 emulator starts on a bundled program and must find it the same way
-/// File > Open Example does.
+/// The examples resolver used to live here. It is in `app_paths.cpp` now, so that
+/// File > Open Example and every other reader of `Examples/` find it one way.
 
 }  // namespace
 
@@ -431,9 +428,9 @@ void MainWindow::rebuildExamplesMenu() {
         if (files.isEmpty()) {
             continue;
         }
-        // The folder name is the settings key ("chip8"), so the display name
-        // ("CHIP-8") comes from the same table the rest of the UI uses rather
-        // than from the directory.
+        // The folder name is the settings key ("logo"), so the display name
+        // ("Logo") comes from the same table the rest of the UI uses rather than
+        // from the directory.
         const Language language = languageFromKey(folder);
         QMenu* submenu = examples_menu_->addMenu(
             language == Language::Unknown ? folder : displayName(language));
@@ -902,9 +899,8 @@ void MainWindow::refreshDocumentState() {
     }
     if (debug_panel_ != nullptr) {
         // Every language can stop now: the line-loop languages at a statement,
-        // Logo at a top-level statement, Smalltalk at a message send, Forth at a
-        // token and CHIP-8 at an instruction. The call stack remains the Scheme
-        // machine's own.
+        // Logo at a top-level statement, Smalltalk at a message send and Forth at a
+        // token. The call stack remains the Scheme machine's own.
         debug_panel_->setAvailable(true, QString{});
         debug_panel_->setLineNumber(editor->currentLine());
     }
@@ -977,21 +973,7 @@ bool MainWindow::openFile(const QString& path, OpenFailure failure) {
     QByteArray bytes = file.readAll();
     file.close();
 
-    const bool chip8 = languageForFile(absolute) == Language::Chip8;
-    const bool binary_rom = chip8 && bytes.contains('\0');
-    QString text;
-    if (binary_rom) {
-        // A .ch8 file may be a binary ROM. A document normalises '\r' to '\n',
-        // so the bytes go through the codec in `language.hpp` rather than
-        // through `fromLatin1`: that is what keeps 0x0D a 0x0D when the file is
-        // run or saved back.
-        text = romBytesToText(bytes);
-    } else {
-        if (chip8 && bytes.startsWith("\xEF\xBB\xBF")) {
-            bytes.remove(0, 3);
-        }
-        text = chip8 ? QString::fromLatin1(bytes) : QString::fromUtf8(bytes);
-    }
+    QString text = QString::fromUtf8(bytes);
     // A byte-order mark is not part of the program. Left in place it is an
     // invisible first character, so the first token of the first line fails to
     // parse with an error pointing at a column that looks empty.
@@ -1007,19 +989,12 @@ bool MainWindow::openFile(const QString& path, OpenFailure failure) {
     // future change to how the text is loaded cannot make a just-opened file look
     // dirty and prompt for a save it does not need.
     editor->document()->setModified(false);
-    // A ROM is bytecode, not editable source. Showing it in the editor is useful
-    // (it is the thing Run executes), but a keystroke in it would be a corrupted
-    // program waiting to be saved.
-    editor->setReadOnly(binary_rom);
     updateTabLabel(editor);
     editor->setFocus();
     noteRecentFile(absolute);
 
     setExecutionState(tr("ready"),
-                      binary_rom
-                          ? tr("Opened %1 as a binary ROM (read-only)")
-                                .arg(QFileInfo{absolute}.fileName())
-                          : tr("Opened %1").arg(QFileInfo{absolute}.fileName()));
+                      tr("Opened %1").arg(QFileInfo{absolute}.fileName()));
     return true;
 }
 
@@ -1042,14 +1017,7 @@ bool MainWindow::writeDocument(CodeEditor* editor, const QString& path) {
                                       file.errorString()));
         return false;
     }
-    // A binary ROM was decoded through the codec that preserves every byte;
-    // writing it as UTF-8 would turn every high byte into two and the program
-    // would no longer be the one loaded.
-    const QString text = editor->toPlainText();
-    const QByteArray bytes = languageOf(editor) == Language::Chip8 &&
-                                     text.contains(QChar{0})
-                                 ? romTextToBytes(text)
-                                 : text.toUtf8();
+    const QByteArray bytes = editor->toPlainText().toUtf8();
     if (file.write(bytes) != bytes.size() || !file.commit()) {
         QMessageBox::warning(this, tr("Save failed"),
                              tr("Could not write %1.").arg(QDir::toNativeSeparators(path)));

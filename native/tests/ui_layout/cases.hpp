@@ -68,7 +68,6 @@ void test_edit_menu_has_find_in_files();
 void test_every_right_column_page_has_a_key();
 void test_file_menu_new_opens_a_document();
 void test_file_menu_close_tab_closes_one();
-void test_tools_menu_opens_one_emulator();
 void test_the_guided_tour_points_at_real_widgets();
 void test_the_guided_tour_is_seen_once_and_rearmable();
 void test_the_guided_tour_walks_its_steps();
@@ -108,6 +107,5 @@ void test_assistant_panel_contract();
 void test_repl_bar_runs_and_keeps_bindings();
 void test_repl_basic_direct_mode();
 void test_repl_bar_scheme_errors_and_language_switch();
-void test_the_hb2_window_runs_a_listing();
 
 }  // namespace tw::ui_layout

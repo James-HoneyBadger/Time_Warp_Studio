@@ -9,9 +9,9 @@
 // records them as text.
 //
 // The methods are the union of the turtle extensions the line-by-line
-// languages expose (FOCAL, COMAL, REXX, Logo) plus the raster operations CHIP-8
-// needs. Adding a language extends this interface rather than reaching around
-// it, so every executor draws through the same door.
+// languages expose (FOCAL, COMAL, REXX, Logo) plus the raster operations the
+// whole-program engines need. Adding a language extends this interface rather
+// than reaching around it, so every executor draws through the same door.
 
 #pragma once
 
@@ -304,8 +304,8 @@ public:
     /// that says it.
     ///
     /// Distinct from `set_svga_mode`, which reports the *world-space* size a
-    /// whole-program engine happens to draw in (CHIP-8 fills a 512x256 world
-    /// rectangle) and does not by itself change how anything is shown. Not
+    /// whole-program engine happens to draw in and does not by itself change how
+    /// anything is shown. Not
     /// pure: a recorder or headless gate has no surface, and the program still
     /// runs when the request is ignored.
     virtual void set_framebuffer(int /*width*/, int /*height*/) {}

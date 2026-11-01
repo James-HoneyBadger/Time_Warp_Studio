@@ -600,8 +600,8 @@ int runGolden(const QStringList& arguments) {
     static const QStringList kPorted{QStringLiteral("basic"), QStringLiteral("pilot"),
                                      QStringLiteral("logo"),  QStringLiteral("comal"),
                                      QStringLiteral("rexx"),  QStringLiteral("focal"),
-                                     QStringLiteral("chip8"), QStringLiteral("apl"),
-                                     QStringLiteral("smalltalk"), QStringLiteral("forth")};
+                                     QStringLiteral("apl"), QStringLiteral("smalltalk"),
+                                     QStringLiteral("forth")};
     const QStringList chosen =
         only_languages.isEmpty() ? kPorted : only_languages;
 

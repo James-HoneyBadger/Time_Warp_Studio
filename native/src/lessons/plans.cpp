@@ -71,7 +71,6 @@ std::string_view fence_language(lang::Language language) {
         case lang::Language::Scheme: return "scheme";
         case lang::Language::Apl: return "apl";
         case lang::Language::Focal: return "text";
-        case lang::Language::Chip8: return "asm";
         case lang::Language::Smalltalk: return "smalltalk";
         default: return "text";
     }
@@ -114,7 +113,7 @@ std::string checkpoint_list(const std::vector<const Lesson*>& lessons) {
 }  // namespace
 
 std::string plan_filename(lang::Language language) {
-    // The protocol key is already "chip8", "smalltalk": lowercase, no punctuation.
+    // The protocol key is already "logo", "smalltalk": lowercase, no punctuation.
     return std::string{lang::key(language)} + ".md";
 }
 
@@ -249,7 +248,7 @@ std::vector<PlanGroup> group_by_language(const std::vector<Lesson>& lessons) {
     std::map<std::string, std::size_t> index;
     for (const Lesson& lesson : lessons) {
         // The display name, not the protocol key: the document is headed
-        // "# BASIC lesson plans" and the index table lists "CHIP-8".
+        // "# BASIC lesson plans" and the index table lists "Smalltalk".
         const std::string name{lang::display_name(lesson.language)};
         const auto found = index.find(name);
         if (found == index.end()) {

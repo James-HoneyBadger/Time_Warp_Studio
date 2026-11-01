@@ -78,9 +78,7 @@ int runStructure(const Invocation& invocation) {
     return timewarp::gates::runStructure(wordsOf(invocation));
 }
 
-int runHb(const Invocation& invocation) { return timewarp::gates::runHb(wordsOf(invocation)); }
-
-constexpr std::array<timewarp::cli::Command, 8> kCommands{{
+constexpr std::array<timewarp::cli::Command, 7> kCommands{{
     {"smoke", "every Examples/** program through time_warp_check", runSmoke},
     {"commands", "every row of the command table, one program each", runCommands},
     {"repl", "every row again, through the REPL API", runRepl},
@@ -88,7 +86,6 @@ constexpr std::array<timewarp::cli::Command, 8> kCommands{{
     {"tree", "that the tree holds no Python", runTree},
     {"registry", "that the language table has one home", runRegistry},
     {"structure", "that no file has outgrown its budget", runStructure},
-    {"hb", "an HB-2 listing through the machine, with its screen", runHb},
 }};
 
 constexpr std::string_view kSynopsis{"<command> [--language NAME] [--verbose] [--explain]"};

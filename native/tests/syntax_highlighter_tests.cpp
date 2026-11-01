@@ -141,16 +141,6 @@ void test_pilot_units_are_a_shape_not_a_keyword() {
     TW_CHECK(colorAt(colour.document, 0, 3) != colors().directive);
 }
 
-void test_chip8_hex_labels_and_comments() {
-    announce("CHIP-8: opcodes, labels, hex, `;`");
-    const Coloured colour{QStringLiteral("start: LD V0, 0x1F ; load"), Language::Chip8};
-
-    TW_CHECK_EQ(colorAt(colour.document, 0, 0), colors().directive);
-    TW_CHECK_EQ(colorAt(colour.document, 0, 7), colors().keyword);
-    TW_CHECK_EQ(colorAt(colour.document, 0, 14), colors().number);
-    TW_CHECK_EQ(colorAt(colour.document, 0, 21), colors().comment);
-}
-
 void test_apl_comments_are_its_own_symbol() {
     announce("APL: the comment symbol, and a string");
     const Coloured colour{
@@ -217,7 +207,6 @@ void test_the_keyword_tables_hold_the_engines_names() {
     TW_CHECK(keywordsOf(Language::Logo).contains(QStringLiteral("FORWARD")));
     TW_CHECK(keywordsOf(Language::Logo).contains(QStringLiteral("SETPC")));
     TW_CHECK(keywordsOf(Language::Rexx).contains(QStringLiteral("SAY")));
-    TW_CHECK(keywordsOf(Language::Chip8).contains(QStringLiteral("DRW")));
     TW_CHECK(keywordsOf(Language::Scheme).contains(QStringLiteral("set!")));
     TW_CHECK(keywordsOf(Language::Smalltalk).contains(QStringLiteral("forward:")));
 
@@ -242,7 +231,6 @@ int main(int argc, char** argv) {
     test_a_block_comment_outlives_its_line();
 
     test_pilot_units_are_a_shape_not_a_keyword();
-    test_chip8_hex_labels_and_comments();
     test_apl_comments_are_its_own_symbol();
 
     test_case_sensitivity_follows_the_engine();

@@ -3,7 +3,7 @@
 A lesson is a short piece of one language, split into **checkpoints**. Each
 checkpoint gives you a program with something missing, tells you what the
 finished program should do, and can check your work by running it. There are
-twenty-two lessons — two for each language — and sixty-six checkpoints.
+twenty lessons — two for each language — and sixty checkpoints.
 
 You can work through them at a terminal or in the IDE's **🎓 Lessons** panel.
 Both check your work the same way, so you can switch between them freely.
@@ -162,19 +162,6 @@ it expects that you have done `basic_first_steps`.
 `time_warp_learn show <lesson>` prints everything about a lesson before you start it:
 what it is for, what you will be able to do afterwards, and the description of
 every checkpoint.
-
-## 8. Take it to a machine
-
-When a checkpoint passes, the same program runs on the machines the Studio
-carries. Press `Ctrl+Alt+W` for the [HB-1](../hb1/README.md): choose the language's
-ROM, paste the program on the PROGRAM page and press `F9`. The machine keeps each
-ROM's program, so you can leave an answer there and come back to it — and
-`SAVE "NAME"` puts it on a 1982 disk that survives a restart.
-
-For something completely different, `Ctrl+Shift+M` opens the
-[CHIP-8](../chip8/README.md), which is a computer small enough to understand in
-an afternoon. Its [tutorial](../tutorials/chip8.md) starts from the same place
-your lessons did: one instruction at a time.
 
 ## Nothing here can break your machine
 

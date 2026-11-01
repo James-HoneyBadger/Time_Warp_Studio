@@ -32,7 +32,6 @@
 #include "timewarp/ui/app_paths.hpp"
 #include "timewarp/ui/benchmark.hpp"
 #include "timewarp/ui/breakpoints.hpp"
-#include "timewarp/ui/chip8_window.hpp"
 #include "timewarp/ui/code_editor.hpp"
 #include "timewarp/ui/classroom_marker.hpp"
 #include "timewarp/ui/command_palette.hpp"
@@ -45,7 +44,6 @@
 #include "timewarp/ui/preferences.hpp"
 #include "timewarp/ui/profile_report.hpp"
 #include "timewarp/ui/project_panel.hpp"
-#include "timewarp/ui/retro_computer.hpp"
 #include "timewarp/ui/repl_runner.hpp"
 #include "timewarp/ui/sql_panel.hpp"
 #include "timewarp/sql/database.hpp"
@@ -218,7 +216,7 @@ void MainWindow::buildToolBar() {
     };
     // The debugging controls, live for every language. The line-loop languages
     // stop at a statement; Logo at a top-level statement, Smalltalk at a message
-    // send and CHIP-8 at an instruction; Scheme through its own runner. Continue
+    // send and Forth at a token; Scheme through its own runner. Continue
     // resumes and Trace stops at the next boundary.
     QAction* debug_action =
         addRunAction(tr("\U0001F41B Debug"), tr("Run, stopping before any breakpoint"));

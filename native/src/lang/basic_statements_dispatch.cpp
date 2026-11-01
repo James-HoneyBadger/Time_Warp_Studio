@@ -290,9 +290,6 @@ std::string Machine::execute_statement(std::string_view command) {
     if (cmd == "CLS") {
         turtle_.clear();
         state_.raster.clear(state_.raster.background());
-        // On a machine the screen is memory: clearing it is clearing cells, which is
-        // what the tube then shows.
-        interpreter_.machine_clear_screen();
         return "🎨 Screen cleared\n";
     }
     if (starts_with(cmd, "SCREEN ")) {
@@ -460,20 +457,14 @@ std::string Machine::execute_statement(std::string_view command) {
         return in_port(strip_comment(tail(text, 3)));
     }
     if (starts_with(cmd, "SYS ")) {
-        // `SYS address` runs machine code on the machine's own processor. On the HB-2
-        // that is HB-16: the program declares its own budget, and what the code prints
-        // comes back as output, in order with the PRINTs around it.
-        const std::string argument = strip_comment(trim(tail(text, 4)));
-        if (argument.empty()) {
+        // `SYS address` called machine code on a machine's own processor. This build
+        // has no machine under the language, so both answers below are refusals: a
+        // missing argument is still a mistake, and a program that names an address
+        // is told why the processor is not there rather than being quietly skipped.
+        if (strip_comment(trim(tail(text, 4))).empty()) {
             return "\u274C SYS needs an address\n";
         }
-        if (!interpreter_.machine_can_sys()) {
-            return "\u274C SYS needs a machine with a processor attached\n";
-        }
-        const double value = eval(argument);
-        const auto address = static_cast<int>(value);
-        const std::string printed = interpreter_.machine_sys(address);
-        return printed.empty() ? std::string{} : printed;
+        return "\u274C SYS needs a machine with a processor attached\n";
     }
     if (starts_with(cmd, "SHELL ")) {
         return shell(strip_comment(tail(text, 6)));

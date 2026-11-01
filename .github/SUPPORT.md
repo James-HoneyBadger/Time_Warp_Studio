@@ -32,7 +32,7 @@ one I would type:
   REPL, debugging, SQL, terminal tools and the API.
 - **[docs/FAQ.md](../docs/FAQ.md)** — the questions that come up most.
 - **[docs/LANGUAGE_GUIDE.md](../docs/LANGUAGE_GUIDE.md)** — the reference for all
-  eleven languages, including what each one is *not* able to do.
+  ten languages, including what each one is *not* able to do.
 - **[docs/API.md](../docs/API.md)** — the JSON-RPC methods and the linkable C++
   libraries.
 
@@ -54,7 +54,7 @@ distribution and version you are on when you report, and include
 Debug, AddressSanitizer and UndefinedBehaviorSanitizer. A crash or a diagnostic
 that appears in only one of them is a real bug and worth reporting.
 
-**The languages.** All eleven are supported, and each has an executor, a test suite,
+**The languages.** All ten are supported, and each has an executor, a test suite,
 an example, command coverage, a tutorial, a reference section and a lesson. Every
 language runs in C++ in the application, and so does the lesson check. The Python
 reference engine they were ported from was deleted at 18.0, and the last Python

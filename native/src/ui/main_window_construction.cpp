@@ -39,7 +39,6 @@
 #include "timewarp/ui/app_paths.hpp"
 #include "timewarp/ui/benchmark.hpp"
 #include "timewarp/ui/breakpoints.hpp"
-#include "timewarp/ui/chip8_window.hpp"
 #include "timewarp/ui/code_editor.hpp"
 #include "timewarp/ui/classroom_marker.hpp"
 #include "timewarp/ui/command_palette.hpp"
@@ -52,7 +51,6 @@
 #include "timewarp/ui/preferences.hpp"
 #include "timewarp/ui/profile_report.hpp"
 #include "timewarp/ui/project_panel.hpp"
-#include "timewarp/ui/retro_computer.hpp"
 #include "timewarp/ui/repl_runner.hpp"
 #include "timewarp/ui/sql_panel.hpp"
 #include "timewarp/sql/database.hpp"
@@ -518,9 +516,8 @@ void MainWindow::buildRightColumn(QSplitter* parent) {
     debug_panel_ = new DebugPanel{right_tabs_};
     right_tabs_->addTab(debug_panel_, tr("\U0001F41B Debug"));
     connectDebugPanel();
-    // The lesson panel is the one page of the right column that is *not* a
-    // placeholder: the Python implementation had a working one, and a learner of
-    // eleven is not going to open a terminal instead.
+    // The lesson panel is a real page rather than a placeholder: a learner is not
+    // going to open a terminal instead.
     lesson_panel_ = new LessonPanel{right_tabs_};
     right_tabs_->addTab(lesson_panel_, tr("\U0001F393 Lessons"));
     connect(lesson_panel_, &LessonPanel::curriculumNeeded, this,

@@ -157,7 +157,7 @@ void test_menu_structure() {
         titles << action->text();
     }
     // Debug is absent on purpose: a menu with nothing to put in it is a promise
-    // the window cannot keep. Tools carries the CHIP-8 emulator.
+    // the window cannot keep.
     TW_CHECK_EQ(titles.join(QLatin1Char('|')).toStdString(),
                 std::string{"&File|&Project|&Edit|&Run|&Tools|&View|&Help"});
 
@@ -305,25 +305,6 @@ void test_file_menu_close_tab_closes_one() {
         item->trigger();
         TW_CHECK_EQ(window.editorTabs()->count(), before - 1);
     }
-}
-
-
-void test_tools_menu_opens_one_emulator() {
-    announce("Tools > CHIP-8 Emulator");
-    MainWindow window;
-    QAction* item = entryContaining(menuNamed(window, QStringLiteral("&Tools")),
-                                    QStringLiteral("CHIP-8"));
-    TW_CHECK(item != nullptr);
-    if (item == nullptr) {
-        return;
-    }
-    TW_CHECK(item->isEnabled());
-    item->trigger();
-    TW_CHECK_EQ(window.findChildren<timewarp::ui::Chip8Window*>().size(), 1);
-    // A second invocation raises the running emulator rather than starting a
-    // second machine on the same program.
-    item->trigger();
-    TW_CHECK_EQ(window.findChildren<timewarp::ui::Chip8Window*>().size(), 1);
 }
 
 
@@ -506,7 +487,7 @@ void test_file_menu_lists_the_installed_examples() {
         titles << withoutMnemonic(entry->text());
     }
     // Sorted by folder name and labelled with the same display names the rest of
-    // the UI uses -- "CHIP-8", not "chip8".
+    // the UI uses -- "Smalltalk", not "smalltalk".
     TW_CHECK_EQ(titles.join(QLatin1Char('|')).toStdString(),
                 std::string{"BASIC|Logo"});
 

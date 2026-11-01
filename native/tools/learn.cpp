@@ -66,7 +66,6 @@ QString extension_for(timewarp::lang::Language language) {
         case timewarp::lang::Language::Rexx: return QStringLiteral(".rexx");
         case timewarp::lang::Language::Scheme: return QStringLiteral(".scm");
         case timewarp::lang::Language::Focal: return QStringLiteral(".foc");
-        case timewarp::lang::Language::Chip8: return QStringLiteral(".ch8");
         case timewarp::lang::Language::Apl: return QStringLiteral(".apl");
         case timewarp::lang::Language::Smalltalk: return QStringLiteral(".st");
         case timewarp::lang::Language::Forth: return QStringLiteral(".fs");

@@ -9,12 +9,11 @@
 //
 // #### Why the system prompt is long
 //
-// A general assistant does not know that this IDE runs eleven specific
-// interpreters, that BASIC has a turtle at all, or that a CHIP-8 program is
-// assembly rather than a script. Asked cold, it will happily answer a Logo question
-// with Python, and a learner who pastes that answer gets an error. So the prompt
-// states the language list, the shapes of the programs, the turtle vocabulary the
-// guide documents, and the reply format -- code in one fence, labelled with the
+// A general assistant does not know that this IDE runs ten specific interpreters,
+// or that BASIC has a turtle at all. Asked cold, it will happily answer a Logo
+// question with Python, and a learner who pastes that answer gets an error. So the
+// prompt states the language list, the shapes of the programs, the turtle vocabulary
+// the guide documents, and the reply format -- code in one fence, labelled with the
 // language key -- once, where a test can pin it.
 
 #pragma once
@@ -65,7 +64,7 @@ struct Conversation {
 
 /// The program on screen, as the assistant should see it.
 struct Context {
-    /// The language's display name ("Logo", "CHIP-8"). Empty when unknown.
+    /// The language's display name ("Logo", "Smalltalk"). Empty when unknown.
     QString language;
     /// The document's file name, or its untitled label.
     QString file_name;

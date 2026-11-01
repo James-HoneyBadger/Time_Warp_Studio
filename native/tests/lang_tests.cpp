@@ -2,10 +2,9 @@
 //
 // Tests for the native language engine.
 //
-// The two ported languages are tested the way the reference tests them: the
-// CHIP-8 assembler and machine separately (an assembled wrong opcode and a
-// wrongly executed right opcode are different bugs), and FOCAL through the
-// interpreter so line numbering, jumps and error decoration are exercised too.
+// FOCAL is tested through the interpreter rather than its own functions, so line
+// numbering, jumps and error decoration are exercised too, and the whole-program
+// languages are tested the way the reference tests them.
 //
 // No Qt and no display: `RecordingHost` is the drawing surface, so a test can
 // assert what was drawn without a window.
@@ -33,55 +32,8 @@ int main() {
     test_forth_turtle_words_move_and_colour();
     test_forth_run_can_be_walked_back();
     test_the_reference_palette_is_the_same_table_everywhere();
-    test_chip8_program_starts_at_0x200();
-    test_chip8_labels_resolve_forward_references();
-    test_chip8_both_hex_spellings_agree();
-    test_chip8_font_is_present_in_memory();
-    test_chip8_db_and_dw_emit_data();
-    test_chip8_assembler_errors();
     test_the_debug_session_pauses_and_resumes();
     test_stopping_a_paused_run_unwinds_it();
-    test_chip8_sys_is_ignored();
-    test_chip8_ld_and_add_with_a_byte();
-    test_chip8_add_sets_the_carry_flag();
-    test_chip8_subtract_sets_the_borrow_flag();
-    test_chip8_add_byte_wraps_without_carry();
-    test_chip8_index_arithmetic();
-    test_chip8_shr_shifts_the_named_register_in_place();
-    test_chip8_logic_and_shl();
-    test_chip8_bcd_conversion_writes_three_digits();
-    test_chip8_store_and_load_through_i();
-    test_chip8_block_transfer_advances_i();
-    test_chip8_skips();
-    test_chip8_keypad_is_live();
-    test_chip8_ld_key_waits_for_a_press();
-    test_chip8_call_and_return();
-    test_chip8_ret_without_call_is_reported();
-    test_chip8_draw_lights_the_expected_pixels();
-    test_chip8_drawing_twice_erases_and_reports_the_collision();
-    test_chip8_pixels_wrap_around_the_screen();
-    test_chip8_hires_mode_changes_the_grid_and_starts_blank();
-    test_chip8_cls_in_hires_keeps_the_hi_res_grid();
-    test_chip8_large_sprite_is_sixteen_by_sixteen_in_hires();
-    test_chip8_large_sprite_doubles_columns_in_lores();
-    test_chip8_scroll_down_moves_the_drawing_and_clears_the_top();
-    test_chip8_scroll_left_and_right_move_four_pixels();
-    test_chip8_exit_opcode_halts();
-    test_chip8_fx30_points_at_the_large_font();
-    test_chip8_large_font_is_in_memory();
-    test_chip8_rpl_flags_round_trip();
-    test_chip8_hires_display_halves_the_pixel_size();
-    test_chip8_keys();
-    test_chip8_jump_with_offset_uses_v0();
-    test_chip8_timers();
-    test_chip8_frame_limit_is_information();
-    test_chip8_unknown_opcode_is_reported();
-    test_chip8_binary_rom_loads_at_0x200();
-    test_chip8_binary_rom_respects_memory();
-    test_chip8_display_uses_the_palette();
-    test_chip8_display_is_cleared_before_the_first_frame();
-    test_chip8_run_can_be_walked_back();
-    test_chip8_rewind_restores_frame_phase();
     test_focal_type_prints_text_and_expressions();
     test_focal_set_then_read_back();
     test_focal_format_directive_sets_decimal_places();
@@ -213,7 +165,6 @@ int main() {
     test_profiling_is_off_unless_asked();
     test_logo_stops_at_a_breakpoint_and_steps();
     test_smalltalk_stops_at_a_message_send();
-    test_chip8_stops_before_an_instruction();
     test_repl_snippet_keeps_bindings();
     test_repl_new_clears_basic_bindings();
     test_basic_question_mark_is_print();

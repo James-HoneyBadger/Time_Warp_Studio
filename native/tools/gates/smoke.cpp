@@ -36,7 +36,7 @@ struct LanguageExamples {
 /// The languages the corpus covers, with the extension their examples use.
 ///
 /// Both halves come from `timewarp/lang/registry.hpp` -- the key and the first
-/// extension of each row -- because a second copy of "what extension is CHIP-8" is
+/// extension of each row -- because a second copy of "what extension is Logo" is
 /// how the smoke gate and the IDE end up disagreeing about which files are examples.
 std::vector<LanguageExamples> language_examples() {
     std::vector<LanguageExamples> languages;
@@ -90,36 +90,12 @@ const QSet<QString>& drawingExamples() {
         QStringLiteral("rexx/turtle_spiral.rexx"),
         QStringLiteral("scheme/turtle_polygons.scm"),
         QStringLiteral("focal/square.foc"),
-        QStringLiteral("chip8/font_and_frames.ch8"),
-        QStringLiteral("chip8/hires.ch8"),
-        QStringLiteral("chip8/paint.ch8"),
-        QStringLiteral("chip8/rewind_lab.ch8"),
-        QStringLiteral("chip8/pattern_loom.ch8"),
-        QStringLiteral("chip8/waveform.ch8"),
-        QStringLiteral("chip8/collision_lab.ch8"),
-        QStringLiteral("chip8/font_ledger.ch8"),
-        QStringLiteral("chip8/hires_rings.ch8"),
-        QStringLiteral("chip8/keypad_probe.ch8"),
-        // The set added with the machine's 1992 proposal: every one of them draws on
-        // a bare frame, which is the whole of what a CHIP-8 program can do.
-        QStringLiteral("chip8/bounce.ch8"),
-        QStringLiteral("chip8/catch.ch8"),
-        QStringLiteral("chip8/countdown.ch8"),
-        QStringLiteral("chip8/maze.ch8"),
-        QStringLiteral("chip8/spinner.ch8"),
-        QStringLiteral("chip8/typewriter.ch8"),
-        // The HB-1 demos: the tube is memory, so a silent run of one is a broken
-        // run even though the program is BASIC.
-        QStringLiteral("hb1/tube_writer.bas"),
-        QStringLiteral("hb1/ram_probe.bas"),
-        QStringLiteral("hb1/frame_clock.bas"),
         QStringLiteral("apl/arrays_and_turtle.apl"),
         QStringLiteral("smalltalk/shapes.st"),
         // The showcases: each draws as well as prints, so a silent run is a broken
         // run for all of them.
         QStringLiteral("apl/showcase.apl"),
         QStringLiteral("basic/showcase.bas"),
-        QStringLiteral("chip8/showcase.ch8"),
         QStringLiteral("comal/showcase.comal"),
         QStringLiteral("focal/showcase.foc"),
         QStringLiteral("logo/showcase.logo"),
@@ -196,8 +172,8 @@ int runSmoke(const QStringList& arguments) {
 
         for (const QString& path : paths) {
             // The path below `Examples`, not the bare file name: a language may keep
-            // programs in more than one folder (the HB-1 demos are BASIC), and two
-            // `showcase.bas` files must not answer to one identifier.
+            // programs in more than one folder, and two `showcase.bas` files must not
+            // answer to one identifier.
             const QString identifier =
                 QFileInfo{path}.absoluteFilePath().mid(folder.size() + 1);
             if (nativeOnly().contains(identifier)) {

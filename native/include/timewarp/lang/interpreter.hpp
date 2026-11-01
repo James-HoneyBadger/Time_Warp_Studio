@@ -144,8 +144,8 @@ public:
     [[nodiscard]] DebugSession* debug_session() const noexcept { return debug_; }
 
     /// A pause point for a whole-program executor, which runs its own loop and
-    /// therefore calls this itself. `line` is 1-based, or 0 when the program has
-    /// no source lines (a binary CHIP-8 ROM).
+    /// therefore calls this itself. `line` is 1-based, or 0 for an engine whose
+    /// position is not a source line.
     ///
     /// This also checks the data breakpoints: a whole-program language has no
     /// statement loop to compare bindings after, so its own pause points are the
@@ -372,78 +372,6 @@ public:
     void set_sql_callback(SqlCallback callback) { sql_callback_ = std::move(callback); }
     [[nodiscard]] bool sql_available() const noexcept { return static_cast<bool>(sql_callback_); }
 
-    /// The machine underneath the language: the address space `POKE` writes and
-    /// `PEEK` reads, the cursor `LOCATE` moves, the ink and paper `COLOR` sets and
-    /// the screen `CLS` clears.
-    ///
-    /// Without a bus -- the IDE editor, `time_warp_check`, the parity gates -- a
-    /// program gets `State::memory`, the sparse map a language may carry, and the
-    /// statements behave exactly as they did. With one, a statement reaches real
-    /// hardware, which is the difference between the HB-1 and an editor tab.
-    ///
-    /// Each hook returns false when the machine refused: a `poke` into ROM is the
-    /// case that matters, because the program has to be told.
-    struct MachineBus {
-        std::function<std::uint8_t(int address)> peek;
-        std::function<bool(int address, std::uint8_t value)> poke;
-        std::function<void(int row, int column)> set_cursor;
-        std::function<void(int index)> set_ink;
-        std::function<void(int index)> set_paper;
-        std::function<void()> clear_screen;
-        /// A line of program output, on the engine's thread and in order with the
-        /// `POKE`s around it. A machine's teletype printed what the program said when
-        /// the program said it; a queued callback to the GUI would print it later,
-        /// after a program that pokes the screen had already overwritten the cells.
-        std::function<void(const std::string& line)> write_text;
-        /// Machine code, run on the machine's own processor from `address`, returning
-        /// what it printed. `SYS` is the one statement that needs a processor rather
-        /// than an address space, and the HB-2 is the machine that has one.
-        std::function<std::string(int address)> sys;
-        /// The machine's joystick registers, which are the ones a 1992 program reads.
-        /// Absent on a machine with no joystick, and then `STICK`/`STRIG` answer 0.
-        std::function<int(int index)> stick;
-        std::function<bool(int index)> strig;
-        /// The highest address `POKE`/`PEEK` may reach: 65536 on a machine whose
-        /// processor has sixteen address lines, the top of its map on the HB-2. Zero
-        /// means the language's own map, which is the editor and the parity gates.
-        int address_limit = 0;
-    };
-    void set_machine_bus(MachineBus bus) { machine_bus_ = std::move(bus); }
-    [[nodiscard]] bool machine_attached() const noexcept {
-        return static_cast<bool>(machine_bus_.poke);
-    }
-    /// Reads `address` from the machine. An executor that wants the sparse map a
-    /// language carries instead asks `machine_attached()` first, which is what keeps
-    /// the editor and the parity gates on the behaviour they have always had.
-    [[nodiscard]] std::uint8_t machine_peek(int address);
-    /// Writes `value`. False when the machine refused the address.
-    bool machine_poke(int address, std::uint8_t value);
-    void machine_locate(int row, int column);
-    void machine_ink(int index);
-    void machine_paper(int index);
-    void machine_clear_screen();
-    /// Sends one output line to the machine, if there is one. The caller still emits
-    /// through `output_callback_`: this is the screen, that is the console.
-    void machine_write_text(const std::string& line);
-    /// Whether the machine has a processor a program can call.
-    [[nodiscard]] bool machine_can_sys() const noexcept {
-        return static_cast<bool>(machine_bus_.sys);
-    }
-    /// Runs machine code at `address` and returns what it printed. Empty when the
-    /// machine has no processor.
-    std::string machine_sys(int address);
-    /// Whether the machine has joysticks attached at all, which is what tells `STICK`
-    /// to read the machine rather than the host's gamepad.
-    [[nodiscard]] bool machine_has_joystick() const noexcept {
-        return static_cast<bool>(machine_bus_.stick);
-    }
-    [[nodiscard]] int machine_stick(int index);
-    /// The machine's address space, or 65536 when no machine is attached.
-    [[nodiscard]] int machine_address_limit() const noexcept {
-        return machine_bus_.address_limit > 0 ? machine_bus_.address_limit : 65536;
-    }
-    [[nodiscard]] bool machine_strig(int index);
-
     /// The directory a program's relative file names are confined to.
     ///
     /// Empty means the process's working directory, which is what `time_warp_check`,
@@ -478,7 +406,7 @@ public:
     /// should not pay for it.
     ///
     /// Only the shared line loop records anything. A whole-program language
-    /// (Logo, Scheme, Smalltalk, CHIP-8) runs its own loop and reports an empty
+    /// (Logo, Scheme, Smalltalk, Forth) runs its own loop and reports an empty
     /// profile, which the UI says rather than showing an empty table.
     void set_profiling(bool on) noexcept { profiling_ = on; }
     [[nodiscard]] bool profiling() const noexcept { return profiling_; }
@@ -614,7 +542,6 @@ private:
     double elapsed_ms_ = 0.0;
     bool profiling_ = false;
     bool tracing_ = false;
-    MachineBus machine_bus_;
     std::string file_base_;
     std::map<std::size_t, LineProfile> profile_;
     bool timed_out_ = false;

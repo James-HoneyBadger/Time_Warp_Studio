@@ -63,15 +63,6 @@ jobs:
             docs/lessons/teacher-guide.md \
             docs/lessons/FORMAT.md \
             docs/lessons/plans/README.md \
-            docs/MACHINES.md \
-            docs/hb1/README.md \
-            docs/hb1/roms.md \
-            docs/hb1/hb-dos.md \
-            docs/hb1/config.md \
-            docs/hb1/inside.md \
-            docs/chip8/README.md \
-            docs/chip8/assembly.md \
-            docs/chip8/instruction-set.md
           do
             if [ ! -f "$required" ]; then
               echo "::error file=$required::promised by docs/INDEX.md, and not here"
@@ -81,13 +72,13 @@ jobs:
           test "$missing" -eq 0
           echo "Every promised guide is present."
 
-      # One tutorial per language, because docs/INDEX.md lists eleven and a missing
+      # One tutorial per language, because docs/INDEX.md lists all ten and a missing
       # one is invisible: the table still renders, with a dead link in it.
       - name: Every language has a tutorial
         run: |
           set -euo pipefail
           missing=0
-          for language in basic pilot logo comal rexx scheme focal apl chip8 smalltalk forth
+          for language in basic pilot logo comal rexx scheme focal apl smalltalk forth
           do
             if [ ! -f "docs/tutorials/$language.md" ]; then
               echo "::error::no tutorial for $language (docs/tutorials/$language.md)"

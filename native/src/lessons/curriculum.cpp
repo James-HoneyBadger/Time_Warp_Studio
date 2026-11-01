@@ -61,7 +61,7 @@ namespace {
     return true;
 }
 
-/// The language a lesson names. The curriculum says `BASIC`, `CHIP8`,
+/// The language a lesson names. The curriculum says `BASIC`, `LOGO`,
 /// `SMALLTALK` -- the display names, because that is what a lesson document
 /// shows.
 [[nodiscard]] std::optional<lang::Language> language_named(std::string name) {
@@ -240,7 +240,6 @@ std::string_view extension_for(lang::Language language) noexcept {
         case lang::Language::Rexx: return ".rexx";
         case lang::Language::Scheme: return ".scm";
         case lang::Language::Focal: return ".foc";
-        case lang::Language::Chip8: return ".ch8";
         case lang::Language::Apl: return ".apl";
         case lang::Language::Smalltalk: return ".st";
         case lang::Language::Forth: return ".fs";

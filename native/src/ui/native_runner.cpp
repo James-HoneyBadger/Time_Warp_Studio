@@ -57,8 +57,6 @@ std::optional<timewarp::lang::Language> nativeLanguage(Language language) {
             return timewarp::lang::Language::Scheme;
         case Language::Focal:
             return timewarp::lang::Language::Focal;
-        case Language::Chip8:
-            return timewarp::lang::Language::Chip8;
         case Language::Apl:
             return timewarp::lang::Language::Apl;
         case Language::Smalltalk:
@@ -75,7 +73,7 @@ NativeCanvasHost::NativeCanvasHost(timewarp::canvas::CanvasCommandQueue& queue)
     : queue_{queue} {
     // No slots are seeded here: an unset slot is answered by
     // `reference_palette_colour`, so the picture a program gets does not depend
-    // on which host drew it. CHIP-8 sets slots 1 and 2 before it asks for either.
+    // on which host drew it.
 }
 
 void NativeCanvasHost::submit(const CanvasCommand& command) {
@@ -869,16 +867,9 @@ void NativeRunner::run() {
     engine->set_sql_callback(sql_callback_);
     engine->set_profiling(profiling_);
     engine->set_tracing(tracing_);
-    engine->set_machine_bus(machine_bus_);
     engine->set_file_base(file_base_.toStdString());
 
-    // A binary ROM was decoded through the codec that preserves every byte
-    // (including 0x0D, which a QTextDocument would normalise); a listing is
-    // UTF-8 like every other document.
-    const bool binary_rom = language_ == timewarp::lang::Language::Chip8 &&
-                            source_.contains(QChar{0});
-    engine->load_program(binary_rom ? romTextToBytes(source_).toStdString()
-                                    : source_.toStdString());
+    engine->load_program(source_.toStdString());
     // After the program: loading resets the run, which empties the history.
     engine->set_history(history_depth_);
     host_->begin_run();

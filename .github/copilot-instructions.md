@@ -1,6 +1,6 @@
 # Time Warp Studio - AI Coding Agent Instructions
 
-**Project:** Time Warp Studio - an old-school programming environment: eleven languages, an IDE, and three machines  
+**Project:** Time Warp Studio - an old-school programming environment: ten languages and an IDE  
 **Maintainer:** James Temple <james@honey-badger.org>  
 **Last Updated:** October 2026
 
@@ -8,12 +8,12 @@
 
 ## Project Overview
 
-Time Warp Studio is an old-school desktop programming environment built with **C++20 and Qt6** for Linux: a unified IDE for eleven interpreters from 1964 to 1980, with turtle graphics, a debugger in every language, and three machines — the HB-1 home computer, a live CHIP-8 and the HB-2 of 1992. A checked lesson curriculum ships for teaching, but the product is framed for retro-computing hobbyists first.
+Time Warp Studio is an old-school desktop programming environment built with **C++20 and Qt6** for Linux: a unified IDE for ten interpreters from 1964 to 1980, with turtle graphics and a debugger in every language. A checked lesson curriculum ships for teaching, but the product is framed for retro-computing hobbyists first. The application is the IDE and the languages: there is no emulator in it.
 
-**Supported Languages:** BASIC, APL, Logo, PILOT, FOCAL, Scheme, CHIP-8, COMAL, REXX, Smalltalk and Forth.
+**Supported Languages:** BASIC, APL, Logo, PILOT, FOCAL, Scheme, COMAL, REXX, Smalltalk and Forth.
 
 **Current State:** The Qt desktop application in `native/` is the product, and all
-eleven languages run in C++ inside it. The PySide6 implementation that came before it
+ten languages run in C++ inside it. The PySide6 implementation that came before it
 has been **removed**, and so has the Python engine the ports were judged against:
 the parity gate compares with a recorded corpus, and the harnesses drive
 `time_warp_check` (see "The gates").
@@ -32,7 +32,7 @@ the parity gate compares with a recorded corpus, and the harnesses drive
     languages `native/src/ui/language.cpp`, a Qt adapter over the one table in
     `native/include/timewarp/lang/registry.hpp`
   - Every language is native: Scheme (`timewarp_scheme`, an explicit-stack CEK
-    machine, dispatched in-process) and CHIP-8, Logo, Smalltalk and Forth
+    machine, dispatched in-process) and Logo, Smalltalk and Forth
     (whole-program) plus BASIC, FOCAL, PILOT, COMAL, APL and REXX (line-by-line)
     on `timewarp_lang`, the shared interpreter loop plus one executor each, and
     the expression evaluator (`timewarp_expr`, linked into `timewarp_lang` and
@@ -45,7 +45,7 @@ the parity gate compares with a recorded corpus, and the harnesses drive
   standalone executable.
 - **The frozen parity corpus** — `native/tests/golden/lang_corpus.json.gz`.
   - The Python reference engine was deleted at 18.0. The corpus is what remains of
-    it: 479 programs, each with the program text, what it printed, every drawing
+    it: 442 programs, each with the program text, what it printed, every drawing
     call and the variables it left. `make golden-check` compares the ports with
     those answers and imports no Python to do it.
   - It is a weaker gate than the live differential it replaced and says so: a
@@ -70,7 +70,7 @@ std::string execute_my_lang(Interpreter& interpreter, std::string_view source,
 
 **Two execution modes:**
 
-- **Whole-program executors** (five languages: Scheme, CHIP-8, Logo, Smalltalk and
+- **Whole-program executors** (four languages: Scheme, Logo, Smalltalk and
   Forth): receive the entire source at once. `is_whole_program` in
   `native/src/lang/language.cpp` is the one list.
 - **Line-by-line executors** (six languages: BASIC, APL, PILOT, FOCAL, COMAL and
@@ -93,7 +93,6 @@ cmake --build native/build -j
 ./native/build/time_warp_ide Examples/logo/mandala.logo
 ./native/build/time_warp_ide --run Examples/logo/mandala.logo
 ./native/build/time_warp_ide --run Examples/logo/mandala.logo --export mandala.png
-./native/build/time_warp_ide --computer      # the HB-1 screen
 ./native/build/time_warp_ide --help          # all options
 
 # Or through the Makefile
@@ -128,7 +127,7 @@ make -C native asan           # AddressSanitizer; ASAN=undefined for UBSan
 
 # The parity gate: the ports against the corpus recorded from the reference engine
 # before it was deleted. 0 differences is the verdict.
-make golden-check     # both corpora: 479 language programs and 192 Scheme ones
+make golden-check     # both corpora: 442 language programs and 192 Scheme ones
 
 # The curriculum and the documentation gates
 ./native/build/time_warp_teach validate
@@ -140,7 +139,7 @@ make doc-links doc-claims
 - `native/tests/*_tests.cpp` = the C++ suites (lexer, evaluator, scheme, native
   languages, audio, canvas queue, canvas bridge, debug, debugger runner, lessons,
   classroom, ui layout, ui document, turtle canvas, syntax highlighter, media, editor
-  services, help browser, chip8 emulator, retro computer, project, sql, api)
+  services, help browser, project, sql, api)
 - `native/tools/gates/` = `time_warp_gates`, one binary with a subcommand per
   harness: `smoke` (every `Examples/**` program through the native engines, with the
   programs that must draw listed in `smoke.cpp`), `commands` (one row per command,
@@ -169,14 +168,13 @@ The order is the native one first, because that is the only implementation there
 
 4. Register it in the Qt side so the IDE knows its settings key and extensions:
    `native/src/ui/language.cpp` (`kLanguages`). The display name is what the lesson
-   documents and panels show: the enum member spells CHIP-8 as `CHIP8`, the display
-   name is `CHIP-8`, and using one where the other belongs is a wrong name in the one
-   place it is written down.
+   documents and panels show, and using the enum member's spelling where the display
+   name belongs puts a wrong name in the one place it is written down.
 
 5. Add an example under `Examples/my_lang/`<!-- doc-claims: ignore --> and a row to
    `native/share/command_rows.json` so every new command is covered by
    `time_warp_gates commands`. A row's `language` string is the protocol key
-   (`Language[key.upper()]`), so CHIP-8's rows read `CHIP8`; a row labelled with prose
+   (`Language[key.upper()]`), so Forth's rows read `FORTH`; a row labelled with prose
    needs `also=(...)` naming the command the inventory knows, or it is reported as
    untested forever.
 
@@ -246,7 +244,7 @@ maximum-contrast variant of the active theme; it does not replace it.
 native/                        - the Qt application (the product)
   CMakeLists.txt
   include/ src/ tests/ tools/
-    lang/                      - the eleven executors and the shared loop
+    lang/                      - the ten executors and the shared loop
     scheme/                    - the explicit-stack Scheme machine
     lessons/                   - curriculum, verifier, progress, classroom
     debugger/ project/ sql/ api/ canvas/
@@ -255,7 +253,7 @@ native/                        - the Qt application (the product)
     gates/                     - time_warp_gates: smoke, commands, repl, golden, tree
     docs/                      - time_warp_docs: links, claims, version (no Qt)
     icon/                      - time_warp_icon: the packaged icons (zlib only)
-Examples/                      - 95 example programs across the 11 active languages
+Examples/                      - 68 example programs across the 10 active languages
 docs/                          - USER_GUIDE, API, language guide and tutorials
 ```
 
@@ -277,30 +275,12 @@ needs an interpreter: if a guide names a `python3` command it is out of date, an
 - **CodeEditor**: `native/src/ui/code_editor.cpp` — gutter, current line, tab stops,
   syntax colouring and the search that `FindBar` drives
 - **Language table**: `native/src/ui/language.cpp` — names, settings keys, extensions
-- **HB-1**: `native/src/ui/retro_computer_*.cpp` — a self-contained home
-  computer whose ROM socket is the `Language` enum. It owns its own canvas queue,
-  bridge, `ReplRunner` and `NativeRunner`, so nothing started there shares state with
-  the editor's REPL bar; per-ROM programs, the ROM and the screen mode persist in
-  QSettings. Its configuration screen (`retro_settings.cpp`) owns the boot ROM and
-  boot screen, the start-up message, the prompt-history budget, program memory, the
-  phosphor palette (`retroPalette`), the two text sizes and the CRT strengths, stored
-  under `retroComputer/config` and written only when the dialog is accepted. Its
-  disk is `hb_dos.{hpp,cpp}` (`HbDos`): one volume of named programs with a lock
-  bit and 256-byte sector accounting, persisted as a JSON image under
-  `~/.time_warp/disks`; the window's `CATALOG`/`SAVE`/`LOAD`/`RUN "name"`/`DELETE`/
-  `RENAME`/`LOCK`/`UNLOCK`/`VERIFY`/`TYPE`/`STATUS`/`INIT` words are thin calls
-  into it, and `INIT` must be said twice. Its manuals are `docs/hb1/`.
-- **CHIP-8 machine**: `native/src/lang/chip8.cpp` (assembler + `Chip8Machine`,
-  also the editor's whole-program executor) and `native/src/ui/chip8_*.cpp`
-  (`Chip8Window`, the 60 Hz `Chip8Emulator`, the screen, the ROM library). Manuals:
-  `docs/chip8/`. Both machines are introduced, and the design premise stated, in
-  `docs/MACHINES.md` — the machines are a centrepiece, not a demo.
 - **Lessons**: `native/src/lessons/` (`timewarp_lessons`: the curriculum, the verifier,
   progress, and the classroom with rosters, handouts, marking and bundles),
   `native/src/ui/panels_lessons.cpp` (`LessonPanel`), and the two commands
   `native/tools/{learn,teach}.cpp`
 - **The AI assistant**: `native/src/ai/` (`timewarp_ai`: `config.cpp` for the
-  endpoint, model and key, `prompt.cpp` for what the model is told about the eleven
+  endpoint, model and key, `prompt.cpp` for what the model is told about the ten
   languages, `client.cpp` for the one request in flight), `native/src/ui/ai_panel.cpp`
   (the 🤖 Assistant page) and `ai_settings.cpp` (presets, limits, **Test
   connection**), plus `native/tools/ai_cli.cpp` (`time_warp_ai`, the same thing from
@@ -324,9 +304,9 @@ needs an interpreter: if a guide names a `python3` command it is out of date, an
   without pausing. `DebugPanel`'s buttons forward to whichever runner is paused:
   Scheme through `DebuggerRunner`, every other language through `NativeRunner` and the
   shared `DebugSession` (a statement, a Logo top-level statement, a Smalltalk message
-  send, a CHIP-8 instruction). The terminal is a real opt-in `TerminalWidget`, and the
+  send, a Forth token). The terminal is a real opt-in `TerminalWidget`, and the
   outline dock is a real `OutlinePanel`; nothing in the window is a `PlaceholderPanel`.
-- **Engine**: `timewarp_lang` dispatches through `executor_for`; the eleven executors are
+- **Engine**: `timewarp_lang` dispatches through `executor_for`; the ten executors are
   stateless functions returning text with an emoji prefix
 - **Expression evaluator**: native C++ (`timewarp_expr`), gated by the recorded corpus
 - **Scheme**: native C++ explicit-stack machine (`timewarp_scheme`)
@@ -420,9 +400,6 @@ Each fact has one home; the other guides link to it rather than restating it.
 
 | Book | Owns |
 | --- | --- |
-| `docs/MACHINES.md` | The machines as a set, and the parallel-universe premise item by item |
-| `docs/hb1/` | The HB-1: owner's manual, ROM library, HB DOS reference, CONFIG reference, engineering companion |
-| `docs/chip8/` | The CHIP-8: machine manual, assembler, instruction set |
 | `docs/USER_GUIDE.md` | The IDE: projects, the REPL bar, debugging, SQL, the assistant, terminal, automation, appearance |
 | `docs/AI.md` | The AI assistant: presets, the key, and exactly what is sent |
 | `docs/LANGUAGE_GUIDE.md`, `docs/tutorials/` | Every command, and how to learn each language |

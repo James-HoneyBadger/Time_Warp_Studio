@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 //
-// Forth: the eleventh language.
+// Forth: the tenth language.
 //
-// Whole-program, like Scheme, Logo, Smalltalk and CHIP-8: a Forth program is a
+// Whole-program, like Scheme, Logo and Smalltalk: a Forth program is a
 // sequence of *words*, not statements, and `: SQUARE DUP * ;` is a definition that
 // spans as many lines as it likes. A line-by-line dispatcher would have to decide
 // where a definition ends before the language could, so this one receives the whole

@@ -58,7 +58,7 @@ paid for at least once:
 | ----- | -------- | ----- |
 | `id` | yes | Unique across the file. Progress is keyed by it, so two lessons sharing one would share a learner's place in them. `lower_snake_case` by convention. |
 | `title` | yes | Shown in the panel and the plans. |
-| `language` | yes | A `Language` enum member name: `BASIC`, `PILOT`, `LOGO`, `COMAL`, `REXX`, `SCHEME`, `FOCAL`, `CHIP8`, `APL`, `SMALLTALK`. Hyphens are accepted and folded to underscores. |
+| `language` | yes | A `Language` enum member name: `BASIC`, `PILOT`, `LOGO`, `COMAL`, `REXX`, `SCHEME`, `FOCAL`, `APL`, `SMALLTALK`, `FORTH`. Hyphens are accepted and folded to underscores. |
 | `difficulty` | yes | One of `beginner`, `intermediate`, `advanced`. |
 | `description` | no | One sentence: what the lesson is about. |
 | `objectives` | no | What the learner will be able to do. Printed in the plan. |
@@ -128,9 +128,9 @@ Two details the extraction gets right on purpose:
 | `returns_home` | The turtle ended within 0.5 of where it started |
 
 Pen segments and filled shapes are counted separately because **two different
-things draw**: the turtle languages lay down pen segments, and CHIP-8 is a 64x32
-framebuffer that paints lit pixels as filled rectangles. A CHIP-8 checkpoint that
-counted pen segments would count zero however good the program was.
+things draw**: a line lays down pen segments, and a filled region paints shapes.
+A checkpoint about one should not have to care how much of the other the program
+produced.
 
 Every failure message names the count it looked at, because "you drew 3 and this
 needs 4" is the sentence that tells a learner what to change.

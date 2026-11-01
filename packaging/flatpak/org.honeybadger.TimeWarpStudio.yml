@@ -28,7 +28,7 @@ finish-args:
   - --socket=fallback-x11
   # A raster-rendered widget application still wants the GPU for the canvas.
   - --device=dri
-  # SOUND, PLAY and the machines' beeps hand a WAV to a player on the PATH.
+  # SOUND and PLAY hand a WAV to a player on the PATH.
   - --socket=pulseaudio
   # The IDE opens the user's own programs, so the sandbox has to reach them. This
   # is the whole cost of the Flatpak: a document outside the home directory is not

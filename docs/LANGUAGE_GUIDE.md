@@ -1,9 +1,9 @@
 # Language Guide - Time Warp Studio
 
-Time Warp Studio actively implements and ships **11 programming languages**:
-BASIC, APL, Logo, PILOT, FOCAL, Scheme, CHIP-8, COMAL, REXX, Smalltalk and Forth.
+Time Warp Studio actively implements and ships **10 programming languages**:
+BASIC, APL, Logo, PILOT, FOCAL, Scheme, COMAL, REXX, Smalltalk and Forth.
 
-> **All eleven have reference sections below.** Each language also has a suite in
+> **All ten have reference sections below.** Each language also has a suite in
 > `native/tests/`, a worked example and a showcase under `Examples/`, and rows in
 > `native/share/command_rows.json`; running `make command-matrix` exercises every
 > command through the native engines, so the tables here are checked against the
@@ -14,14 +14,10 @@ BASIC, APL, Logo, PILOT, FOCAL, Scheme, CHIP-8, COMAL, REXX, Smalltalk and Forth
 > [lessons](lessons/README.md) have two per language, each with a plan, hints and
 > a worked answer.
 
-**Tools > HB-1 Computer** (`Ctrl+Alt+W`) boots all eleven languages in one
-home-computer screen: a ROM selector, a prompt, and the same turtle canvas. It is
-the shortest way to try a command from these tables without opening a file — see
-[the HB-1 Owner's Manual](hb1/README.md) and, for each language's prompt and
-direct mode, [the ROM library](hb1/roms.md). The CHIP-8 section below is joined by
-[the CHIP-8 machine manual](chip8/README.md),
-[the assembler](chip8/assembly.md) and
-[the instruction set](chip8/instruction-set.md).
+The shortest way to try a command from these tables without opening a file is the
+**REPL bar** under the editor: it runs one entry in the current document's
+language, and in BASIC it is also the classic direct mode. See
+[the user guide](USER_GUIDE.md#3-the-repl-bar).
 
 ---
 
@@ -37,13 +33,13 @@ direct mode, [the ROM library](hb1/roms.md). The CHIP-8 section below is joined 
 6. [Scheme](#scheme)
 7. [APL](#apl)
 8. [FOCAL](#focal)
-9. [CHIP-8](#chip-8)
-10. [Smalltalk](#smalltalk)
-11. [Forth](#forth)
+9. [Smalltalk](#smalltalk)
+10. [Forth](#forth)
 
 [The REPL in each language](#the-repl-in-each-language) explains which bindings
-survive between commands, and [SQL in nine languages](#sql-in-nine-languages) is a
-Studio extension available from every language except CHIP-8 and Forth.
+survive between commands, and [SQL in eight languages](#sql-in-eight-languages) is a
+Studio extension available from every language except Logo, Smalltalk and Forth's
+whole-program shape — the line-by-line languages all have it.
 
 Each language also has a worked example and a tutorial:
 
@@ -57,7 +53,6 @@ Each language also has a worked example and a tutorial:
 | **Scheme** | `.scm`, `.ss`, `.scheme` | [`hello.scm`](../Examples/scheme/hello.scm) | [`showcase.scm`](../Examples/scheme/showcase.scm) | [`docs/tutorials/scheme.md`](tutorials/scheme.md) |
 | **APL** | `.apl`, `.dyalog` | [`arrays_and_turtle.apl`](../Examples/apl/arrays_and_turtle.apl) | [`showcase.apl`](../Examples/apl/showcase.apl) | [`docs/tutorials/apl.md`](tutorials/apl.md) |
 | **FOCAL** | `.foc`, `.focal` | [`square.foc`](../Examples/focal/square.foc) | [`showcase.foc`](../Examples/focal/showcase.foc) | [`docs/tutorials/focal.md`](tutorials/focal.md) |
-| **CHIP-8** | `.ch8`, `.c8` | [`font_and_frames.ch8`](../Examples/chip8/font_and_frames.ch8) | [`showcase.ch8`](../Examples/chip8/showcase.ch8) | [`docs/tutorials/chip8.md`](tutorials/chip8.md) |
 | **Smalltalk** | `.st`, `.smalltalk` | [`shapes.st`](../Examples/smalltalk/shapes.st) | [`showcase.st`](../Examples/smalltalk/showcase.st) | [`docs/tutorials/smalltalk.md`](tutorials/smalltalk.md) |
 | **Forth** | `.fs`, `.fth` | [`hello.fs`](../Examples/forth/hello.fs) | [`showcase.fs`](../Examples/forth/showcase.fs) | [`docs/tutorials/forth.md`](tutorials/forth.md) |
 
@@ -76,7 +71,6 @@ the same canvas queue.
 | Logo | `MAKE` variables; `TO ... END` definitions do not survive because each entry is re-run as a whole program. |
 | Scheme | The persistent machine: `define`/`set!` and closures; expression values are echoed. |
 | Smalltalk | Nothing from the previous entry; each entry is a complete program. |
-| CHIP-8 | Nothing; each entry is an assembly listing that runs and resets the machine. |
 | Forth | Nothing; a definition spans as many lines as it likes, so each entry is run as a whole program and the dictionary it built goes with it. |
 
 In BASIC, `NEW` clears the session's bindings and prints `✅ BASIC workspace
@@ -86,7 +80,7 @@ cleared`. Running a document stops and replaces the REPL session. The API's
 
 ---
 
-## SQL in nine languages
+## SQL in eight languages
 
 The Studio embeds SQLite. Open or create a database in the 🗄 **Database** tab,
 then a program can use the same connection with a `SQL` statement:
@@ -120,8 +114,9 @@ A query prints its columns, rows and row count; an insert or update prints how
 many rows changed; an error prints the database's own message. The database
 manager and the running program share one connection, so a table created at the
 prompt is visible to the next `SQL` statement without reopening anything.
-Two of the eleven have no `SQL` form: CHIP-8 is a bytecode machine with no strings to
-carry a statement, and Forth has no word for it.
+Two of the ten have no `SQL` form: Smalltalk has no statement that would carry the
+query (it reaches the database through its library instead — see its section), and
+Forth has no word for it.
 
 ---
 
@@ -1447,147 +1442,6 @@ A **Time Warp extension**: 1969 FOCAL had no graphics at all. `FORWARD`/`FD`,
 
 ---
 
-## CHIP-8
-
-CHIP-8 is Joseph Weisbecker's bytecode interpreter from 1977 - the machine the
-first home computers were taught with. It is not a text language: a program is a
-sequence of two-byte opcodes and the display is a framebuffer of lit and unlit
-pixels: 64x32 in the original mode, 128x64 in SuperChip hi-res. So this executor
-is two things in one file: a small **assembler** that turns mnemonics into
-opcodes, and the **machine** that runs them.
-
-Executed whole-program. An opcode stream cannot be interpreted a line at a time,
-so the listing is assembled in full and then run. For the live machine — a clock,
-a keypad, an inspector and SuperChip — see
-[the CHIP-8 machine manual](chip8/README.md); for every opcode and quirk, see
-[the instruction set](chip8/instruction-set.md).
-
-A `.ch8` file containing a **NUL byte** is a binary ROM rather than a listing:
-its bytes are copied to `0x200` unchanged, up to the 3584 that fit before the end
-of memory. The editor opens such a file read-only, because a keystroke in it
-would be a corrupted program waiting to be saved.
-
-**Tools > CHIP-8 Emulator** (Ctrl+Shift+M) runs the same bytes as a live
-machine: the screen in either mode, a keypad that can be pressed while the program runs,
-Run/Pause/Step/Reset, a speed control, the sound timer's buzzer, and registers,
-stack and memory beside the screen. When the current document is not a CHIP-8
-program it opens on the bundled `tour.ch8` the first time and on `paint.ch8`
-afterwards, and its **Listing** tab assembles and runs typed source
-(`Ctrl+Return`) without using the main editor. The Run button
-keeps the whole-program model described below, because a lesson, a gate and an
-animation want different answers from the same file.
-
-**ROM Library...** in that window browses a folder of programs the user supplies,
-recursively, remembering the folder after a successful open. The studio ships no
-ROMs: most CHIP-8 programs in circulation are somebody else's copyright, so the
-library reads a folder the user has the right to use rather than bundling one.
-Its **Fetch Homebrew Archive...** button is the one download in the application: a
-dozen public-domain programs from the Octo archive, fetched into
-`~/.time_warp/chip8/archive` after a dialog that names what it will fetch and under
-which licence. [The CHIP-8 manual](chip8/README.md#the-homebrew-archive) has the
-detail.
-
-```chip8
-; a comment
-start:  LD   V0, 0x41
-        LD   I, hexfont
-        LD   F, V0
-        DRW  V0, V1, 5
-        HALT
-hexfont: DW  0x0000
-```
-
-### Numbers
-
-Decimal unless marked, and marked either way round, because both spellings appear
-in listings: `0x41` and `41h` are both 65, and a bare `41` is decimal 41.
-
-### Directives
-
-| Directive | Does |
-| --------- | ---- |
-| `DB n` | Emit one byte |
-| `DW n` | Emit one word |
-| `HALT` | Stop the machine |
-| `; keys <digits>` | Present keypad state for the run |
-
-### The instruction set
-
-The complete original -- all 35 opcodes, including the arithmetic group, the
-random and timing registers, the font and BCD conversions, and memory block
-load/store -- plus the SuperChip 1.1 set a hi-res ROM needs. Those extensions
-have no mnemonics in this assembler; write them with `DW` and a comment.
-
-| Mnemonic | Meaning |
-| -------- | ------- |
-| `CLS` | Clear the display |
-| `SYS addr` | Ignored; the original's RCA 1802 call |
-| `JP addr` / `JP V0, addr` | Jump |
-| `CALL addr` / `RET` | Subroutine call and return |
-| `SE Vx, byte` / `SNE Vx, byte` | Skip if equal / not equal |
-| `LD Vx, byte` / `LD Vx, Vy` / `LD I, addr` | Load |
-| `LD F, Vx` / `LD B, Vx` / `LD [I], Vx` | Font, BCD and memory block |
-| `ADD` `SUB` `SUBN` `OR` `AND` `XOR` | Arithmetic and logic |
-| `SHR Vx` / `SHL Vx` | Shift |
-| `RND Vx, byte` | Random, masked |
-| `DRW Vx, Vy, n` | Draw an n-byte sprite |
-| `SKP Vx` / `SKNP Vx` | Skip on key pressed / not pressed |
-| `LD Vx, K` / `LD Vx, DT` / `LD ST, Vx` | Keypad and timers |
-| `00FE` / `00FF` (`DW`) | Select 64x32 / 128x64; clears the screen |
-| `00Cn` / `00FB` / `00FC` / `00FD` (`DW`) | Scroll down `n`, right 4, left 4; exit |
-| `DXY0` | 16x16 sprite in hi-res; 8x16 with doubled columns in 64x32 |
-| `Fx30` / `Fx75` / `Fx85` (`DW`) | 8x10 font address, store/load RPL flags |
-
-### Where the original decides
-
-This follows the 1977 interpreter rather than a later emulator, because that is
-the machine the books describe:
-
-- **`SHR`/`SHL` shift `Vx` in place.** The later convention of shifting `Vy` into
-  `Vx` is not used. The y operand is accepted and ignored, so both spellings
-  assemble.
-- **Sprites wrap, and a collision sets `VF`.** Drawing a lit pixel onto a lit
-  pixel clears it and reports the collision.
-- **`LD [I], Vx` and `LD Vx, [I]` leave `I` one past the block.** CHIP-48 and
-  SCHIP leave it where it was; this machine increments it. A program that needs
-  the old value sets `I` again after the transfer.
-- **`SYS` (`0NNN`) is ignored.** It calls a routine on the RCA 1802 that hosted
-  the original interpreter, which this machine cannot run. Ignoring it keeps a
-  ROM that contains one runnable, and the assembler still accepts the mnemonic.
-
-`JP V0, addr` is the jump-table form: `Bnnn` always adds `V0`, so naming any
-other register is refused by the assembler rather than assembling to an
-instruction that silently ignores it.
-
-### The display
-
-The display is drawn in the canvas's own coordinates with filled rectangles, and
-its two colours come from the canvas palette. Both modes fill a 512x256 canvas: a
-64x32 screen at a scale of eight, or 128x64 at four. MegaChip's drawing planes and
-audio extensions are not implemented, so `Fx01` and the MegaChip sound opcodes are
-reported as unknown rather than half-drawn.
-
-### The keypad
-
-Presented by directive, not by typing: `; keys 13` marks keys 1 and 3 as held
-down. `LD Vx, K` then reads the first held key, or 0. A program runs to completion
-inside one executor call, and the engine has no way to hand input to something
-that never yields control.
-
-### Frames
-
-A Run simulates frames rather than timing them: ten opcodes make a frame and the
-timers tick once per frame, with no real clock. A fixed number of frames is the
-limit, so a program that does not halt reports that it stopped rather than
-hanging. The interactive emulator uses the same ten opcodes per frame by
-default, but a 60 Hz clock and its speed control change how many opcodes each
-frame executes; it also lets `LD Vx, K` wait for a press, where a Run can only
-read the `; keys` directive.
-
-**File extension:** `.ch8`, `.c8`
-
----
-
 ## Smalltalk
 
 Smalltalk-80 is the language that made "everything is an object" a working
@@ -1595,7 +1449,7 @@ proposal rather than a slogan. There is **no syntax for control flow at all**:
 `ifTrue:`, `whileTrue:` and `to:do:` are messages sent to objects. It fills the
 one paradigm gap the lineup had - nothing else here is object-oriented.
 
-Executed whole-program, like Scheme and CHIP-8. A file defines classes and
+Executed whole-program, like Scheme and Forth. A file defines classes and
 methods and then runs some code, and a method body is more than one line, so the
 whole source is read before anything runs.
 
@@ -1738,7 +1592,7 @@ vocabulary suited to their problem rather than fitting the problem to the langua
 CR
 ```
 
-Forth here is whole-program, like Scheme, Logo, Smalltalk and CHIP-8: a definition
+Forth here is whole-program, like Scheme, Logo and Smalltalk: a definition
 spans as many lines as it likes, so the engine has to see the whole source before it
 can decide where the definition ends.
 
@@ -1796,19 +1650,15 @@ VARIABLE TOTAL
 pops a number once and pushes it forever. `@`/`!` address this language's own 64 KiB
 data space, two bytes per cell, allocated upwards from the end of the dictionary.
 
-`POKE` and `PEEK` are the machine's memory rather than the dictionary's:
+`POKE` and `PEEK` address this program's own 64 KiB map, which is the one BASIC's
+`POKE` and `PEEK` use too:
 
 ```forth
-65 32768 POKE      \ write 'A' into the first character cell of the tube
+65 32768 POKE      \ write 65 at 32768
 32768 PEEK .       \ read it back -- 65
 ```
 
-On the HB-1 those addresses *are* the screen, so a Forth program draws text by
-poking character cells (`$8000` is row 0, column 0, eighty cells to a row) exactly as
-BASIC's `POKE` does, and a write into the ROM region is refused out loud rather than
-accepted and dropped. Run anywhere else — in the IDE, or through `time_warp_check` —
-the same words read and write a memory map of their own, so a poke and a peek still
-agree.
+A poke and a peek always agree, and neither reaches outside the program.
 
 `RECURSE` compiles a call to the word being defined. A definition is registered in
 the dictionary at `:` rather than at `;`, so naming it works too — `RECURSE` is the
@@ -1880,6 +1730,5 @@ To select which language your code uses:
 | `.scm` / `.ss` / `.scheme` | Scheme |
 | `.apl` / `.dyalog` | APL |
 | `.foc` / `.focal` | FOCAL |
-| `.ch8` / `.c8` | CHIP-8 |
 | `.st` / `.smalltalk` | Smalltalk |
 | `.fs` / `.fth` | Forth |

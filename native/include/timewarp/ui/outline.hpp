@@ -41,7 +41,7 @@ struct OutlineEntry {
 /// Every entry in `source`, in source order.
 ///
 /// `language` decides which rules apply; a language with no outline rules
-/// (FOCAL, CHIP-8, APL beyond `∇`) returns an empty list rather than a guess,
+/// (FOCAL, APL beyond `∇`) returns an empty list rather than a guess,
 /// which the panel shows as an empty state.
 [[nodiscard]] QList<OutlineEntry> outlineFor(Language language, const QString& source);
 

@@ -38,8 +38,8 @@ struct LessonCheckpoint {
 struct LessonSummary {
     QString id;
     QString title;
-    QString language;     ///< Display name, e.g. "CHIP-8".
-    QString languageKey;  ///< Settings key, e.g. "chip8": what a document records.
+    QString language;     ///< Display name, e.g. "Smalltalk".
+    QString languageKey;  ///< Settings key, e.g. "smalltalk": what a document records.
     QString difficulty;
     QString description;
     QStringList objectives;

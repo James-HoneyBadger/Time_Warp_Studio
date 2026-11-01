@@ -1,7 +1,7 @@
 # Lessons
 
 Time Warp Studio is a teaching environment, and lessons are the teaching
-material: twenty-two short pieces of curriculum, two for each of the eleven languages,
+material: twenty short pieces of curriculum, two for each of the ten languages,
 each one a sequence of checkpoints that a learner works through and the studio
 **checks by running what they wrote**.
 
@@ -55,7 +55,6 @@ has one implementation, and every client of it is that library.
 | Scheme | Scheme Basics | Recursion and Lists in Scheme |
 | FOCAL | First Steps in FOCAL | Branching in FOCAL |
 | APL | Arrays in APL | Defined Functions and Shape in APL |
-| CHIP-8 | Drawing with CHIP-8 | Sprites and Pixels in CHIP-8 |
 | Smalltalk | Objects and Messages in Smalltalk | Classes and Blocks in Smalltalk |
 | Forth | First Words in Forth | Loops, Variables and Recursion in Forth |
 

@@ -28,7 +28,7 @@ struct PlanGroup {
 /// document and the console describe a checkpoint the same way.
 [[nodiscard]] std::string describe_expectation(const Checkpoint& checkpoint);
 
-/// The file a language's plan is written to: `chip8.md`, `basic.md`.
+/// The file a language's plan is written to: `logo.md`, `basic.md`.
 [[nodiscard]] std::string plan_filename(lang::Language language);
 
 /// One language's plan, as a Markdown document.

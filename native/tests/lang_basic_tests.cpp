@@ -227,8 +227,8 @@ void test_on_timer_fires_the_handler_while_the_program_runs() {
 // except that the lookup put a `functions` iterator into the variable holding a
 // `subs` one and compared it against the other map's `end()`. Comparing iterators
 // from different containers is undefined behaviour, and when the comparison came out
-// false the code dereferenced `end()` and crashed the whole application. A CHIP-8
-// listing run as BASIC reaches it with seven `CALL`s to names no subroutine has.
+// false the code dereferenced `end()` and crashed the whole application. A listing
+// pasted from another language reaches it with `CALL`s to names no subroutine has.
 //
 // The property a person would check is the message, so that is what is asserted --
 // and the run completing at all, which is the part that used to be a segfault.

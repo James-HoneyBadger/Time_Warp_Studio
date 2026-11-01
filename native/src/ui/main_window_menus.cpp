@@ -34,7 +34,6 @@
 #include "timewarp/ui/app_paths.hpp"
 #include "timewarp/ui/benchmark.hpp"
 #include "timewarp/ui/breakpoints.hpp"
-#include "timewarp/ui/chip8_window.hpp"
 #include "timewarp/ui/code_editor.hpp"
 #include "timewarp/ui/classroom_marker.hpp"
 #include "timewarp/ui/command_palette.hpp"
@@ -47,7 +46,6 @@
 #include "timewarp/ui/preferences.hpp"
 #include "timewarp/ui/profile_report.hpp"
 #include "timewarp/ui/project_panel.hpp"
-#include "timewarp/ui/retro_computer.hpp"
 #include "timewarp/ui/repl_runner.hpp"
 #include "timewarp/ui/sql_panel.hpp"
 #include "timewarp/sql/database.hpp"
@@ -384,31 +382,13 @@ void MainWindow::buildMenuBar() {
     add(run, tr("Clear &Canvas"), {}, [this] { clearCanvas(); });
 
     // -- Tools ------------------------------------------------------------
-    // A CHIP-8 program is the one document that wants a live machine rather
-    // than a run-to-completion executor, and a window is where its keypad and
-    // inspector fit. Ctrl+Shift+M is unclaimed.
     QMenu* tools = bar->addMenu(tr("&Tools"));
     tools->setObjectName(QStringLiteral("toolsMenu"));
-    add(tools, tr("CHIP-8 &Emulator..."),
-        timewarp::core::keySequence(Qt::CTRL | Qt::SHIFT, Qt::Key_M), [this] { openChip8Emulator(); })
-        ->setObjectName(QStringLiteral("chip8EmulatorAction"));
-    // The machine the languages share. Ctrl+Alt+W is unclaimed and is the
-    // chord the machine has always been documented with, so renaming it to the
-    // HB-1 does not move it out from under anyone's fingers.
-    add(tools, tr("&HB-1 Computer..."),
-        timewarp::core::keySequence(Qt::CTRL | Qt::ALT, Qt::Key_W), [this] { openRetroComputer(); })
-        ->setObjectName(QStringLiteral("retroComputerAction"));
-    // The HB-2 sits beside it: same family, thirty years later, and the chord is
-    // beside the HB-1's so an owner of both learns one pattern.
-    add(tools, tr("HB-&2 Model 92..."),
-        timewarp::core::keySequence(Qt::CTRL | Qt::ALT, Qt::Key_2), [this] { openHb2(); })
-        ->setObjectName(QStringLiteral("hb2Action"));
 #ifdef TIME_WARP_HAVE_AI
-    tools->addSeparator();
-    // The assistant sits beside the machines rather than in a menu of its own: one
-    // heading for what this IDE can do *to a program* is a menu a person can find,
-    // and a top-level menu with three entries is a heading that exists to hold its
-    // own name.
+    // The assistant lives in Tools rather than in a menu of its own: one heading for
+    // what this IDE can do *to a program* is a menu a person can find, and a
+    // top-level menu with five entries is a heading that exists to hold its own
+    // name.
     add(tools, tr("\U0001F916 &Assistant"),
         timewarp::core::keySequence(Qt::CTRL | Qt::SHIFT, Qt::Key_A),
         [this] { showAssistant(); })
@@ -617,11 +597,9 @@ void MainWindow::buildMenuBar() {
             tr("<b>Time Warp Studio</b> %1"
                "<p><i>Timey wimey wibbly wobbly, time &amp; multiuniverse travel "
                "computing.</i>"
-               "<p>An old-school programming environment for eleven languages: BASIC, "
-               "APL, Logo, PILOT, FOCAL, Scheme, CHIP-8, COMAL, REXX, Smalltalk and "
-               "Forth, with an integrated turtle graphics canvas — and three complete "
-               "machines inside it: the HB-1 home computer, a live CHIP-8 and the HB-2 "
-               "of 1992."
+               "<p>An old-school programming environment for ten languages: BASIC, "
+               "APL, Logo, PILOT, FOCAL, Scheme, COMAL, REXX, Smalltalk and "
+               "Forth, with an integrated turtle graphics canvas."
                "<p>Everything runs on this machine: no account, no telemetry, and "
                "nothing sent unless you ask it to fetch something.")
                 .arg(timewarp::ui::version()));

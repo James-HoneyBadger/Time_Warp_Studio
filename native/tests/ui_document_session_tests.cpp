@@ -198,10 +198,6 @@ void test_autosave_keeps_unsaved_work() {
     scratch.restoreDataDir();
 }
 
-/// A binary ROM and a text listing share `.ch8`. The ROM is decoded through the
-/// byte-preserving codec, opened read-only so it cannot be edited into
-/// corruption, and run without the assembler seeing it.
-
 void test_the_split_survives_a_restart() {
     announce("session restore: the split and which side each document was on");
     const QTemporaryDir dir;

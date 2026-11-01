@@ -77,7 +77,6 @@
 #include "timewarp/ui/ai_settings.hpp"
 #endif
 #include "timewarp/ui/autosave.hpp"
-#include "timewarp/ui/chip8_window.hpp"
 #include "timewarp/ui/code_editor.hpp"
 #include "timewarp/ui/command_palette.hpp"
 #include "timewarp/ui/command_reference.hpp"

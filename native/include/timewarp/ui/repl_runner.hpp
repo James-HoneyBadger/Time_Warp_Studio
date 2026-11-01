@@ -66,9 +66,6 @@ public:
     void requestStop();
 
     void setSqlCallback(std::function<std::string(std::string_view)> callback);
-    /// The machine underneath the prompt: what `POKE`, `LOCATE`, `COLOR` and `CLS`
-    /// reach in a line typed at the machine. Set once, before the first submission.
-    void setMachineBus(timewarp::lang::Interpreter::MachineBus bus);
     /// Wakes the GUI so it drains the canvas queue. The window supplies
     /// `CanvasBridge::wake`; a headless test can leave it unset.
     void setWakeup(std::function<void()> wakeup);

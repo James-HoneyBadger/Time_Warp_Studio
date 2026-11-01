@@ -37,7 +37,6 @@ const QMap<QString, QStringList>& sources() {
         {QStringLiteral("smalltalk"),
          {QStringLiteral("smalltalk.cpp"), QStringLiteral("smalltalk_library.cpp"),
           QStringLiteral("smalltalk_driver.cpp")}},
-        {QStringLiteral("chip8"), {QStringLiteral("chip8.cpp")}},
         {QStringLiteral("forth"), {QStringLiteral("forth.cpp")}},
     };
     return map;
@@ -50,10 +49,10 @@ const QSet<QString>& commandVariables() {
         QStringLiteral("cmd_type"),  QStringLiteral("command"),
         QStringLiteral("command_type"), QStringLiteral("kw"),
         QStringLiteral("keyword"),
-        // APL dispatches on the statement's leading glyph or word; CHIP-8 on the
-        // mnemonic the assembler split off; Smalltalk compares a whole send against
-        // a selector name; COMAL upper-cases the statement into `up`.
-        QStringLiteral("glyph"),    QStringLiteral("mnemonic"),
+        // APL dispatches on the statement's leading glyph or word; Smalltalk
+        // compares a whole send against a selector name; COMAL upper-cases the
+        // statement into `up`.
+        QStringLiteral("glyph"),
         QStringLiteral("up"),        QStringLiteral("name"),
         QStringLiteral("op"),        QStringLiteral("stmt"),
         QStringLiteral("statement"), QStringLiteral("token"),
@@ -90,8 +89,6 @@ const QSet<QString>& notCommands() {
         QStringLiteral("true"),
         QStringLiteral("false"),
         QStringLiteral("nil"),
-        // The CHIP-8 number prefix, which `_number` tests for so that 0x41 is 65.
-        QStringLiteral("0x"),
     };
     return literals;
 }

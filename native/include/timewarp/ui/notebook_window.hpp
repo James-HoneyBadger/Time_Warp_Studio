@@ -2,10 +2,9 @@
 //
 // The notebook window: prose and programs in one file, run a cell at a time.
 //
-// A window of its own rather than a document tab, for the same reason the HB-1 and
-// the CHIP-8 have theirs: the tab strip holds editors, and every part of the window
-// that asks "which document is this?" would have to learn about a second kind of
-// thing. A notebook is opened, edited and saved by this window, and the editor is
+// A window of its own rather than a document tab: the tab strip holds editors, and
+// every part of the window that asks "which document is this?" is spared having to
+// learn about a second kind of thing. A notebook is opened, edited and saved by this window, and the editor is
 // not involved.
 //
 // #### The shape of the thing

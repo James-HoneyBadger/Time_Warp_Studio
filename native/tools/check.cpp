@@ -59,8 +59,8 @@ int usage() {
                  "usage: time_warp_check --language <key> [--json] [--quiet] <file>\n"
                  "       time_warp_check --language <key> [--json] -   (stdin)\n"
                  "\n"
-                 "  --language  basic, apl, logo, pilot, focal, scheme, chip8,\n"
-                 "              comal, rexx, smalltalk\n"
+                 "  --language  basic, apl, logo, pilot, focal, scheme,\n"
+                 "              comal, rexx, smalltalk, forth\n"
                  "  --json      line-delimited JSON, in the shape the harnesses read\n"
                  "  --quiet     print nothing when the program ran cleanly\n");
     return 2;

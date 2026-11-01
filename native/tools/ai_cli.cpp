@@ -171,7 +171,7 @@ void write_report(const Invocation& invocation, const QJsonObject& report) {
 }
 
 /// A language name as the table spells it, or the words the user gave when they are
-/// not one of the eleven.
+/// not one of the ten.
 [[nodiscard]] QString display_language(const QString& words) {
     const QString wanted = words.trimmed().toLower();
     for (const timewarp::lang::LanguageRow& row : timewarp::lang::kLanguageTable) {

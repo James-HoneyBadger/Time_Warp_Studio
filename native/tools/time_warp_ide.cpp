@@ -32,7 +32,6 @@
 
 #include "timewarp/ui/app.hpp"
 #include "timewarp/ui/main_window.hpp"
-#include "timewarp/ui/retro_computer.hpp"
 #include "timewarp/ui/standalone.hpp"
 #include "timewarp/ui/turtle_canvas.hpp"
 
@@ -94,9 +93,7 @@ int main(int argc, char* argv[]) {
     parser.setApplicationDescription(
         QStringLiteral("Time Warp Studio \u2014 an old-school programming "
                        "environment for BASIC, APL, Logo, PILOT, FOCAL, Scheme, "
-                       "CHIP-8, COMAL, REXX, Smalltalk and Forth, with three "
-                       "machines inside it: the HB-1 home computer, a live CHIP-8 "
-                       "and the HB-2 of 1992."));
+                       "COMAL, REXX, Smalltalk and Forth."));
     parser.addHelpOption();
     parser.addVersionOption();
 
@@ -145,25 +142,6 @@ int main(int argc, char* argv[]) {
         QStringLiteral("run"),
         QStringLiteral("Run the first file as soon as the window is up.")};
     parser.addOption(runOption);
-
-    const QCommandLineOption hb2Option{
-        QStringLiteral("hb2"),
-        QStringLiteral("Open the HB-2 Model 92: the 1992 machine's screen, prompt, "
-                       "monitor and listing editor.")};
-    parser.addOption(hb2Option);
-    const QCommandLineOption computerOption{
-        QStringLiteral("computer"),
-        QStringLiteral("Open the HB-1 computer, booted into the first "
-                       "file's language (or BASIC), and raise it. With --run, "
-                       "run the computer's program.")};
-    parser.addOption(computerOption);
-    const QCommandLineOption machineOption{
-        QStringLiteral("machine"),
-        QStringLiteral("Boot the HB-1 from a machine image (.hb1) and raise it: the "
-                       "ROM, the screen, every ROM's program, the phosphor and the "
-                       "disk, as one file."),
-        QStringLiteral("file")};
-    parser.addOption(machineOption);
 
     const QCommandLineOption compileOption{
         QStringLiteral("compile"),
@@ -318,43 +296,7 @@ int main(int argc, char* argv[]) {
     openArguments(&window, arguments);
     window.show();
 
-    if (parser.isSet(computerOption) || parser.isSet(machineOption)) {
-        window.openRetroComputer();
-    }
-    if (parser.isSet(hb2Option)) {
-        window.openHb2();
-    }
-    if (parser.isSet(machineOption)) {
-        const QString image = parser.value(machineOption);
-        auto* machine = window.findChild<timewarp::ui::RetroComputerWindow*>();
-        if (machine == nullptr) {
-            std::fprintf(stderr, "time_warp_ide: the computer did not open\n");
-            return 2;
-        }
-        QString machine_error;
-        if (!machine->loadMachine(image, &machine_error)) {
-            std::fprintf(stderr, "time_warp_ide: %s\n", qPrintable(machine_error));
-            return 2;
-        }
-        machine->raise();
-        machine->activateWindow();
-    }
-
-    // A screenshot without --computer photographs the IDE. With it, the picture
-    // is of the machine, which is what a script demonstrating the boot screen
-    // wants; grabbing the parent would show the editor with a small window on
-    // top of it.
     QWidget* screenshot_target = &window;
-    timewarp::ui::RetroComputerWindow* computer_window = nullptr;
-    if (parser.isSet(computerOption) || parser.isSet(machineOption)) {
-        computer_window = window.findChild<timewarp::ui::RetroComputerWindow*>();
-        if (computer_window != nullptr) {
-            if (!screenshotPath.isEmpty()) {
-                computer_window->resize(screenshotSize);
-            }
-            screenshot_target = computer_window;
-        }
-    }
 
     // A first run only: the guide stores "seen" in QSettings and refuses a second
     // time. A file argument, a screenshot, an export, a named panel or a player
@@ -370,11 +312,7 @@ int main(int argc, char* argv[]) {
         // a fit computed against a 0x0 widget would be recomputed on the first
         // resize anyway, but the run would also start before the window is
         // usable, which makes the interactive case feel broken.
-        if (computer_window != nullptr) {
-            computer_window->runProgram();
-        } else {
-            window.runCurrentDocument();
-        }
+        window.runCurrentDocument();
     }
 
     if (!screenshotPath.isEmpty() || !exportPath.isEmpty()) {
@@ -395,8 +333,7 @@ int main(int argc, char* argv[]) {
             delay = std::max(delay, 6000);
         }
         QTimer::singleShot(delay, &application,
-                           [&window, screenshot_target, computer_window, screenshotPath,
-                            exportPath] {
+                           [&window, screenshot_target, screenshotPath, exportPath] {
             if (!screenshotPath.isEmpty()) {
                 const QPixmap shot = screenshot_target->grab();
                 if (!shot.save(screenshotPath)) {
@@ -410,16 +347,11 @@ int main(int argc, char* argv[]) {
             }
             if (!exportPath.isEmpty()) {
                 // The same call the File menu makes, so what a teacher renders from
-                // a script is what a teacher would have saved by hand. With
-                // --computer the program ran on the machine's canvas, so that is
-                // the one holding the ink.
+                // a script is what a teacher would have saved by hand.
                 QString error;
-                timewarp::ui::TurtleCanvas* canvas = computer_window != nullptr
-                                                         ? computer_window->graphicsCanvas()
-                                                         : window.turtleCanvas();
-                // `frameCount` counts shapes as well as strokes: a CHIP-8 screen
-                // is all rectangles, and "nothing was drawn" about it would be a
-                // lie.
+                timewarp::ui::TurtleCanvas* canvas = window.turtleCanvas();
+                // `frameCount` counts shapes as well as strokes, so "nothing was
+                // drawn" is about the drawing rather than about the program.
                 if (canvas == nullptr || canvas->frameCount() == 0) {
                     std::fprintf(stderr,
                                  "time_warp_ide: nothing was drawn, so there is nothing "

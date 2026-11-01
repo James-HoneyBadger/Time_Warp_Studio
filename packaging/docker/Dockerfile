@@ -64,7 +64,7 @@ FROM ubuntu:24.04
 ARG VERSION=0.0.0
 
 LABEL org.opencontainers.image.title="Time Warp Studio" \
-      org.opencontainers.image.description="An old-school programming environment: eleven languages, an IDE, an HB-1 home computer and a live CHIP-8" \
+      org.opencontainers.image.description="An old-school programming environment: ten languages and a full IDE" \
       org.opencontainers.image.licenses="MIT" \
       org.opencontainers.image.version="${VERSION}"
 

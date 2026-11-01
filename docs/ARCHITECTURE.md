@@ -1,6 +1,6 @@
 # Architecture Guide
 
-## Time Warp Studio v27.0.0 — System Design and Implementation
+## Time Warp Studio v28.0.0 — System Design and Implementation
 
 > **This page describes the shipping product.** It was rewritten alongside the move
 > to C++20 / Qt6. Earlier revisions documented the PySide6 implementation, which has
@@ -28,11 +28,10 @@
 
 ## Overview
 
-Time Warp Studio is a desktop workbench for old-school programming: eleven
-interpreters from 1964–1980 — **BASIC, APL, Logo, PILOT, FOCAL, Scheme, CHIP-8,
-COMAL, REXX, Smalltalk and Forth** — with an integrated turtle graphics canvas, and
-three machines. It is a C++20 / Qt 6 application for Linux, and all eleven
-languages run in C++ inside it. There is no Python in the tree at all: the product,
+Time Warp Studio is a desktop workbench for old-school programming: ten
+interpreters from 1964–1980 — **BASIC, APL, Logo, PILOT, FOCAL, Scheme,
+COMAL, REXX, Smalltalk and Forth** — with an integrated turtle graphics canvas. It is
+a C++20 / Qt 6 application for Linux, and all ten languages run in C++ inside it. There is no Python in the tree at all: the product,
 its tests, its gates and its documentation checks are one language.
 
 So the product is **one GUI process**. Two things it can start as children, both
@@ -50,14 +49,14 @@ per line — program text going in and a stream of JSON messages coming back.
 | `timewarp_canvas` | `native/src/canvas/` | producer: interpreter thread; consumer: GUI thread | Carries drawing across the thread boundary |
 | `timewarp_canvas_qt` | `native/src/canvas/qt_bridge.cpp` | GUI thread | Qt glue for that queue: wakeup and draining |
 | `timewarp_scheme` | `native/src/scheme/` | runner thread, in-process | Scheme, on an explicit-stack machine with no native recursion |
-| `timewarp_lang` | `native/src/lang/` | runner thread, in-process | The shared interpreter loop, the value type, dispatch and the language registry — a static library composed of one object library per language: BASIC, FOCAL, PILOT, COMAL, APL and REXX line by line, CHIP-8, Logo, Smalltalk and Forth whole-program |
+| `timewarp_lang` | `native/src/lang/` | runner thread, in-process | The shared interpreter loop, the value type, dispatch and the language registry — a static library composed of one object library per language: BASIC, FOCAL, PILOT, COMAL, APL and REXX line by line, Logo, Smalltalk and Forth whole-program |
 | `timewarp_audio` | `native/src/audio/` | either | `SOUND` and `PLAY`'s tones and the mixer. Was a file list inside `timewarp_lang` |
 | `timewarp_io` | `native/src/io/` | either | `SERIAL`, `PARALLEL`, `STICK` and `STRIG`. Also out of `timewarp_lang`, so a language edit no longer rebuilds a device reader |
-| `timewarp/lang/registry.hpp` | `native/include/timewarp/lang/` | compiled in | The eleven languages, once: display name, protocol key, extensions, whole-program flag. Header-only and Qt-free, so the executors, the shell and the gates read the same table |
+| `timewarp/lang/registry.hpp` | `native/include/timewarp/lang/` | compiled in | The ten languages, once: display name, protocol key, extensions, whole-program flag. Header-only and Qt-free, so the executors, the shell and the gates read the same table |
 | `timewarp_debugger` | `native/src/debugger/` | its own `QThread` | Runs a Scheme program and services pause / step / breakpoint requests |
 | `timewarp_expr` | `native/src/token.cpp`, `lexer.cpp`, `evaluator.cpp` | runner thread, in-process | The ported expression evaluator, linked into `timewarp_lang` — see the note below |
 | `timewarp_lessons` | `native/src/lessons/` | GUI thread, or a command | The curriculum, the verifier, the learner's progress and the classroom. See the libraries section |
-| the frozen corpus | `native/tests/golden/lang_corpus.json.gz` | read by a command, never at run time | The reference engine's answers to 479 programs -- the Forth ones recorded from this engine, which has no reference run -- : what each printed, every drawing call, the variables it left. The parity gate compares the ports with these. The engine itself is deleted |
+| the frozen corpus | `native/tests/golden/lang_corpus.json.gz` | read by a command, never at run time | The reference engine's answers to 442 programs -- the Forth ones recorded from this engine, which has no reference run -- : what each printed, every drawing call, the variables it left. The parity gate compares the ports with these. The engine itself is deleted |
 
 > **`timewarp_expr` is part of a Run now.** It builds, it has 485 checks of its
 > own, the expression cases are in the recorded parity corpus, and `timewarp_lang`
@@ -325,137 +324,6 @@ touches it.
   scrubber be a view control rather than a mode the rest of the window has to
   know about.
 
-### The machines
-
-The three machines are documented as machines, not as features:
-[MACHINES.md](MACHINES.md) is the premise, the [HB-1 books](hb1/README.md), the
-[CHIP-8 books](chip8/README.md) and the [HB-2 books](hb2/README.md) are the manuals, and
-[Inside the HB-1](hb1/inside.md) is the engineer's companion to this section. The
-short version: they are not skins. Each owns its clock, its input and its storage, and
-each draws through the same queue as the editor.
-
-### The CHIP-8 machine
-
-CHIP-8 is two things in this tree, and the split is deliberate: `assemble_chip8`
-turns a listing into bytes, and `Chip8Machine` executes bytes. An assembled wrong
-opcode and a wrongly executed right opcode are different bugs, so they have
-different tests. `execute_chip8` binds them into the editor's whole-program
-executor.
-
-`Chip8Window` is a second top-level window, not a mode of the main one: the
-editor's Run keeps the whole-program executor, while `Chip8Emulator` owns a
-`QTimer` at about 60 Hz, executes a configurable number of opcodes per frame,
-ticks the delay and sound timers once a frame, and applies key presses as they
-arrive. The clock and the keypad are the only things the window adds — the
-assembler, the machine, the fonts and the quirks are the same code the editor
-runs. `Chip8Screen` paints the 64x32 framebuffer (128x64 in SuperChip hi-res)
-with an integer scale, `Chip8Keypad` mirrors the same key state, and the inspector
-reads a `Chip8Snapshot` copied after each frame, so it can never read a
-half-executed instruction. The window is parented to `MainWindow` and reused;
-closing it alone ends the run, and the next invocation builds a fresh machine
-rather than touching a dead one. The API and the quirks are in
-[the instruction set](chip8/instruction-set.md).
-
-### The HB-1
-
-`RetroComputerWindow` is the third top-level machine window, alongside the CHIP-8
-emulator. It is deliberately self-contained: its own `CanvasCommandQueue` and
-`CanvasBridge`, its own persistent `ReplRunner`, and its own `NativeRunner` for a
-whole-program `RUN`. Nothing in it shares state with the editor's REPL bar, so a
-program started from the computer cannot inherit a binding from a command typed in
-the IDE.
-
-The fiction is the design brief, not a coat of paint. The constraints are period —
-one ROM socket, 512 sectors of 256 bytes, a prompt, four phosphors — and every
-modern capability behind them is there to remove the cruelty, not the character.
-[Inside the HB-1](hb1/inside.md) is the long version; the four comments it cites
-(`hb_dos.hpp`, `retro_settings.hpp`, `retro_computer.hpp`, `panels.hpp`) are the
-short one.
-
-The ROM selector is a `Language`; `romFor()` supplies the version, prompt and boot
-note, and `setLanguage()` performs a cold boot -- stop both engines, swap the
-program buffer, clear the tube, print the banner. Each language's source is held
-in `programs_`, keyed by the enum value and persisted in QSettings, which is why
-switching ROMs and returning restores that ROM's memory. The screen is a
-`QSplitter` whose two children are a `QTabWidget` (a real `CodeEditor` on the
-PROGRAM page and the boot/output console on OUTPUT) and the `TurtleCanvas`; the
-mode selector shows one or both. A `CrtOverlay` covers the frame as glass rather
-than as a second surface, so it is transparent to input.
-
-`RetroComputerSettings` (`retro_settings.hpp`) is the machine's configuration: the
-boot ROM and boot screen, the start-up message, the prompt-history budget, whether
-programs are remembered, whether drawing switches to SPLIT, the phosphor, the two
-text sizes and the five glass strengths. It is persisted under
-`retroComputer/config` by the dialog and by nothing else — the window's own
-`saveSettings()` writes session state (geometry, ROM, screen, program buffers), so
-cancelling a preview cannot leave a configuration the user did not choose.
-`retroPalette()` is the one table of monitor colours; the stylesheet, the program
-editor's palette, the canvas surface and the CRT overlay all derive from it, which
-is why choosing Amber changes the whole machine rather than tinting one widget.
-
-`HbDos` (`hb_dos.{hpp,cpp}`) is the machine's disk: one volume of named programs,
-each with the ROM that runs it, a lock bit, and a size counted in 256-byte sectors
-against a 512-sector volume. It is a plain class with no widgets, so the same code
-serves the prompt and the tests; it persists as one JSON image in the application's
-data directory (`disks/HBWARP.dsk`), and every change is committed immediately and
-rolled back in memory when the write fails. The window's DOS words are thin: parse
-the arguments, call `HbDos`, print what happened in the machine's voice. `INIT` is
-the one destructive word, and the window makes it be said twice, with any other
-line in between cancelling it.
-
-The prompt has two paths. The machine's own words (`RUN`, `LIST`, `NEW`, `EDIT`,
-`TEXT`, `GFX`, `SPLIT`, `CLS`, `HELP`, `ROMS`, `CONFIG`, and the DOS words
-`CATALOG`, `STATUS`, `SAVE`, `LOAD`, `DELETE`, `RENAME`, `LOCK`, `UNLOCK`,
-`VERIFY`, `TYPE`, `INIT`) are handled in the window; in the BASIC ROM, a numbered
-line is inserted into the editor in numeric order and a bare number deletes it. Everything else is submitted to the `ReplRunner` for the
-selected ROM, which keeps bindings between entries. `RUN` stops that session and
-starts a `NativeRunner`, the same engine the editor's Run uses, so the two cannot
-both draw into the tube.
-
-### The HB-2
-
-The HB-2 is the one machine built as a library first: `timewarp_hb2`
-(`native/src/hb2/`, no Qt, no widgets) holds the bus, the devices, the processor and
-its tools, the operating system, the disk and the cassette, and the window is a view
-over it. That is why the machine can be assembled, run and inspected by
-`time_warp_gates hb` on a machine with no display, and why `hb2_tests` drives it
-without a `QApplication`.
-
-The memory map is one table. `native/include/timewarp/hb2/devices.inc` holds a row per
-region -- base, size, owning device, where in that device's own space the window
-starts, and whether the row exists only in `MODE 0` -- and `map.hpp` compiles it into
-the array the bus routes with, the address space `POKE` may reach, and the page the
-manual prints. A new device page is a row, not a second switch.
-
-Devices implement `Device`: `read`, `write`, `tick`, `reset`. The video chip owns the
-1982 text cells and both bitmap modes, the DAC, the blitter, the sprites and the ROM
-font the bitmap modes print with; the audio chip owns four PCM channels with envelopes
-and the waveform bank, plus the 1982 latch as channel zero; the input device owns the
-pointer, the key matrix and queue, and the two joysticks. `Machine` composes them, runs
-the 60 Hz frame, dispatches `INT` through one handler that every processor shares, and
-answers `statusText()` for a harness.
-
-`Cpu` is HB-16: a 16-bit processor with eight registers, six addressing modes and a
-cycle table carried as data so the manual's timing page and the machine cannot disagree.
-`assemble`, `disassemble` and `Cpu` are three readers of one instruction encoding, which
-is why assemble-disassemble-assemble is asserted to be the same bytes. An `Assembly`
-separates the image's base (`origin`, the lowest byte placed) from the `entry` the
-processor starts at (the first instruction placed), so a listing may put a message above
-its code.
-
-The seam back to the languages is the one the HB-1 already used: `Interpreter::MachineBus`
-is a set of callbacks -- `peek`, `poke`, cursor, ink and paper, clear, write text, `sys`,
-`stick` and `strig`, and the address range `POKE` may reach -- and `NativeRom` in
-`hb2/rom.cpp` implements them over the bus. Nine of the eleven engines therefore run *on*
-the machine with no change to the engines themselves: `POKE 1048576, 5` is a pixel
-because that address is the framebuffer, and `SYS 4096` runs HB-16 because the callback
-that answers it resets the machine's processor. Scheme is its own machine and CHIP-8 is
-a different computer, so neither is a ROM.
-
-HB-OS is a scheduler over the same bus: eight tasks, round-robin on the frame tick, each
-with its own registers, console and window, and a fault in one is that task's fault. The
-desktop composes the windows and the task bar from what they printed.
-
 ### The guided tour
 
 `tour.cpp` owns a first-run overlay and the one-time hints built on the same
@@ -472,7 +340,7 @@ menu can show it on demand.
 
 `native/src/ui/language.cpp` is a Qt adapter over the one table, which lives in
 `native/include/timewarp/lang/registry.hpp`: display name, protocol key and file
-extensions for each of the eleven, read by the executors, the shell and the gates
+extensions for each of the ten, read by the executors, the shell and the gates
 alike. The UI side adds `languageFromKey` and `languageForFile`. The enum order
 matches the registry's, and new languages are **append-only**, because persisted
 state references these by identity rather than by position.
@@ -539,7 +407,7 @@ Every language's arithmetic goes through it: the executors call
 ### Parity as the acceptance test
 
 The language engines are compared with the recorded corpus by
-`time_warp_gates golden` — 479 programs, and **0 differences** is the verdict —
+`time_warp_gates golden` — 442 programs, and **0 differences** is the verdict —
 and the Scheme machine against its own corpus (`scheme_corpus.json.gz`, 192
 programs, comparing whole output text). The Scheme entries that are *documented* as
 divergent carry the reference's text and the reason beside it, and the check asserts
@@ -595,9 +463,8 @@ Five libraries sit beside the engines, each with one job and a test suite:
   own store through `keyring.cpp` (Credential Manager, Keychain, `libsecret`) and falls
   back to the settings file restricted to its owner, and every message goes through
   `redact()` before it is shown, so a proxy echoing the request cannot put the key in
-  the status bar. `history.cpp` is the opt-in conversation file, and `assistant_dialog`
-  is the same page in a dialog for the two machine windows. The client is asynchronous
-  and every request streams; the `time_warp_ai` command waits on an event loop rather
+  the status bar. `history.cpp` is the opt-in conversation file. The client is
+  asynchronous and every request streams; the `time_warp_ai` command waits on an event loop rather
   than the library growing a second, blocking path.
 - **`timewarp_api`** is JSON-RPC 2.0 over newline-delimited JSON, with no transport
   of its own. `api::Server` takes an `istream` and an `ostream`, which is how it can
@@ -611,7 +478,7 @@ Five libraries sit beside the engines, each with one job and a test suite:
   "what does this program do".
 
 `time_warp_ide --compile` (and `./twc`, which is a wrapper for it) writes a
-standalone artifact for a program: the source is embedded as bytes (a CHIP-8 ROM is
+standalone artifact for a program: the source is embedded as bytes (a program
 binary), the player that runs it links `timewarp_lang` or `timewarp_scheme`, and
 `graphics::RecordingHost` — the same recorder the API returns — writes the drawing
 as SVG. The result needs neither the Studio nor a second interpreter at run time.
@@ -725,7 +592,7 @@ declares the one signature both execution modes share — they differ only in wh
 using Executor = std::string (*)(Interpreter&, std::string_view, TurtleHost&);
 ```
 
-- **Whole-program executors** receive the entire source: CHIP-8, Logo, Smalltalk and
+- **Whole-program executors** receive the entire source: Logo, Smalltalk and
   Forth, which is what `whole_program` in the registry marks and
   `is_whole_program` reads. Scheme is whole-program too, but it is not in this table:
   it is the explicit-stack machine in `timewarp_scheme`, and `executor_for` answers
@@ -861,7 +728,7 @@ were filled in:
 
 Every language can be stepped. The six line-loop languages stop at a statement through
 `DebugSession::note_line`; Logo stops at a top-level statement, Smalltalk at a message
-send and CHIP-8 before an instruction through `note_source_line`. Scheme is the only
+send and Forth at a token through `note_source_line`. Scheme is the only
 one that also reports a call stack and frame bindings, because it is the only machine
 that keeps them. `DebugPanel`'s buttons drive whichever runner is paused.
 
@@ -913,11 +780,11 @@ tree.
 
 | Gate | Command | What it protects |
 | --- | --- | --- |
-| C++ suites (26) | `make -C native test` | Lexer, evaluator, Scheme, native languages, canvas queue, canvas bridge, debug, debugger runner, UI layout, UI documents, turtle canvas, syntax highlighter, media, editor services, help browser, CHIP-8 emulator, retro computer, project, SQL, API, audio, lessons, classroom, CLI, AI and player |
+| C++ suites (24) | `make -C native test` | Lexer, evaluator, Scheme, native languages, canvas queue, canvas bridge, debug, debugger runner, UI layout, UI documents, turtle canvas, syntax highlighter, media, editor services, help browser, project, SQL, API, audio, lessons, classroom, CLI, AI and player |
 | Debug tree | `make -C native test-debug` | Keeps `Q_ASSERT` and standard-library hardening live; a suite green in Release can crash here |
 | Sanitisers | `make -C native asan` | Reads and writes of memory that is no longer valid, which no assertion can see. `ASAN=undefined` for UBSan |
 | Example corpus | `make smoke` | Every `Examples/**` program, through the native engines, including the 48 that must produce ink |
-| Parity gate | `make golden-check` (`time_warp_gates golden`) | The ports against 671 recorded programs: the reference's answers, frozen before it was deleted, plus the Forth ones recorded from the native engine. 0 differences |
+| Parity gate | `make golden-check` (`time_warp_gates golden`) | The ports against 634 recorded programs: the reference's answers, frozen before it was deleted, plus the Forth ones recorded from the native engine. 0 differences |
 | Lesson curriculum | `make teach-check` (`time_warp_teach validate`) | That every checkpoint's own solution passes, that no starter already passes, and that every language has a lesson |
 | Command matrix | `make command-matrix` (`time_warp_gates commands`) | One row per documented command, through `time_warp_check` and then through the REPL |
 | Version metadata | `make doc-claims` (`time_warp_docs version`) | That every hand-written copy of the version agrees with `VERSION` |
@@ -1039,13 +906,13 @@ coming from the Python application starts from this build's defaults.
   pause, step and breakpoints, and `debug_tests` covers the machinery; `DebugPanel`
   drives it for Scheme. Every other language stops through the shared
   `DebugSession`: a statement for the line-loop languages, a top-level statement
-  for Logo, a message send for Smalltalk and an instruction for CHIP-8. Watch
+  for Logo, a message send for Smalltalk and a token for Forth. Watch
   expressions are evaluated over the paused bindings by `timewarp::lang`'s watch
   evaluator; data breakpoints compare the bindings after each statement (or at a
   whole-program pause point) and stop when a watched name changes. Every language
   that keeps a return stack now publishes it as a call chain: Smalltalk's message
   sends through a probe, and the line-loop languages' `GOSUB`/`CALL`/`PROC`/`DO`
-  frames by mirroring the stack they already keep. Logo and CHIP-8 keep none.
+  frames by mirroring the stack they already keep. Logo and Forth keep none.
 - **The editor** has syntax colouring, find/replace, find-in-files, a minimap, a
   formatter, language-specific checking as you type (squiggles, gutter markers,
   hover text), optional completion, auto-indent, breakpoint markers in the gutter,

@@ -26,6 +26,10 @@ namespace timewarp::lang::basic {
 
 namespace {
 
+/// The top address `POKE` and `PEEK` reach: the language's own map has always been
+/// 16 bits, so a program that draws by poking cells can address all of it.
+constexpr long kBasicMemoryLimit = 0xFFFF;
+
 /// The text of one statement argument: `"text"`, a string variable, or an
 /// expression -- evaluated with the string evaluator, exactly as `PUT #` does.
 [[nodiscard]] std::string argument_text(Interpreter& interpreter, const State& state,
@@ -321,26 +325,13 @@ std::string Machine::poke(const std::string& args) {
     try {
         const auto address = static_cast<long>(eval(address_text));
         const auto value = static_cast<long>(eval(value_text));
-        // The range is the machine's: a processor with sixteen address lines takes
-        // 0-65535, and the HB-2's 1 MiB takes 0-1048575. Without a machine it is the
-        // language's own map, which has always been 16 bits.
-        const long limit = static_cast<long>(interpreter_.machine_address_limit()) - 1;
+        // The language's own map has always been 16 bits.
+        const long limit = kBasicMemoryLimit;
         if (address < 0 || address > limit) {
             return "❌ POKE address must be 0-" + std::to_string(limit) + "\n";
         }
         if (value < 0 || value > 255) {
             return "❌ POKE value must be 0-255\n";
-        }
-        if (interpreter_.machine_attached()) {
-            // A machine has real memory, and a POKE into a cell draws. Refusing a
-            // write into ROM is the one case a program has to be told about: the
-            // byte cannot land and pretending it did would be the silent failure
-            // this project treats as the bug.
-            if (!interpreter_.machine_poke(static_cast<int>(address),
-                                           static_cast<std::uint8_t>(value))) {
-                return "❌ POKE " + std::to_string(address) + " is ROM: it cannot be written\n";
-            }
-            return {};
         }
         state_.memory[static_cast<int>(address)] = static_cast<int>(value);
     } catch (const std::exception& error) {
@@ -354,19 +345,13 @@ std::string Machine::peek(const std::string& args) {
     // cell it computed.
     try {
         const auto address = static_cast<long>(eval(trim(args)));
-        const long limit = static_cast<long>(interpreter_.machine_address_limit()) - 1;
+        const long limit = kBasicMemoryLimit;
         if (address < 0 || address > limit) {
             return "❌ PEEK address must be 0-" + std::to_string(limit) + ": got " +
                    std::to_string(address) + "\n";
         }
-        const int value = interpreter_.machine_attached()
-                              ? static_cast<int>(
-                                    interpreter_.machine_peek(static_cast<int>(address)))
-                              : [this, address] {
-                                    const auto found =
-                                        state_.memory.find(static_cast<int>(address));
-                                    return found == state_.memory.end() ? 0 : found->second;
-                                }();
+        const auto found = state_.memory.find(static_cast<int>(address));
+        const int value = found == state_.memory.end() ? 0 : found->second;
         return "ℹ️ PEEK(" + std::to_string(address) + ") = " + std::to_string(value) + "\n";
     } catch (const std::exception& error) {
         return "❌ PEEK error: " + std::string{error.what()} + "\n";

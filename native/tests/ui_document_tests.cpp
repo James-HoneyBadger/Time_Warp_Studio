@@ -63,7 +63,6 @@ int main(int argc, char** argv) {
     test_run_selection_and_history();
     test_autosave_keeps_unsaved_work();
     test_restoring_a_copy_opens_a_new_tab();
-    test_a_binary_chip8_rom_opens_read_only();
     test_word_at_cursor();
     test_context_help_follows_the_document_language();
     test_breakpoints_toggle_paint_and_persist();

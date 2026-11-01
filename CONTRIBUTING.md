@@ -77,9 +77,9 @@ Three recipes cover most contributions:
 - **Documentation.** `.github/workflows/docs.yml` enforces the parts that can be
   checked: every guide [docs/INDEX.md](docs/INDEX.md) promises exists, every
   relative link and `#anchor` resolves (`make doc-links`), every language has a
-  tutorial, and the lesson plans match the curriculum. Each fact has one home —
-  the [HB-1](docs/hb1/README.md) and [CHIP-8](docs/chip8/README.md) books own their
-  machines, and the IDE guide links to them rather than restating them.
+  tutorial, and the lesson plans match the curriculum. Each fact has one home, and
+  the guides link to it rather than restating it — see the documentation map in
+  [copilot-instructions.md](.github/copilot-instructions.md).
 
 A change that alters a program's output is a documentation change too: the guides
 and the lessons contain transcripts of what programs print.
@@ -198,9 +198,9 @@ detect-secrets scan --baseline .secrets.baseline
 
 The harnesses are `time_warp_gates`, one binary built with the product: `smoke`
 runs every example, `commands` runs every row of the command table, `repl` runs the
-same rows through the API, `golden` compares the ports with the frozen corpora, and
-`hb` assembles an HB-2 listing, runs the machine and shows what it printed and drew. The rows are data in `native/share/command_rows.json`, and the inventory
-that measures their coverage reads the executors' own sources
+same rows through the API, and `golden` compares the ports with the frozen corpora.
+The rows are data in `native/share/command_rows.json`, and the inventory that
+measures their coverage reads the executors' own sources
 (`native/tools/gates/inventory.cpp`).
 
 The documentation gates are `time_warp_docs` (`native/tools/docs`, one small
@@ -435,10 +435,6 @@ project uses, and every fix is expected to arrive with one.
 - `docs/ARCHITECTURE.md` - If internal change
 - `docs/INSTALLATION.md` - If build or run steps change
 - `docs/LANGUAGE_GUIDE.md` - If language syntax
-- `docs/hb1/` - If the HB-1's words, disk, settings or screen change
-- `docs/chip8/` - If the assembler, an opcode or the emulator window changes
-- `docs/hb2/` - If the bus, a device, a service, the disk, the cassette, the ROM socket or the module bay changes
-- `docs/MACHINES.md` - If any machine, or what they share, changes
 - `docs/ROADMAP.md` - If a planned item lands or is deferred
 - `native/README.md` - If the Qt application's design or behaviour changes
 
@@ -495,11 +491,10 @@ if you miss it:
 
 - `native/src/lang/language.cpp` — the `Language` enum member, `display_name`,
   `key`, `all_languages`, `is_whole_program` and `executor_for`
-- `native/src/ui/language.cpp` — display name, settings key and extensions. CHIP-8
-  is the trap here: the enum member is `CHIP8` and the display name is `CHIP-8`
+- `native/src/ui/language.cpp` — the Qt adapter over that table: display name,
+  settings key and extensions
 - the switches that have a case per language: `syntax_highlighter.cpp`, `lint.cpp`,
-  `outline.cpp`, `native_runner.cpp`, `retro_computer.cpp` (the ROM socket) and
-  `curriculum.cpp` (the extension)
+  `outline.cpp`, `native_runner.cpp` and `curriculum.cpp` (the extension)
 - `native/CMakeLists.txt` — the source file
 
 The build is `-Werror` with switch-exhaustiveness warnings, so a missing case is a
@@ -609,7 +604,7 @@ Time_Warp_Studio/
 │                                 #   golden, tree, in gates/), time_warp_docs
 │                                 #   (links, claims, version, in docs/),
 │                                 #   time_warp_icon (the packaged icons)
-├── Examples/                     # 95 example programs across the 11 languages
+├── Examples/                     # 68 example programs across the 10 languages
 ├── docs/                         # the guides
 │   ├── USER_GUIDE.md             #   the IDE manual (projects, REPL, SQL, API)
 │   ├── API.md                    #   JSON-RPC methods and libraries

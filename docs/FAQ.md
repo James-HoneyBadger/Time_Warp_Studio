@@ -28,39 +28,35 @@ Studio. For the full listing, see the [documentation index](INDEX.md) and
 
 ### What is Time Warp Studio?
 
-Time Warp Studio is an old-school desktop programming environment. It runs eleven
+Time Warp Studio is an old-school desktop programming environment. It runs ten
 interpreters from 1964–1980 in one IDE, with an integrated turtle graphics canvas,
-an output console and a debugger that works in every one of them.
-
-It also carries three machines: the **HB-1**, a 1982 home computer from a
-parallel universe, the **CHIP-8**, the 1977 virtual machine, and the **HB-2**, the
-same company's 1992 workstation with a processor of its own. All three are real
-programs you can type at, debug and save to — see
-[the machines](MACHINES.md).
+an output console and a debugger that works in every one of them. Every language is
+a native implementation inside the application: there is no emulator and no
+interpreter underneath.
 
 ### What can the Studio do?
 
-The short inventory: eleven languages on native engines; an editor with find in
+The short inventory: ten languages on native engines; an editor with find in
 files, snippets, an outline, formatting, live lint, autosave and version history;
 a turtle canvas with zoom, pan, scrubber playback, GIF recording and raster, SVG,
-PDF and HTML export; a debugger that works in all eleven languages, with watches,
-data breakpoints, a Variables panel and telemetry; projects; SQLite; 22 lessons
-and 66 checkpoints with classroom tools; a JSON-RPC API and a standalone `twc`
-compiler; 35 themes with high contrast and text sizes; the machines; and help
-inside the application. The full list, with links, is in the
+PDF and HTML export; a debugger that works in all ten languages, with watches,
+data breakpoints, a Variables panel and telemetry; projects; SQLite; 20 lessons
+and 60 checkpoints with classroom tools; a JSON-RPC API and a standalone `twc`
+compiler; 35 themes with high contrast and text sizes; and help inside the
+application. The full list, with links, is in the
 [README](../README.md#what-else-is-in-the-workbench).
 
-### Why is there a home computer from 1982 in my IDE?
+### Why are the languages so old?
 
-Because a constraint is the best teacher. The HB-1 is a machine from a parallel
-universe where the design sense of the next forty years arrived in time for the
-8-bit boom: a prompt, a sector-counted disk and 64K of memory, with modern engines
-behind them. Nothing about it is decorative — every word and switch does something
-you can watch. [The machines](MACHINES.md) explains the premise item by item.
+Because a constraint is the best teacher. A language with numbered lines, sixteen
+kilobytes and no libraries makes a program something you can hold in your head, and
+the ideas it teaches — a loop, a subroutine, a variable's scope — are the same ones
+a modern language asks you to take on trust. Each interpreter here is the real
+language of its year rather than a simplified one.
 
 ### Which languages are supported?
 
-BASIC, APL, Logo, PILOT, FOCAL, Scheme, CHIP-8, COMAL, REXX, Smalltalk and Forth.
+BASIC, APL, Logo, PILOT, FOCAL, Scheme, COMAL, REXX, Smalltalk and Forth.
 Each language implements a subset of its traditional form. See the
 [Language Guide](LANGUAGE_GUIDE.md) for what each one supports.
 
@@ -71,16 +67,16 @@ Yes. It is released under the MIT License. See [LICENSE](../LICENSE).
 ### Who is it for?
 
 People who like old computers: retro-computing hobbyists, language collectors and
-anyone who wants to type at a 1982 machine that never existed, or write and run
-CHIP-8. The Studio is also a complete teaching environment — checked lessons,
+anyone who wants to type at a 1982 machine that never existed. The Studio is also a
+complete teaching environment — checked lessons,
 rosters and marking — for anyone who wants that, but it does not assume a
 classroom. Output and errors are in plain language with emoji prefixes, so the
 first session is readable either way.
 
 ### Does it need an internet connection?
 
-No. The core features work offline: the eleven interpreters, the machines, the
-debugger, the lessons and the SQL database are all inside the application. The one
+No. The core features work offline: the ten interpreters, the debugger, the lessons
+and the SQL database are all inside the application. The one
 feature that can use a connection is the optional [AI assistant](AI.md), which is
 off until you configure a service and which can point at a model running on this
 machine instead.
@@ -94,9 +90,8 @@ machine instead.
 - A C++20 compiler, CMake 3.20+, Qt6 (Widgets, Core, Gui; Svg is optional and
   adds SVG drawing export, PrintSupport is optional and adds the two Print
   entries), and SQLite 3 (the development package is needed for a source build)
-- Nothing else. Every language, the lesson check, the classroom, the two
-  machines, the gates and the documentation tools are C++ built from this
-  repository: no interpreter is needed to run a program, test the tree or check a
+- Nothing else. Every language, the lesson check, the classroom, the gates and the
+  documentation tools are C++ built from this repository: no interpreter is needed to run a program, test the tree or check a
   guide.
 
 ### How do I build it?
@@ -145,7 +140,6 @@ system. The [Installation Guide](INSTALLATION.md) has the Linux steps.
 | PILOT | `.pilot`, `.plt` |
 | FOCAL | `.foc`, `.focal` |
 | Scheme | `.scm`, `.ss`, `.scheme` |
-| CHIP-8 | `.ch8`, `.c8` |
 | COMAL | `.comal`, `.cml` |
 | REXX | `.rexx`, `.rex` |
 | Smalltalk | `.st`, `.smalltalk` |
@@ -164,18 +158,6 @@ contents tree on the left; Help → Getting Started opens the student guide. The
 same pages are in `docs/` in the repository. Start with the
 [user guide](USER_GUIDE.md) for the IDE and the
 [language guide](LANGUAGE_GUIDE.md) for commands.
-
-### Where are the machine manuals?
-
-The machine books are in this folder, and Help → Documentation lists them:
-
-- [the machines](MACHINES.md) — why there are three, and what they share;
-- [HB-1 Owner's Manual](hb1/README.md), [ROMs](hb1/roms.md),
-  [HB DOS](hb1/hb-dos.md), [CONFIG](hb1/config.md),
-  [Inside the HB-1](hb1/inside.md);
-- [CHIP-8 Machine Manual](chip8/README.md), [the assembler](chip8/assembly.md),
-  [the instruction set](chip8/instruction-set.md);
-- [HB-2 Manual](hb2/README.md) and [the HB-16 instruction set](hb2/instruction-set.md).
 
 ### How do I see all keyboard shortcuts?
 
@@ -278,59 +260,19 @@ Yes. The **REPL** line under the editor runs one entry at a time. BASIC, FOCAL,
 PILOT, COMAL, REXX, APL, Logo and Scheme keep state between entries, so
 `LET X = 5` followed by `PRINT X` prints 5; Scheme also keeps `define`s and echoes
 expression values. Logo keeps `MAKE` variables but not `TO` definitions. Smalltalk
-and CHIP-8 run each submission as a separate whole program, so assignments and
-registers do not carry over. In BASIC, `?` means `PRINT`; a line beginning with
+and Forth run each submission as a separate whole program, so assignments and stack
+contents do not carry over. In BASIC, `?` means `PRINT`; a line beginning with
 a number is stored in the editor as a program line, and `LIST`, `RUN` and `NEW`
 work as direct-mode commands. `NEW` clears the program and the session's
 bindings. Switching the document's language starts a REPL session for that
 language; API clients can also call `repl.reset`.
-
-### Is there a retro home-computer interface?
-
-Yes. **Tools → HB-1 Computer** (`Ctrl+Alt+W`, or `./run.sh --computer`)
-opens a self-contained machine: one CRT with a boot intro, a prompt underneath, a
-language ROM socket for all eleven languages, and TEXT/SPLIT/GRAPHICS screen modes.
-Type at the prompt — in the BASIC ROM, `10 PRINT "HELLO"` stores a program line and
-`RUN` runs it — or edit the program on the PROGRAM page and press `F9`. Each ROM
-keeps its own program, and the ROM, the screen mode and all eleven program buffers persist
-between sessions. **CONFIG** (or `Ctrl+,`) sets what the machine boots into, the
-start-up message, the phosphor — green, amber, white or ice — the text sizes and
-the CRT glass, and **HB DOS** saves programs to a disk with `SAVE "NAME"`,
-`LOAD "NAME"`, `CATALOG` and the rest of a 1980s DOS.
-[The user guide](USER_GUIDE.md#4-the-hb-1-computer) has the prompt commands;
-the **[Owner's Manual](hb1/README.md)** has everything else, and the
-**[HB DOS reference](hb1/hb-dos.md)** every disk word and refusal.
-
-### Is there a CHIP-8 machine?
-
-Yes, two views of one. The editor's CHIP-8 language runs a listing as a whole
-program for lessons and parity checks; **Tools → CHIP-8 Emulator** (`Ctrl+Shift+M`)
-runs it live at 60 frames a second with a keypad, single-step, an inspector and
-adjustable speed. It assembles listings and loads binary ROMs, and the ROM library
-browses a folder you own — the Studio ships no third-party ROMs.
-Start with [the CHIP-8 machine manual](chip8/README.md), then
-[the assembler](chip8/assembly.md) and
-[the instruction set](chip8/instruction-set.md).
-
-### Is there a 1992 machine?
-
-Yes. **Tools → HB-2 Model 92** (`Ctrl+Alt+2`, or `./run.sh --hb2`) opens the HB-1's
-successor: a 640 × 480 framebuffer with a blitter and sixteen sprites, four channels of
-sampled audio, a keyboard, a joystick and a clock, and HB-16 — a processor of its own,
-with an assembler, a disassembler and a monitor. Its ROM socket holds nine of the
-editor's languages as well as the assembler, so a BASIC `POKE` writes a pixel, `SYS`
-runs machine code and `STICK` reads the machine's joystick; HB DOS 2.0 has two drives
-with directories, there is a cassette beside it, eight processes share a desktop, and a
-module bay holds scripts, binaries, machine images and packages of running programs.
-Start with [the HB-2 manual](hb2/README.md) and [the instruction set](hb2/instruction-set.md).
 
 ### Why does my program run forever?
 
 It may contain an endless loop, such as a `GOTO` with no exit condition or a
 `while` loop whose condition never becomes false. The line-by-line engine stops a
 runaway run on its own budget (2,000,000 steps or 10 seconds, whichever comes first)
-and says so; CHIP-8 has its own opcode and frame limits. The Stop button ends either
-sooner, at the next statement or instruction.
+and says so. The Stop button ends it sooner, at the next statement.
 
 ### Can I run a program from a lesson or example directly?
 
@@ -372,13 +314,13 @@ REXX is a typeless string-processing language: `SAY` to display, `PULL` to read 
 
 Scheme is a small Lisp dialect with lexical closures. Define procedures with `define`/`lambda`, branch with `if`/`cond`, loop with recursion or named `let`, and process lists with `map`, `filter` and `foldl`. See [scheme.md](tutorials/scheme.md).
 
-### What about APL, FOCAL, CHIP-8 and Smalltalk?
+### What about APL, FOCAL, Smalltalk and Forth?
 
 APL is array programming with its glyphs and keyword spellings; FOCAL is a
-line-numbered formula calculator; CHIP-8 is a bytecode machine with an
-integrated assembler; Smalltalk is a message-sending object system with real
-blocks and a class library. Each has a tutorial in `docs/tutorials/` and a
-reference section in [LANGUAGE_GUIDE.md](LANGUAGE_GUIDE.md).
+line-numbered formula calculator; Smalltalk is a message-sending object system with
+real blocks and a class library; Forth is a stack and a dictionary of words you
+extend as you go. Each has a tutorial in `docs/tutorials/` and a reference section
+in [LANGUAGE_GUIDE.md](LANGUAGE_GUIDE.md).
 
 ### Which language should a beginner start with?
 
@@ -413,9 +355,9 @@ Drawing...** print directly; see [How do I print?](#how-do-i-print).
 
 ### Does the turtle work in every language?
 
-Logo, BASIC, COMAL, REXX, Scheme, FOCAL, APL and Smalltalk have turtle words.
-PILOT draws through its `G:` graphics commands, and CHIP-8 paints rectangles
-directly. Check each language's tutorial for its graphics commands.
+Logo, BASIC, COMAL, REXX, Scheme, FOCAL, APL, Smalltalk and Forth have turtle
+words. PILOT draws through its `G:` graphics commands. Check each language's
+tutorial for its graphics commands.
 
 ---
 
@@ -423,9 +365,9 @@ directly. Check each language's tutorial for its graphics commands.
 
 ### Does the Studio have a debugger?
 
-Yes, for every language. The 🐞 Debug tab, the toolbar's Debug/Continue/Trace actions and gutter breakpoints stop the run at the language's natural boundary: a statement for BASIC, FOCAL, PILOT, COMAL, APL and REXX; a top-level statement for Logo; a message send for Smalltalk; an instruction before CHIP-8 executes it (the tab shows the listing line, or "the next instruction" for a binary ROM). **Continue** runs to the next breakpoint and **Trace** stops at the next boundary.
+Yes, for every language. The 🐞 Debug tab, the toolbar's Debug/Continue/Trace actions and gutter breakpoints stop the run at the language's natural boundary: a statement for BASIC, FOCAL, PILOT, COMAL, APL and REXX; a top-level statement for Logo; a message send for Smalltalk; a token for Forth. **Continue** runs to the next breakpoint and **Trace** stops at the next boundary.
 
-Scheme additionally reports the call stack and the paused frame's bindings. Smalltalk reports the message sends it is inside, and the line-loop languages report the calls they are inside — a `GOSUB`, `CALL`, `PROC`, `DO` group or PILOT unit, under the program's own frame. Logo and CHIP-8 keep no return stack, so they report no chain. For every language the 🔍 Variables tab shows the bindings the run is stopped in.
+Scheme additionally reports the call stack and the paused frame's bindings. Smalltalk reports the message sends it is inside, and the line-loop languages report the calls they are inside — a `GOSUB`, `CALL`, `PROC`, `DO` group or PILOT unit, under the program's own frame. Logo and Forth keep no return stack, so they report no chain. For every language the 🔍 Variables tab shows the bindings the run is stopped in.
 
 The Debug tab also has **watch expressions** — `X * 2` is evaluated over the paused bindings, with a typo reported as `?` rather than silently read as zero — and **data breakpoints**: type a variable name, or double-click it in the Variables table, and the run stops when its value changes. The pause says which variable changed.
 
@@ -473,8 +415,8 @@ when the run ends a report lists the lines longest first with their hit count,
 total time, share of the run and source text. It is off at every launch on
 purpose — a clock read around every statement costs, and a remembered "on" would
 make every later run pay for a report nobody asked to see. Whole-program
-languages (Logo, Scheme, Smalltalk, CHIP-8) have no statement loop to time, so
-the console says so instead.
+languages (Logo, Scheme, Smalltalk, Forth) have no statement loop to time, so the
+console says so instead.
 
 ### Can I go back in time?
 

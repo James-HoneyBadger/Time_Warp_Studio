@@ -2,6 +2,73 @@
 
 <!-- history: all -->
 
+## [28.0.0] - 2026-11-01
+
+**The IDE and the languages, and nothing else: the machines are removed.**
+Three emulated computers lived inside the application -- the HB-1 home computer,
+its 1992 successor the HB-2, and the CHIP-8 virtual machine -- and each was a second
+product with its own clock, storage, manuals and manuals' worth of caveats. This
+release removes them, and with them the language that ran on the last one. What is
+left is what the application is for: writing a program, running it, watching it
+draw, stopping it, and reading why.
+
+### Removed
+
+- **The HB-1.** `RetroComputerWindow` with its ROM socket, prompt, screen modes,
+  CONFIG dialog, phosphor palettes and CRT glass; **HB DOS 1.0** (`HbDos`, a
+  512-sector volume with a catalogue, lock bits and a two-step `INIT`); **WARP
+  BOARD** (`HbBbs`, the machine's modem and its bulletins); the tube and its memory
+  map (`HbTube`, `HbMemory`); machine images (`MachineImage`); the machine's voice
+  (`MachineVoice`); and `HbClock`, the 60 Hz clock that only the machine felt.
+  Tools > HB-1 Computer is gone, and so are `--computer` and `--machine`.
+- **The HB-2.** The whole machine library `timewarp_hb2` -- the bus, HB-16 and its
+  assembler, video, audio, peripherals, tape, DOS 2.0, HB-OS, the monitor, the module
+  bay and the shell -- and `Hb2Window` with its screen, prompt, monitor and listing
+  page. The `hb` gate and the `make hb-check` target are gone with it.
+- **The CHIP-8.** The language: `src/lang/chip8.cpp` (the assembler and
+  `Chip8Machine`), the `Chip8` enumerator, its `.ch8`/`.c8` extensions, its syntax
+  rules, its linter, its 37 recorded parity programs, its 34 command rows, its two
+  lessons and its eighteen example listings. The window: `Chip8Window`,
+  `Chip8Emulator`, the screen, the ROM library and the homebrew archive, which was
+  the application's second and last network call.
+- **The machine bus.** `Interpreter::MachineBus` let a `POKE`, a `LOCATE`, a `COLOR`,
+  a `CLS`, a `SYS` or a `STICK` reach real hardware instead of the program's own
+  memory. With no machine to reach, the hook had no caller: the statements now read
+  and write the language's own 16-bit map, which is what they always did in the IDE,
+  and `SYS` reports that it needs a machine rather than pretending otherwise.
+- **`AssistantDialog`**, the copy of the assistant page that only the two machine
+  windows opened.
+- **The manuals**: `docs/MACHINES.md`, `docs/hb1/`, `docs/hb2/`, `docs/chip8/`, the
+  CHIP-8 tutorial, its lesson plan and its two lessons.
+
+### Changed
+
+- **Ten languages, not eleven.** Every table that counted eleven now counts ten, and
+  `make registry-check` still proves the count has one home.
+- **The figures are corrected where they are quoted.** The parity corpus holds 442
+  language programs rather than 479, the command table 532 rows rather than 566, the
+  smoke gate 67 example programs rather than 94, and the curriculum 20 lessons and 60
+  checkpoints rather than 22 and 66.
+- **The assistant is told about ten languages.** Its system prompt loses the CHIP-8
+  sentence and the whole-program list the machines were in.
+- **`time_warp_ide --help` no longer offers `--computer`, `--machine` or `--hb2`.**
+
+### Verified
+
+- `ctest --test-dir native/build` -- 24 suites, all green. The four machine suites
+  (`chip8_emulator_tests`, `hb2_tests`, `retro_computer_tests` and the CHIP-8 cases in
+  `lang_tests`) are removed rather than skipped; the four debugger cases that lived in
+  the CHIP-8 assembler suite were moved to `lang_debugging_tests.cpp` rather than
+  deleted, because they tested the debugger and not the machine.
+- `make golden-check` -- 442 language programs and 192 Scheme ones, 0 differences.
+- `make smoke` -- 67 example programs, all of them running and all the drawing ones
+  drawing.
+- `make command-matrix` and `make repl-matrix` -- 532 rows each, all behaving.
+- `make teach-check`, `make doc-links`, `make doc-claims`, `make lint-md`,
+  `make tree-check`, `make registry-check`, `make structure-check` -- silent.
+
+---
+
 ## [27.0.0] - 2026-10-31
 
 **The HB-2's own gaps are closed: a language on its hardware, a cassette, a joystick.**

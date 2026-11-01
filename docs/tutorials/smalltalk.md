@@ -6,7 +6,7 @@ object-oriented, and the one with the fewest reserved words: there is **no synta
 for control flow at all**. `ifTrue:`, `whileTrue:` and `to:do:` are messages sent
 to objects.
 
-Time Warp Studio runs Smalltalk whole-program, like Scheme and CHIP-8: a file
+Time Warp Studio runs Smalltalk whole-program, like Scheme and Forth: a file
 defines classes and methods and then runs some code, and a method body is more
 than one line, so the whole source is read before anything runs.
 

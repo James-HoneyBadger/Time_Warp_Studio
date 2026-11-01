@@ -134,7 +134,7 @@ void list(const std::vector<Lesson>& lessons) {
 }
 
 /// Whether `name` means this language, spelled either way a person might write it:
-/// the protocol key ("basic", "chip8") or the display name ("BASIC", "CHIP-8"),
+/// the protocol key ("basic", "logo") or the display name ("BASIC", "Logo"),
 /// case-insensitively. The two are different facts stored in different places, and a
 /// teacher typing `--language Logo` should not have to know which one this compares.
 bool language_matches(timewarp::lang::Language language, const std::string& name) {

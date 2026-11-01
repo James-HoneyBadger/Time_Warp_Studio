@@ -68,7 +68,6 @@
 #include "timewarp/ui/app_paths.hpp"
 #include "timewarp/ui/benchmark.hpp"
 #include "timewarp/ui/breakpoints.hpp"
-#include "timewarp/ui/chip8_window.hpp"
 #include "timewarp/ui/code_editor.hpp"
 #include "timewarp/ui/classroom_marker.hpp"
 #include "timewarp/ui/command_palette.hpp"
@@ -81,8 +80,6 @@
 #include "timewarp/ui/preferences.hpp"
 #include "timewarp/ui/profile_report.hpp"
 #include "timewarp/ui/project_panel.hpp"
-#include "timewarp/ui/hb2_window.hpp"
-#include "timewarp/ui/retro_computer.hpp"
 #include "timewarp/ui/repl_runner.hpp"
 #include "timewarp/ui/sql_panel.hpp"
 #include "timewarp/sql/database.hpp"
@@ -722,90 +719,6 @@ void MainWindow::rearmGuidedTour() {
     }
 }
 
-void MainWindow::openChip8Emulator() {
-    const bool created = chip8_window_ == nullptr;
-    if (created) {
-        auto* window = new Chip8Window{this};
-        // Closing the emulator alone must end it; the QPointer then goes null,
-        // so the next invocation builds a fresh one rather than using a dead
-        // window.
-        window->setAttribute(Qt::WA_DeleteOnClose);
-        chip8_window_ = window;
-    }
-    chip8_window_->show();
-    chip8_window_->raise();
-    chip8_window_->activateWindow();
-
-    // An emulator that already has a program is not overwritten: the learner may
-    // have typed into the listing tab or run the game to a state worth keeping.
-    // Opening the tool the first time loads the current document, or the bundled
-    // paint program so the window is ready to run rather than blank.
-    if (!created && chip8_window_->emulator()->loaded()) {
-        return;
-    }
-    CodeEditor* editor = currentEditor();
-    if (editor != nullptr && languageOf(editor) == Language::Chip8) {
-        const QString path = pathOf(editor);
-        if (path.isEmpty()) {
-            chip8_window_->loadSource(editor->toPlainText());
-        } else {
-            chip8_window_->openFile(path);
-        }
-        return;
-    }
-    chip8_window_->loadBundledProgram();
-}
-
-void MainWindow::openHb2() {
-    const bool created = hb2_window_ == nullptr;
-    if (created) {
-        auto* window = new Hb2Window{this};
-        // Closing the machine ends it; the QPointer then goes null, so the next
-        // invocation builds a fresh machine rather than raising a dead window.
-        window->setAttribute(Qt::WA_DeleteOnClose);
-        hb2_window_ = window;
-        if (CodeEditor* editor = currentEditor(); editor != nullptr) {
-            const QString text = editor->toPlainText();
-            if (!text.isEmpty()) {
-                hb2_window_->setListing(text);
-            }
-        }
-        // A window that is closed has to be able to open again: `WA_DeleteOnClose`
-        // destroys it, and the QPointer is what says so.
-        connect(window, &QObject::destroyed, this, [this] { hb2_window_ = nullptr; });
-    }
-    hb2_window_->show();
-    hb2_window_->raise();
-    hb2_window_->activateWindow();
-}
-
-void MainWindow::openRetroComputer() {
-    const bool created = retro_computer_window_ == nullptr;
-    if (created) {
-        auto* window = new RetroComputerWindow{this};
-        // Closing the machine alone must end it; the QPointer then goes null, so
-        // the next invocation builds a fresh one rather than raising a dead
-        // window. A live machine is never rebuilt, because its RAM is the point.
-        window->setAttribute(Qt::WA_DeleteOnClose);
-        retro_computer_window_ = window;
-
-        CodeEditor* editor = currentEditor();
-        if (editor != nullptr) {
-            const Language language = languageOf(editor);
-            if (language != Language::Unknown) {
-                retro_computer_window_->setLanguage(language);
-            }
-            if (!editor->toPlainText().isEmpty()) {
-                retro_computer_window_->loadProgram(editor->toPlainText());
-                retro_computer_window_->showProgramPage();
-            }
-        }
-    }
-    retro_computer_window_->show();
-    retro_computer_window_->raise();
-    retro_computer_window_->activateWindow();
-}
-
 void MainWindow::goToLine(int line) {
     CodeEditor* editor = currentEditor();
     if (editor == nullptr) {
@@ -871,8 +784,8 @@ void MainWindow::goToLinePrompt() {
 }
 
 void MainWindow::exportDrawingDialog() {
-    // `frameCount`, not `strokeCount`: CHIP-8 draws rectangles, so a screen full of
-    // pixels has no strokes at all and would otherwise be "nothing to export".
+    // `frameCount`, not `strokeCount`: a screen of filled pixels has no strokes at
+    // all, and would otherwise be "nothing to export".
     if (turtle_canvas_ == nullptr || turtle_canvas_->frameCount() == 0) {
         // Nothing drawn yet. Said rather than done silently: a save dialog that
         // produces an empty picture is worse than being told there is nothing.

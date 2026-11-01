@@ -21,6 +21,5 @@ void test_terminal_text_survives_split_characters();
 void test_the_finish_notification_says_one_thing();
 
 /// The homebrew catalogue and the rules that keep a download inside its folder.
-void test_the_archive_catalogue_is_a_cleared_list();
 
 }  // namespace tw::editor_services

@@ -196,10 +196,8 @@ One request contains:
 Nothing else. No other tab, no other file, no path, no list of what you have open,
 no telemetry, no version of this application beyond the request itself.
 
-The assistant is one of the application's two network calls, and both are asked for:
-this one, and the CHIP-8 window's **Fetch Homebrew Archive…**, which requests a
-dozen fixed files from one pinned commit and sends nothing but the request for each
-(`docs/chip8/README.md`). Nothing else in the application opens a socket.
+This is the application's one network call, and it is asked for. Nothing else in
+the application opens a socket.
 
 **The program is capped at 12,000 characters.** A larger document is cut at that
 point and the model is told so in the text it receives — a truncated program the
@@ -275,21 +273,20 @@ model did not follow the instruction.
 The system prompt is a constant in `native/src/ai/prompt.cpp`, and every sentence in
 it is a mistake the assistant otherwise makes:
 
-- the eleven languages, by name, and that they are interpreters written between 1964
+- the ten languages, by name, and that they are interpreters written between 1964
   and 1980 running natively inside one application;
 - that BASIC, COMAL and FOCAL are numbered lines, PILOT is letter-coded units, and
-  Logo, Scheme, Smalltalk, Forth and CHIP-8 are whole programs;
+  Logo, Scheme, Smalltalk and Forth are whole programs;
 - the turtle vocabulary the language guide documents, that heading 0 is north and
   increases clockwise, and that Logo has no `CIRCLE`, `RECTANGLE` or `POLYGON` —
   shapes are `REPEAT`;
-- that a CHIP-8 program is assembly for the assembler in this application;
 - that no imports, packages or external libraries exist, so an answer must be one
   self-contained file;
 - that code comes back in one fenced block labelled with the language key, and that
   the user's program should not be quoted back unless it is being changed.
 
 `ai_tests` reads the language table and fails if the prompt stops naming a language,
-so a twelfth language cannot be added without the assistant learning about it.
+so an eleventh language cannot be added without the assistant learning about it.
 
 ### The voice
 
@@ -447,7 +444,6 @@ happened.
 | Where the key lives | `native/include/timewarp/ai/keyring.hpp`, `native/src/ai/keyring.cpp` -- the Credential Manager, the Keychain, `libsecret`, or the settings file |
 | The page | `native/include/timewarp/ui/ai_panel.hpp`, `native/src/ui/ai_panel.cpp` |
 | The settings dialog | `native/include/timewarp/ui/ai_settings.hpp`, `native/src/ui/ai_settings.cpp` |
-| The dialog the machines open | `native/include/timewarp/ui/assistant_dialog.hpp`, `native/src/ui/assistant_dialog.cpp` |
 | The command | `native/tools/ai_cli.cpp` |
 | The suite | `native/tests/ai_tests.cpp` |
 
@@ -484,7 +480,7 @@ cmake --build native/build --target ai_tests
 ctest --test-dir native/build -R ai_tests --output-on-failure
 ```
 
-The prompt is where the assistant is told what this IDE is: the eleven languages,
+The prompt is where the assistant is told what this IDE is: the ten languages,
 which of them are line-numbered and which are whole programs, the turtle vocabulary,
 and the rule that code comes back in one fenced block labelled with the language key.
 `ai_tests` reads the language table and fails if the prompt stops naming a language.
@@ -501,22 +497,8 @@ and the rule that code comes back in one fenced block labelled with the language
   itself would be a language model with a keyboard.
 - **It does not talk to the machine.** No files, no shell, no debugger: it is asked
   about text and answers in text.
-- **It does not see the drawing, the variables or the debugger.** The machines can ask
-  it about their own program (below), and none of the three sends anything else.
+- **It does not see the drawing, the variables or the debugger.** It is sent the
+  program, and nothing else.
 - **It is not in the standalone player.** `time_warp_player` opens a compiled
   program, and a program that opens a socket to an AI service is not what a
   compiled program is for.
-
-### The machines
-
-The HB-1 and the CHIP-8 each open the same page in a dialog, because those windows are
-machines of their own rather than the IDE: the HB-1's 🤖 button in its header and
-**🤖 Assistant...** on the CHIP-8's toolbar. What they send is the program the machine
-is holding -- the current ROM's listing, or the text in the CHIP-8's Listing tab -- and
-nothing else: not the screen, not the memory, not the disk. A CHIP-8 binary ROM has no
-text to send, so it sends none.
-
-The dialog is the same widget the IDE shows, so the settings, the conversation limits
-and the privacy note are one implementation and cannot drift. It keeps no conversation
-of its own: closing it forgets what was asked, and the tick that remembers a
-conversation applies here too.

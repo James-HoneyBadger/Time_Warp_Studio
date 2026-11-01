@@ -4,7 +4,7 @@
 //
 // `time_warp_ide --compile` has always produced a copy of the IDE with the program
 // appended, and the copy hides the authoring UI at start-up. That is a working
-// player and a poor one to hand to somebody: it is a 4.7MB editor with eleven docks
+// player and a poor one to hand to somebody: it is a 4.7MB editor with ten docks
 // removed at run time, not a program that opens. This is the executable that opens
 // one, and it links `timewarp::ui_core` -- the canvas, the runner, the sound and the
 // palette -- rather than the shell.

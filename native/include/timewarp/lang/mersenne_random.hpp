@@ -2,8 +2,8 @@
 //
 // The seeded generator `RND` and `FRAN` answer with.
 //
-// Several languages expose randomness (`FRAN` in FOCAL, `RND` in BASIC, CHIP-8 and
-// Logo). A port that used `std::mt19937` directly would implement something else:
+// Several languages expose randomness (`FRAN` in FOCAL, `RND` in BASIC and Logo).
+// A port that used `std::mt19937` directly would implement something else:
 // the same seed would produce a different sequence, so a program that seeds itself
 // would print different numbers after the port than before it. So this is MT19937
 // with the seeding and the sampling the reference used -- an integer seed split
