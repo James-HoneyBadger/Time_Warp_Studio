@@ -1,9 +1,7 @@
 # Time Warp Studio
 
 A desktop programming environment for ten interpreters of the 1964–1980 period, with
-one editor, one debugger, and a live turtle canvas.
-
-*Timey wimey wibbly wobbly, time & multiuniverse travel computing.*
+one editor, one debugger and a live turtle canvas.
 
 [![Languages](https://img.shields.io/badge/languages-10-blue)](#ten-interpreters-one-per-era)
 [![Platform](https://img.shields.io/badge/platform-Linux-green)](docs/INSTALLATION.md)

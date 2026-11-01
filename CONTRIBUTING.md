@@ -458,8 +458,9 @@ datasheet's precision with a hobbyist's patience. Concretely:
 - **Second person for procedures only.** "Press `F9`" in a procedure; nowhere else.
 - **Em dashes sparingly, colon or full stop otherwise.** Emoji only where they are
   part of a control's name (the 🐞 Debug tab), never as decoration.
-- **One memorable line is allowed.** The project has one — "Timey wimey wibbly wobbly"
-  at the top of the README — and does not need a second.
+- **No whimsy in the manuals.** A joke in a guide costs a reader a second look at a
+  sentence that was supposed to be a fact. The product's name is the one piece of
+  character the text carries; the rest earns its place by being accurate.
 
 ```markdown
 # Feature title

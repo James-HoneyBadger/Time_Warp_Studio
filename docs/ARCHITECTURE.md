@@ -741,8 +741,7 @@ The curriculum is loaded when the tab is first looked at, not when the window is
 a user who never opens the lesson panel should not pay for reading and validating a
 curriculum they do not want.
 
-Three widgets are worth knowing about because what they cover is easy to
-underestimate:
+Three widgets carry more behaviour than their size suggests:
 
 - `ImmediateModePanel` is a REPL prompt and entry line with the layout contract the Python
   sets (a 44px floor). `commandSubmitted` drives `ReplRunner`, a `QThread` that keeps

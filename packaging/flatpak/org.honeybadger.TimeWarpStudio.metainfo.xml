@@ -127,7 +127,6 @@
     </release>
     <release version="25.0.0" date="2026-10-30">
       <description>
-        <p>Timey wimey wibbly wobbly, time &amp; multiuniverse travel computing.</p>
         <p>A real pseudo-terminal in the Terminal tab, three historical voices for
         the assistant, a desktop notification when a run finishes behind you, an
         original five-page tour the CHIP-8 boots into, a curated CC0 homebrew

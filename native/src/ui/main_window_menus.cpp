@@ -595,13 +595,11 @@ void MainWindow::buildMenuBar() {
         QMessageBox::about(
             this, tr("About Time Warp Studio"),
             tr("<b>Time Warp Studio</b> %1"
-               "<p><i>Timey wimey wibbly wobbly, time &amp; multiuniverse travel "
-               "computing.</i>"
-               "<p>An old-school programming environment for ten languages: BASIC, "
-               "APL, Logo, PILOT, FOCAL, Scheme, COMAL, REXX, Smalltalk and "
-               "Forth, with an integrated turtle graphics canvas."
-               "<p>Everything runs on this machine: no account, no telemetry, and "
-               "nothing sent unless you ask it to fetch something.")
+               "<p>A programming environment for ten languages: BASIC, APL, Logo, "
+               "PILOT, FOCAL, Scheme, COMAL, REXX, Smalltalk and Forth, with an "
+               "integrated turtle graphics canvas."
+               "<p>Everything runs in this process: no account, no telemetry, and "
+               "nothing sent unless you ask it to.")
                 .arg(timewarp::ui::version()));
     });
     add(help, tr("About &Qt"), {}, [this] { QMessageBox::aboutQt(this); });

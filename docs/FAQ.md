@@ -34,7 +34,7 @@ an output console and a debugger that works in every one of them. Every language
 a native implementation inside the application: there is no emulator and no
 interpreter underneath.
 
-### What can the Studio do?
+### What does it do?
 
 The short inventory: ten languages on native engines; an editor with find in
 files, snippets, an outline, formatting, live lint, autosave and version history;
@@ -46,13 +46,13 @@ compiler; 35 themes with high contrast and text sizes; and help inside the
 application. The full list, with links, is in the
 [README](../README.md#what-else-is-in-the-workbench).
 
-### Why are the languages so old?
+### Why these ten languages?
 
-Because a constraint is the best teacher. A language with numbered lines, sixteen
-kilobytes and no libraries makes a program something you can hold in your head, and
-the ideas it teaches — a loop, a subroutine, a variable's scope — are the same ones
-a modern language asks you to take on trust. Each interpreter here is the real
-language of its year rather than a simplified one.
+Each is the whole language of its year rather than a teaching subset of it, and each
+makes a different idea visible: a line-numbered program, a procedure, a token stream, an
+array, an object, a stack. The constraints of the period — no libraries, small memory,
+one screen — are also why a complete program fits on a page, which is what makes them
+usable for teaching and readable as examples.
 
 ### Which languages are supported?
 
@@ -66,20 +66,18 @@ Yes. It is released under the MIT License. See [LICENSE](../LICENSE).
 
 ### Who is it for?
 
-People who like old computers: retro-computing hobbyists, language collectors and
-anyone who wants to write a program the way it was written in 1975 and watch it run.
-The Studio is also a complete teaching environment — checked lessons, rosters and
-marking — for anyone who wants that, but it does not assume a classroom. Output and
-errors are in plain language with emoji prefixes, so the first session is readable
-either way.
+People who work with old computers: retro-computing hobbyists, collectors of
+languages, and anyone who wants to write a program the way it was written in 1975 and
+watch it run. It is also usable for teaching — checked lessons, rosters and marking —
+without assuming a classroom. Program output and errors are in plain language with
+status prefixes, so a first session is readable.
 
 ### Does it need an internet connection?
 
-No. The core features work offline: the ten interpreters, the debugger, the lessons
-and the SQL database are all inside the application. The one
-feature that can use a connection is the optional [AI assistant](AI.md), which is
-off until you configure a service and which can point at a model running on this
-machine instead.
+No. The ten interpreters, the debugger, the lessons and the SQL database are all
+inside the application. The only feature that uses a connection is the optional
+[AI assistant](AI.md), which is off until a service is configured and can point at a
+model running on this machine.
 
 ---
 
@@ -130,7 +128,7 @@ system. The [Installation Guide](INSTALLATION.md) has the Linux steps.
 
 ## Editing and Files
 
-### Which file extensions does the Studio recognize?
+### Which file extensions are recognised?
 
 | Language | Extensions |
 | -------- | ---------- |
@@ -211,7 +209,7 @@ file, and `Ctrl+L` goes to a line. The editor also suggests words as you type
 picker, filtered to the current language. Choosing one inserts it at the cursor as a
 single undo step, resolving `$CURSOR$` and `$SELECTION$`.
 
-### Can I work with several files in one project?
+### How do projects work?
 
 Yes. **View → Project Panel** (`Ctrl+Shift+E`) shows the 🗂 Projects dock: **Project
 → New Project...** creates a `.twproject` beside the programs, and **Project → Add
@@ -223,7 +221,7 @@ never moves the file on disk. The project remembers its files, groups and missin
 entries, and reopens with the session. Drag files onto a group, or onto the
 project, to add or move them.
 
-### Can my programs use a database?
+### Can a program use a database?
 
 Yes. The 🗄 **Database** tab opens or creates a SQLite file, lists its tables,
 runs one statement or a whole script, and shows the result grid. A program uses
@@ -233,7 +231,7 @@ FROM scores` in Logo, `(sql "SELECT * FROM scores")` in Scheme, and
 `Transcript show: (SQL run: 'SELECT * FROM scores')` in Smalltalk. Results are
 printed as a table; an error is printed with the database's own message.
 
-### Are my unsaved changes lost if the app closes?
+### What happens to unsaved changes when the window closes?
 
 The window asks before closing a modified tab, and autosave keeps a copy of any
 document with unsaved changes, so a crash costs at most the last couple of
@@ -256,7 +254,7 @@ Use the Stop button in the toolbar. A program that waits for input can also be s
 
 Use the input command of your language: `INPUT` in BASIC, `INPUT` in COMAL, `A:` (accept) in PILOT, or `PULL` in REXX.
 
-### Can I try commands without writing a whole program?
+### Can commands be tried without writing a program?
 
 Yes. The **REPL** line under the editor runs one entry at a time. BASIC, FOCAL,
 PILOT, COMAL, REXX, APL, Logo and Scheme keep state between entries, so
@@ -292,7 +290,7 @@ graphics statements — plus Logo's turtle words (`FORWARD`, `RIGHT`, `PENUP`,
 `CLEARSCREEN`), which a BASIC line is forwarded to when BASIC does not recognise
 it. See [basic.md](tutorials/basic.md).
 
-### What about PILOT?
+### What can I do in PILOT?
 
 PILOT is a simple language for interactive lessons. Commands like `T:` (type) and `A:` (accept) handle text and input. See [pilot.md](tutorials/pilot.md).
 
@@ -300,7 +298,7 @@ PILOT is a simple language for interactive lessons. Commands like `T:` (type) an
 
 Core Logo commands such as `FORWARD`, `BACK`, `RIGHT`, `LEFT`, `PENUP`, `PENDOWN`, `REPEAT`, `CLEARSCREEN`, and procedure definitions with `TO`/`END`. See [logo.md](tutorials/logo.md) for the full list.
 
-### Which Logo colors can I use?
+### Which Logo colours can I use?
 
 Named colors, hex values, and RGB values all work with `SETPENCOLOR`. See [logo.md](tutorials/logo.md) for the syntax.
 
@@ -326,7 +324,8 @@ in [LANGUAGE_GUIDE.md](LANGUAGE_GUIDE.md).
 
 ### Which language should a beginner start with?
 
-BASIC, Logo or COMAL are common first choices, since their output and drawings are easy to see. REXX and Scheme are good next steps once you are comfortable with variables and loops.
+BASIC, Logo and COMAL produce visible results soonest: a `PRINT` shows a line, and a
+turtle draws. REXX and Scheme come next, once variables and loops are familiar.
 
 ---
 
@@ -355,7 +354,7 @@ page holding the program, its output and the drawing, which is the file to hand
 in or put on a projector. **File → Print Code...** and **File → Print
 Drawing...** print directly; see [How do I print?](#how-do-i-print).
 
-### Does the turtle work in every language?
+### Which languages have turtle words?
 
 Logo, BASIC, COMAL, REXX, Scheme, FOCAL, APL, Smalltalk and Forth have turtle
 words. PILOT draws through its `G:` graphics commands. Check each language's
