@@ -212,6 +212,7 @@ int main(int argc, char** argv) {
 
     std::string error;
     bool ok = true;
+    bool capped = false;
     std::uint64_t steps = 0;
     double elapsed = 0.0;
 
@@ -251,7 +252,11 @@ int main(int argc, char** argv) {
         interpreter.load_program(source);
         interpreter.run();
         error = interpreter.error();
-        ok = error.empty() && !interpreter.timed_out();
+        // A run stopped by a budget is not a run that finished. Reporting it as one
+        // is how a truncated drawing gets through a gate that is meant to prove the
+        // program drew.
+        capped = interpreter.iteration_capped();
+        ok = error.empty() && !interpreter.timed_out() && !capped;
         steps = interpreter.steps_used();
         elapsed = interpreter.elapsed_ms();
     }
@@ -265,6 +270,11 @@ int main(int argc, char** argv) {
             const std::string detail =
                 error.empty() ? std::string{"the run hit its budget"} : error;
             done.insert(QStringLiteral("error"), QString::fromStdString(detail));
+        }
+        if (capped) {
+            done.insert(QStringLiteral("capped"), true);
+            done.insert(QStringLiteral("step_budget"),
+                        static_cast<double>(timewarp::lang::Interpreter::kMaxSteps));
         }
         done.insert(QStringLiteral("steps"), static_cast<double>(steps));
         done.insert(QStringLiteral("elapsed_ms"), elapsed);
@@ -296,6 +306,11 @@ int main(int argc, char** argv) {
         if (printed_total > printed.size()) {
             std::printf("-- %zu output line(s), the first %zu kept\n", printed_total,
                         printed.size());
+        }
+        if (capped) {
+            std::printf("-- the run hit its statement budget (%llu statements)\n",
+                        static_cast<unsigned long long>(
+                            timewarp::lang::Interpreter::kMaxSteps));
         }
         std::printf("-- %s\n", ok ? "ok" : (error.empty() ? "budget" : error.c_str()));
     }

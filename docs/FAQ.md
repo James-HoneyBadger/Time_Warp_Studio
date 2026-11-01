@@ -269,10 +269,10 @@ language; API clients can also call `repl.reset`.
 
 ### Why does my program run forever?
 
-It may contain an endless loop, such as a `GOTO` with no exit condition or a
-`while` loop whose condition never becomes false. The line-by-line engine stops a
-runaway run on its own budget (2,000,000 steps or 10 seconds, whichever comes first)
-and says so. The Stop button ends it sooner, at the next statement.
+It may contain an endless loop: a `GOTO` with no exit condition, or a `while` whose
+condition never becomes false. Every engine, Scheme included, stops a runaway run on
+the same budget — two million statements or ten seconds, whichever comes first — and
+says so in the console. The Stop button ends it sooner, at the next statement.
 
 ### Can I run a program from a lesson or example directly?
 

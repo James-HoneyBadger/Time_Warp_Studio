@@ -563,6 +563,10 @@ void DebuggerRunner::run() {
         machine.load(source_.toStdString(), &source_map);
 
         for (;;) {
+            // The budget measures uninterrupted execution: a pause may last as long
+            // as the person debugging it likes, and the run must not begin its next
+            // statement already over time.
+            machine.restart_clock();
             const SuspendReason reason = machine.step_quantum(kUnlimitedSteps);
             if (reason == SuspendReason::Finished) {
                 completed = true;

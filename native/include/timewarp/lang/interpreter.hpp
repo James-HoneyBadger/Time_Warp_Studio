@@ -98,8 +98,14 @@ public:
     /// IDE's adapter blocks until the user replies.
     using InputCallback = std::function<std::string(const std::string& prompt)>;
 
+    /// The statement budget. One number, because two of them is how the manual
+    /// came to promise two million statements while the loop stopped at a hundred
+    /// thousand: a program that is cut off here is reported as cut off, never as a
+    /// clean run.
     static constexpr std::uint64_t kMaxSteps = 2'000'000;
-    static constexpr std::uint64_t kMaxIterations = 100'000;
+    /// The loop enforces `kMaxSteps`; the name is kept because the loop's bound and
+    /// the published budget are the same fact.
+    static constexpr std::uint64_t kMaxIterations = kMaxSteps;
     static constexpr double kMaxSeconds = 10.0;
 
     Interpreter(Language language, TurtleHost& turtle);

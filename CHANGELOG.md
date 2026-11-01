@@ -43,6 +43,8 @@ draw, stopping it, and reading why.
 
 ### Changed
 
+- **The statement budget is now enforced as documented:** two million statements, one
+  constant, and a cut-off run reported as cut off. See Fixed.
 - **Ten languages, not eleven.** Every table that counted eleven now counts ten, and
   `make registry-check` still proves the count has one home.
 - **The figures are corrected where they are quoted.** The parity corpus holds 442
@@ -52,6 +54,26 @@ draw, stopping it, and reading why.
 - **The assistant is told about ten languages.** Its system prompt loses the CHIP-8
   sentence and the whole-program list the machines were in.
 - **`time_warp_ide --help` no longer offers `--computer`, `--machine` or `--hb2`.**
+
+### Fixed
+
+- **A Scheme program could run forever.** `Machine::set_step_limit` had no caller, and
+  `execute()` — which the check tool, the JSON-RPC API, the example gallery, a notebook
+  cell and a lesson check all use — had neither a step nor a wall-clock cap. A runaway
+  program hung `time_warp_check` and stopped `./api` answering anything, including the
+  request that would end it. The machine now arms its own ten-second clock at every
+  run-to-completion entry point, so no caller can forget one, and a debugger that pauses
+  for an hour re-arms on resume rather than charging the pause to the program.
+- **A run cut off by a budget reported success.** `time_warp_check` printed `-- ok` and
+  exited 0 for a program it had stopped at the statement cap, and its JSON said
+  `"ok":true`. A truncated run is now a failure: exit 1, `"capped": true` with
+  `step_budget` in the JSON, and the sentence naming the budget in the console.
+- **The published statement budget was twenty times the enforced one.** The loop stopped
+  at 100,000 statements while `kMaxSteps` said 2,000,000 and the manual repeated it. The
+  two constants are now one value, and the loop enforces what the manual promises.
+- **`SYS` was a statement that could only fail.** It survived the machine removal as a
+  branch that always answered "needs a machine with a processor attached"; it is gone,
+  and `SYS 49152` is now reported as an unknown command like any other.
 
 ### Verified
 
@@ -66,6 +88,9 @@ draw, stopping it, and reading why.
 - `make command-matrix` and `make repl-matrix` -- 532 rows each, all behaving.
 - `make teach-check`, `make doc-links`, `make doc-claims`, `make lint-md`,
   `make tree-check`, `make registry-check`, `make structure-check` -- silent.
+- A runaway program in each language ends at its budget: BASIC and Forth at their
+  instruction caps, Smalltalk and FOCAL on their own limits, Scheme on the new clock,
+  and `time_warp_check` exits 1 in every case.
 
 ---
 

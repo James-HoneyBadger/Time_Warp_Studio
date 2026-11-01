@@ -31,6 +31,9 @@ Measurement measure(const std::string& program) {
     timewarp::scheme::Arena arena;
     timewarp::scheme::NullHost host;
     timewarp::scheme::Machine machine{arena, host};
+    // A benchmark answers "how many steps per second", so it must not be cut off by
+    // the budget that stops a runaway program.
+    machine.set_time_limit(std::chrono::milliseconds{0});
 
     const auto start = Clock::now();
     Measurement result;

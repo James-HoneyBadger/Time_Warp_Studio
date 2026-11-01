@@ -562,6 +562,31 @@ void test_arena_reclaims_everything() {
     TW_CHECK_EQ(arena.bytes_allocated(), std::size_t{0});
 }
 
+/// A program that never finishes must end, and say why. Without this the machine
+/// runs until whatever called it gives up: the check tool, an API request, a
+/// notebook cell and the example gallery all run source the user supplied.
+void test_a_runaway_program_stops_at_its_time_limit() {
+    std::printf("-- scheme: the clock ends a runaway\n");
+    Arena arena;
+    NullHost host;
+    Machine machine{arena, host};
+    machine.set_time_limit(std::chrono::milliseconds{1});
+    const std::string text = machine.execute("(let loop () (loop))");
+    TW_CHECK(text.find("ran for longer than") != std::string::npos);
+    TW_CHECK(text.rfind("\u274C", 0) == 0);
+}
+
+/// The limit is a budget, not a policy: a caller that measures how far the machine
+/// can go sets it to zero and is not cut off.
+void test_a_zero_time_limit_runs_to_completion() {
+    std::printf("-- scheme: a zero limit is unlimited\n");
+    Arena arena;
+    NullHost host;
+    Machine machine{arena, host};
+    machine.set_time_limit(std::chrono::milliseconds{0});
+    TW_CHECK_EQ(machine.execute("(display (+ 1 2))"), std::string{"3\n"});
+}
+
 }  // namespace
 
 int main() {
@@ -608,5 +633,7 @@ int main() {
     test_large_integral_reals_print_every_digit();
     test_turtle_calls_reach_the_host();
     test_arena_reclaims_everything();
+    test_a_runaway_program_stops_at_its_time_limit();
+    test_a_zero_time_limit_runs_to_completion();
     return tw::test::summary("scheme");
 }

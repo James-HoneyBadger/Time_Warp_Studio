@@ -99,9 +99,13 @@ empty.
 | Answer an input prompt | Type it into the dialog and press Return |
 | Open a file | **File → Open** (`Ctrl+O`) or pass it on the command line |
 
-The engine stops a runaway program after its own step and time budget — 10 seconds
-and two million statements — with a sentence in the console rather than a hung
-window; Stop ends it sooner, at the next statement.
+Every engine has a budget, and it is the same rule in all ten: a run is stopped
+after two million statements or ten seconds of evaluation, whichever comes first, with
+a sentence in the console rather than a hung window. Scheme reaches the same limit
+through the same clock. A run the budget ended is reported as stopped, not as finished
+— `time_warp_check` exits non-zero and names the budget that ended it, so a script
+cannot mistake a truncated run for a complete one. **Stop** ends a run sooner, at the
+next statement.
 
 ### A program with a screen
 

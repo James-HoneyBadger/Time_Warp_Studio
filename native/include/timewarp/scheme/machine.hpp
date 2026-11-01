@@ -40,6 +40,7 @@
 
 #pragma once
 
+#include <chrono>
 #include <cstddef>
 #include <cstdint>
 #include <string>
@@ -308,6 +309,13 @@ enum class SpecialForm : std::uint8_t {
 // The machine
 // ---------------------------------------------------------------------------
 
+/// How long a run-to-completion entry point lets a program run before it stops it.
+///
+/// The same ten seconds the other engines use, so "a runaway program is stopped" is
+/// one rule rather than a rule per language. A caller that measures throughput rather
+/// than runs a program (the benchmark) sets its own.
+inline constexpr std::chrono::milliseconds kDefaultTimeLimit{10'000};
+
 class Machine {
 public:
     Machine(Arena& arena, Host& host);
@@ -326,8 +334,33 @@ public:
     [[nodiscard]] std::uint64_t steps() const noexcept { return steps_; }
 
     /// Aborts the program once `limit` evaluation steps have been charged.
-    /// Zero (the default) means unlimited.
+    /// Zero means unlimited, which is the default for `step_quantum` and for a
+    /// controller-driven run.
     void set_step_limit(std::uint64_t limit) noexcept { step_limit_ = limit; }
+
+    /// The wall-clock budget a run-to-completion entry point applies:
+    /// `execute`, `run` and `run_forms`. When it expires the run ends with the same
+    /// `BudgetExhausted` answer as a step limit, so a runaway program is reported
+    /// rather than hanging whatever called it.
+    ///
+    /// This is armed by the entry points rather than by the caller, because every
+    /// path that runs a program the user supplied — the check tool, the API, the
+    /// example gallery, a notebook cell, a lesson check — would otherwise have to
+    /// remember, and one of them would not. A debugger that pauses for an hour is
+    /// not "running", so `step_quantum` leaves the clock to its controller:
+    /// `DebuggerRunner` disables this limit and bounds uninterrupted execution
+    /// itself.
+    void set_time_limit(std::chrono::milliseconds limit) noexcept {
+        time_limit_ = limit;
+    }
+    [[nodiscard]] std::chrono::milliseconds time_limit() const noexcept {
+        return time_limit_;
+    }
+
+    /// Restarts the clock. A controller-driven run — the IDE's debugger — calls this
+    /// whenever it resumes, so a session paused for an hour does not begin its next
+    /// statement already over budget.
+    void restart_clock() noexcept { arm_clock(); }
 
     /// Deepest the continuation stack ever got.  Lets a test *prove* that a
     /// deeply recursive program ran in bounded space.
@@ -403,6 +436,9 @@ private:
     void eval_step();
     bool deliver_step();
     void charge(std::uint64_t amount);
+    /// Starts the run-to-completion clock, so the budget measures time spent
+    /// evaluating rather than time since the machine was built.
+    void arm_clock();
     void note_depth();
     /// Appends to the program's output.
     ///
@@ -515,6 +551,10 @@ private:
 
     std::uint64_t steps_ = 0;
     std::uint64_t step_limit_ = 0;
+    /// The run-to-completion budget, and when the current one started.
+    std::chrono::milliseconds time_limit_{kDefaultTimeLimit};
+    std::chrono::steady_clock::time_point started_{};
+    bool clock_running_ = false;
     std::size_t peak_frames_ = 0;
 
     // -- background execution state --------------------------------------

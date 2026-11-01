@@ -119,7 +119,18 @@ void Machine::load_forms(std::vector<Value> forms) {
 
 std::string Machine::run_forms(const std::vector<Value>& forms) {
     load_forms(forms);
-    (void)run_loaded();
+    // Armed here rather than by the caller: every path that runs a program the user
+    // supplied comes through this function, and a caller that forgot a step limit
+    // would otherwise hang the thread it is on -- the gallery, a notebook cell, an
+    // API request, a gate.
+    arm_clock();
+    try {
+        (void)run_loaded();
+    } catch (...) {
+        clock_running_ = false;
+        throw;
+    }
+    clock_running_ = false;
     return out_;
 }
 
@@ -395,9 +406,23 @@ void Machine::charge(std::uint64_t amount) {
     if (step_limit_ != 0 && steps_ > step_limit_) {
         throw BudgetExhausted{steps_};
     }
-    if (steps_ % 512 == 0 && !host_.tick(512)) {
-        throw BudgetExhausted{steps_};
+    // The clock costs a read, so it is checked at the same cadence as the host's
+    // tick rather than per evaluation step.
+    if (steps_ % 512 == 0) {
+        if (clock_running_ && time_limit_.count() > 0 &&
+            std::chrono::steady_clock::now() - started_ > time_limit_) {
+            clock_running_ = false;
+            throw TimeLimitExceeded{steps_, time_limit_};
+        }
+        if (!host_.tick(512)) {
+            throw BudgetExhausted{steps_};
+        }
     }
+}
+
+void Machine::arm_clock() {
+    started_ = std::chrono::steady_clock::now();
+    clock_running_ = true;
 }
 
 void Machine::note_depth() {

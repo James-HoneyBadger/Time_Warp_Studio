@@ -9,6 +9,7 @@
 
 #pragma once
 
+#include <chrono>
 #include <cstdint>
 #include <stdexcept>
 #include <string>
@@ -41,6 +42,15 @@ public:
     explicit BudgetExhausted(std::uint64_t steps)
         : SchemeError{"step budget exhausted after " + std::to_string(steps) +
                       " steps"} {}
+};
+
+/// The run-to-completion clock expired: the program was still running when the
+/// budget ended it, so the answer is "it ran too long" rather than "it was wrong".
+class TimeLimitExceeded : public SchemeError {
+public:
+    TimeLimitExceeded(std::uint64_t steps, std::chrono::milliseconds limit)
+        : SchemeError{"the program ran for longer than " + std::to_string(limit.count()) +
+                      " ms (" + std::to_string(steps) + " steps)"} {}
 };
 
 }  // namespace timewarp::scheme

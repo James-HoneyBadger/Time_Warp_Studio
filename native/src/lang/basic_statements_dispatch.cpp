@@ -456,16 +456,6 @@ std::string Machine::execute_statement(std::string_view command) {
     if (starts_with(cmd, "IN ")) {
         return in_port(strip_comment(tail(text, 3)));
     }
-    if (starts_with(cmd, "SYS ")) {
-        // `SYS address` called machine code on a machine's own processor. This build
-        // has no machine under the language, so both answers below are refusals: a
-        // missing argument is still a mistake, and a program that names an address
-        // is told why the processor is not there rather than being quietly skipped.
-        if (strip_comment(trim(tail(text, 4))).empty()) {
-            return "\u274C SYS needs an address\n";
-        }
-        return "\u274C SYS needs a machine with a processor attached\n";
-    }
     if (starts_with(cmd, "SHELL ")) {
         return shell(strip_comment(tail(text, 6)));
     }
