@@ -52,7 +52,7 @@ cmake --build native/build -j
 ```
 
 The first build takes a few minutes and later ones are incremental. The tree carries no
-binary: `native/build/time_warp_ide` exists because you built it.
+binary: `native/build/time_warp_ide` exists because you built it. <!-- doc-claims: ignore -->
 
 | Option | Effect |
 | --- | --- |

@@ -136,7 +136,7 @@ guide it promises exists, and the application parses it into the Help tree.
 3. **The corpus is weaker than the differential it replaced.** A recording cannot notice a
    mistake in the recording, which is why behaviour changes are corpus edits.
 4. **Building outside the checkout breaks two suites** (`classroom_tests`, `ui_layout_tests`)
-   because the curriculum resolves relative to the executable. Build in `native/build`.
+   because the curriculum resolves relative to the executable. Build in `native/build`. <!-- doc-claims: ignore -->
 5. **`$?` after a pipeline measures the last command.** Redirect rather than piping when
    checking an exit code.
 6. **The window's minimum is 900 pixels wide**, and the toolbar is built to fit every control
