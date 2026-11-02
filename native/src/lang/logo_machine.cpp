@@ -626,10 +626,19 @@ std::vector<std::string> LogoMachine::consume_args(const std::vector<std::string
 void LogoMachine::set_number(const std::string& name, double value) {
     interpreter_.set_number(name, value);
     words_.erase(name);
+    lists_.erase(name);
 }
 
 void LogoMachine::set_word(const std::string& name, std::string value) {
+    interpreter_.remove_variable(name);
+    lists_.erase(name);
     words_[name] = std::move(value);
+}
+
+void LogoMachine::set_list(const std::string& name, std::vector<std::string> value) {
+    interpreter_.remove_variable(name);
+    words_.erase(name);
+    lists_[name] = std::move(value);
 }
 
 // -- turtle ----------------------------------------------------------------

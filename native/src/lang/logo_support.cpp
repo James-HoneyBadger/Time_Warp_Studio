@@ -265,6 +265,10 @@ const std::set<std::string_view>& logo_reporters() {
 /// `PRINT COUNT [1 2 3]` echoed the command instead of printing 3.  What makes a word
 /// a value rather than a statement is that the dispatcher returns its answer, so a
 /// word that reports belongs here whether or not it can also be a colour.
+///
+/// The math functions are deliberately absent: the dispatcher has no `ABS` command,
+/// so listing one here would turn an echoed line into `Unknown Logo command`. They
+/// are read as expressions by `math_prefix_functions` instead.
 const std::set<std::string_view>& logo_value_reporters() {
     static const std::set<std::string_view> words{
         "SUM",     "DIFFERENCE", "PRODUCT", "QUOTIENT", "RANDOM", "WORD",
@@ -289,7 +293,7 @@ const std::set<std::string_view>& colour_reporters() {
 /// evaluator only understands as `COS(x)`.
 const std::set<std::string_view>& math_prefix_functions() {
     static const std::set<std::string_view> words{
-        "ACOS", "ASIN",  "ATAN", "CEIL", "CINT",  "COS",  "COSH", "EXP",
+        "ABS",  "ACOS", "ASIN",  "ATAN", "CEIL", "CINT",  "COS",  "COSH", "EXP",
         "FIX",  "FLOOR", "INT",  "LOG10", "LOG2", "LOG",  "ROUND", "SGN",
         "SIN",  "SINH",  "SQR",  "SQRT", "TAN",   "TANH",
     };

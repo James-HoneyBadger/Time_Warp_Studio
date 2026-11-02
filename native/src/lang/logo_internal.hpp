@@ -141,8 +141,15 @@ private:
     std::string format_value(std::string_view text, bool as_text) const;
 
     // -- variables -------------------------------------------------------
+    /// A name holds one value, so each of these clears the other two stores.
     void set_number(const std::string& name, double value);
     void set_word(const std::string& name, std::string value);
+    void set_list(const std::string& name, std::vector<std::string> value);
+    /// Binds a name to whatever *expression* denotes: a number, a quoted word or
+    /// text, a bracketed list, or the value a `:name` holds.  `MAKE` and a
+    /// procedure's parameters both go through it, so the two cannot disagree about
+    /// what a value is.
+    void assign_value(const std::string& name, std::string_view expression);
 
     // -- turtle ----------------------------------------------------------
     void forward(double distance);

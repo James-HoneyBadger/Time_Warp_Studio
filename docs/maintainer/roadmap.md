@@ -120,7 +120,7 @@ Eleven of the thirteen were defects, and each is now fixed with a test behind it
 | BASIC statement separators | `WHILE … : WEND` reported `WHILE without WEND`; `FOR … : NEXT` ran the body three times instead of twice; one-line `SUB` and `TYPE` failed obscurely | A colon-separated line runs as a unit, so its loops repeat inside it and either spelling of a `FOR` header counts the same. A definition split by colons is refused by name |
 | BASIC `1e6` | Printed 0: E-notation without an explicit sign was not read as a number | The number scanner takes the exponent in either spelling, with or without a sign |
 | Logo `MAP`, `FILTER`, `REDUCE` | Ran the template as a command and reported `Invalid numbers for SUM` | Read the template as an expression with `?`, `?1` and `?2` bound, and still run a template that is commands |
-| Logo `COUNT` | Of a multi-item list answered 1 | Counts the whole list |
+| Logo `COUNT` | Of a multi-item list answered 1; of a list held in a name it counted the characters of the text `:name` | Counts the whole list, wherever it is written, and a word's characters |
 | Logo `LOCAL` | Did not restore the caller's value, and `LOCAL "X` made a name containing the quote | Restores the caller's binding on return, and both spellings name the same variable |
 | Logo quotes in a body | `PRINT "HI"` inside brackets printed `HI"` | The closing quote of a word form is silent |
 | Logo reporters | `PRINT` and `SHOW` evaluated fourteen named reporters; anything else was echoed | Every word that reports a value is run, so `PRINT COUNT [1 2 3]` prints 3 |
@@ -135,15 +135,30 @@ suspicious:
 - **Smalltalk `new` leaves instance variables nil.** That is Smalltalk: `initialize` is the
   convention that gives them a value, and `new` sends it when the class defines one.
 
+Reading the Logo procedure code for the manual turned up a defect the table did not
+have: a name could hold a number, a word and a list at once, and each command read whichever
+one it looked for first. `MAKE "X 5` followed by `MAKE "X "hello` still answered 5 to `SHOW`,
+while `FIRST :X` read a list a third statement had left behind; a procedure's input did not
+shadow a number the caller held under the same name; a list passed to a procedure arrived as
+the text of its brackets; and `:name` as a reporter argument was read as the text of the name
+rather than as its value, so `SUM :A 2` reported `Invalid numbers for SUM`. A name now holds
+one value, `MAKE` and a procedure's input share one reading of what a value is, and the
+reporters use it. The one recorded consequence is
+`Examples/logo/fractal_forest.logo`, whose spiral now sets the pen colour on every pass
+instead of only the first: the calls were dropped because the colour arrived as the text
+`:CLR`, and the ink is the same either way.
+
 One related wart is recorded rather than fixed: `FOREACH` runs a *command* body, so `?` in
 `FOREACH [1 2 3] [FD ?]` is not bound, while `MAP` and `FILTER` bind it because a template
 there is an expression. Binding it in a command body means rewriting the text, and a `?`
 inside a quoted word would be rewritten with it, so the rule needs a decision before the
-code.
+code. The same applies to `MAX 1 2` and `MIN 1 2`: a function takes its arguments in a
+bracket, `MAX(1, 2)`, and a two-argument function written with a space is not read. The
+reference states the form that works rather than the form a Logo book would show.
 
-Each of the eleven had the same shape: the language was plausible, the behaviour was
-silently different, and nothing said so. `lang_tests` now asserts every one of them, and the
-corpus entries whose program changed carry a note saying which side is the reference's.
+Each of these had the same shape: the language was plausible, the behaviour was silently
+different, and nothing said so. `lang_tests` now asserts every one of them, and the corpus
+entries whose program changed carry a note saying which side is the reference's.
 
 ---
 

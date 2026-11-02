@@ -380,6 +380,101 @@ void test_logo_closing_quote_of_a_word_is_silent() {
     TW_CHECK_EQ(run.output.at(2), std::string{"YES"});
 }
 
+// A name holds one value. Three parallel stores -- a number, a word and a list --
+// meant `MAKE "X 5` then `MAKE "X "hello` still read 5, while `FIRST :X` read the
+// list a third statement had left behind.
+void test_logo_make_replaces_the_value_whatever_kind_it_was() {
+    const LogoRun run = run_logo(
+        "MAKE \"X 5\n"
+        "SHOW :X\n"
+        "MAKE \"X \"hello\n"
+        "SHOW :X\n"
+        "MAKE \"X [1 2 3]\n"
+        "SHOW COUNT :X\n"
+        "SHOW FIRST :X\n"
+        "MAKE \"X 7\n"
+        "SHOW :X");
+    TW_CHECK(!any_error(run.output));
+    TW_CHECK_EQ(run.output.at(0), std::string{"5"});
+    TW_CHECK_EQ(run.output.at(1), std::string{"hello"});
+    TW_CHECK_EQ(run.output.at(2), std::string{"3"});
+    TW_CHECK_EQ(run.output.at(3), std::string{"1"});
+    TW_CHECK_EQ(run.output.at(4), std::string{"7"});
+}
+
+// The closing quote of a word form is optional in `MAKE` too, which is where the
+// `PRINT "HI"` trap came from: `MAKE "B "hello"` kept the quote and
+// `MAKE "D "hello world` kept the opening one.
+void test_logo_make_strips_the_closing_quote() {
+    const LogoRun run = run_logo(
+        "MAKE \"A \"hello\n"
+        "SHOW :A\n"
+        "MAKE \"B \"hello\"\n"
+        "SHOW :B\n"
+        "MAKE \"C \"hello world\"\n"
+        "SHOW :C\n"
+        "MAKE \"D \"hello world\n"
+        "SHOW :D");
+    TW_CHECK(!any_error(run.output));
+    TW_CHECK_EQ(run.output.at(0), std::string{"hello"});
+    TW_CHECK_EQ(run.output.at(1), std::string{"hello"});
+    TW_CHECK_EQ(run.output.at(2), std::string{"hello world"});
+    TW_CHECK_EQ(run.output.at(3), std::string{"hello world"});
+}
+
+// A parameter is bound the way `MAKE` binds a value, so it shadows what the caller
+// held whatever kind of value that was -- a number used to win over the parameter,
+// because the printer looked for a number before it looked for a word.
+void test_logo_parameter_shadows_whatever_the_caller_held() {
+    const LogoRun words = run_logo(
+        "TO SHOWIT :X\n"
+        "SHOW :X\n"
+        "END\n"
+        "MAKE \"X 99\n"
+        "SHOWIT \"hello\n"
+        "SHOW :X");
+    TW_CHECK(!any_error(words.output));
+    // A word argument reaches a command upper-cased, which is how a Logo word is
+    // read; what matters here is that the word arrived at all.
+    TW_CHECK_EQ(words.output.at(0), std::string{"HELLO"});
+    TW_CHECK_EQ(words.output.at(1), std::string{"99"});
+
+    const LogoRun lists = run_logo(
+        "TO COUNTIT :L\n"
+        "SHOW COUNT :L\n"
+        "SHOW FIRST :L\n"
+        "END\n"
+        "MAKE \"L [9 9 9 9]\n"
+        "COUNTIT [a b c]\n"
+        "SHOW COUNT :L");
+    TW_CHECK(!any_error(lists.output));
+    TW_CHECK_EQ(lists.output.at(0), std::string{"3"});
+    TW_CHECK_EQ(lists.output.at(1), std::string{"A"});
+    // The caller's list comes back.
+    TW_CHECK_EQ(lists.output.at(2), std::string{"4"});
+}
+
+// A reporter reads the value a `:name` argument stands for. Before this, `SUM :A 2`
+// reported `Invalid numbers for SUM` and `COUNT :M` counted the three characters of
+// the text `:M`.
+void test_logo_reporter_reads_a_variable_argument() {
+    const LogoRun run = run_logo(
+        "MAKE \"A 5\n"
+        "SHOW SUM :A 2\n"
+        "SHOW COUNT :A\n"
+        "MAKE \"M [1 2 3]\n"
+        "SHOW COUNT :M\n"
+        "SHOW MAP [? * 2] :M\n"
+        "SHOW REDUCE [SUM ?1 ?2] :M\n"
+        "SHOW ABS 5");
+    TW_CHECK(!any_error(run.output));
+    TW_CHECK_EQ(run.output.at(0), std::string{"7"});
+    TW_CHECK_EQ(run.output.at(2), std::string{"3"});
+    TW_CHECK_EQ(run.output.at(3), std::string{"[2 4 6]"});
+    TW_CHECK_EQ(run.output.at(4), std::string{"6"});
+    TW_CHECK_EQ(run.output.at(5), std::string{"5"});
+}
+
 // ---------------------------------------------------------------------------
 // The seeded generator `RND` and `FRAN` answer with
 // ---------------------------------------------------------------------------

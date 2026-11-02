@@ -422,6 +422,39 @@ SQUARE 20
 | `LOCAL` | Declares a name that belongs to the procedure body: the caller's value for it goes back when the procedure returns. `LOCAL "X` and `LOCAL :X` both name `X`. | `LOCAL :X` |
 | `OUTPUT`, `OP` | The value a procedure reports to its caller. | `OUTPUT :N * 2` |
 | `STOP`, `BYE` | Ends the procedure, or the run. | `BYE` |
+| `REM`, `;` | A comment, on its own or after a statement: the rest of the line is ignored. | `FD 10 ; and stop here` |
+
+### A name holds one value
+
+`MAKE` and a procedure's input both read their value the same way, so the two cannot
+disagree about what a value is:
+
+| Written | The value |
+| --- | --- |
+| `42`, `:N + 1` | a number |
+| `"red`, `"red"` | the word `red`; the closing quote is optional |
+| `"hello world"` | the text, spaces and all |
+| `[1 2 3]` | a list of three items |
+| `:count` | whatever `count` holds, of whatever kind |
+
+A name holds one value, so `MAKE "X 5` followed by `MAKE "X "hello` leaves the word
+and not the number beside it.
+
+### What a procedure's inputs are
+
+`TO SQUARE :S` declares one input. A call reads one value per input, in order, and
+binds it the way `MAKE` binds a value, so `SQUARE 20`, `SQUARE :N + 1`, `SQUARE
+"green` and `SQUARE [1 2 3]` each bind what they look like -- a number, a word, a
+list. Fewer values than inputs reports `Procedure SQUARE requires 1 inputs`, and
+words after the last input are ignored.
+
+An input shadows whatever the caller held under that name -- a number, a word or a
+list -- and the caller's value is back as soon as the procedure returns. `LOCAL` adds
+another name to the same frame, so it too goes back on return.
+
+The body stops at `STOP`, at `OUTPUT` (which is the value the caller sees) or at
+`BYE`. An error ends the body and is reported, and the caller carries on. Recursion
+is allowed 128 calls deep.
 
 ### Data and reporters
 
@@ -433,23 +466,54 @@ SHOW FIRST [1 2 3]
 
 | Command | What it does | Example |
 | --- | --- | --- |
-| `MAKE` | Binds a name to a value; `[a b c]` makes a list. | `MAKE "X 5` |
+| `MAKE` | Binds a name to one value, read as the table above describes: a number, a word, a text or a list. | `MAKE "X 5` |
 | `THING` | The value a name holds, quoted: `THING "X`. | `SHOW THING "X` |
 | `PRINT` | Writes a value. Text it cannot evaluate is written back as it stands. | `PRINT "HELLO` |
 | `SHOW` | Writes a value and ends the line. | `SHOW 42` |
+| `TYPE` | Writes a value. The console is a list of lines rather than a stream, so it ends the line as `PRINT` does. | `TYPE "A` |
 | `FIRST`, `LAST` | The first or last item. | `SHOW FIRST [1 2 3]` |
 | `BUTFIRST`, `BUTLAST` | The list without its first or last item. | `SHOW BUTFIRST [1 2 3]` |
 | `ITEM` | The nth item, counting from 1. | `SHOW ITEM 2 [1 2 3]` |
-| `COUNT` | The number of items in a list. | `COUNT [1 2 3]` |
+| `COUNT` | The number of items in a list, or of characters in a word. | `COUNT [1 2 3]` |
 | `LIST` | A list of its arguments. | `SHOW LIST 1 2` |
 | `SENTENCE` | The arguments as one flat list. | `SHOW SENTENCE 1 2` |
 | `SUM`, `DIFFERENCE`, `PRODUCT`, `QUOTIENT` | Arithmetic, also spelled `+ - * /`. | `SHOW SUM 1 2` |
 | `RANDOM` | An integer from 0 up to one less than the argument. | `SHOW RANDOM 10` |
 | `MAP`, `FILTER` | A new list of the template's answers, or the items whose template answer holds: `?` is the item. | `SHOW MAP [? * 2] [1 2]` |
 | `REDUCE` | Folds a list with a template of two: `?1` is the running value and `?2` the next item. `REDUCE "SUM [1 2 3]` names a procedure instead. | `REDUCE [SUM ?1 ?2] [1 2 3]` |
+| `POS` | Where the turtle stands, as a list of two. | `SHOW POS` |
+| `XCOR`, `YCOR`, `HEADING` | One number of that pose: across, up, and the heading in degrees clockwise from north. | `SHOW HEADING` |
 
 A list prints with quoted words, as a Python list would: `SHOW LIST 1 2` gives
 `[1.0, 2.0]`, `SHOW BUTFIRST [1 2 3]` gives `['2', '3']`.
+
+### Mathematics
+
+```logo
+PRINT ABS 5
+PRINT SQRT 16
+PRINT MAX(3, 7)
+```
+
+| Command | What it does | Example |
+| --- | --- | --- |
+| `ABS` | The absolute value. | `ABS(-5)` |
+| `SGN` | -1, 0 or 1 according to the sign. | `SGN(-3)` |
+| `INT`, `FLOOR` | The largest integer not greater than the argument, so a negative rounds down. | `INT(3.7)` |
+| `CEIL` | The smallest integer not less than it. | `CEIL(1.2)` |
+| `FIX` | The integer part, discarding the fraction. | `FIX(-3.7)` |
+| `CINT`, `ROUND` | The nearest whole number, with a half going to the even one. | `ROUND(2.5)` |
+| `SQRT`, `SQR` | The square root. | `SQRT 16` |
+| `EXP`, `LOG`, `LOG10`, `LOG2` | e to the power; the natural, base-10 and base-2 logarithm. | `LOG 1` |
+| `SIN`, `COS`, `TAN` | Trigonometry in radians, and `ASIN`, `ACOS`, `ATAN` the inverses. | `SIN(0)` |
+| `SINH`, `COSH`, `TANH` | The hyperbolic forms. | `TANH(0)` |
+| `MAX`, `MIN`, `POW` | The larger, the smaller, and one raised to the other. | `MAX(3, 7)` |
+
+A function takes the one number written after it: `SQRT 16 + 9` is 13, because the
+root is taken of 16 and the 9 is added afterwards. Anything else -- a negative
+number, a longer expression, or a second argument -- needs the bracket: `ABS(-5)` is
+5, `SQRT(16 + 9)` is 5, and `MAX(3, 7)` is 7. A number prints with six significant
+digits: `1 / 3` is `0.333333`.
 
 ### Three dimensions
 
@@ -475,7 +539,17 @@ A list prints with quoted words, as a Python list would: `SHOW LIST 1 2` gives
   and `REDUCE` reads `?1` and `?2`. A template that is really commands -- `FOREACH
   [1 2] [FD 10]` -- still runs as commands, and `FOREACH` does not bind `?`.
 - **A closing quote in a word form is silent.** `PRINT "HI` and `PRINT "HI"` both
-  write `HI`, so a bracketed body may be written `[PRINT "HI"]`.
+  write `HI`, so a bracketed body may be written `[PRINT "HI"]`, and `MAKE "X "HI"`
+  binds `HI`.
+- **A word argument arrives upper-cased.** Words are case-insensitive, so `show` is
+  `SHOW`; a word written as an argument is read upper-cased, which is why
+  `SHOW "hello` writes `HELLO` while `PRINT "hello` writes `hello` -- the printer
+  reads the text of the line, and `MAKE` reads it the same way. A word handed to a
+  command loses the case it was written in: `SHOW LIST "abc "def` gives
+  `['ABC', 'DEF']`.
+- **`TYPE` ends the line.** The console is a list of lines rather than a stream, so
+  `TYPE "A` followed by `PRINT "B` shows two lines where a Logo stream would show
+  `AB`.
 - **Loops that overrun stop silently.** `WHILE`, `UNTIL` and `FOREVER` end after
   10,000 passes with no message, `REPEAT` has no such cap, and recursion stops at 128
   deep with `Procedure R exceeded maximum recursion depth (128)`.

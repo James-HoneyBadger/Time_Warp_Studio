@@ -105,6 +105,10 @@ int main() {
     test_logo_print_runs_a_reporter_it_was_not_told_about();
     test_logo_local_restores_the_callers_value();
     test_logo_closing_quote_of_a_word_is_silent();
+    test_logo_make_replaces_the_value_whatever_kind_it_was();
+    test_logo_make_strips_the_closing_quote();
+    test_logo_parameter_shadows_whatever_the_caller_held();
+    test_logo_reporter_reads_a_variable_argument();
     test_sleep_waits_and_can_be_stopped();
     test_on_timer_fires_the_handler_while_the_program_runs();
     test_basic_sprite_statements_capture_place_move_and_hide();

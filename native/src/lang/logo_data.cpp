@@ -45,26 +45,53 @@ std::string LogoMachine::do_make(const std::vector<std::string>& args,
         }
     }
 
-    try {
-        set_number(name, eval(value_expr));
-        return {};
-    } catch (const std::exception&) {
-        // Not a number: a word or a list, stored the way the reference does.
-    }
-    if (!value_expr.empty() && value_expr.front() == '"' &&
-        value_expr.find(' ') == std::string::npos) {
-        set_word(name, rstrip(std::string_view{value_expr}.substr(1)));
-    } else if (value_expr.size() >= 2 && value_expr.front() == '"' &&
-               value_expr.back() == '"') {
-        set_word(name, value_expr.substr(1, value_expr.size() - 2));
-    } else if (value_expr.size() >= 2 && value_expr.front() == '[' &&
-               value_expr.back() == ']') {
-        lists_[name] = split_ws(
-            std::string_view{value_expr}.substr(1, value_expr.size() - 2));
-    } else {
-        set_word(name, value_expr);
-    }
+    assign_value(name, value_expr);
     return {};
+}
+
+/// A name holds one value, and a value is written one of five ways: a number, a
+/// quoted word (`"red`), a quoted text (`"hello world`), a bracketed list, or
+/// another name's value (`:count`).  `MAKE` and a procedure's parameters both come
+/// here, because a parameter that did not understand a value the way `MAKE` does
+/// was the source of three separate defects: a list arrived as the text of its
+/// brackets, another name's value arrived as the text of its name, and a closing
+/// quote was kept.
+void LogoMachine::assign_value(const std::string& name, std::string_view expression) {
+    try {
+        set_number(name, eval(expression));
+        return;
+    } catch (const std::exception&) {
+        // Not a number: a word or a list.
+    }
+    const std::string text{expression};
+    if (!text.empty() && text.front() == '"') {
+        // The closing quote is optional in a word form, so `"hello`, `"hello"` and
+        // `"hello there"` are one value each rather than three spellings of two.
+        std::size_t end = text.size();
+        if (end >= 2 && text.back() == '"') {
+            --end;
+        }
+        set_word(name, rstrip(std::string_view{text}.substr(1, end - 1)));
+        return;
+    }
+    if (text.size() >= 2 && text.front() == '[' && text.back() == ']') {
+        set_list(name, split_ws(std::string_view{text}.substr(1, text.size() - 2)));
+        return;
+    }
+    if (text.size() > 1 && text.front() == ':') {
+        const std::string source = upper(std::string_view{text}.substr(1));
+        const auto list = lists_.find(source);
+        if (list != lists_.end()) {
+            set_list(name, list->second);
+            return;
+        }
+        const auto word = words_.find(source);
+        if (word != words_.end()) {
+            set_word(name, word->second);
+            return;
+        }
+    }
+    set_word(name, text);
 }
 
 std::string LogoMachine::do_thing(const std::vector<std::string>& args) {
@@ -296,7 +323,7 @@ std::string LogoMachine::do_word(const std::vector<std::string>& args) {
     std::string result;
     for (const std::string& argument : args) {
         try {
-            const double value = interpreter_.evaluate_expression(argument);
+            const double value = eval(argument);
             result += std::trunc(value) == value ? repr_integer(value) : repr_real(value);
         } catch (const std::exception&) {
             result += strip_char(argument, '"');
@@ -312,7 +339,7 @@ std::string LogoMachine::do_list(const std::vector<std::string>& args) {
     items.reserve(args.size());
     for (const std::string& argument : args) {
         try {
-            const double value = interpreter_.evaluate_expression(argument);
+            const double value = eval(argument);
             items.emplace_back(true, repr_real(value));
         } catch (const std::exception&) {
             items.emplace_back(false, strip_char(argument, '"'));
@@ -345,7 +372,7 @@ std::string LogoMachine::do_sentence(const std::vector<std::string>& args) {
             continue;
         }
         try {
-            const double value = interpreter_.evaluate_expression(argument);
+            const double value = eval(argument);
             items.push_back(repr_value(value));
         } catch (const std::exception&) {
             items.push_back(strip_char(argument, '"'));
@@ -398,7 +425,7 @@ std::string LogoMachine::do_first(const std::vector<std::string>& args, bool las
         return last ? items.back() : items.front();
     }
     try {
-        return repr_value(interpreter_.evaluate_expression(argument));
+        return repr_value(eval(argument));
     } catch (const std::exception&) {
         const std::string word = strip_char(argument, '"');
         if (word.empty()) {
@@ -450,7 +477,7 @@ std::string LogoMachine::do_butfirst(const std::vector<std::string>& args, bool 
         return shorten(split_ws(std::string_view{argument}.substr(1, argument.size() - 2)));
     }
     try {
-        return shorten_word(repr_real(interpreter_.evaluate_expression(argument)));
+        return shorten_word(repr_real(eval(argument)));
     } catch (const std::exception&) {
         return shorten_word(strip_char(argument, '"'));
     }
@@ -507,7 +534,7 @@ std::string LogoMachine::do_item(const std::vector<std::string>& args) {
         return {};
     }
     try {
-        const std::string text = repr_value(interpreter_.evaluate_expression(thing));
+        const std::string text = repr_value(eval(thing));
         if (index >= 0 && index < static_cast<long long>(text.size())) {
             return std::string{text[static_cast<std::size_t>(index)]};
         }
@@ -532,8 +559,21 @@ std::string LogoMachine::do_count(const std::vector<std::string>& args) {
         return std::to_string(
             split_ws(std::string_view{argument}.substr(1, argument.size() - 2)).size());
     }
+    // `:name` is the value the name holds: a list has items to count, a word has
+    // characters.  Counting the text `:name` itself answered a name's length.
+    if (argument.size() > 1 && argument.front() == ':') {
+        const std::string name = upper(std::string_view{argument}.substr(1));
+        const auto list = lists_.find(name);
+        if (list != lists_.end()) {
+            return std::to_string(list->second.size());
+        }
+        const auto word = words_.find(name);
+        if (word != words_.end()) {
+            return std::to_string(word->second.size());
+        }
+    }
     try {
-        return std::to_string(repr_value(interpreter_.evaluate_expression(argument)).size());
+        return std::to_string(repr_value(eval(argument)).size());
     } catch (const std::exception&) {
         return std::to_string(strip_char(argument, '"').size());
     }
@@ -551,8 +591,8 @@ std::string LogoMachine::do_arithmetic(const std::vector<std::string>& args,
     double first = 0.0;
     double second = 0.0;
     try {
-        first = interpreter_.evaluate_expression(args[0]);
-        second = interpreter_.evaluate_expression(args[1]);
+        first = eval(args[0]);
+        second = eval(args[1]);
     } catch (const std::exception&) {
         return std::string{"❌ Invalid numbers for "} + label + "\n";
     }
@@ -577,7 +617,7 @@ std::string LogoMachine::do_random(const std::vector<std::string>& args) {
     }
     double limit = 0.0;
     try {
-        limit = std::trunc(interpreter_.evaluate_expression(args[0]));
+        limit = std::trunc(eval(args[0]));
     } catch (const std::exception&) {
         return "❌ Invalid limit for RANDOM\n";
     }
@@ -596,8 +636,8 @@ std::string LogoMachine::do_arc(const std::vector<std::string>& args) {
     double angle = 0.0;
     double radius = 0.0;
     try {
-        angle = interpreter_.evaluate_expression(args[0]);
-        radius = interpreter_.evaluate_expression(args[1]);
+        angle = eval(args[0]);
+        radius = eval(args[1]);
     } catch (const std::exception&) {
         return "❌ Invalid parameters for ARC\n";
     }
@@ -619,7 +659,7 @@ std::string LogoMachine::do_bezier(const std::vector<std::string>& args) {
     double values[6] = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
     for (std::size_t index = 0; index < 6; ++index) {
         try {
-            values[index] = interpreter_.evaluate_expression(args[index]);
+            values[index] = eval(args[index]);
         } catch (const std::exception&) {
             return "❌ Invalid parameters for BEZIER\n";
         }
@@ -1007,6 +1047,14 @@ std::string LogoMachine::do_higher_order(std::string_view command, char which) {
         } else {
             items = split_ws(rest);
         }
+    } else if (rest.size() > 1 && rest.front() == ':') {
+        // The list may be in a name: `MAP [? * 2] :ITEMS`.
+        const std::string source = upper(std::string_view{rest}.substr(1));
+        const auto stored = lists_.find(source);
+        if (stored == lists_.end()) {
+            return "❌ " + name + " requires a list, and " + rest + " is not one\n";
+        }
+        items = stored->second;
     } else {
         items = split_ws(rest);
     }

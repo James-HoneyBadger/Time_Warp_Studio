@@ -362,16 +362,9 @@ std::string LogoMachine::call_procedure(const std::string& name,
         }
         saved.push_back(entry);
 
-        if (!argument.empty() && argument.front() == '"') {
-            set_word(param, argument.substr(1));
-            continue;
-        }
-        try {
-            set_number(param, eval(argument));
-        } catch (const std::exception&) {
-            // A bare word is a string, not an error.
-            set_word(param, argument);
-        }
+        // A parameter is bound the way `MAKE` binds a value, so a list arrives as
+        // a list and another name's value arrives as its value.
+        assign_value(param, argument);
     }
 
     std::string output;
