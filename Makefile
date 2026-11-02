@@ -73,7 +73,7 @@ check-built:
 	@$(MAKE) --no-print-directory -C $(NATIVE) check
 
 # The parity gate. `native/tests/golden/` holds the reference engine's answers --
-# 442 language programs and 192 Scheme programs; this compares the ports with those
+# 444 language programs and 192 Scheme programs; this compares the ports with those
 # and imports no Python to do it. There is no `--record` any more: the engine those
 # answers came from is deleted, so a deliberate behaviour change edits the corpus
 # entry in the same commit that changes the behaviour.
