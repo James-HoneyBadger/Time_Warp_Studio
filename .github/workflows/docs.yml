@@ -65,7 +65,7 @@ jobs:
             docs/project/history.md \
             docs/lessons/README.md \
             docs/lessons/FORMAT.md \
-            docs/lessons/plans/README.md \
+            docs/lessons/plans/README.md
           do
             if [ ! -f "$required" ]; then
               echo "::error file=$required::promised by docs/INDEX.md, and not here"
