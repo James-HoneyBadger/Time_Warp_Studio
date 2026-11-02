@@ -1,0 +1,10 @@
+# LeakSanitizer suppressions.
+#
+# One entry, and it names Qt rather than anything in this tree.
+#
+# QDBusMetaObject::createMetaObject keeps the meta-object it builds in a static
+# hash for the life of the process: building one again is expensive, and a Qt
+# process ends rather than unloading the cache. `notifyDesktop` asks for a single
+# interface, so a widget test that finishes a run reports 181 bytes that belong to
+# Qt's cache. The stack names the library, so a leak in the product still fails.
+leak:QDBusMetaObject::createMetaObject

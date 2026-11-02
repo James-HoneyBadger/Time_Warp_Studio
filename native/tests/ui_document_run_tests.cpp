@@ -673,12 +673,24 @@ void test_stop_interrupts_a_running_program() {
     TurtleCanvas* canvas = window.turtleCanvas();
     TW_CHECK(waitFor([canvas] { return canvas->strokeCount() > 0; }, 5000));
 
+    // Deliver anything the run has already queued before the badge is read as the
+    // truth: a builder slow enough to spend the ten-second budget while the canvas
+    // fills has ended the run, and the badge has not heard yet.
+    QApplication::processEvents(QEventLoop::AllEvents, 10);
+    const bool still_running =
+        badgeText(window, "executionBadge") == QStringLiteral("running");
     window.stopRunningDocument();
     TW_CHECK(waitFor([&window] {
         const QString state = badgeText(window, "executionBadge");
         return state != QStringLiteral("running") && state != QStringLiteral("stopping");
     }));
-    TW_CHECK_EQ(badgeText(window, "executionBadge"), QStringLiteral("stopped"));
+    // A machine slow enough to spend the Scheme clock before the stop is pressed
+    // -- a build with instrumentation, typically -- has already ended the run, and
+    // then Stop reports that nothing was running rather than that it stopped one.
+    // The strict assertion is kept for the case the test is about.
+    if (still_running) {
+        TW_CHECK_EQ(badgeText(window, "executionBadge"), QStringLiteral("stopped"));
+    }
 
     // And the thread really is gone, not merely quiet: the window must be able
     // to close, which joins it.

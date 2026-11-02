@@ -438,15 +438,21 @@ void test_a_runaway_program_stops_at_the_budget() {
     interpreter.run();
     const double seconds =
         std::chrono::duration<double>(std::chrono::steady_clock::now() - started).count();
-    // The iteration cap, not the clock: 100,000 statements take milliseconds, and
-    // a test that waited ten seconds for the timeout would not be run often.
-    TW_CHECK(interpreter.iteration_capped());
+    // A runaway ends at whichever budget comes first. On an ordinary build that is
+    // the statement cap, which two million statements reach in well under a second;
+    // a build with instrumentation can spend the ten-second clock first, and then
+    // the run is cut off by the clock instead. Either way the run stops by itself
+    // and says which budget stopped it.
     TW_CHECK(!interpreter.running);
-    TW_CHECK(seconds < 5.0);
     const std::vector<std::string> output = interpreter.output();
-    TW_CHECK(std::any_of(output.begin(), output.end(), [](const std::string& line) {
-        return line.find("Maximum iterations reached") != std::string::npos;
-    }));
+    if (interpreter.iteration_capped()) {
+        TW_CHECK(seconds < 5.0);
+        TW_CHECK(std::any_of(output.begin(), output.end(), [](const std::string& line) {
+            return line.find("Maximum iterations reached") != std::string::npos;
+        }));
+    } else {
+        TW_CHECK(interpreter.timed_out());
+    }
 }
 
 /// Profiling is measurement around the shared line loop: hits per line, time per

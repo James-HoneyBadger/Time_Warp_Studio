@@ -7,6 +7,7 @@
 // Where the port deliberately differs, the test names say so and the divergence
 // is listed in native/README.md.
 
+#include <chrono>
 #include <cstdint>
 #include <string>
 #include <string_view>
@@ -78,9 +79,13 @@ private:
     bool fail_ = false;
 };
 
-Run run_with_host(std::string_view source, timewarp::scheme::Host& host) {
+Run run_with_host(std::string_view source, timewarp::scheme::Host& host,
+                   std::chrono::milliseconds time_limit = std::chrono::milliseconds{0}) {
     Arena arena;
     Machine machine{arena, host};
+    if (time_limit.count() > 0) {
+        machine.set_time_limit(time_limit);
+    }
     Run result;
     result.output = machine.execute(source);
     result.peak_frames = machine.peak_frame_depth();
@@ -445,11 +450,15 @@ void test_step_budget() {
 void test_tail_calls_are_constant_space() {
     // 1,000,000 Scheme calls.  The reference aborted at roughly 200 with
     // "Maximum recursion depth exceeded"; this must run in bounded depth.
+    //
+    // The question is space, not speed, so the clock is raised: a million calls
+    // take longer than the default ten seconds in a build with instrumentation,
+    // and a run cut off by the clock would say nothing about the depth.
     NullHost host;
     const Run result = run_with_host(
         "(define (loop n) (if (= n 0) 'done (loop (- n 1))))"
         "(display (loop 1000000))",
-        host);
+        host, std::chrono::seconds{120});
     TW_CHECK_EQ(result.output, std::string{"done\n"});
     // Only the Halt frame plus a handful of transient ones at any moment.
     TW_CHECK(result.peak_frames < 32);

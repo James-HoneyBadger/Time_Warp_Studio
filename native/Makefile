@@ -171,6 +171,9 @@ test-debug: ## Build and test unoptimised, with assertions active
 #     make asan ASAN=undefined       # uninitialised reads and integer overflow
 ASAN       ?= address
 ASAN_FLAGS ?= -fsanitize=$(ASAN) -fno-omit-frame-pointer -g
+# Qt's DBus meta-object cache is never freed; the file says why, and names nothing
+# in this tree, so a leak here still fails.
+LSAN_SUPPRESSIONS ?= $(CURDIR)/tests/lsan.supp
 asan: ## Build and test under AddressSanitizer (ASAN=thread/undefined to switch)
 	@$(MAKE) --no-print-directory BUILD_DIR=$(SAN_DIR) BUILD_TYPE=Debug \
 		CMAKE_FLAGS="-DCMAKE_CXX_FLAGS='$(ASAN_FLAGS)' -DCMAKE_EXE_LINKER_FLAGS='-fsanitize=$(ASAN)'" \
@@ -180,8 +183,9 @@ asan: ## Build and test under AddressSanitizer (ASAN=thread/undefined to switch)
 # `asan` go through it, so the command exists in exactly one place.
 ctest-run: build
 	@echo "  ctest      $(BUILD_DIR)"
-	@QT_QPA_PLATFORM=$(QT_QPA_PLATFORM) $(CTEST) --test-dir $(BUILD_DIR) \
-		--output-on-failure $(CTEST_ARGS)
+	@QT_QPA_PLATFORM=$(QT_QPA_PLATFORM) \
+		LSAN_OPTIONS=suppressions=$(LSAN_SUPPRESSIONS):print_suppressions=0 \
+		$(CTEST) --test-dir $(BUILD_DIR) --output-on-failure $(CTEST_ARGS)
 
 # The run report the harnesses and a person both use: one program through the
 # native engines, with what it printed and what it drew. Built on demand so
