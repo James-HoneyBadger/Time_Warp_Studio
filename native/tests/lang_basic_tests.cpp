@@ -434,19 +434,18 @@ void test_a_runaway_program_stops_at_the_budget() {
     RecordingHost host;
     Interpreter interpreter{Language::Basic, host};
     interpreter.load_program("10 GOTO 10\n");
-    const auto started = std::chrono::steady_clock::now();
     interpreter.run();
-    const double seconds =
-        std::chrono::duration<double>(std::chrono::steady_clock::now() - started).count();
-    // A runaway ends at whichever budget comes first. On an ordinary build that is
-    // the statement cap, which two million statements reach in well under a second;
-    // a build with instrumentation can spend the ten-second clock first, and then
-    // the run is cut off by the clock instead. Either way the run stops by itself
-    // and says which budget stopped it.
+    // A runaway ends at whichever budget comes first: the statement cap, which an
+    // ordinary build reaches in well under a second, or the ten-second clock, which
+    // a slow or instrumented build can reach first. Either way the run stops itself.
     TW_CHECK(!interpreter.running);
     const std::vector<std::string> output = interpreter.output();
     if (interpreter.iteration_capped()) {
-        TW_CHECK(seconds < 5.0);
+        // Counted, not timed. The cap is reached exactly, and a loop that asked the
+        // budget rarely would show a count past it; a clock here would only report
+        // how fast the machine is, and failed a Debug runner that is neither slow
+        // nor wrong.
+        TW_CHECK_EQ(interpreter.steps_used(), interpreter.max_steps());
         TW_CHECK(std::any_of(output.begin(), output.end(), [](const std::string& line) {
             return line.find("Maximum iterations reached") != std::string::npos;
         }));
