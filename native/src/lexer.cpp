@@ -204,6 +204,21 @@ std::vector<Token> Lexer::tokenize(std::string_view source) const {
             while (i < size && (is_digit(source[i]) || source[i] == '.')) {
                 ++i;
             }
+            // An exponent, in either of the spellings BASIC and Logo accept:
+            // `1E6`, `1e-6`, `2.5E+3`.  The `E` only belongs to the number when
+            // digits follow it, so `2E` is still the number 2 and the variable E.
+            if (i < size && (source[i] == 'e' || source[i] == 'E')) {
+                std::size_t scan = i + 1;
+                if (scan < size && (source[scan] == '+' || source[scan] == '-')) {
+                    ++scan;
+                }
+                if (scan < size && is_digit(source[scan])) {
+                    while (scan < size && is_digit(source[scan])) {
+                        ++scan;
+                    }
+                    i = scan;
+                }
+            }
             tokens.push_back(
                 Token::make_number(parse_decimal(source.substr(start, i - start))));
             continue;

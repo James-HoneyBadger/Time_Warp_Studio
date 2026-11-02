@@ -70,6 +70,8 @@ int main() {
     test_pilot_no_and_hint();
     test_pilot_graphics_and_text();
     test_pilot_reports_errors();
+    test_pilot_link_chains_to_another_lesson();
+    test_pilot_file_open_defaults_to_reading_and_write_takes_the_line();
     test_comal_print_and_assignment();
     test_comal_if_blocks();
     test_comal_loops();
@@ -98,6 +100,11 @@ int main() {
     test_a_chained_bezier_starts_where_the_last_one_finished();
     test_logo_bezier_rejects_a_short_argument_list();
     test_logo_setpc_with_a_palette_index_sets_the_pen();
+    test_logo_higher_order_words_compute();
+    test_logo_count_counts_a_whole_list();
+    test_logo_print_runs_a_reporter_it_was_not_told_about();
+    test_logo_local_restores_the_callers_value();
+    test_logo_closing_quote_of_a_word_is_silent();
     test_sleep_waits_and_can_be_stopped();
     test_on_timer_fires_the_handler_while_the_program_runs();
     test_basic_sprite_statements_capture_place_move_and_hide();
@@ -122,6 +129,8 @@ int main() {
     test_rexx_if_block_skips_the_else();
     test_rexx_builtins();
     test_rexx_subroutine_returns_through_result();
+    test_rexx_parse_gives_the_last_target_the_rest();
+    test_rexx_pull_fills_every_target();
     test_rexx_turtle_words_draw();
     test_smalltalk_class_and_instance_variable();
     test_smalltalk_block_is_a_closure();
@@ -176,6 +185,13 @@ int main() {
     test_a_run_can_be_snapshotted_and_restored();
     test_history_rewinds_a_finished_run();
     test_basic_call_chain_names_the_subroutines();
+    test_basic_select_case_runs_only_the_matching_body();
+    test_basic_select_case_skips_nested_blocks();
+    test_basic_const_refuses_assignment();
+    test_basic_one_line_loops_repeat_within_the_line();
+    test_basic_one_line_definition_is_refused();
+    test_basic_loop_header_may_share_its_line_with_the_body();
+    test_basic_exponent_literals_are_numbers();
     test_focal_group_reports_a_frame();
     test_pilot_unit_reports_a_frame();
     test_comal_procedure_reports_a_frame();

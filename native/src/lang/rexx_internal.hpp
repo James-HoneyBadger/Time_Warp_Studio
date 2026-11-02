@@ -86,7 +86,10 @@ struct RexxState {
     std::vector<Frame> stack;
     std::vector<std::pair<std::size_t, std::vector<RValue>>> call_stack;
     std::optional<std::map<std::string, std::size_t>> labels;
-    std::optional<std::string> waiting;
+    /// The names a `PULL`/`PARSE PULL` is waiting to fill.  REXX puts one word in
+    /// each and the rest of the line in the last, so a single name could not express
+    /// it -- a second target was silently left unset.
+    std::vector<std::string> waiting;
     std::vector<RValue> args;
     /// The ELSE lines a taken single-statement IF has to skip. A DO body ends at its
     /// END, where `handle_end` can skip; a one-line body has no END, so the ELSE line
@@ -98,6 +101,10 @@ struct RexxState {
 
 bool is_loop(const std::string& kind);
 RValue get_var(Interpreter& interpreter, const std::string& name);
+/// Splits `line` into the targets the way REXX does: one word each, and whatever is
+/// left over into the last one.
+void assign_parse_targets(Interpreter& interpreter, const std::vector<std::string>& targets,
+                          const std::string& line);
 void set_var(Interpreter& interpreter, const std::string& name, const RValue& value);
 /// The expression parser's only entry point: tokens in, a value out.
 RValue eval_expr(Interpreter& interpreter, const std::string& expression);

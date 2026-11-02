@@ -1394,7 +1394,7 @@
   {
    "language": "Logo",
    "command": "COUNT",
-   "source": "SHOW COUNT [1 2 3]",
+   "source": "SHOW COUNT [7 8 9]",
    "expect": "prints:3"
   },
   {
@@ -1442,8 +1442,23 @@
   {
    "language": "Logo",
    "command": "REDUCE",
-   "source": "SHOW REDUCE \"SUM [1 2 3]",
-   "expect": "prints:"
+   "source": "SHOW REDUCE [SUM ?1 ?2] [1 2 3]",
+   "expect": "prints:6",
+   "also": [
+    "SUM"
+   ]
+  },
+  {
+   "language": "Logo",
+   "command": "MAP",
+   "source": "SHOW MAP [? * 2] [7 8 9]",
+   "expect": "prints:14 16 18"
+  },
+  {
+   "language": "Logo",
+   "command": "FILTER",
+   "source": "SHOW FILTER [? > 7] [7 8 9]",
+   "expect": "prints:8 9"
   },
   {
    "language": "Logo",
@@ -1496,8 +1511,13 @@
   {
    "language": "Logo",
    "command": "LOCAL",
-   "source": "TO P\nLOCAL \"X\nMAKE \"X 5\nSHOW :X\nEND\nP",
-   "expect": "prints:5"
+   "source": "TO INNER\nSHOW :X\nEND\nTO OUTER\nLOCAL \"X\nMAKE \"X 5\nINNER\nEND\nMAKE \"X 99\nOUTER\nSHOW :X",
+   "expect": "prints:99",
+   "also": [
+    "TO / END",
+    "MAKE",
+    "SHOW"
+   ]
   },
   {
    "language": "Logo",
@@ -1808,7 +1828,7 @@
   },
   {
    "language": "PILOT",
-   "command": "LINK reports that chaining is not implemented",
+   "command": "LINK reports a lesson file it cannot open",
    "source": "LINK lesson.pilot\nT: DONE",
    "expect": "error",
    "also": [
@@ -2088,8 +2108,8 @@
   {
    "language": "REXX",
    "command": "PARSE VAR",
-   "source": "line = 'red green blue'\nPARSE VAR line first second third\nSAY second",
-   "expect": "prints:green"
+   "source": "line = 'red green blue sky'\nPARSE VAR line first rest\nSAY rest",
+   "expect": "prints:green blue sky"
   },
   {
    "language": "REXX",

@@ -183,6 +183,27 @@ void set_var(Interpreter& interpreter, const std::string& name, const RValue& va
     }
 }
 
+void assign_parse_targets(Interpreter& interpreter, const std::vector<std::string>& targets,
+                          const std::string& line) {
+    const std::vector<std::string> words = split_ws(line);
+    for (std::size_t index = 0; index < targets.size(); ++index) {
+        std::string value;
+        if (index + 1 == targets.size()) {
+            // The last target takes the remainder of the line, spaces and all, which
+            // is what makes `PULL verb rest` keep the sentence.
+            for (std::size_t rest = index; rest < words.size(); ++rest) {
+                if (!value.empty()) {
+                    value.push_back(' ');
+                }
+                value += words[rest];
+            }
+        } else if (index < words.size()) {
+            value = words[index];
+        }
+        set_var(interpreter, targets[index], RValue::word(value));
+    }
+}
+
 
 // Line helpers
 // ---------------------------------------------------------------------------

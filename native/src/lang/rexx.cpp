@@ -67,20 +67,25 @@ struct RexxMachine {
 };
 
 void RexxMachine::sync_pending_input() {
-    if (!state.waiting.has_value()) {
+    if (state.waiting.empty()) {
         return;
     }
-    const std::string name = upper(*state.waiting);
-    state.waiting.reset();
+    std::vector<std::string> targets;
+    for (const std::string& name : state.waiting) {
+        targets.push_back(upper(name));
+    }
+    state.waiting.clear();
+    // The answer comes back in the first target's `<name>$` slot, which is where the
+    // input provider puts a line whatever the statement asked for.
     std::string stored;
-    const auto found = interpreter.variables().find(name + "$");
+    const auto found = interpreter.variables().find(targets.front() + "$");
     if (found != interpreter.variables().end()) {
         stored = found->second.is_text() ? found->second.text() : found->second.render();
     } else {
-        const auto number = interpreter.variables().find(name);
+        const auto number = interpreter.variables().find(targets.front());
         stored = number != interpreter.variables().end() ? number->second.render() : "";
     }
-    set_var(interpreter, name, RValue::word(stored));
+    assign_parse_targets(interpreter, targets, stored);
 }
 
 Flow RexxMachine::run_statements(const std::string& text) {
@@ -210,9 +215,12 @@ Flow RexxMachine::handle_pull(const std::string& text) {
     if (body.empty()) {
         return Flow::None;
     }
-    const std::string name = split_ws(body).front();
-    state.waiting = name;
-    interpreter.request_input("", upper(name) + "$", false);
+    const std::vector<std::string> targets = split_ws(body);
+    if (targets.empty()) {
+        return Flow::None;
+    }
+    state.waiting = targets;
+    interpreter.request_input("", upper(targets.front()) + "$", false);
     return Flow::Jump;
 }
 
@@ -221,11 +229,8 @@ Flow RexxMachine::handle_parse_var(const std::string& body) {
     if (parts.size() < 2) {
         return Flow::None;
     }
-    const std::vector<std::string> words = split_ws(fmt(get_var(interpreter, parts[0])));
-    for (std::size_t position = 1; position < parts.size(); ++position) {
-        set_var(interpreter, parts[position],
-                RValue::word(position - 1 < words.size() ? words[position - 1] : ""));
-    }
+    const std::vector<std::string> targets(parts.begin() + 1, parts.end());
+    assign_parse_targets(interpreter, targets, fmt(get_var(interpreter, parts[0])));
     return Flow::None;
 }
 

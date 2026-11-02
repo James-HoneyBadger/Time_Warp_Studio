@@ -112,6 +112,22 @@ std::optional<std::size_t> matching_terminator(Interpreter& interpreter, std::si
 }
 
 std::string Machine::exit_loop(const std::string& kind) {
+    // A loop written on one line has no terminator *line* to search for, so the
+    // line's own runner is asked first: it knows where its loops close.
+    if (state_.line_loops != nullptr) {
+        const char wanted = kind == "FOR" ? 'F' : (kind == "DO" ? 'D' : 'W');
+        for (auto frame = state_.line_loops->rbegin(); frame != state_.line_loops->rend();
+             ++frame) {
+            if (frame->kind != wanted) {
+                continue;
+            }
+            // Anything opened inside the loop is abandoned with it.
+            state_.line_jump = frame->close;
+            state_.line_loops->erase(std::next(frame).base(), state_.line_loops->end());
+            return {};
+        }
+        return "❌ EXIT " + kind + " outside a " + kind + "\n";
+    }
     const std::string opener = kind;
     const std::string closer = kind == "FOR" ? "NEXT" : (kind == "DO" ? "LOOP" : "WEND");
     if (kind == "FOR") {

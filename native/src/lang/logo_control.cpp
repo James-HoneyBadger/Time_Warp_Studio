@@ -347,7 +347,7 @@ std::string LogoMachine::call_procedure(const std::string& name,
     for (std::size_t index = 0; index < params.size(); ++index) {
         const std::string& param = params[index];
         const std::string& argument = used[index];
-        Saved entry{param, std::nullopt, std::nullopt};
+        Saved entry{param, std::nullopt, std::nullopt, std::nullopt};
         const auto existing = interpreter_.variables().find(param);
         if (existing != interpreter_.variables().end()) {
             entry.number = existing->second;
@@ -355,6 +355,10 @@ std::string LogoMachine::call_procedure(const std::string& name,
         const auto existing_word = words_.find(param);
         if (existing_word != words_.end()) {
             entry.word = existing_word->second;
+        }
+        const auto existing_list = lists_.find(param);
+        if (existing_list != lists_.end()) {
+            entry.list = existing_list->second;
         }
         saved.push_back(entry);
 
@@ -380,8 +384,13 @@ std::string LogoMachine::call_procedure(const std::string& name,
         LogoMachine& machine;
         const std::vector<Saved>& saved;
         double depth;
-        ~Guard() { machine.restore(saved, depth); }
-    } guard{*this, saved, depth};
+        std::vector<Saved>* const outer;
+        ~Guard() {
+            machine.frame_saved_ = outer;
+            machine.restore(saved, depth);
+        }
+    } guard{*this, saved, depth, frame_saved_};
+    frame_saved_ = &saved;
 
     for (const std::string& statement : parse_body(body->second)) {
         const std::string trimmed = strip(statement);
@@ -420,6 +429,11 @@ void LogoMachine::restore(const std::vector<Saved>& saved, double depth) {
             words_[entry.name] = *entry.word;
         } else {
             words_.erase(entry.name);
+        }
+        if (entry.list.has_value()) {
+            lists_[entry.name] = *entry.list;
+        } else {
+            lists_.erase(entry.name);
         }
     }
 }

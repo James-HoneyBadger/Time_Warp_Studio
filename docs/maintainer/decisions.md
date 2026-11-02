@@ -33,7 +33,7 @@ recording.
 
 ### Parity, and what a recording cannot do
 
-The reference engine was deleted in 18.0. What remains is `lang_corpus.json.gz`, 442 programs
+The reference engine was deleted in 18.0. What remains is `lang_corpus.json.gz`, 444 programs
 with the output they printed, every drawing call in order and the variables they left, and
 `scheme_corpus.json.gz`, 192 programs compared as whole output text. `time_warp_gates golden`
 compares the ports against both, and zero differences is the verdict.

@@ -308,10 +308,12 @@ void test_domain_errors() {
             [&] { (void)evaluator.evaluate("999999999999999999999999 AND 1"); }),
         std::string{"integer operand out of 64-bit range"});
 
-    // Shared limitation with the reference: the number scanner consumes only
-    // digits and dots, so exponent notation is *not* a numeric literal.
-    TW_CHECK_EQ(message_of([&] { (void)evaluator.evaluate("1e300"); }),
-                std::string{"Undefined variable: E300"});
+    // Exponent notation is a numeric literal in both spellings, and the sign is
+    // optional -- `1e6` used to read as the number 1 beside a variable called E6.
+    TW_CHECK_EQ(evaluator.evaluate("1e300"), 1e300);
+    TW_CHECK_EQ(evaluator.evaluate("1E6"), 1000000.0);
+    TW_CHECK_EQ(evaluator.evaluate("2.5e-3"), 0.0025);
+    TW_CHECK_EQ(evaluator.evaluate("1e+2"), 100.0);
 }
 
 void test_phased_api() {

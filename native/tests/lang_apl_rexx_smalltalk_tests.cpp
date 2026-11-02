@@ -88,10 +88,21 @@ struct RexxRun {
     RecordingHost host;
 };
 
-RexxRun run_rexx(std::string_view source) {
+RexxRun run_rexx(std::string_view source, const std::vector<std::string>& input = {}) {
     RexxRun run;
     Interpreter interpreter{Language::Rexx, run.host};
-    interpreter.set_input_callback([](const std::string&) { return std::string{}; });
+    // A PULL reads one line per statement that asks, in the order the program is
+    // written, and an exhausted queue reads as an empty line.
+    auto lines = input;
+    interpreter.set_input_callback([lines = std::move(lines)](
+                                       const std::string&) mutable -> std::string {
+        if (lines.empty()) {
+            return {};
+        }
+        std::string line = lines.front();
+        lines.erase(lines.begin());
+        return line;
+    });
     interpreter.load_program(source);
     interpreter.run();
     run.output = interpreter.output();
@@ -137,6 +148,28 @@ void test_rexx_subroutine_returns_through_result() {
     const RexxRun run =
         run_rexx("CALL double 21\nSAY RESULT\nEXIT\ndouble:\n  RETURN ARG(1) * 2");
     TW_CHECK_EQ(run.output.at(0), std::string{"42"});
+}
+
+// REXX splits a line into one word per target and gives the last target everything
+// that is left. A second name used to be left unset, so `PULL verb rest` lost the
+// sentence.
+void test_rexx_parse_gives_the_last_target_the_rest() {
+    const RexxRun parsed =
+        run_rexx("line = 'red green blue sky'\nPARSE VAR line first rest\nSAY rest");
+    TW_CHECK_EQ(parsed.output.back(), std::string{"green blue sky"});
+
+    // Abutting terms concatenate without a space, which is REXX's rule: the target
+    // values are `a`, `b` and the remainder `c d`.
+    const RexxRun three =
+        run_rexx("line = 'a b c d'\nPARSE VAR line one two tail\nSAY one two tail");
+    TW_CHECK_EQ(three.output.back(), std::string{"abc d"});
+}
+
+void test_rexx_pull_fills_every_target() {
+    const RexxRun run =
+        run_rexx("PULL verb rest\nSAY 'verb= ' verb\nSAY 'rest= ' rest", {"ADD 2 3"});
+    TW_CHECK_EQ(run.output.at(run.output.size() - 2), std::string{"verb= ADD"});
+    TW_CHECK_EQ(run.output.back(), std::string{"rest= 2 3"});
 }
 
 void test_rexx_turtle_words_draw() {

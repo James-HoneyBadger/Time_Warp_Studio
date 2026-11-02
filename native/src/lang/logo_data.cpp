@@ -3,6 +3,7 @@
 // Variables, lists, words, the drawing extras and the higher-order primitives.
 #include "logo_internal.hpp"
 
+#include <algorithm>
 #include <cmath>
 #include <cstddef>
 #include <cstdio>
@@ -136,7 +137,14 @@ std::string LogoMachine::do_print(const std::vector<std::string>& args,
         return strip(tightened) + "\n";
     }
     if (text.front() == '"' && text.find(' ') == std::string::npos) {
-        return text.substr(1) + "\n";
+        // The closing quote is optional in Logo -- `PRINT "HI` is the word form --
+        // and printing it back was a trap: a body written `[PRINT "HI"]` printed
+        // `HI"`, so the body had to be written with the quote left off.
+        std::size_t end = text.size();
+        if (end >= 2 && text.back() == '"') {
+            --end;
+        }
+        return text.substr(1, end - 1) + "\n";
     }
 
     if (args.size() == 1 && args[0].front() == ':') {
@@ -191,25 +199,8 @@ std::string LogoMachine::do_print(const std::vector<std::string>& args,
         }
     }
 
-    if (in_set(colour_reporters(), upper(args[0]))) {
-        std::string joined;
-        for (const std::string& piece : args) {
-            if (!joined.empty()) {
-                joined.push_back(' ');
-            }
-            joined += piece;
-        }
-        std::string result = run_text(joined);
-        if (!result.empty() && result.back() == '\n') {
-            result.pop_back();
-        }
-        double value = 0.0;
-        if (looks_like_number(result, value)) {
-            result = format_value(repr_real(value), false);
-        }
-        return result + "\n";
-    }
-
+    // The pose reporters are the printer's own: they read the turtle rather than a
+    // variable, and they are not commands a line can start with.
     if (args.size() == 1) {
         const std::string reporter = upper(args[0]);
         if (reporter == "POS" || reporter == "XCOR" || reporter == "YCOR" ||
@@ -226,6 +217,25 @@ std::string LogoMachine::do_print(const std::vector<std::string>& args,
             }
             return repr_real(pose_.heading()) + "\n";
         }
+    }
+
+    if (in_set(logo_value_reporters(), upper(args[0]))) {
+        std::string joined;
+        for (const std::string& piece : args) {
+            if (!joined.empty()) {
+                joined.push_back(' ');
+            }
+            joined += piece;
+        }
+        std::string result = run_text(joined);
+        if (!result.empty() && result.back() == '\n') {
+            result.pop_back();
+        }
+        double value = 0.0;
+        if (looks_like_number(result, value)) {
+            result = format_value(repr_real(value), false);
+        }
+        return result + "\n";
     }
 
     try {
@@ -514,7 +524,10 @@ std::string LogoMachine::do_count(const std::vector<std::string>& args) {
     if (args.empty()) {
         return "❌ COUNT requires argument\n";
     }
-    const std::string& argument = args[0];
+    // `[1 2 3]` reaches the dispatcher as three words, so the argument has to be
+    // reassembled before it can be counted: the first item alone is not the list.
+    const std::vector<std::string> consumed = consume_args(args, 1);
+    const std::string& argument = consumed.empty() ? args[0] : consumed[0];
     if (argument.size() >= 2 && argument.front() == '[' && argument.back() == ']') {
         return std::to_string(
             split_ws(std::string_view{argument}.substr(1, argument.size() - 2)).size());
@@ -854,12 +867,63 @@ std::string LogoMachine::run_template(std::string_view template_text,
     return output;
 }
 
+/// `?`, `?1` and `?2` replaced by their bound values, ready to be read as an
+/// expression.  The longer names first: replacing `?` first would break `?1`.
+std::string substitute_placeholders(std::string_view template_text,
+                                    const std::map<std::string, Value>& bindings) {
+    std::string text{template_text};
+    for (const std::string& name : {std::string{"?1"}, std::string{"?2"},
+                                    std::string{"?"}}) {
+        const auto found = bindings.find(name);
+        if (found == bindings.end()) {
+            continue;
+        }
+        const std::string value = found->second.render();
+        std::string replaced;
+        for (std::size_t index = 0; index < text.size();) {
+            if (text.compare(index, name.size(), name) == 0) {
+                replaced += value;
+                index += name.size();
+                continue;
+            }
+            replaced.push_back(text[index]);
+            ++index;
+        }
+        text = std::move(replaced);
+    }
+    return text;
+}
+
 Value template_value(std::string_view item) {
     double number = 0.0;
     if (looks_like_number(item, number)) {
         return Value{number};
     }
     return Value{std::string{item}};
+}
+
+std::optional<std::string> LogoMachine::template_expression(
+    std::string_view template_text, const std::map<std::string, Value>& bindings) {
+    const std::string substituted = substitute_placeholders(template_text, bindings);
+    try {
+        // Rendered the way a printed value is, so a whole number stays whole:
+        // `MAP [? * 2] [7 8 9]` answers `[14 16 18]`, not `[14.0 16.0 18.0]`.
+        return format_value(repr_real(eval(substituted)), false);
+    } catch (const std::exception&) {
+        // Not an expression.  A template may name a prefix reporter instead --
+        // REDUCE's `[SUM ?1 ?2]` -- so the dispatcher is asked for the answer, and
+        // a word that is not a reporter is not a value at all.
+        const std::vector<std::string> words = split_ws(substituted);
+        if (words.empty() || !in_set(logo_value_reporters(), upper(words[0]))) {
+            return std::nullopt;
+        }
+        const std::string result = run_command(substituted);
+        if (result.empty() || result.rfind("❌", 0) == 0 ||
+            result.find("Unknown Logo command") != std::string::npos) {
+            return std::nullopt;
+        }
+        return strip(result);
+    }
 }
 
 std::string LogoMachine::do_foreach(std::string_view command) {
@@ -905,18 +969,36 @@ std::string LogoMachine::do_higher_order(std::string_view command, char which) {
     const std::size_t found = upper(command).find(name);
     const std::string after = strip(command.substr(found + name.size()));
 
+    // Two spellings, both traditional: a bracketed template, `MAP [? * 2] [1 2 3]`,
+    // and a quoted procedure name, `REDUCE "SUM [1 2 3]`.
+    std::string template_text;
+    std::string rest;
     const std::size_t open = after.find('[');
-    if (open == std::string::npos) {
+    const std::size_t quoted = after.find('"');
+    if (quoted != std::string::npos && (open == std::string::npos || quoted < open)) {
+        const std::size_t end = after.find(' ', quoted);
+        const std::string word = after.substr(quoted + 1,
+                                              end == std::string::npos
+                                                  ? std::string::npos
+                                                  : end - quoted - 1);
+        // The procedure is applied to the two values REDUCE brings together.
+        template_text = upper(word) + " ?1 ?2";
+        rest = end == std::string::npos ? std::string{} : strip(after.substr(end));
+    } else if (open != std::string::npos) {
+        const std::size_t close = matching_bracket(after, open);
+        if (close == std::string::npos) {
+            return "❌ " + name + " requires [template] [list]\n";
+        }
+        template_text = strip(after.substr(open + 1, close - open - 1));
+        rest = strip(after.substr(close + 1));
+    } else {
         return "❌ " + name + (which == 'm'   ? " requires [template] [list]\n"
                                 : which == 'f' ? " requires [predicate] [list]\n"
                                                : " requires [template] [list]\n");
     }
-    const std::size_t close = matching_bracket(after, open);
-    if (close == std::string::npos) {
-        return "❌ " + name + " requires [template] [list]\n";
+    if (template_text.empty()) {
+        return "❌ " + name + " requires a template\n";
     }
-    const std::string template_text = strip(after.substr(open + 1, close - open - 1));
-    const std::string rest = strip(after.substr(close + 1));
 
     std::vector<std::string> items;
     if (!rest.empty() && rest.front() == '[') {
@@ -929,18 +1011,36 @@ std::string LogoMachine::do_higher_order(std::string_view command, char which) {
         items = split_ws(rest);
     }
 
+    // A template is a value first and a command list second: `[? * 2]` was run as a
+    // command, which is why MAP reported `Invalid numbers for SUM` and answered
+    // nothing.  A template that is really commands -- FOREACH's `[FD 10]` -- still
+    // runs as one.
+    const auto value_of = [this, &template_text](const std::map<std::string, Value>& binds,
+                                                 std::string& text_out) -> bool {
+        const std::optional<std::string> value = template_expression(template_text, binds);
+        if (!value.has_value()) {
+            return false;
+        }
+        text_out = *value;
+        return true;
+    };
+
     if (which == 'r') {
-        if (items.size() < 1) {
+        if (items.empty()) {
             return "❌ REDUCE requires a non-empty list\n";
         }
         Value accumulator = template_value(items[0]);
         for (std::size_t index = 1; index < items.size(); ++index) {
             tick();
-            const std::string result =
-                run_template(template_text, {{"?1", accumulator},
-                                             {"?2", template_value(items[index])}});
-            const std::string trimmed = strip(result);
-            accumulator = template_value(trimmed);
+            const std::map<std::string, Value> binds{{"?1", accumulator},
+                                                     {"?2", template_value(items[index])}};
+            std::string text;
+            if (value_of(binds, text)) {
+                accumulator = template_value(strip(text));
+                continue;
+            }
+            const std::string result = run_template(template_text, binds);
+            accumulator = template_value(strip(result));
         }
         return accumulator.render() + "\n";
     }
@@ -948,13 +1048,17 @@ std::string LogoMachine::do_higher_order(std::string_view command, char which) {
     std::vector<std::string> results;
     for (const std::string& item : items) {
         tick();
-        const std::string result =
-            run_template(template_text, {{"?", template_value(item)}});
+        const std::map<std::string, Value> binds{{"?", template_value(item)}};
+        std::string text;
+        const bool valued = value_of(binds, text);
+        if (!valued) {
+            text = run_template(template_text, binds);
+        }
+        const std::string trimmed = strip(text);
         if (which == 'm') {
-            results.push_back(strip(result));
+            results.push_back(trimmed);
             continue;
         }
-        const std::string trimmed = strip(result);
         double value = 0.0;
         bool truthy = false;
         if (looks_like_number(trimmed, value)) {
@@ -978,18 +1082,44 @@ std::string LogoMachine::do_higher_order(std::string_view command, char which) {
 
 std::string LogoMachine::do_local(const std::vector<std::string>& args) {
     for (const std::string& argument : args) {
+        // `LOCAL "X` and `LOCAL :X` both name X.  Keeping the quote made a
+        // variable whose name was `"X`, which nothing could then read.
         std::size_t start = 0;
-        while (start < argument.size() && argument[start] == ':') {
+        while (start < argument.size() &&
+               (argument[start] == ':' || argument[start] == '"')) {
             ++start;
         }
-        // The reference strips only `:` here, so `LOCAL "X` makes a variable
-        // whose name really is `"X`. Reproduced rather than tidied up: the
-        // parity harness compares variable names.
         const std::string name = upper(std::string_view{argument}.substr(start));
-        if (interpreter_.variables().find(name) == interpreter_.variables().end() &&
-            words_.find(name) == words_.end()) {
-            interpreter_.set_number(name, 0.0);
+        if (name.empty()) {
+            continue;
         }
+        // The caller's binding goes on the frame's list first, so returning puts it
+        // back -- which is the whole difference between a local and a global.
+        if (frame_saved_ != nullptr) {
+            const bool already =
+                std::any_of(frame_saved_->begin(), frame_saved_->end(),
+                            [&name](const Saved& entry) { return entry.name == name; });
+            if (already) {
+                continue;
+            }
+            Saved entry{name, std::nullopt, std::nullopt, std::nullopt};
+            const auto existing = interpreter_.variables().find(name);
+            if (existing != interpreter_.variables().end()) {
+                entry.number = existing->second;
+            }
+            const auto existing_word = words_.find(name);
+            if (existing_word != words_.end()) {
+                entry.word = existing_word->second;
+            }
+            const auto existing_list = lists_.find(name);
+            if (existing_list != lists_.end()) {
+                entry.list = existing_list->second;
+            }
+            frame_saved_->push_back(std::move(entry));
+        }
+        words_.erase(name);
+        lists_.erase(name);
+        interpreter_.set_number(name, 0.0);
     }
     return {};
 }

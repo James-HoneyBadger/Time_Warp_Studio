@@ -58,6 +58,9 @@ bool in_set(const std::set<std::string_view>& words, std::string_view word);
 const std::set<std::string_view>& logo_commands();
 const std::set<std::string_view>& no_argument_commands();
 const std::set<std::string_view>& logo_reporters();
+/// Every word that answers a value, which is what the printer runs rather than
+/// echoing.
+const std::set<std::string_view>& logo_value_reporters();
 const std::set<std::string_view>& colour_reporters();
 const std::set<std::string_view>& math_prefix_functions();
 const std::set<std::string_view>& spaced_call_functions();
@@ -197,6 +200,11 @@ private:
     std::string do_dot(const std::vector<std::string>& args);
     std::string do_foreach(std::string_view command);
     std::string do_higher_order(std::string_view command, char which);
+    /// A template evaluated as an expression, with `?`, `?1` and `?2` replaced by
+    /// what they are bound to.  Nothing when the template is not an expression --
+    /// `[FD 10]` is a command list, and MAP's `[? * 2]` is not.
+    std::optional<std::string> template_expression(
+        std::string_view template_text, const std::map<std::string, Value>& bindings);
     std::string run_template(std::string_view template_text,
                              const std::map<std::string, Value>& bindings);
     std::string do_local(const std::vector<std::string>& args);
@@ -205,7 +213,11 @@ private:
         std::string name;
         std::optional<Value> number;
         std::optional<std::string> word;
+        std::optional<std::vector<std::string>> list;
     };
+    /// The bindings the procedure now running has to put back.  `LOCAL` adds to it,
+    /// so a name a procedure declares local gets its caller's value back on return.
+    std::vector<Saved>* frame_saved_ = nullptr;
     void restore(const std::vector<Saved>& saved, double depth);
     std::string resolve_colour_argument(const std::vector<std::string>& args);
     std::vector<std::string> group_rgb_arguments(const std::vector<std::string>& args) const;

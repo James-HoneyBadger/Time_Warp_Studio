@@ -46,7 +46,7 @@ it, so shipping one without correcting the documentation fails a gate.
 | Database | A SQLite Database panel, the shared `SQL` statement in nine languages, scripts, tables and schema; compiled programs link SQLite |
 | Automation | JSON-RPC over stdin and stdout, and the `twc` terminal compiler |
 | Packaging | `make install`; tagged releases build `.deb`, `.rpm`, AppImage, tarball, Flatpak and a container image for Linux |
-| Quality gates | 24 CTest suites in four build configurations; the frozen-corpus gate over 634 programs; 532 command rows run as programs and through the REPL; 67 example programs through the smoke gate; the documentation gates |
+| Quality gates | 24 CTest suites in four build configurations; the frozen-corpus gate over 636 programs; 534 command rows run as programs and through the REPL; 67 example programs through the smoke gate; the documentation gates |
 
 ---
 
@@ -104,33 +104,46 @@ it should, and it does not check that the console is free of error lines. A prog
 prints an error and exits successfully is the same class of silent failure the smoke gate was
 built for, one level further in.
 
-### Engine behaviour the reference documents that is probably wrong
+### Engine behaviour the reference documented that was wrong
 
 Writing the reference meant running every command rather than reading the old prose, and
-fifteen claims in it turned out to be false. Some are documentation errors, now corrected in
-the page; the ones below are engine behaviour that is more likely a defect than a design.
-Each is recorded rather than changed, because each needs a decision and a test.
+fifteen claims in it turned out to be false. Some were documentation errors, corrected in
+the page. Thirteen were engine behaviour that looked more like a defect than a design, and
+each was recorded rather than changed, because each needed a decision and a test.
 
-| What | What happens |
-| --- | --- |
-| BASIC `SELECT CASE` | Every `CASE` body runs; the statement reports which matched and executes them all. A multi-value clause and `CASE ELSE` raise `Invalid CASE expression` and run anyway |
-| BASIC `CONST` | Does not stop assignment: `SIZE = 9` after `CONST SIZE = 5` is accepted |
-| BASIC `INT` | Floors, so `INT(-3.7)` is -4 rather than truncating toward zero |
-| BASIC statement separators | `WHILE … : WEND` reports `WHILE without WEND`; `FOR … : NEXT` runs two passes of three; one-line `SUB` and `TYPE` fail |
-| BASIC `1e6` | Prints 0: E-notation without an explicit sign is not read |
-| Logo `MAP`, `FILTER`, `REDUCE` | Exist but run their template as a command and report `Invalid numbers for SUM` |
-| Logo `COUNT` | Of a multi-item list answers 1 |
-| Logo `LOCAL` | Does not restore the caller's value, and `LOCAL "X` creates a name containing the quote |
-| Logo quotes in a body | `PRINT "HI"` inside brackets prints `HI"`; the closing quote has to be omitted |
-| Logo reporters | `PRINT` and `SHOW` evaluate fourteen named reporters; anything else is echoed |
-| Smalltalk `new` | Leaves instance variables nil unless the class defines `initialize` |
-| REXX `PARSE PULL` | Takes one target; a second name is silently left unset |
-| PILOT `F:` | `WRITE` needs two arguments and `OPEN` needs a mode; `LINK` is unimplemented |
+Eleven of the thirteen were defects, and each is now fixed with a test behind it:
 
-Three of these are the kind a learner meets in the first hour — `SELECT CASE`, `INT` and the
-Logo quote rule — and each is the same shape: the language is plausible, the behaviour is
-silently different, and nothing says so. The reference states what happens in every case, so
-the documentation is honest in the meantime; the engine is not.
+| What | What it did | What it does |
+| --- | --- | --- |
+| BASIC `SELECT CASE` | Every `CASE` body ran; the statement reported which matched and executed them all | The first clause that matches is the only one whose body runs. A clause is a value, a list, `a TO b`, `IS <comparison>` or `ELSE` |
+| BASIC `CONST` | Accepted an assignment to the name: `SIZE = 9` after `CONST SIZE = 5` | Refuses it with `Cannot assign to constant SIZE` |
+| BASIC statement separators | `WHILE … : WEND` reported `WHILE without WEND`; `FOR … : NEXT` ran the body three times instead of twice; one-line `SUB` and `TYPE` failed obscurely | A colon-separated line runs as a unit, so its loops repeat inside it and either spelling of a `FOR` header counts the same. A definition split by colons is refused by name |
+| BASIC `1e6` | Printed 0: E-notation without an explicit sign was not read as a number | The number scanner takes the exponent in either spelling, with or without a sign |
+| Logo `MAP`, `FILTER`, `REDUCE` | Ran the template as a command and reported `Invalid numbers for SUM` | Read the template as an expression with `?`, `?1` and `?2` bound, and still run a template that is commands |
+| Logo `COUNT` | Of a multi-item list answered 1 | Counts the whole list |
+| Logo `LOCAL` | Did not restore the caller's value, and `LOCAL "X` made a name containing the quote | Restores the caller's binding on return, and both spellings name the same variable |
+| Logo quotes in a body | `PRINT "HI"` inside brackets printed `HI"` | The closing quote of a word form is silent |
+| Logo reporters | `PRINT` and `SHOW` evaluated fourteen named reporters; anything else was echoed | Every word that reports a value is run, so `PRINT COUNT [1 2 3]` prints 3 |
+| REXX `PARSE PULL` | Took one target; a second name was silently left unset | One word per name and the remainder into the last, as REXX does |
+| PILOT `F:` | `WRITE` needed two arguments and `OPEN` needed a mode, so the common spelling of either wrote nothing; `LINK` was unimplemented | The mode is optional and defaults to reading, the text of `WRITE` is the rest of the unit, and `LINK` chains to another lesson |
+
+The other two are not defects, and the reference now says why instead of listing them as
+suspicious:
+
+- **BASIC `INT` floors.** `INT(-3.7)` is -4 because that is what every BASIC of the period
+  answered, and `FIX` is the word that truncates toward zero.
+- **Smalltalk `new` leaves instance variables nil.** That is Smalltalk: `initialize` is the
+  convention that gives them a value, and `new` sends it when the class defines one.
+
+One related wart is recorded rather than fixed: `FOREACH` runs a *command* body, so `?` in
+`FOREACH [1 2 3] [FD ?]` is not bound, while `MAP` and `FILTER` bind it because a template
+there is an expression. Binding it in a command body means rewriting the text, and a `?`
+inside a quoted word would be rewritten with it, so the rule needs a decision before the
+code.
+
+Each of the eleven had the same shape: the language was plausible, the behaviour was
+silently different, and nothing said so. `lang_tests` now asserts every one of them, and the
+corpus entries whose program changed carry a note saying which side is the reference's.
 
 ---
 

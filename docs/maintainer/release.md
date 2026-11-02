@@ -39,7 +39,7 @@ prose, and somebody has to read it.
 make test                 # the 24 C++ suites
 make test-debug           # the same in Debug
 make asan                 # AddressSanitizer; ASAN=undefined for UBSan
-make golden-check         # the ports against the frozen corpus, 634 programs
+make golden-check         # the ports against the frozen corpus, 636 programs
 make smoke                # 67 example programs through the native engines
 make command-matrix       # every command row as a program
 make repl-matrix          # every command row through the REPL

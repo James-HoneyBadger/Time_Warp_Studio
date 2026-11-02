@@ -71,7 +71,7 @@ The languages are not documented and left to hope. Three gates hold them:
   `native/share/command_rows.json`, and reports any command the executors dispatch on that no
   row or waiver mentions.
 - **The parity corpus** compares the engines with the answers the deleted Python reference
-  gave for 442 programs, including every drawing call in order.
+  gave for 444 programs, including every drawing call in order.
 - **The example gate** runs all 68 shipped programs, and fails when a program that should draw
   produces no ink.
 

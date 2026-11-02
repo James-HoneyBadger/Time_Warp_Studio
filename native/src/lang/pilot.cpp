@@ -690,14 +690,17 @@ std::string file_command(Interpreter& interpreter, PilotState& state, std::strin
     };
 
     if (operation == "OPEN") {
-        if (const std::string message = count_error(2, "F: OPEN"); !message.empty()) {
-            return "❌ " + message + "\n";
+        // `F: OPEN notes.txt` opens for reading: a mode is the exception, not the
+        // rule, and demanding one made the common case an error.
+        if (parts.size() < 2 || parts.size() > 3) {
+            return "❌ F: OPEN expects a file name and an optional mode R|W|A, got " +
+                   std::to_string(static_cast<int>(parts.size()) - 1) + " argument(s)\n";
         }
         const std::string filename = parts[1];
         if (const auto invalid = validate_file_path(filename); invalid.has_value()) {
             return "❌ " + *invalid + "\n";
         }
-        const std::string mode = upper(parts[2]);
+        const std::string mode = parts.size() == 3 ? upper(parts[2]) : std::string{"READ"};
         if (mode != "READ" && mode != "R" && mode != "WRITE" && mode != "W" &&
             mode != "APPEND" && mode != "A") {
             return "❌ F: OPEN requires mode R|W|A, got: " + mode + "\n";
@@ -758,8 +761,10 @@ std::string file_command(Interpreter& interpreter, PilotState& state, std::strin
         return {};
     }
     if (operation == "WRITE") {
-        if (const std::string message = count_error(2, "F: WRITE"); !message.empty()) {
-            return "❌ " + message + "\n";
+        // The line is the rest of the unit, not one word: `F: WRITE notes.txt hello
+        // world` wrote nothing at all before, because two words were three arguments.
+        if (parts.size() < 3) {
+            return "❌ F: WRITE expects a file name and the text to write\n";
         }
         const std::string& filename = parts[1];
         auto found = state.files.find(filename);
@@ -773,10 +778,47 @@ std::string file_command(Interpreter& interpreter, PilotState& state, std::strin
             }
             data += parts[index];
         }
-        *found->second << data << '\n';
+        // `$name` and `#name` are replaced as they are in a `T:` unit, so a lesson
+        // can write what it computed rather than only what it typed.
+        *found->second << substitute_variables(interpreter, data) << '\n';
         return {};
     }
     return "❌ Unknown file operation: " + operation + "\n";
+}
+
+/// `LINK other.pilot`: the file now running is replaced by that one, and everything
+/// this file has computed stays in scope.  The lesson that does the linking does not
+/// continue afterwards -- a chain, not a call -- which is what a lesson that hands
+/// over to a second lesson wants.
+std::string link_lesson(Interpreter& interpreter, const std::string& command) {
+    std::string text = trim(command);
+    const std::size_t colon = text.find(':');
+    if (colon != std::string::npos) {
+        text = trim(std::string_view{text}.substr(colon + 1));
+    } else {
+        text = trim(std::string_view{text}.substr(text.find(' ') == std::string::npos
+                                                      ? text.size()
+                                                      : text.find(' ')));
+    }
+    if (text.empty()) {
+        return "❌ LINK requires a lesson file\n";
+    }
+    if (const auto invalid = validate_file_path(text); invalid.has_value()) {
+        return "❌ " + *invalid + "\n";
+    }
+    std::ifstream file{text};
+    if (!file.is_open()) {
+        return "❌ LINK: cannot open '" + text + "'\n";
+    }
+    std::string source;
+    for (std::string line; std::getline(file, line);) {
+        source += line;
+        source.push_back('\n');
+    }
+    file.close();
+    interpreter.chain_to(source);
+    interpreter.jump_to(0);
+    return {};
 }
 
 // ---------------------------------------------------------------------------
@@ -836,11 +878,7 @@ std::string execute_unit(Interpreter& interpreter, TurtleHost& turtle, PilotStat
     if (command_upper == "LINK" || command_upper == "LOAD" ||
         starts_with(command_upper, "LINK ") || starts_with(command_upper, "LINK:") ||
         starts_with(command_upper, "LOAD ") || starts_with(command_upper, "LOAD:")) {
-        const std::size_t colon = command_upper.find(':');
-        const std::string word = trim(std::string_view{command_upper}.substr(
-            0, colon == std::string::npos ? command_upper.size() : colon));
-        const std::size_t space = word.find(' ');
-        return "❌ " + word.substr(0, space) + ": lesson chaining is not implemented\n";
+        return link_lesson(interpreter, command);
     }
     if (std::optional<std::string> substituted =
             long_form(interpreter, turtle, state, command);

@@ -88,19 +88,20 @@ frozen before the engine was deleted. Zero differences is the verdict, and the d
 divergences are expected and printed.
 
 ```bash
-make golden-check                                  # both corpora, 634 programs
+make golden-check                                  # both corpora, 636 programs
 ./native/build/time_warp_gates golden --scheme     # the Scheme machine alone
 ```
 
-The language corpus, `native/tests/golden/lang_corpus.json.gz`, holds 442 programs: every
+The language corpus, `native/tests/golden/lang_corpus.json.gz`, holds 444 programs: every
 command-table row and every example for a ported language, with the output lines it printed,
 every drawing call in order, and the variables it left. The Scheme corpus holds 192 programs
 and compares the whole output text, which is what the Scheme harness always compared.
 
-Three of the language entries were recorded from *this* engine rather than from the deleted
-reference, because Forth arrived at 21.0 after the reference could no longer run it. Each
-carries `recorded_from` saying so, and `time_warp_gates golden --record forth` makes the
-recording again.
+Nine of the language entries were recorded from *this* engine rather than from the deleted
+reference: the three Forth programs, because Forth arrived at 21.0 after the reference could
+no longer run it, and six command rows whose program changed when the defect the row
+recorded was fixed. Each carries `recorded_from` saying so, and
+`time_warp_gates golden --record forth` makes the Forth recording again.
 
 ### What the gate is worth
 

@@ -166,6 +166,20 @@ void Interpreter::load_program(std::string_view source) {
     parse_lines(source);
 }
 
+void Interpreter::chain_to(std::string_view source) {
+    program_source_ = std::string{source};
+    program_lines_.clear();
+    labels_.clear();
+    line_number_map.clear();
+    subroutine_stack.clear();
+    call_frames_.clear();
+    last_match_succeeded = false;
+    error_.clear();
+    current_line = 0;
+    jumped_ = false;
+    parse_lines(source);
+}
+
 std::string Interpreter::run_snippet(std::string_view source) {
     // Everything a program owns except its bindings: the text, the labels, the
     // position and the last run's output. Variables, arrays and per-executor

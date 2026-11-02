@@ -404,7 +404,7 @@ keeps it honest.
 
 ## Parity
 
-The language engines are compared with a frozen corpus by `time_warp_gates golden`: 442
+The language engines are compared with a frozen corpus by `time_warp_gates golden`: 444
 programs in `native/tests/golden/lang_corpus.json.gz`, comparing output lines, every drawing
 call in order and the final variables, with zero differences as the verdict. The Scheme
 machine has its own 192-program corpus compared as whole output text, and the 24 entries

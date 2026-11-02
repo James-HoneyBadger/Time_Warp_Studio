@@ -23,6 +23,7 @@
 #include <map>
 #include <memory>
 #include <optional>
+#include <set>
 #include <stdexcept>
 #include <string>
 #include <string_view>
@@ -110,6 +111,19 @@ struct ForFrame {
     std::size_t body = 0;
 };
 
+/// One loop open inside a colon-separated line: `WHILE X < 3 : ... : WEND` written
+/// as a single line has no `WEND` line for `EXIT WHILE` to look for, so the line's
+/// own runner keeps the frame and `EXIT` reads it.
+struct LineLoop {
+    char kind = '\0';  // 'W' WHILE, 'F' FOR, 'D' DO
+    std::size_t opener = 0;
+    std::size_t body = 0;
+    /// The statement after this loop's terminator -- where leaving the loop lands --
+    /// or the statement count when the line does not close it.
+    std::size_t close = 0;
+    ForFrame for_frame;
+};
+
 /// One open block `IF`, and whether its body is being skipped.
 struct IfFrame {
     bool skip = false;
@@ -184,8 +198,24 @@ struct State {
     std::vector<std::string> data;
     std::size_t data_pointer = 0;
     bool scanned = false;
-    std::string select_expression;
-    bool in_select = false;
+    /// One open `SELECT CASE` block: the selector, and whether one of its clauses
+    /// has been taken -- once it has, the rest of the block is skipped rather than
+    /// tested, which is what makes a block choose one body.  A stack, because a
+    /// block may hold another: an inner `END SELECT` closes the inner block and
+    /// leaves the outer one as it was.
+    struct SelectFrame {
+        std::string expression;
+        bool matched = false;
+    };
+    std::vector<SelectFrame> selects;
+    /// Names `CONST` has pinned.  An assignment to one is refused, which is the
+    /// whole difference between a constant and a variable.
+    std::set<std::string> constants;
+    /// The loops a one-line statement sequence has open, and where an `EXIT` inside
+    /// one of them has asked the sequence to carry on.  A pointer because the frames
+    /// belong to the sequence runner's own stack.
+    std::vector<LineLoop>* line_loops = nullptr;
+    std::optional<std::size_t> line_jump;
     std::map<int, int> memory;
     std::map<int, int> ports;
     std::map<int, Rgb> palette;
@@ -332,6 +362,12 @@ private:
     std::string goto_line(const std::string& args);
     std::string gosub(const std::string& args);
     std::string return_from_sub();
+    /// Reads `var = start TO end [STEP step]`, assigns the start value and fills
+    /// `frame`.  A one-line `FOR` and a `FOR` line share it, so they cannot drift.
+    std::string begin_for(const std::string& args, ForFrame& frame);
+    /// Whether `value` is still inside `frame`'s range, which is the test both
+    /// `NEXT` and a one-line loop make.
+    [[nodiscard]] bool for_runs_again(const ForFrame& frame, double value) const;
     std::string for_loop(const std::string& args);
     std::string next(const std::string& args);
     std::string while_loop(const std::string& args);
@@ -340,6 +376,13 @@ private:
     std::string loop(const std::string& args);
     std::string select_case(const std::string& args);
     std::string case_of(const std::string& args);
+    std::string end_select();
+    /// Moves to the next `CASE` in this block, or to its `END SELECT`.
+    std::string skip_to_next_clause();
+    /// Runs the statements of one colon-separated line as a unit, so a loop written
+    /// on a single line -- `WHILE X < 3 : PRINT X : X = X + 1 : WEND` -- repeats
+    /// inside the line instead of looking for a `WEND` line that does not exist.
+    std::string run_sequence(const std::vector<std::string>& statements);
     std::string sub_definition(const std::string& args);
     std::string end_sub();
     std::string function_definition(const std::string& args);

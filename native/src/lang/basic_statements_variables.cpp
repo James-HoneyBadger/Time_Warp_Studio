@@ -113,6 +113,9 @@ std::string Machine::let(const std::string& args) {
     } catch (const BasicError& error) {
         return "❌ " + std::string{error.what()} + "\n";
     }
+    if (state_.constants.count(var_name) != 0) {
+        return "❌ Cannot assign to constant " + var_name + "\n";
+    }
 
     if (!var_name.empty() && var_name.back() == '$') {
         const bool simple_literal =
@@ -393,6 +396,12 @@ std::string Machine::constant(const std::string& args) {
     if (name.empty()) {
         return "❌ CONST requires a name\n";
     }
+    try {
+        validate_name(name);
+    } catch (const BasicError& error) {
+        return "❌ " + std::string{error.what()} + "\n";
+    }
+    state_.constants.insert(name);
     if (!name.empty() && name.back() == '$') {
         if (value_text.size() >= 2 && value_text.front() == '"' && value_text.back() == '"') {
             interpreter_.set_text(name, value_text.substr(1, value_text.size() - 2));

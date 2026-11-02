@@ -351,10 +351,69 @@ void test_pilot_graphics_and_text() {
 }
 
 void test_pilot_reports_errors() {
-    TW_CHECK(contains(run_pilot("LINK lesson.pilot").output,
-                     "lesson chaining is not implemented"));
+    TW_CHECK(contains(run_pilot("LINK").output, "LINK requires a lesson file"));
+    TW_CHECK(contains(run_pilot("LINK missing.pilot").output, "cannot open 'missing.pilot'"));
     TW_CHECK(contains(run_pilot("J: NOWHERE").output, "Label 'NOWHERE' not found"));
     TW_CHECK(contains(run_pilot("F: OPEN notes.txt X").output, "mode R|W|A"));
+}
+
+// `LINK` reported lesson chaining as unimplemented, which made a lesson that
+// hands over to a second lesson impossible. The file now replaces the one
+// running and keeps its variables, and the lesson that linked does not carry on.
+void test_pilot_link_chains_to_another_lesson() {
+    namespace fs = std::filesystem;
+    const fs::path root = fs::temp_directory_path() / "timewarp-pilot-link";
+    std::error_code ignored;
+    fs::remove_all(root, ignored);
+    fs::create_directories(root, ignored);
+    {
+        std::ofstream second{root / "second.pilot"};
+        second << "T: IN THE SECOND\nT: X IS #X\n";
+    }
+
+    const fs::path started_in = fs::current_path();
+    std::error_code error;
+    fs::current_path(root, error);
+    TW_CHECK(!error);
+    const PilotRun run = run_pilot("C:X = 7\nLINK second.pilot\nT: NOT REACHED");
+    fs::current_path(started_in, ignored);
+    fs::remove_all(root, ignored);
+
+    TW_CHECK(!any_error(run.output));
+    TW_CHECK(contains(run.output, "IN THE SECOND"));
+    // The linked file sees what the first one computed.
+    TW_CHECK(contains(run.output, "X IS 7"));
+    TW_CHECK(!contains(run.output, "NOT REACHED"));
+}
+
+// A unit file command used to count its arguments strictly: `F: OPEN notes.txt`
+// demanded a mode, and `F: WRITE notes.txt hello world` was three arguments
+// where two were wanted, so the common spelling wrote nothing.
+void test_pilot_file_open_defaults_to_reading_and_write_takes_the_line() {
+    namespace fs = std::filesystem;
+    const fs::path root = fs::temp_directory_path() / "timewarp-pilot-files";
+    std::error_code ignored;
+    fs::remove_all(root, ignored);
+    fs::create_directories(root, ignored);
+
+    const fs::path started_in = fs::current_path();
+    std::error_code error;
+    fs::current_path(root, error);
+    TW_CHECK(!error);
+    const PilotRun wrote = run_pilot(
+        "C:X = 7\n"
+        "F: OPEN notes.txt W\n"
+        "F: WRITE notes.txt total #X words\n"
+        "F: CLOSE notes.txt\n"
+        "F: OPEN notes.txt\n"
+        "F: READ notes.txt LINE$\n"
+        "F: CLOSE notes.txt\n"
+        "T: SAID $LINE");
+    fs::current_path(started_in, ignored);
+    fs::remove_all(root, ignored);
+
+    TW_CHECK(!any_error(wrote.output));
+    TW_CHECK(contains(wrote.output, "SAID total 7 words"));
 }
 
 // ---------------------------------------------------------------------------

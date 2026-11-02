@@ -254,7 +254,23 @@ const std::set<std::string_view>& logo_reporters() {
         "SUM",    "DIFFERENCE", "PRODUCT", "QUOTIENT", "RANDOM", "WORD",
         "LIST",   "SENTENCE",   "FIRST",   "LAST",     "BUTFIRST", "BUTLAST",
         "ITEM",   "THING",      "COUNT",   "REPCOUNT", "POS",    "XCOR",
-        "YCOR",   "HEADING",    "ROLL",    "REDUCE",
+        "YCOR",   "HEADING",    "ROLL",    "REDUCE",   "MAP",    "FILTER",
+    };
+    return words;
+}
+
+/// Every word that answers a value and can be written where one is wanted.
+///
+/// The printer used to know only the fourteen that can also name a colour, so
+/// `PRINT COUNT [1 2 3]` echoed the command instead of printing 3.  What makes a word
+/// a value rather than a statement is that the dispatcher returns its answer, so a
+/// word that reports belongs here whether or not it can also be a colour.
+const std::set<std::string_view>& logo_value_reporters() {
+    static const std::set<std::string_view> words{
+        "SUM",     "DIFFERENCE", "PRODUCT", "QUOTIENT", "RANDOM", "WORD",
+        "LIST",    "SENTENCE",   "FIRST",   "LAST",     "BUTFIRST", "BUTLAST",
+        "ITEM",    "THING",      "COUNT",   "REPCOUNT", "MAP",    "FILTER",
+        "REDUCE",
     };
     return words;
 }

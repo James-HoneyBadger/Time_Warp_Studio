@@ -120,6 +120,13 @@ public:
 
     /// Stores *source*, discarding any previous program and variable state.
     void load_program(std::string_view source);
+    /// Replaces the program with another one, keeping the variables it has set.
+    ///
+    /// This is what a language that chains to a second program -- PILOT's `LINK` --
+    /// does: the text, the labels and the position belong to the file now running,
+    /// and everything the first file computed is still in scope.
+    void chain_to(std::string_view source);
+
     /// Executes from `current_line` to the end, or until a stop is requested.
     void run();
 

@@ -828,4 +828,175 @@ void test_basic_call_chain_names_the_subroutines() {
     TW_CHECK(interpreter.call_stack().empty());
 }
 
+// `SELECT CASE` reported which clause matched and then ran every body in the
+// block, so a program that chose between three cases did all three. The clause
+// is now read as a list of values, a range, a comparison or `ELSE`, and the
+// first clause that matches is the only one whose body runs.
+void test_basic_select_case_runs_only_the_matching_body() {
+    const BasicRun chosen = run_basic(
+        "X = 2\n"
+        "SELECT CASE X\n"
+        "CASE 1\n"
+        "PRINT \"ONE\"\n"
+        "CASE 2, 3\n"
+        "PRINT \"TWO OR THREE\"\n"
+        "CASE 4 TO 9\n"
+        "PRINT \"FOUR TO NINE\"\n"
+        "CASE ELSE\n"
+        "PRINT \"ELSE\"\n"
+        "END SELECT\n");
+    TW_CHECK_EQ(chosen.output.size(), std::size_t{1});
+    TW_CHECK_EQ(chosen.output.at(0), std::string{"TWO OR THREE"});
+
+    const BasicRun compared = run_basic(
+        "SELECT CASE 2\n"
+        "CASE IS > 10\n"
+        "PRINT \"BIG\"\n"
+        "CASE ELSE\n"
+        "PRINT \"SMALL\"\n"
+        "END SELECT\n");
+    TW_CHECK_EQ(compared.output.size(), std::size_t{1});
+    TW_CHECK_EQ(compared.output.at(0), std::string{"SMALL"});
+
+    // No clause applies and there is no `ELSE`: the block runs nothing, and the
+    // statement after `END SELECT` is where the run carries on.
+    const BasicRun unmatched = run_basic(
+        "SELECT CASE 9\n"
+        "CASE 1\n"
+        "PRINT \"A\"\n"
+        "END SELECT\n"
+        "PRINT \"AFTER\"\n");
+    TW_CHECK_EQ(unmatched.output.size(), std::size_t{1});
+    TW_CHECK_EQ(unmatched.output.at(0), std::string{"AFTER"});
+}
+
+// The walk past an untaken clause has to tell a clause from a nested block's
+// clause, and a nested block's `END SELECT` from its own: the inner block leaves
+// the outer one open, still matched.
+void test_basic_select_case_skips_nested_blocks() {
+    const BasicRun run = run_basic(
+        "SELECT CASE 3\n"
+        "CASE 1 TO 2\n"
+        "PRINT \"LOW\"\n"
+        "CASE 3 TO 4\n"
+        "SELECT CASE 4\n"
+        "CASE 4\n"
+        "PRINT \"NESTED FOUR\"\n"
+        "END SELECT\n"
+        "CASE 9\n"
+        "PRINT \"WRONG\"\n"
+        "END SELECT\n"
+        "PRINT \"AFTER\"\n");
+    TW_CHECK(!any_error(run.output));
+    TW_CHECK_EQ(run.output.size(), std::size_t{2});
+    TW_CHECK_EQ(run.output.at(0), std::string{"NESTED FOUR"});
+    TW_CHECK_EQ(run.output.at(1), std::string{"AFTER"});
+}
+
+// `CONST` named a value and then accepted an assignment to it, which is the
+// whole difference between a constant and a variable.
+void test_basic_const_refuses_assignment() {
+    const BasicRun run = run_basic(
+        "CONST SIZE = 5\n"
+        "SIZE = 9\n"
+        "PRINT SIZE\n"
+        "OTHER = 9\n"
+        "PRINT OTHER\n");
+    TW_CHECK(contains(run.output, "Cannot assign to constant SIZE"));
+    TW_CHECK(contains(run.output, "5"));
+    TW_CHECK(contains(run.output, "9"));
+}
+
+// A loop written with its body on the same line has no terminator *line* to
+// jump to, so `WHILE X < 3 : ... : WEND` reported `WHILE without WEND` and
+// `FOR ... : NEXT` ran its body too often. The line now runs as a unit.
+void test_basic_one_line_loops_repeat_within_the_line() {
+    const BasicRun counted = run_basic(
+        "X = 1\n"
+        "WHILE X < 4 : PRINT X : X = X + 1 : WEND\n"
+        "FOR I = 1 TO 3 : PRINT \"I\"; I : NEXT\n");
+    TW_CHECK(!any_error(counted.output));
+    TW_CHECK_EQ(counted.output.size(), std::size_t{6});
+    if (counted.output.size() == 6) {
+        TW_CHECK_EQ(counted.output.at(0), std::string{"1"});
+        TW_CHECK_EQ(counted.output.at(1), std::string{"2"});
+        TW_CHECK_EQ(counted.output.at(2), std::string{"3"});
+        TW_CHECK_EQ(counted.output.at(3), std::string{"I 1"});
+        TW_CHECK_EQ(counted.output.at(4), std::string{"I 2"});
+        TW_CHECK_EQ(counted.output.at(5), std::string{"I 3"});
+    }
+
+    // A header whose start is already past its limit runs its body once and then
+    // stops, whichever way it is written: the limit is tested after the pass, not
+    // before it, so the two spellings agree.
+    const BasicRun past_the_limit = run_basic(
+        "FOR J = 5 TO 1 : PRINT \"ONCE\" : NEXT\n"
+        "FOR J = 5 TO 1\n"
+        "PRINT \"ONCE\"\n"
+        "NEXT\n");
+    TW_CHECK_EQ(past_the_limit.output.size(), std::size_t{2});
+
+    // `EXIT FOR` leaves the loop it is inside rather than the line.
+    const BasicRun guarded = run_basic(
+        "FOR K = 1 TO 5 : IF K = 3 THEN EXIT FOR : PRINT K : NEXT\n");
+    TW_CHECK(!any_error(guarded.output));
+    TW_CHECK_EQ(guarded.output.size(), std::size_t{2});
+    if (guarded.output.size() == 2) {
+        TW_CHECK_EQ(guarded.output.at(0), std::string{"1"});
+        TW_CHECK_EQ(guarded.output.at(1), std::string{"2"});
+    }
+
+    // A name that begins with a loop word is still an ordinary name: `NEXTX = 5`
+    // on a line is an assignment, not a `NEXT` with something wrong after it.
+    const BasicRun named = run_basic("NEXTX = 5 : PRINT NEXTX\n");
+    TW_CHECK(!any_error(named.output));
+    TW_CHECK_EQ(named.output.at(0), std::string{"5"});
+
+    const BasicRun counted_do = run_basic(
+        "Z = 0\n"
+        "DO : Z = Z + 1 : LOOP UNTIL Z >= 3\n"
+        "PRINT \"Z=\"; Z\n");
+    TW_CHECK(!any_error(counted_do.output));
+    TW_CHECK_EQ(counted_do.output.back(), std::string{"Z= 3"});
+}
+
+// A definition is its own lines, so a body split by colons is refused rather
+// than run as statements -- which used to report the second half as an unknown
+// command.
+void test_basic_one_line_definition_is_refused() {
+    const BasicRun run = run_basic("SUB BROKEN : PRINT \"X\" : END SUB\n");
+    TW_CHECK(contains(run.output, "needs its own lines"));
+}
+
+// A header that shares its line with the first statement of the body, with the
+// terminator on a later line, is still a *block* loop: the line is not a one-line
+// loop, and the `WEND` line closes it.
+void test_basic_loop_header_may_share_its_line_with_the_body() {
+    const BasicRun run = run_basic(
+        "X = 1\n"
+        "WHILE X < 4 : X = X + 1\n"
+        "PRINT X\n"
+        "WEND\n");
+    TW_CHECK(!any_error(run.output));
+    TW_CHECK_EQ(run.output.size(), std::size_t{3});
+    if (run.output.size() == 3) {
+        TW_CHECK_EQ(run.output.at(0), std::string{"2"});
+        TW_CHECK_EQ(run.output.at(2), std::string{"4"});
+    }
+}
+
+// `1e6` was read as the number 1 beside a variable called `E6`, so E-notation
+// without an explicit sign evaluated to 0.
+void test_basic_exponent_literals_are_numbers() {
+    const BasicRun run = run_basic(
+        "PRINT 1E6\n"
+        "PRINT 1000000\n"
+        "PRINT 2.5E-3\n"
+        "PRINT 1e2\n");
+    TW_CHECK(!any_error(run.output));
+    TW_CHECK_EQ(run.output.at(0), run.output.at(1));
+    TW_CHECK_EQ(run.output.at(2), std::string{"0.0025"});
+    TW_CHECK_EQ(run.output.at(3), std::string{"100"});
+}
+
 }  // namespace tw::lang_tests

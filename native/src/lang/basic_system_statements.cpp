@@ -465,8 +465,7 @@ std::string Machine::reset_program(std::string_view message) {
     state_.data.clear();
     state_.data_pointer = 0;
     state_.scanned = false;
-    state_.select_expression.clear();
-    state_.in_select = false;
+    state_.selects.clear();
     state_.memory.clear();
     state_.ports.clear();
     state_.palette.clear();

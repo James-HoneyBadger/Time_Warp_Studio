@@ -66,11 +66,17 @@ std::string Machine::execute_statement(std::string_view command) {
         !starts_with(all_upper, "'") && !starts_with(all_upper, "IF ")) {
         const std::vector<std::string> statements = split_statements(text);
         if (statements.size() > 1) {
-            std::string output;
-            for (const std::string& statement : statements) {
-                output += execute(statement);
+            // A block definition is its own lines and nothing else. Saying so beats
+            // running the pieces as statements and reporting the second one as an
+            // unknown command.
+            const std::string first = upper(statements.front());
+            for (const char* block : {"SUB ", "FUNCTION ", "TYPE "}) {
+                if (starts_with(first, block)) {
+                    return "❌ " + trim(statements.front()) +
+                           " needs its own lines: a definition cannot be split by colons\n";
+                }
             }
-            return output;
+            return run_sequence(statements);
         }
     }
 
@@ -205,9 +211,7 @@ std::string Machine::execute_statement(std::string_view command) {
         return case_of(strip_comment(tail(text, 5)));
     }
     if (cmd == "END SELECT") {
-        state_.in_select = false;
-        state_.select_expression.clear();
-        return {};
+        return end_select();
     }
     if (starts_with(cmd, "SUB ")) {
         return sub_definition(strip_comment(tail(text, 4)));

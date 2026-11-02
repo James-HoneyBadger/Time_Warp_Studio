@@ -295,6 +295,91 @@ void test_logo_run_can_be_walked_back() {
     }
 }
 
+// `MAP`, `FILTER` and `REDUCE` existed and ran their template as a *command*,
+// so `MAP [? * 2]` reported `Invalid numbers for SUM` and answered nothing. A
+// template is a value first: `?`, `?1` and `?2` are bound and the template read
+// as an expression, and a template that is really commands still runs as one.
+void test_logo_higher_order_words_compute() {
+    const LogoRun run = run_logo(
+        "SHOW MAP [? * 2] [7 8 9]\n"
+        "SHOW FILTER [? > 7] [7 8 9]\n"
+        "SHOW REDUCE [SUM ?1 ?2] [1 2 3]\n"
+        "SHOW REDUCE \"SUM [1 2 3]\n"
+        "FOREACH [1 2] [FD 10]");
+    TW_CHECK(!any_error(run.output));
+    TW_CHECK_EQ(run.output.at(0), std::string{"[14 16 18]"});
+    TW_CHECK_EQ(run.output.at(1), std::string{"[8 9]"});
+    // The quoted spelling names the procedure, which is the other traditional form.
+    TW_CHECK_EQ(run.output.at(2), std::string{"6"});
+    TW_CHECK_EQ(run.output.at(3), std::string{"6"});
+    // A body that is commands rather than an expression still runs as commands.
+    TW_CHECK_EQ(run.host.ops.size(), std::size_t{2});
+}
+
+// `COUNT [1 2 3]` answered 1, because a multi-item list reaches the dispatcher
+// one word at a time and the first word alone was counted.
+void test_logo_count_counts_a_whole_list() {
+    const LogoRun run = run_logo(
+        "SHOW COUNT [7 8 9]\n"
+        "SHOW COUNT [5]\n"
+        "SHOW COUNT []");
+    TW_CHECK(!any_error(run.output));
+    TW_CHECK_EQ(run.output.at(0), std::string{"3"});
+    TW_CHECK_EQ(run.output.at(1), std::string{"1"});
+    TW_CHECK_EQ(run.output.at(2), std::string{"0"});
+}
+
+// The printer knew fourteen reporters by name, so `PRINT COUNT [1 2 3]` echoed
+// the command instead of printing the answer. Every word that reports a value is
+// now run, whatever else it may also name.
+void test_logo_print_runs_a_reporter_it_was_not_told_about() {
+    const LogoRun run = run_logo(
+        "PRINT COUNT [1 2 3]\n"
+        "PRINT REDUCE [SUM ?1 ?2] [1 2 3]\n"
+        "PRINT MAP [? * 2] [1 2]\n"
+        "PRINT SUM 1 2");
+    TW_CHECK(!any_error(run.output));
+    TW_CHECK_EQ(run.output.at(0), std::string{"3"});
+    TW_CHECK_EQ(run.output.at(1), std::string{"6"});
+    TW_CHECK_EQ(run.output.at(2), std::string{"[2 4]"});
+    TW_CHECK_EQ(run.output.at(3), std::string{"3"});
+}
+
+// `LOCAL` declared a name and then left the procedure's value in it for the
+// caller, so a local was global with a comment. Returning now puts the caller's
+// binding back, and `LOCAL "X` names `X` rather than `"X`.
+void test_logo_local_restores_the_callers_value() {
+    const LogoRun run = run_logo(
+        "TO INNER\n"
+        "SHOW :X\n"
+        "END\n"
+        "TO OUTER\n"
+        "LOCAL \"X\n"
+        "MAKE \"X 5\n"
+        "INNER\n"
+        "END\n"
+        "MAKE \"X 99\n"
+        "OUTER\n"
+        "SHOW :X");
+    TW_CHECK(!any_error(run.output));
+    TW_CHECK_EQ(run.output.at(0), std::string{"5"});
+    TW_CHECK_EQ(run.output.at(1), std::string{"99"});
+}
+
+// A closing quote used to be written back, so a body had to be written
+// `[PRINT "HI]`; closing the quote printed `HI"`.
+void test_logo_closing_quote_of_a_word_is_silent() {
+    const LogoRun run = run_logo(
+        "PRINT \"HI\"\n"
+        "REPEAT 1 [PRINT \"HI\"]\n"
+        "IFELSE 1 = 1 [PRINT \"YES\"] [PRINT \"NO\"]");
+    TW_CHECK(!any_error(run.output));
+    TW_CHECK_EQ(run.output.size(), std::size_t{3});
+    TW_CHECK_EQ(run.output.at(0), std::string{"HI"});
+    TW_CHECK_EQ(run.output.at(1), std::string{"HI"});
+    TW_CHECK_EQ(run.output.at(2), std::string{"YES"});
+}
+
 // ---------------------------------------------------------------------------
 // The seeded generator `RND` and `FRAN` answer with
 // ---------------------------------------------------------------------------

@@ -59,13 +59,13 @@ numbered or not; a jump needs a number, and nothing else does.
 | `GOSUB` and `RETURN` | Calls the numbered line and comes back at the matching `RETURN`. | `GOSUB 100` |
 | `IF ... THEN` and `ELSE` and `END IF` | Runs one block or the other; the block form ends at `END IF`, and `ENDIF` is the same word. | `IF X > 10 THEN` |
 | a one-line `IF` | Runs the rest of the line when the test holds, and the part after `ELSE` when it does not. | `IF X > 9 THEN GOTO 40 ELSE GOTO 50` |
-| `FOR ... TO ... STEP` and `NEXT` | Counts from the start to the limit inclusive, by one or by the step; the loop needs its own lines, because a colon closes the header before `NEXT` can be read. | `FOR I = 1 TO 3` |
+| `FOR ... TO ... STEP` and `NEXT` | Counts from the start to the limit inclusive, by one or by the step; written on one line, the loop repeats within that line. | `FOR I = 1 TO 3` |
 | `NEXT` | Closes the loop the variable names, which is optional. | `NEXT` |
-| `WHILE` and `WEND` | Repeats while the test holds, with `WEND` on a line of its own. | `WHILE X < 3` |
+| `WHILE` and `WEND` | Repeats while the test holds. `WEND` may be on a later line or later in the same one. | `WHILE X < 3` |
 | `DO` and `LOOP` | Repeats a block; the loop line may carry `WHILE` or `UNTIL`. | `DO: X = X + 1: LOOP UNTIL X >= 3` |
 | `UNTIL` | The test on a `LOOP` that ends the loop when it becomes true. | `LOOP UNTIL X = 2` |
 | `EXIT FOR`, `EXIT DO`, `EXIT WHILE` | Leaves that loop from inside it. | `IF I = 3 THEN EXIT FOR` |
-| `SELECT CASE` and `CASE` and `END SELECT` | Chooses between cases. Each `CASE` reports whether it matched; see the note below, because the bodies all run. | `SELECT CASE X` |
+| `SELECT CASE` and `CASE` and `END SELECT` | Chooses one body. A clause is a value, a comma-separated list of values, `a TO b`, `IS <comparison>` or `ELSE`, and the first clause that matches is the only one whose body runs. | `SELECT CASE X` |
 | `SUB` and `END SUB` | A named block called with `CALL`, whose parameters are local, and whose body is on its own lines. | `SUB DOUBLE(N)` |
 | `CALL` | Calls a `SUB` or a `FUNCTION` by name. | `CALL GREET("Ann")` |
 | `FUNCTION` and `END FUNCTION` | A named block used in an expression; its answer is the variable named after it when `END FUNCTION` is reached. | `PRINT TWICE(21)` |
@@ -82,10 +82,12 @@ numbered or not; a jump needs a number, and nothing else does.
 | `REM` and `'` | A comment to the end of the line, spelled as a word or as an apostrophe. | `REM ignored` |
 | `:` | Separates two statements on a line. | `PRINT "A": PRINT "B"` |
 
-`SELECT CASE` does not select. Each `CASE` evaluates the selector against one value
-and prints `Case matched` or `Case skipped`, and every statement below it still runs;
-a multi-value, ranged or `CASE ELSE` clause reports `Invalid CASE expression` and its
-body runs anyway. Use `IF`. A variable may begin with a reserved word: `DOUBLE`,
+`SELECT CASE` takes the first clause that matches and runs that body alone. A clause
+`CASE 2` compares the selector with one value, `CASE 2, 3` with a list of them,
+`CASE 4 TO 9` with a range, `CASE IS > 10` with a comparison and `CASE ELSE` takes
+whatever is left; the selector is read once for the block, when its first clause is
+tested. A clause that cannot be read reports `Invalid CASE expression` and its body is
+skipped, and blocks may nest. A variable may begin with a reserved word: `DOUBLE`,
 `RUNNER`, `CLOSER`, `NEXTX` and `LOOPS` are ordinary names.
 
 ### Output and input
@@ -110,7 +112,7 @@ body runs anyway. Use `IF`. A variable may begin with a reserved word: `DOUBLE`,
 | `DIM`, `DIM ... AS` | Declares an array indexed from 0, or a record from a `TYPE`. | `DIM N(10): N(1) = 7` |
 | `ERASE` | Discards an array, which then reads as zeroes. | `ERASE A` |
 | `SWAP` | Exchanges two variables. | `SWAP A, B` |
-| `CONST` | Names a value. It assigns like any other statement, so a later `SIZE = 9` is accepted: the word states an intention, it does not enforce one. | `CONST SIZE = 5` |
+| `CONST` | Names a value, and refuses a later assignment to that name. | `CONST SIZE = 5` |
 | `DEFINT` | Makes the named variables integer, truncating on assignment. | `DEFINT X: X = 3.7` |
 | `DEFLNG`, `DEFSNG`, `DEFDBL` | The same declaration for long, single and double. | `DEFDBL A-Z` |
 | `DEFSTR` | Makes the named variables text. | `DEFSTR A-Z` |
@@ -141,7 +143,9 @@ first.
 | `RANDOMIZE` | Seeds the generator; `RANDOMIZE TIMER` seeds it from the clock. | `RANDOMIZE 42` |
 
 Numbers print with six significant digits: `PRINT 1 / 3` gives `0.333333` and a
-large pixel value prints as `1.67772e+07`.
+large pixel value prints as `1.67772e+07`. A literal may be written in exponent form
+-- `1E6`, `1e-6`, `2.5E+3` -- with or without the sign, and `1E6` is the number a
+million rather than 1 beside a variable called `E6`.
 
 ### Graphics
 
@@ -226,16 +230,20 @@ them to the active workspace.
   and the run carries on with the next line.
 - **`FOR` counts past its limit.** The variable keeps the first value beyond the
   end: `FOR I = 1 TO 3` leaves 4, and `FOR J = 3 TO 1` has no step to count
-  backwards with, so its body runs once.
+  backwards with, so its body runs once. The limit is tested after the pass, so a
+  header already past its limit does the same whether it is written on one line or
+  as a block.
 - **`INT` rounds down**, so `INT(-3.7)` is -4, and division by zero is an error.
   Numbers print with six significant digits: `1 / 3` is `0.333333`.
 - **A failed statement is reported, not skipped quietly**: an unknown statement
   reports `Unknown BASIC command: ...` and a malformed loop reports
   `FOR requires format: var = start TO end [STEP step]`.
-- **Blocks need their own lines.** A colon closes a `FOR`, `WHILE`, `SUB` or `TYPE`
-  header before the closing word can be read, so `WHILE ... : WEND` reports
-  `WHILE without WEND` and `FOR ... : NEXT` ends after two passes. `IF`, `DO` and
-  plain statements take colons; the blocks do not.
+- **`SUB`, `FUNCTION` and `TYPE` bodies need their own lines.** A colon ends the
+  header, so a definition split by colons is refused with `SUB ... needs its own
+  lines: a definition cannot be split by colons` rather than run as statements.
+  Loops and plain statements take colons: `WHILE X < 3 : PRINT X : X = X + 1 : WEND`
+  and `FOR I = 1 TO 3 : PRINT I : NEXT` repeat inside the line, and `EXIT FOR` inside
+  one leaves the loop rather than the line.
 
 ## APL
 
@@ -406,12 +414,12 @@ SQUARE 20
 | a procedure call | Any word that is not a primitive runs the procedure of that name. | `SQUARE 20` |
 | `REPEAT` | Runs a body a number of times; `REPCOUNT` counts them. | `REPEAT 4 [FD 10 RT 90]` |
 | `IF` | Runs a body when the test holds. | `IF 1 = 1 [FD 10]` |
-| `IFELSE` | One body or the other. | `IFELSE 1 = 1 [PRINT "YES] [PRINT "NO]` |
+| `IFELSE` | One body or the other. | `IFELSE 1 = 1 [PRINT "YES"] [PRINT "NO"]` |
 | `WHILE` | Repeats while the first body holds. | `WHILE [:I < 3] [MAKE "I :I + 1]` |
 | `FOREVER` | Repeats until the body stops the run. | `FOREVER [STOP]` |
 | `FOREACH` | Runs a body once per item of a list. | `FOREACH [1 2 3] [FD 10]` |
 | `REPCOUNT` | The pass number of the enclosing loop, from 1. | `REPEAT 2 [SHOW REPCOUNT]` |
-| `LOCAL` | Declares a name for the procedure body. The value is not restored to the caller's afterwards, and the quoted spelling keeps the quote in the name, so write `LOCAL :X` to get the name `X`. | `LOCAL :X` |
+| `LOCAL` | Declares a name that belongs to the procedure body: the caller's value for it goes back when the procedure returns. `LOCAL "X` and `LOCAL :X` both name `X`. | `LOCAL :X` |
 | `OUTPUT`, `OP` | The value a procedure reports to its caller. | `OUTPUT :N * 2` |
 | `STOP`, `BYE` | Ends the procedure, or the run. | `BYE` |
 
@@ -432,12 +440,13 @@ SHOW FIRST [1 2 3]
 | `FIRST`, `LAST` | The first or last item. | `SHOW FIRST [1 2 3]` |
 | `BUTFIRST`, `BUTLAST` | The list without its first or last item. | `SHOW BUTFIRST [1 2 3]` |
 | `ITEM` | The nth item, counting from 1. | `SHOW ITEM 2 [1 2 3]` |
-| `COUNT` | The number of items in a list. A list of more than one item reaches it one word at a time, so `COUNT [1 2 3]` answers 1. | `COUNT [5]` |
+| `COUNT` | The number of items in a list. | `COUNT [1 2 3]` |
 | `LIST` | A list of its arguments. | `SHOW LIST 1 2` |
 | `SENTENCE` | The arguments as one flat list. | `SHOW SENTENCE 1 2` |
 | `SUM`, `DIFFERENCE`, `PRODUCT`, `QUOTIENT` | Arithmetic, also spelled `+ - * /`. | `SHOW SUM 1 2` |
 | `RANDOM` | An integer from 0 up to one less than the argument. | `SHOW RANDOM 10` |
-| `REDUCE` | Runs a template with `?1` and `?2` over a list. The template is run as a command, so an expression such as `[SUM ?1 ?2]` reports `Invalid numbers for SUM`. | `REDUCE [SUM ?1 ?2] [1 2 3]` |
+| `MAP`, `FILTER` | A new list of the template's answers, or the items whose template answer holds: `?` is the item. | `SHOW MAP [? * 2] [1 2]` |
+| `REDUCE` | Folds a list with a template of two: `?1` is the running value and `?2` the next item. `REDUCE "SUM [1 2 3]` names a procedure instead. | `REDUCE [SUM ?1 ?2] [1 2 3]` |
 
 A list prints with quoted words, as a Python list would: `SHOW LIST 1 2` gives
 `[1.0, 2.0]`, `SHOW BUTFIRST [1 2 3]` gives `['2', '3']`.
@@ -456,17 +465,17 @@ A list prints with quoted words, as a Python list would: `SHOW LIST 1 2` gives
 
 ### Differences worth knowing
 
-- **A reporter the printer cannot evaluate is echoed, not reported.**
-  `PRINT COUNT [1 2 3]` prints `COUNT [ 1 2 3 ]`, while `PRINT FIRST [1 2 3]` prints
-  1 because `FIRST` is one of the reporters it knows: `SUM`, `DIFFERENCE`, `PRODUCT`,
-  `QUOTIENT`, `RANDOM`, `WORD`, `LIST`, `SENTENCE`, `FIRST`, `LAST`, `BUTFIRST`,
-  `BUTLAST`, `ITEM` and `THING`.
-- **`COUNT`, `MAP`, `FILTER`, `REDUCE` and the list form of `ROLL` do not compute.**
-  A multi-item list reaches `COUNT` one word at a time, the higher-order words run
-  their template as a command, `?` is not a variable, and `ROLL` is the
-  three-dimensional roll.
-- **A quote inside a bracketed body is a trap.** `PRINT "HI` is the word form, so
-  write `REPEAT 1 [PRINT "HI]`; closing the quote prints `HI"`.
+- **A reporter is run, whatever else the word may name.** `PRINT FIRST [1 2 3]`
+  writes 1 and `PRINT COUNT [1 2 3]` writes 3: the printer knows `SUM`,
+  `DIFFERENCE`, `PRODUCT`, `QUOTIENT`, `RANDOM`, `WORD`, `LIST`, `SENTENCE`, `FIRST`,
+  `LAST`, `BUTFIRST`, `BUTLAST`, `ITEM`, `THING`, `COUNT`, `REPCOUNT`, `MAP`,
+  `FILTER` and `REDUCE`. Text it cannot evaluate is written back as it stands.
+- **A template is a value first and a command list second.** `MAP [? * 2]` and
+  `FILTER [? > 7]` read the template as an expression with `?` bound to the item,
+  and `REDUCE` reads `?1` and `?2`. A template that is really commands -- `FOREACH
+  [1 2] [FD 10]` -- still runs as commands, and `FOREACH` does not bind `?`.
+- **A closing quote in a word form is silent.** `PRINT "HI` and `PRINT "HI"` both
+  write `HI`, so a bracketed body may be written `[PRINT "HI"]`.
 - **Loops that overrun stop silently.** `WHILE`, `UNTIL` and `FOREVER` end after
   10,000 passes with no message, `REPEAT` has no such cap, and recursion stops at 128
   deep with `Procedure R exceeded maximum recursion depth (128)`.
@@ -522,11 +531,11 @@ mistyped label costs a unit rather than the run.
 | `G:` | Runs one turtle word, so a drawing is a run of units. | `G: FD 50` |
 | `G: TEXT` | Writes a label at the turtle. | `G: TEXT A label` |
 | `G: FILL` | Fills the area the path encloses, in the pen colour. | `G: FILL` |
-| `F: OPEN` | Opens a file for `R`, `W` or `A`. | `F: OPEN notes.txt W` |
+| `F: OPEN` | Opens a file for reading, or for `R`, `W` or `A` when a mode is written. | `F: OPEN notes.txt W` |
 | `F: CLOSE` | Closes it. | `F: CLOSE notes.txt` |
 | `F: READ` | Reads a line into a variable. | `F: READ notes.txt LINE$` |
-| `F: WRITE` | Writes the value of a variable as a line. | `F: WRITE notes.txt LINE$` |
-| `LINK` | Chains to another lesson. Not implemented: it reports `LINK: lesson chaining is not implemented`. | `LINK lesson.pilot` |
+| `F: WRITE` | Writes the rest of the unit as a line, so the text may be several words, with `$name` and `#name` replaced as they are in a `T:` unit. | `F: WRITE notes.txt total #X words` |
+| `LINK` | Chains to another lesson: that file replaces this one and everything computed so far stays in scope. The lesson that linked does not carry on afterwards. | `LINK lesson.pilot` |
 
 ### Differences worth knowing
 
@@ -535,8 +544,11 @@ mistyped label costs a unit rather than the run.
 - **`M:` matches loosely**: case is ignored, commas separate alternatives, `PAR*S` is
   a pattern, and `RI` matches `PARIS` because plain text only has to appear in the
   answer.
-- **`F:` counts its arguments**: `F: OPEN notes.txt X` reports
-  `F: OPEN requires mode R|W|A, got: X`.
+- **`F:` checks the mode, not the word count**: `F: OPEN notes.txt X` reports
+  `F: OPEN requires mode R|W|A, got: X`, while `F: OPEN notes.txt` reads.
+- **`LINK` chains rather than calls.** The second lesson starts at its first unit
+  with the first lesson's variables, and a name it cannot open is reported as
+  `LINK: cannot open 'name'`.
 - **A headless run has no keyboard**, so the command harness answers nothing at `A:`
   and every `TN:` path is taken.
 
@@ -722,9 +734,9 @@ prints `N`.
 | `DO ... OVER` | A loop over the words of a string. | `DO word OVER 'a b c'` |
 | `SELECT`, `WHEN`, `OTHERWISE` | A multi-way choice. | `SELECT` |
 | `LEAVE`, `ITERATE` | Leave the loop; skip to its next pass. | `LEAVE` |
-| `PARSE VAR` | Splits a string's words into names. | `PARSE VAR line first second third` |
-| `PULL` | Reads a line from the user. | `PULL name` |
-| `PARSE PULL` | Reads a line into one name; a second target is ignored. | `PARSE PULL first` |
+| `PARSE VAR` | Splits a string's words into names; the last name takes the rest of the line. | `PARSE VAR line first rest` |
+| `PULL` | Reads a line from the user, splitting it into its names the same way. | `PULL verb rest` |
+| `PARSE PULL` | Reads a line into names, one word each and the rest into the last. | `PARSE PULL first rest` |
 | `CALL` and `RESULT` | Calls a label as a subroutine and holds its answer. | `CALL DOUBLE 5` |
 | `RETURN` and `EXIT` | Ends a subroutine with a value; ends the program. | `RETURN ARG(1) * 2` |
 | `ARG` | A subroutine's nth argument. | `ARG(1)` |
@@ -744,8 +756,10 @@ width, which is the opposite of `LEFT` and `RIGHT`.
 - **An unassigned variable is its own name.** `SAY count` writes `COUNT`, and
   `DO WHILE count < 3` compares the string `COUNT` with 3, which is false, so the
   loop never runs.
-- **`PARSE PULL` takes one name.** `PARSE PULL a b` puts the whole line in `a` and
-  leaves `b` unset; `PARSE VAR` with a source string does split.
+- **`PARSE` gives the last name the rest.** `PARSE VAR line first rest` puts the
+  first word in `first` and everything after it in `rest`, spaces and all;
+  `PARSE PULL verb rest` splits a line the same way, so `ADD 2 3` is `verb = ADD`
+  and `rest = 2 3`.
 - **`LEFT` and `RIGHT` pad to a width**, and no newline is implied.
 
 ## Smalltalk
