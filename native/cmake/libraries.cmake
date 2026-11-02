@@ -181,6 +181,7 @@ add_library(tw_lang_core OBJECT
     src/lang/watch.cpp
     src/lang/repl.cpp
     src/lang/interpreter.cpp
+    src/lang/file_paths.cpp
     src/lang/mersenne_random.cpp
 )
 

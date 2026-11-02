@@ -72,6 +72,7 @@ int main() {
     test_pilot_reports_errors();
     test_pilot_link_chains_to_another_lesson();
     test_pilot_file_open_defaults_to_reading_and_write_takes_the_line();
+    test_pilot_files_resolve_against_the_runs_own_directory();
     test_comal_print_and_assignment();
     test_comal_if_blocks();
     test_comal_loops();

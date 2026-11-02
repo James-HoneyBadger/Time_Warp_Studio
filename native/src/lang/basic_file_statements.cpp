@@ -22,46 +22,18 @@
 #include <vector>
 
 #include "timewarp/audio/music.hpp"
+#include "timewarp/lang/file_paths.hpp"
 #include "timewarp/lang/screen_mode.hpp"
 
 namespace timewarp::lang::basic {
 
 std::string resolve_confined_path(std::string_view filename, std::string_view base_dir) {
-    // The base is the run's own directory -- a project's root, or the folder the
-    // program was opened from -- and only falls back to the process's working
-    // directory when no run has named one.
-    std::filesystem::path base = base_dir.empty()
-                                     ? std::filesystem::current_path()
-                                     : std::filesystem::path{std::string{base_dir}};
-    std::error_code error;
-    const std::filesystem::path resolved_base = std::filesystem::weakly_canonical(base, error);
-    if (!error) {
-        base = resolved_base;
-    }
     const std::string raw = strip_quotes(trim(filename));
-    std::filesystem::path candidate = base / raw;
-    std::error_code canonical_error;
-    const std::filesystem::path canonical =
-        std::filesystem::weakly_canonical(candidate, canonical_error);
-    if (!canonical_error) {
-        candidate = canonical;
-    }
-    // A prefix test is not a containment test. `/tmp/run` is a prefix of
-    // `/tmp/run2`, so `OPEN "../run2/notes.txt"` from `/tmp/run` passed the old
-    // check and wrote outside the directory the program was confined to. Compare
-    // whole components: the candidate is inside when it *is* the base, or when
-    // what follows the base is a separator.
-    const std::string base_text = base.generic_string();
-    const std::string candidate_text = candidate.generic_string();
-    const bool at_base = candidate_text == base_text;
-    const bool below_base =
-        candidate_text.size() > base_text.size() &&
-        candidate_text.compare(0, base_text.size(), base_text) == 0 &&
-        (base_text.back() == '/' || candidate_text[base_text.size()] == '/');
-    if (!at_base && !below_base) {
+    const std::optional<std::string> resolved = confined_path(raw, base_dir);
+    if (!resolved.has_value()) {
         throw BasicError("Path '" + raw + "' escapes sandbox directory");
     }
-    return candidate_text;
+    return *resolved;
 }
 
 std::string Machine::open_file(const std::string& args) {

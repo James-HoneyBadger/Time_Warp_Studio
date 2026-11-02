@@ -38,7 +38,8 @@ struct PilotRun {
     RecordingHost host;
 };
 
-PilotRun run_pilot(std::string_view source, std::vector<std::string> inputs = {""}) {
+PilotRun run_pilot(std::string_view source, std::vector<std::string> inputs = {""},
+                   std::string file_base = {}) {
     PilotRun run;
     Interpreter interpreter{Language::Pilot, run.host};
     std::size_t next = 0;
@@ -49,6 +50,11 @@ PilotRun run_pilot(std::string_view source, std::vector<std::string> inputs = {"
         }
         return std::string{};
     });
+    // What the IDE sets before a run: the directory the program belongs to, which
+    // is also the sandbox its file statements are confined to.
+    if (!file_base.empty()) {
+        interpreter.set_file_base(file_base);
+    }
     interpreter.load_program(source);
     interpreter.run();
     run.output = interpreter.output();
@@ -414,6 +420,54 @@ void test_pilot_file_open_defaults_to_reading_and_write_takes_the_line() {
 
     TW_CHECK(!any_error(wrote.output));
     TW_CHECK(contains(wrote.output, "SAID total 7 words"));
+}
+
+// The IDE sets a run's directory before it starts, and a file statement resolves
+// against it -- the same base BASIC uses. Without that, `F: OPEN notes.txt` in a
+// lesson opened from a project looked in whatever directory the application was
+// started from, and a lesson could not read the file beside it.
+void test_pilot_files_resolve_against_the_runs_own_directory() {
+    namespace fs = std::filesystem;
+    const fs::path root = fs::temp_directory_path() / "timewarp-pilot-base";
+    const fs::path base = root / "base";
+    const fs::path elsewhere = root / "elsewhere";
+    std::error_code ignored;
+    fs::remove_all(root, ignored);
+    fs::create_directories(base, ignored);
+    fs::create_directories(elsewhere, ignored);
+    {
+        std::ofstream notes{base / "notes.txt"};
+        notes << "beside the lesson\n";
+    }
+    {
+        std::ofstream next{base / "next.pilot"};
+        next << "T: THE SECOND LESSON\n";
+    }
+    {
+        std::ofstream outside{root / "outside.txt"};
+        outside << "not for this lesson\n";
+    }
+
+    const fs::path started_in = fs::current_path();
+    std::error_code error;
+    fs::current_path(elsewhere, error);
+    TW_CHECK(!error);
+    const PilotRun read = run_pilot(
+        "F: OPEN notes.txt\n"
+        "F: READ notes.txt LINE$\n"
+        "F: CLOSE notes.txt\n"
+        "T: SAID $LINE",
+        {""}, base.string());
+    const PilotRun linked = run_pilot("LINK next.pilot", {""}, base.string());
+    const PilotRun escaped = run_pilot("F: OPEN ../outside.txt", {""}, base.string());
+    fs::current_path(started_in, ignored);
+    fs::remove_all(root, ignored);
+
+    TW_CHECK(!any_error(read.output));
+    TW_CHECK(contains(read.output, "SAID beside the lesson"));
+    TW_CHECK(contains(linked.output, "THE SECOND LESSON"));
+    // A name that would leave the directory is refused before it is opened.
+    TW_CHECK(contains(escaped.output, "Path traversal not allowed"));
 }
 
 // ---------------------------------------------------------------------------

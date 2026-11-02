@@ -67,6 +67,7 @@ void test_pilot_graphics_and_text();
 void test_pilot_reports_errors();
 void test_pilot_link_chains_to_another_lesson();
 void test_pilot_file_open_defaults_to_reading_and_write_takes_the_line();
+void test_pilot_files_resolve_against_the_runs_own_directory();
 void test_comal_print_and_assignment();
 void test_comal_if_blocks();
 void test_comal_loops();

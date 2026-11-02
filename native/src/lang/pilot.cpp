@@ -11,6 +11,7 @@
 
 #include "timewarp/lang/pilot.hpp"
 
+#include "timewarp/lang/file_paths.hpp"
 #include "timewarp/lang/interpreter.hpp"
 #include "timewarp/lang/turtle_host.hpp"
 
@@ -716,7 +717,14 @@ std::string file_command(Interpreter& interpreter, PilotState& state, std::strin
             existing->second->close();
             state.files.erase(existing);
         }
-        auto stream = std::make_shared<std::fstream>(filename, flags);
+        // The file is opened in the run's own directory, which is also its sandbox:
+        // a lesson that opens `notes.txt` means the one beside it, not one wherever
+        // the application happens to have been started.
+        const std::optional<std::string> path = confined_path(filename, interpreter.file_base());
+        if (!path.has_value()) {
+            return "❌ Path '" + filename + "' escapes sandbox directory\n";
+        }
+        auto stream = std::make_shared<std::fstream>(*path, flags);
         if (!stream->is_open()) {
             return "❌ F: Error opening file '" + filename + "': cannot open\n";
         }
@@ -806,7 +814,13 @@ std::string link_lesson(Interpreter& interpreter, const std::string& command) {
     if (const auto invalid = validate_file_path(text); invalid.has_value()) {
         return "❌ " + *invalid + "\n";
     }
-    std::ifstream file{text};
+    // A linked lesson is found in the run's own directory, as a file the lesson
+    // opens is, so a lesson next to the one running is named by its bare name.
+    const std::optional<std::string> path = confined_path(text, interpreter.file_base());
+    if (!path.has_value()) {
+        return "❌ Path '" + text + "' escapes sandbox directory\n";
+    }
+    std::ifstream file{*path};
     if (!file.is_open()) {
         return "❌ LINK: cannot open '" + text + "'\n";
     }
