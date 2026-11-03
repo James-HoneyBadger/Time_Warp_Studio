@@ -19,7 +19,7 @@ native/                     the Qt application (the product)
     lang/                   the ten executors and the shared interpreter loop
     scheme/                 the explicit-stack Scheme machine
     lessons/                curriculum, verifier, progress, classroom
-    debugger/ project/ sql/ api/ ai/ canvas/
+    debugger/ project/ sql/ api/ canvas/
   share/                    lessons.json, snippets.json, command_rows.json
   tools/
     gates/                  time_warp_gates: smoke, commands, repl, golden, tree
@@ -110,7 +110,7 @@ Each fact has one home. The set is organised by audience:
 
 | Directory | Owns |
 | --- | --- |
-| `docs/user/` | Getting started, the Studio's window and panels, the assistant, the automation API, questions |
+| `docs/user/` | Getting started, the Studio's window and panels, the automation API, questions |
 | `docs/languages/` | The ten languages, their reference, and one tutorial per language |
 | `docs/lessons/` | The curriculum, the lesson format, and the generated plans |
 | `docs/maintainer/` | Architecture, decisions, testing, roadmap, release |

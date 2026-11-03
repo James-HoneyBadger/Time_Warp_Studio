@@ -21,7 +21,6 @@ For someone with a program to write.
 | --- | --- |
 | [Getting started](user/getting-started.md) | Requirements, building, installing, and the first program |
 | [The Studio](user/the-studio.md) | Documents, projects, the REPL bar, debugging, SQL, the terminal, appearance and shortcuts |
-| [The assistant](user/assistant.md) | The one network call: how to configure it, and exactly what it sends |
 | [Automation](user/automation.md) | The JSON-RPC API, the linkable C++ libraries, and compiling a program |
 | [Questions](user/faq.md) | Short answers, with a pointer to the long one |
 
@@ -90,7 +89,6 @@ work.
 | Write a program in one of the languages | [Getting started](user/getting-started.md), then the tutorial for that language above |
 | Learn a language's commands | [The reference](languages/reference.md) |
 | Use the editor, the debugger, SQL or the terminal | [The Studio](user/the-studio.md) |
-| Ask an assistant about a program | [The assistant](user/assistant.md) |
 | Drive the Studio from a script | [Automation](user/automation.md) |
 | Teach with it | [The curriculum](lessons/README.md) |
 | Understand or change the code | [Architecture](maintainer/architecture.md), then [testing](maintainer/testing.md) |

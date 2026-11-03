@@ -15,7 +15,7 @@ ctest --test-dir native/build --output-on-failure
 | `time_warp_ide` | The application |
 | `timewarp_lang`, `timewarp_scheme`, `timewarp_expr` | The engines: the shared loop and ten executors, the Scheme machine, the expression evaluator |
 | `timewarp_ui`, `timewarp_ui_core` | The window, and the part of it a standalone player needs |
-| `timewarp_project`, `timewarp_sql`, `timewarp_ai`, `timewarp_api` | Projects, the one SQLite connection, the assistant, JSON-RPC |
+| `timewarp_project`, `timewarp_sql`, `timewarp_api` | Projects, the one SQLite connection, JSON-RPC |
 | `time_warp_check` | One program through the engines: what it printed and what it drew |
 | `time_warp_gates` | `smoke`, `commands`, `repl`, `golden`, `tree`: the validation harnesses |
 | `time_warp_teach`, `time_warp_learn` | The curriculum, from a teacher's and a learner's side |

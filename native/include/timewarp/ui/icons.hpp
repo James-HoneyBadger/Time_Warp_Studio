@@ -50,7 +50,6 @@ enum class Glyph {
     Terminal,
     Database,
     Reference,
-    Assistant,
     Notebook,
     Gallery,
     Folder,

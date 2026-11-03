@@ -78,7 +78,6 @@ int main(int argc, char** argv) {
     test_the_new_pages_name_what_they_show();
     test_the_command_reference_lists_the_table();
     test_the_terminal_interrupts_a_running_command();
-    test_assistant_panel_contract();
     test_repl_bar_runs_and_keeps_bindings();
     test_repl_bar_scheme_errors_and_language_switch();
     test_repl_basic_direct_mode();
@@ -116,9 +115,7 @@ int main(int argc, char** argv) {
     test_version_history_lists_snapshots();
     test_version_history_compares_with_the_open_document();
     test_editor_minimap_and_whitespace();
-    test_a_suggested_line_can_be_taken_or_refused();
     test_typing_at_several_cursors();
-    test_the_typing_pause_asks_for_the_text_before_the_caret();
     test_every_right_column_page_has_a_key();
     test_file_menu_new_opens_a_document();
     test_the_guided_tour_points_at_real_widgets();

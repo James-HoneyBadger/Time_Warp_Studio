@@ -106,6 +106,29 @@ the same commit that changes the behaviour.
 Newest first. The headings are the release numbers; the text under each one is what that
 release changed, in the words it was shipped with.
 
+### [28.2.0] - 2026-11-03
+
+**The assistant is removed.**
+The AI assistant — the page beside the editor, its settings dialog, the suggested next
+line, the `ai.ask` method, the `time_warp_ai` tool and the whole `timewarp::ai` library —
+is gone. It was the application's one network call of its own, to an endpoint the user
+configured, and a feature whose only outside world is that call no longer fits a product
+that otherwise makes none.
+
+#### Removed
+
+- **The Assistant page and its settings.** `ai_panel`, `ai_settings`, the `Assistant`
+  glyph, and the `Tools` menu's assistant entries — which left that menu empty, so the
+  menu itself is gone under the rule that an empty menu is worse than an absent one.
+- **The suggested line.** The editor's ghost text, its typing-pause timer and the
+  `inlineSuggestionWanted` signal, with the paint and Tab/Esc handling that drew and
+  accepted it.
+- **`timewarp::ai`.** `client`, `config`, `history`, `keyring` and `prompt`, with the
+  Qt Network and libsecret dependencies they brought.
+- **`ai.ask`** in the JSON-RPC API, and the `assistant` flag in `studio.info`'s
+  `features`.
+- **`time_warp_ai`** and **`ai_tests`**.
+
 ### [28.1.0] - 2026-11-01
 
 **A renewed interface: drawn icons, one toolbar, and a design system underneath.**

@@ -56,8 +56,6 @@
 #include "timewarp/lessons/classroom.hpp"
 #include "timewarp/lessons/progress.hpp"
 #include "timewarp/debugger/debugger_runner.hpp"
-#include "timewarp/ai/config.hpp"
-#include "timewarp/ai/prompt.hpp"
 #include "timewarp/lang/language.hpp"
 #include "timewarp/ui/autosave.hpp"
 #include "timewarp/ui/code_editor.hpp"
@@ -96,10 +94,6 @@ namespace timewarp::ui {
 class ClassroomMarker;
 }  // namespace timewarp::ui
 
-namespace timewarp::ai {
-class Client;
-}  // namespace timewarp::ai
-
 namespace timewarp::sql {
 class Database;
 }
@@ -113,7 +107,6 @@ class TerminalWidget;
 /// mechanism, and a preset is a named point in it.
 enum class ScreenPreset { Normal, Amber, Green, White };
 
-class AiPanel;
 class ClassroomPanel;
 class CommandReferencePanel;
 class CodeEditor;
@@ -224,26 +217,6 @@ public:
     [[nodiscard]] CommandReferencePanel* commandReferencePanel() const noexcept {
         return reference_panel_;
     }
-    /// The assistant page, so a test can drive it and a screenshot can show it.
-    /// Null when this build has no Qt Network, which is the one case in which the
-    /// assistant does not exist at all.
-    [[nodiscard]] AiPanel* aiPanel() const noexcept { return ai_panel_; }
-    /// The assistant's configuration as this window holds it -- the settings file
-    /// at start-up, and whatever the settings dialog last accepted.
-    [[nodiscard]] const timewarp::ai::Config& aiConfig() const noexcept {
-        return ai_config_;
-    }
-    /// Raises the assistant's page and puts the cursor in its question box. Opens
-    /// its settings instead when there is nothing configured to ask.
-    void showAssistant();
-    /// Opens the assistant's settings dialog: the endpoint, the model and the key.
-    void showAiSettings();
-    /// Runs one request about the document in view, for the menu entries that are
-    /// a single click rather than a typed question.
-    void askAssistant(timewarp::ai::Task task);
-    /// Asks about one error the run reported: the selection in the Console, else the
-    /// last error the Errors view holds, else the last line the program printed.
-    void askAssistantAboutOutput();
     /// The open project's file path, or empty when none is open.
     [[nodiscard]] QString activeProjectPath() const;
     /// Shows the find bar, with the replacement row when `withReplacement`.
@@ -890,22 +863,8 @@ private:
     /// Stops it and records the elapsed time as the last run's.
     void stopRunClock();
 
-    // -- the command reference and the assistant ---------------------------
+    // -- the command reference ---------------------------------------------
     void buildCommandReference();
-    void buildAiPanel();
-    /// A pause in typing in `editor`, for the assistant's suggested next line. Silent
-    /// about everything that goes wrong: text appearing under a caret is not a place
-    /// to report a network failure.
-    void requestInlineSuggestion(CodeEditor* editor, const QString& prefix);
-    /// Passes `inline_suggestions` from the configuration to every editor open and to
-    /// every one opened later.
-    void applyInlineSuggestionSetting();
-    /// What the assistant is told about the document in view: the language, the
-    /// name, the text, the selection and what the last run printed.
-    [[nodiscard]] timewarp::ai::Context aiContext() const;
-    /// Puts an answer's code into the document in view, replacing a selection or
-    /// landing at the cursor, in one undo step.
-    void insertAssistantCode(const QString& code);
     /// Adds or removes the terminal tab to match `terminal_enabled_`, the mode
     /// that is active, and whether this window may run commands at all.
     void refreshTerminalTab();
@@ -978,21 +937,6 @@ private:
     /// pointer because the interpreter's SQL callback runs on a runner thread and
     /// must keep the connection alive even if the panel's tab is rebuilt.
     SqlPanel* sql_panel_ = nullptr;
-    /// The assistant page and the configuration it holds. The configuration is a
-    /// setting (the settings file, edited in its own dialog); the *conversation*
-    /// lives in the panel, because a conversation is a session rather than a
-    /// preference that should survive a restart.
-    AiPanel* ai_panel_ = nullptr;
-    timewarp::ai::Config ai_config_;
-    /// The suggested line's own client, and the editor waiting for one. A second
-    /// client rather than the panel's: a suggestion asked for while you type must
-    /// not cancel the answer you are reading, and the panel keeps one request in
-    /// flight by design.
-    timewarp::ai::Client* inline_client_ = nullptr;
-    CodeEditor* inline_target_ = nullptr;
-    /// The text the suggestion was asked for, so an answer that arrives after the
-    /// caret moved is dropped rather than pasted after the wrong line.
-    QString inline_prefix_;
     /// The command reference: a view over the table the command gate drives.
     CommandReferencePanel* reference_panel_ = nullptr;
     std::shared_ptr<timewarp::sql::Database> sql_database_;

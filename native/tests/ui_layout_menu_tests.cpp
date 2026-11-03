@@ -154,7 +154,7 @@ void test_menu_structure() {
     // Debug is absent on purpose: a menu with nothing to put in it is a promise
     // the window cannot keep.
     TW_CHECK_EQ(titles.join(QLatin1Char('|')).toStdString(),
-                std::string{"&File|&Project|&Edit|&Run|&Tools|&View|&Help"});
+                std::string{"&File|&Project|&Edit|&Run|&View|&Help"});
 
     // That the titles exist is not the interesting part. This test used to check
     // only the titles, which is how seven menus with no entries in them passed

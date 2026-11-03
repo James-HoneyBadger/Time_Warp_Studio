@@ -9,7 +9,7 @@ inside it.
 [![Languages](https://img.shields.io/badge/languages-10-blue)](#the-ten-languages)
 [![Platform](https://img.shields.io/badge/platform-Linux-green)](docs/user/getting-started.md)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/Version-28.1.0-orange)](https://github.com/James-HoneyBadger/Time_Warp_Studio)
+[![Version](https://img.shields.io/badge/Version-28.2.0-orange)](https://github.com/James-HoneyBadger/Time_Warp_Studio)
 
 It is written in C++20 against Qt 6 and runs on Linux. The interpreters are libraries in
 the same process, which is what allows one debugger to serve all ten: a run is stopped,
@@ -102,7 +102,6 @@ statement, at a Smalltalk message send, at a Forth token.
 | **REPL bar** | A persistent session in the current language, with the bindings that language keeps |
 | **Projects** | `.twproject` files that group programs without moving them on disk |
 | **SQL** | A SQLite database tab, and a `SQL` statement in eight of the ten languages |
-| **Assistant** | Explain, fix, comment, translate or write a program through a service you configure, or a model on this machine. Off until configured, and the key need not be written to disk |
 | **Teaching** | 20 lessons with 60 checkpoints, checked by running the learner's program; rosters, handouts and marking |
 | **Appearance** | 35 themes including the retro CRT sets, a high-contrast variant of each, text at 100%, 125% or 150%, focus and presentation modes |
 | **Automation** | JSON-RPC over stdin and stdout, a standalone compiler, scriptable screenshots and exports |

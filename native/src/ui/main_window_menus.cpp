@@ -18,8 +18,6 @@
 #include <QMenuBar>
 #include <QMessageBox>
 #include <QPlainTextEdit>
-#ifdef TIME_WARP_HAVE_PRINT
-#endif
 #include <QSettings>
 #include <QShortcut>
 #include <QSignalBlocker>
@@ -380,35 +378,6 @@ void MainWindow::buildMenuBar() {
     run->addSeparator();
     add(run, tr("Clear &Output"), {}, [this] { clearOutput(); });
     add(run, tr("Clear &Canvas"), {}, [this] { clearCanvas(); });
-
-    // -- Tools ------------------------------------------------------------
-    QMenu* tools = bar->addMenu(tr("&Tools"));
-    tools->setObjectName(QStringLiteral("toolsMenu"));
-#ifdef TIME_WARP_HAVE_AI
-    // The assistant lives in Tools rather than in a menu of its own: one heading for
-    // what this IDE can do *to a program* is a menu a person can find, and a
-    // top-level menu with five entries is a heading that exists to hold its own
-    // name.
-    add(tools, tr("&Assistant"),
-        timewarp::core::keySequence(Qt::CTRL | Qt::SHIFT, Qt::Key_A),
-        [this] { showAssistant(); })
-        ->setObjectName(QStringLiteral("aiAssistantAction"));
-    // The two questions a learner asks most often, one click from the program they
-    // are looking at. No shortcut: a key pressed by accident spends a request.
-    add(tools, tr("&Explain This Program"), QKeySequence{},
-        [this] { askAssistant(timewarp::ai::Task::Explain); })
-        ->setObjectName(QStringLiteral("aiExplainAction"));
-    add(tools, tr("Fix This &Program"), QKeySequence{},
-        [this] { askAssistant(timewarp::ai::Task::Fix); })
-        ->setObjectName(QStringLiteral("aiFixAction"));
-    // The one question that starts from what the run said rather than from the
-    // program: the Console already holds the error, so the action names it.
-    add(tools, tr("Ask About the Last &Error"), QKeySequence{},
-        [this] { askAssistantAboutOutput(); })
-        ->setObjectName(QStringLiteral("aiDiagnoseAction"));
-    add(tools, tr("AI &Settings..."), QKeySequence{}, [this] { showAiSettings(); })
-        ->setObjectName(QStringLiteral("aiSettingsAction"));
-#endif
 
     // -- View -------------------------------------------------------------
     QMenu* view = bar->addMenu(tr("&View"));

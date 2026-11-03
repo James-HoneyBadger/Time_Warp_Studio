@@ -17,7 +17,7 @@ cmake --build native/build -j
 ctest --test-dir native/build --output-on-failure
 ```
 
-There are 24 suites, one binary each, named for what they cover:
+There are 23 suites, one binary each, named for what they cover:
 
 | Suite | Covers |
 | --- | --- |
@@ -38,7 +38,6 @@ There are 24 suites, one binary each, named for what they cover:
 | `sql_tests` | The shared SQLite connection |
 | `cli_tests` | `twc` and the command-line surface |
 | `api_tests` | The JSON-RPC server over an in-memory stream |
-| `ai_tests` | The assistant's configuration, prompts and exchange, against a transport of the test's own rather than a network |
 
 Other build trees must stay green:
 

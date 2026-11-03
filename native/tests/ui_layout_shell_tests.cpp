@@ -239,20 +239,11 @@ void test_right_column_tabs_and_order() {
     ResizableTabWidget* tabs = window->rightTabs();
 
     TW_CHECK_EQ(tabs->objectName(), QStringLiteral("rightTabs"));
-#ifdef TIME_WARP_HAVE_AI
-    TW_CHECK_EQ(tabs->count(), 9);
-#else
     TW_CHECK_EQ(tabs->count(), 8);
-#endif
     // Order is part of the interface: users reach for Output first, the classroom
-    // page is late because only a teacher opens it, and the assistant is last
-    // because it is the one page that needs something outside this machine.
+    // page is late because only a teacher opens it.
     QString expected = QStringLiteral("Output|Variables|Telemetry|Debug|Lessons|"
                                       "Classroom|Database|Reference");
-#ifdef TIME_WARP_HAVE_AI
-    // The assistant is last, and only where Qt has a transport to put behind it.
-    expected += QStringLiteral("|Assistant");
-#endif
     TW_CHECK_EQ(tabTitles(tabs).toStdString(),
                 expected.toStdString());
     TW_CHECK_EQ(tabs->widget(0), window->outputCanvasSplitter());

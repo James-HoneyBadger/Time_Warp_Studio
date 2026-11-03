@@ -138,7 +138,7 @@ it makes.
 ## Check the build
 
 ```bash
-ctest --test-dir native/build --output-on-failure   # the 24 suites
+ctest --test-dir native/build --output-on-failure   # the 23 suites
 make smoke                                          # the 67 example programs it runs
 make command-matrix                                 # one row per command
 make repl-matrix                                    # the same rows through the REPL

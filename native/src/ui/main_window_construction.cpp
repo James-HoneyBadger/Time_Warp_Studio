@@ -563,9 +563,6 @@ void MainWindow::buildRightColumn(QSplitter* parent) {
                         tr("Classroom"));
     buildSqlPanel();
     buildCommandReference();
-#ifdef TIME_WARP_HAVE_AI
-    buildAiPanel();
-#endif
     // The reference opens on the document's language, every time it is raised: a
     // page that remembered the language somebody browsed last week would be a page
     // that answers a question they are not asking.

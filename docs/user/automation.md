@@ -40,15 +40,13 @@ the tests drive it without a process.
 | SQL | `sql.open`, `sql.close`, `sql.query`, `sql.tables`, `sql.schema` |
 | Projects | `project.create`, `project.open`, `project.save`, `project.info`, `project.addFile`, `project.addFiles`, `project.addFolder`, `project.removeFile`, `project.addGroup`, `project.renameGroup`, `project.removeGroup`, `project.moveFile`, `project.setEntry`, `project.clearEntry` |
 | Expressions | `watch.evaluate` |
-| Assistant | `ai.ask` |
 
 ---
 
 ## Running a program
 
 `studio.info` takes nothing and reports the API version, the languages this build carries,
-and `features` — including `assistant`, which is `false` in a build without Qt Network.
-`ping` answers; `studio.shutdown` exits the service.
+and `features`. `ping` answers; `studio.shutdown` exits the service.
 
 `language.run`:
 
@@ -214,7 +212,7 @@ a copy it thinks it has.
 
 ---
 
-## Expressions and the assistant
+## Expressions
 
 `watch.evaluate` evaluates debugger-style expressions over supplied bindings. Text
 variables are visible by name and as `NAME$`, and arithmetic is the same evaluator a
@@ -230,26 +228,6 @@ program uses.
  {"expression":"MISSING","value":"?","ok":false,"error":"Undefined variable: MISSING"}]
 ```
 
-`ai.ask` asks the configured assistant one question and returns the answer:
-
-| Parameter | Type | |
-| --- | --- | --- |
-| `prompt` | string | the question; required, and not blank |
-| `system` | string | replaces the Studio's own system prompt for this call |
-| `history` | array | earlier turns, each `{"role":"user"}` or `{"role":"assistant"}`, with its `content`, oldest first |
-
-```json
-{"text":"…", "model":"deepseek-chat", "promptTokens":412, "completionTokens":96}
-```
-
-The configuration is the one Settings > Assistant holds, or the `TIME_WARP_AI_*`
-environment variables that override it, so a script sets those rather than passing a key in
-a request line. Nothing here echoes the key: every failure sentence goes through the same
-`redact()` the panel uses. An assistant that is off, has no model, or cannot be reached is
-`-32000` with a sentence saying which of those it is. The call blocks until the service
-answers, because the protocol is one request line in and one response line out. The
-[assistant page](assistant.md) covers the configuration.
-
 ---
 
 ## Errors
@@ -261,7 +239,7 @@ answers, because the protocol is one request line in and one response line out. 
 | `-32601` | unknown method |
 | `-32602` | invalid parameters: missing, wrong type, or an array where an object is required |
 | `-32603` | an unexpected internal failure |
-| `-32000` | an application failure: the engine, the database, the project or the assistant said no |
+| `-32000` | an application failure: the engine, the database or the project said no |
 
 `error.data`, when present, is the engine's own message — a SQLite constraint error, a
 project file's parse error, and so on. `params` must be an object; positional arrays are
@@ -280,7 +258,6 @@ target_link_libraries(my_tool PRIVATE
     timewarp::scheme    # Scheme's explicit-stack machine
     timewarp::sql       # SQLite database
     timewarp::project   # .twproject model
-    timewarp::ai        # the assistant: configuration, prompts, the client
     timewarp::api       # the JSON-RPC server, if embedding it
 )
 ```
@@ -295,16 +272,12 @@ target_link_libraries(my_tool PRIVATE
 | `timewarp/scheme/machine.hpp` | `scheme::Machine`, run-to-completion and resumable |
 | `timewarp/sql/database.hpp` | `sql::Database`, results, tables, schema |
 | `timewarp/project/project.hpp` | `project::Project`, `.twproject` load and save, groups |
-| `timewarp/ai/config.hpp` | `ai::Config`, the presets, the settings file and the environment overrides |
-| `timewarp/ai/prompt.hpp` | `ai::build_prompt` and the system prompt |
-| `timewarp/ai/client.hpp` | `ai::Client`, one request in flight, over Qt Network |
 | `timewarp/api/server.hpp` | `api::Server`, the dispatcher with no transport |
 | `timewarp/api/debug.hpp` | `debug::Session`, a breakpoint and step session for either engine |
 
 `timewarp::lang` and `timewarp::scheme` depend on nothing but the C++ standard library.
-`timewarp::sql`, `timewarp::project`, `timewarp::ai` and `timewarp::api` use Qt Core's
-string, JSON and file types; `timewarp::ai` adds Qt Network for the transport, and is built
-only where Qt has Network, because a client with no transport is not a smaller assistant.
+`timewarp::sql`, `timewarp::project` and `timewarp::api` use Qt Core's string, JSON and
+file types.
 
 ---
 

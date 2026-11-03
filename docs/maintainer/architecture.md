@@ -1,10 +1,10 @@
 # Architecture
 
-## Time Warp Studio v28.1.0 — System design
+## Time Warp Studio v28.2.0 — System design
 
-Time Warp Studio 28.1.0 is one desktop process for Linux. Ten interpreters, the Qt 6
-window that drives them, the lesson machinery, the SQLite connection, the assistant and
-the JSON-RPC server are all libraries in that process. Nothing crosses a process boundary
+Time Warp Studio 28.2.0 is one desktop process for Linux. Ten interpreters, the Qt 6
+window that drives them, the lesson machinery, the SQLite connection and the JSON-RPC
+server are all libraries in that process. Nothing crosses a process boundary
 to run a program, and there is no interpreter anywhere in the tree: the Python reference
 the ports were judged against was deleted, and what remains of it is a recorded corpus.
 
@@ -41,7 +41,6 @@ execution takes.
 | `timewarp_project` | `native/src/project/` | GUI thread | The `.twproject` model |
 | `timewarp_sql` | `native/src/sql/` | either | One SQLite connection, shared by the Database tab and a program's `SQL` |
 | `timewarp_lessons` | `native/src/lessons/` | GUI thread or a command | Curriculum, verifier, progress, classroom |
-| `timewarp_ai` | `native/src/ai/` | GUI thread | The assistant: configuration, prompts, one network client |
 | `timewarp_api` | `native/src/api/` | its own process or a test | JSON-RPC 2.0 with no transport of its own |
 | `timewarp_ui_core` | `native/src/ui/` (canvas, runner, sound, themes, tokens, stylesheet) | GUI thread | Everything `time_warp_player` links |
 | `timewarp_ui` | `native/src/ui/` (the rest) | GUI thread | Documents, editor, console, docks, settings |
@@ -474,18 +473,6 @@ failure would otherwise be swallowed. `progress.cpp` keeps a learner's place in
 the marks and the bundle. The Lessons panel, `timewarp_teach` and `timewarp_learn` all ask
 this library, so a learner's verdict and a teacher's mark are one function's answer.
 
-**`timewarp_ai`** is split at the only line that matters: what to ask and how to shape a
-request are pure functions (`prompt.cpp` composes the system prompt and the user turn;
-`config.cpp` reads, validates and rewrites the settings), and `client.cpp` is the one class
-that opens a socket. Two wire shapes are supported, OpenAI-compatible and Anthropic's
-Messages API, which is why a vendor such as DeepSeek is a preset holding an endpoint and a
-model rather than a third protocol. The configuration never holds the key it sends:
-`effective_key()` prefers `TIME_WARP_AI_API_KEY`, a stored key goes to the platform's own
-store through `keyring.cpp`, and every message passes through `redact()` before it is shown.
-`history.cpp` is the opt-in conversation file. The client is asynchronous and every request
-streams; `time_warp_ai` waits on an event loop rather than the library growing a second,
-blocking path. The manual is [the assistant](../user/assistant.md).
-
 **`timewarp_api`** is JSON-RPC 2.0 over newline-delimited JSON with no transport of its own.
 `api::Server` takes an `istream` and an `ostream`, which is how a process, a test with string
 streams or an embedding application all drive it. It owns a `sql::Database` and a
@@ -596,8 +583,8 @@ it, or add it to the waiver table and say why.
 
 ### Adding a panel
 
-The right column's Variables, Telemetry, Debug, Lessons, Classroom, Database, Reference and
-Assistant pages are real panels in `native/include/timewarp/ui/panels.hpp`, implemented in
+The right column's Variables, Telemetry, Debug, Lessons, Classroom, Database and Reference
+pages are real panels in `native/include/timewarp/ui/panels.hpp`, implemented in
 `native/src/ui/panels_inspectors.cpp`, `panels_lessons.cpp`, `panels_classroom.cpp` and their
 neighbours, driven by data the window gets from the runners. `PlaceholderPanel` remains as
 the documented way to stand in for a panel that does not exist yet: a real widget with honest

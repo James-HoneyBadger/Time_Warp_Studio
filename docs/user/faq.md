@@ -26,11 +26,9 @@ object system (Smalltalk).
 see it draw. The checked curriculum is there for teaching, but nothing in the application
 assumes it will be used that way.
 
-**Is it free?** MIT licence. The assistant is off until you configure it, and any cost is
-whatever the service you choose charges — a model on your own machine charges nothing.
+**Is it free?** MIT licence, and nothing in the application costs money to use.
 
-**Does it need a network?** No. The one network call in the application is the assistant,
-and it only happens if you configure it and press a button.
+**Does it need a network?** No. The application makes no network calls of its own.
 
 ---
 
@@ -90,8 +88,7 @@ reports them in one table.
 terminal**. It is a real shell on a pseudo-terminal, and a text transcript rather than a
 screen, so a full-screen curses program has its escape sequences stripped.
 
-**Does the Studio send my code anywhere?** Only to the assistant, only when you ask it
-something, and only what the [assistant page](assistant.md#what-leaves-the-machine) lists.
+**Does the Studio send my code anywhere?** No. Your code stays on the machine.
 
 **What happens to unsaved changes when the window closes?** You are asked about every
 document with unsaved changes, in both panes, before anything closes. Autosave also keeps

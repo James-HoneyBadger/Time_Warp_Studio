@@ -28,7 +28,7 @@
     <p>
       A checked curriculum of 20 lessons and 60 checkpoints ships with it for
       teaching, and the whole application is offline: it makes no network call of
-      its own unless you configure the assistant.
+      its own.
     </p>
   </description>
 
@@ -66,6 +66,14 @@
   </keywords>
 
   <releases>
+    <release version="28.2.0" date="2026-11-03">
+      <description>
+        <p>The AI assistant is removed: the page beside the editor, its settings
+        dialog, the suggested next line, the ai.ask method and the time_warp_ai tool,
+        with the Qt Network and libsecret dependencies they brought. The application
+        now makes no network call of its own.</p>
+      </description>
+    </release>
     <release version="28.1.0" date="2026-11-01">
       <description>
         <p>A renewed interface. The chrome is one row, its icons are drawn rather

@@ -37,12 +37,11 @@ release notes unless you prefer otherwise, and the fix ships as a patch release.
 ## What the surface is
 
 Time Warp Studio is an offline desktop application. It ships no server component, binds no
-port and listens on nothing. Three things in it reach outside the process, and all three are
+port and listens on nothing. Two things in it reach outside the process, and both are
 deliberate:
 
 | Reaches | What, and when |
 | --- | --- |
-| **The network** | The assistant, and only it: one HTTPS request to the endpoint *you* configured, sent when you press a button. Off until configured. [The assistant page](docs/user/assistant.md) lists every field that leaves the machine |
 | **A shell** | The embedded terminal, and only if you enable it in Settings. It runs your own login shell on a pseudo-terminal, with your privileges, in the current document's folder |
 | **An audio device** | `SOUND` and `PLAY` write a WAV and hand it to `pw-play`, `paplay`, `aplay`, `ffplay` or `play` |
 
@@ -93,14 +92,11 @@ device, or leave the directory it was given.
 - **The parity corpus** (`native/tests/golden/lang_corpus.json.gz`) is data: program text
   and the reference's answers, read by `make golden-check` and executed by the native
   engines only. It is development tooling and is not installed.
-- **The AI key** is a secret. It can come from `TIME_WARP_AI_API_KEY` and never be stored,
-  it goes to the system keyring where the build found one, and it is stripped from every
-  message and every error the client produces by `redact()`.
 
 ### Dependencies
 
-C++20 with Qt 6 (Widgets, Core, Gui, Network for the assistant), SQLite, zlib for classroom
-bundles, and optionally Qt Svg and Qt PrintSupport for drawing export and printing. Linux
+C++20 with Qt 6 (Widgets, Core, Gui), SQLite, zlib for classroom bundles, and optionally
+Qt Svg and Qt PrintSupport for drawing export and printing. Linux
 only. There is no interpreter at run time and no third-party runtime beyond Qt and SQLite;
 keep them updated. `security.yml` scans the tree with Trivy on every push and weekly, and
 uploads the result as SARIF, so a finding appears in the repository's Security tab rather
@@ -123,8 +119,6 @@ the repository.
 - Load programs from sources you trust, and read a program before running it — the editor
   is right there.
 - Add a device path with `TIME_WARP_PORTS` only if you know what is plugged into it.
-- The assistant is off until you configure it. A model on your own machine
-  (`localhost`) sends nothing anywhere, which is the configuration for a classroom.
 
 ## Acknowledgements
 

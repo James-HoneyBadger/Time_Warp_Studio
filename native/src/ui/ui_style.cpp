@@ -683,10 +683,6 @@ QLabel#sqlEmptyState { color: %%muted%%; }
 QLabel#sqlDatabasePath { color: %%muted%%; font-size: %%fontSmall%%; }
 QLabel#commandReferenceEffect { color: %%text%%; }
 QLabel#commandReferenceStatus { color: %%muted%%; font-size: %%fontSmall%%; }
-QLabel#aiContextHint, QLabel#aiPrivacy, QLabel#aiUsage, QLabel#aiStatus {
-    color: %%muted%%;
-    font-size: %%fontSmall%%;
-}
 /* The database header is three buttons and a path in the width of a dock, so its
    buttons take the smaller rank. */
 QPushButton#sqlOpenDatabase, QPushButton#sqlNewDatabase,

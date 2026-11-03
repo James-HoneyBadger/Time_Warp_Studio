@@ -306,18 +306,6 @@ void draw(Glyph id, QPainter& painter, const QColor& tint) {
             stroke(painter, line(8.2, 8.0, 10.6, 8.0));
             break;
         }
-        case Glyph::Assistant: {
-            QPainterPath star;
-            star.moveTo(8.0, 2.6);
-            star.quadTo(8.9, 7.1, 13.4, 8.0);
-            star.quadTo(8.9, 8.9, 8.0, 13.4);
-            star.quadTo(7.1, 8.9, 2.6, 8.0);
-            star.quadTo(7.1, 7.1, 8.0, 2.6);
-            fill();
-            painter.drawPath(star);
-            outline();
-            break;
-        }
         case Glyph::Notebook: {
             stroke(painter, rounded_rect(3.0, 2.8, 10.0, 10.4, 1.4));
             stroke(painter, line(6.0, 2.8, 6.0, 13.2));

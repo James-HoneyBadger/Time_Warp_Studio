@@ -7,7 +7,7 @@
 // made by reading two documents and remembering. This is the missing half, and it is
 // a pure function -- two strings in, a list of lines out -- so the interesting part
 // is testable without a window and reusable by anything that compares text (a lesson
-// diff, a project check, the assistant).
+// diff, a project check).
 //
 // #### The algorithm, and its bound
 //

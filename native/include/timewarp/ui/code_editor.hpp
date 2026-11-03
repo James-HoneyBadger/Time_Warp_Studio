@@ -79,10 +79,6 @@ struct EditorSettings {
     /// Keep a copy of a document that has unsaved changes, so a crash costs the
     /// last few minutes rather than the whole buffer.
     bool autosave = true;
-    /// Ask the configured assistant for a suggested next line when typing pauses.
-    /// Off unless the user turns it on in AI Settings: this one sends while you
-    /// type, which is a different promise from a panel that waits for a button.
-    bool inline_suggestions = false;
     /// How often, in seconds. The floor is ten: a snapshot per keystroke is a
     /// disk-write loop, not a safety net.
     int autosave_seconds = 120;
@@ -194,25 +190,6 @@ public:
     [[nodiscard]] QList<int> extraCursors() const { return extra_cursors_; }
     [[nodiscard]] bool multiCursorActive() const { return !extra_cursors_.isEmpty(); }
 
-    // -- a suggested next line --------------------------------------------
-    //
-    // A ghost line painted after the caret. What produces it is the window's
-    // business -- the editor never opens a socket and never reads a setting it was
-    // not handed -- so this half is a small, testable surface: show text, accept it
-    // with Tab, dismiss it with Esc.
-
-    /// Shows `text` after the caret as a suggestion. Only its first line is shown,
-    /// because a line-based editor has no way to show a second one honestly.
-    void setGhostText(const QString& text);
-    [[nodiscard]] const QString& ghostText() const noexcept { return ghost_; }
-    /// Inserts the suggestion at the caret as one undo step. False when there was
-    /// nothing to accept.
-    bool acceptGhostText();
-    void clearGhostText();
-    /// Everything before the caret, at most `limit` characters of it. The tail,
-    /// because a suggestion is about what comes next.
-    [[nodiscard]] QString textBeforeCursor(int limit = 4000) const;
-
     // -- indentation ------------------------------------------------------
 
     /// Indents the selected lines by one level, or removes one level when
@@ -315,9 +292,6 @@ signals:
     void cursorMoved(int line, int column);
     /// A breakpoint was added or removed, so the window can persist the set.
     void breakpointsChanged();
-    /// The typing pause expired and a suggestion is wanted for `prefix`. The window
-    /// owns the endpoint; the editor only says that one would be useful.
-    void inlineSuggestionWanted(const QString& prefix);
 
 protected:
     void resizeEvent(QResizeEvent* event) override;
@@ -366,9 +340,6 @@ private:
     /// Debounce for the checker: typing a word must not run the rules on every
     /// keystroke, and a red squiggle that appears mid-word is noise.
     QTimer* lint_timer_ = nullptr;
-    /// The typing pause before a suggestion is asked for, and the suggestion itself.
-    QTimer* suggest_timer_ = nullptr;
-    QString ghost_;
     /// Extra caret positions, kept sorted and free of duplicates.
     QList<int> extra_cursors_;
     /// Inserts `text` at every caret, Backspace and Delete at every caret.

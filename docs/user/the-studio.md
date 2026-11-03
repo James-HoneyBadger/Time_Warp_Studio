@@ -2,9 +2,8 @@
 
 This is the manual for the window: documents, projects, the REPL bar, debugging, SQL,
 the embedded terminal and appearance. The commands a language understands are in the
-[language reference](../languages/reference.md); the [assistant](assistant.md) and
-[automation](automation.md) have their own pages, because each is a service you set up
-separately.
+[language reference](../languages/reference.md); the [automation](automation.md) API has
+its own page, because it is a service you set up separately.
 
 ---
 
@@ -14,7 +13,7 @@ separately.
 | --- | --- |
 | **Editor** | Documents as tabs, a line-number gutter, the current line highlighted, syntax colouring for the language, and a minimap |
 | **Output and Graphics** | The console, the error list, the turtle log and the canvas, with a pose strip under the canvas and a scrubber that replays the drawing |
-| **Right column** | Variables, Telemetry, Debug, Lessons, Classroom, Database, Reference and Assistant |
+| **Right column** | Variables, Telemetry, Debug, Lessons, Classroom, Database and Reference |
 | **Projects dock** | The project tree (**View > Project Panel**, `Ctrl+Shift+E`) |
 | **REPL bar** | One command at a time, under the editor |
 | **Status bar** | The document's path, its language, cursor position and run state |
@@ -389,6 +388,6 @@ directory, which is how the tests avoid touching a real learner's files.
 | `Ctrl+Shift+E`, `Ctrl+Shift+G` | Project panel, new group |
 | `Ctrl+Shift+N`, `Ctrl+Shift+O`, `Ctrl+Alt+R` | New project, open project, run project |
 | `Ctrl+,` | Settings |
-| `Ctrl+Shift+A`, `Ctrl+Alt+A`, `Ctrl+Alt+H` | Assistant, text size, high contrast |
+| `Ctrl+Alt+A`, `Ctrl+Alt+H` | Text size, high contrast |
 | `Shift+F10`, `F11`, `Shift+F11` | Next theme, focus mode, presentation mode |
 | `F1`, `Ctrl+F1`, `F12`, `F10` | Context help, keyword inspector, guided tour, command palette |

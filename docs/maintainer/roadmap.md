@@ -19,7 +19,7 @@ it, so shipping one without correcting the documentation fails a gate.
 
 | Item | Why it is not there |
 | --- | --- |
-| Automatic update check | The application has no account, no telemetry and one network call, which is the assistant. An update check would be a second one, and the packaging story — four formats and a container — makes "is there a newer version" a question the package manager already answers |
+| Automatic update check | The application has no account, no telemetry and no network calls of its own. An update check would be the first one, and the packaging story — four formats and a container — makes "is there a newer version" a question the package manager already answers |
 | Snap | A third sandbox format beside Flatpak and AppImage, for a distribution channel this project does not build for otherwise |
 | arm64 AppImage | The ARM build of the bundling tool is not exercised by the release pipeline, and an artifact nobody has run is not one to publish. arm64 is served by the `.deb`, `.rpm` and tarball |
 | Fully static build | Qt cannot be linked statically in a way that keeps font rendering, platform plugins and the SVG module working without a build of Qt to match. The AppImage is the answer that ships |
