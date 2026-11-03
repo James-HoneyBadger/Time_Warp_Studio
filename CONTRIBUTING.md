@@ -71,7 +71,7 @@ make test-all          # test, smoke, both command matrices, the corpus, curricu
 make smoke             # every example program through the native engines
 make command-matrix    # every command-table row as a program
 make repl-matrix       # the same rows through a REPL session
-make golden-check      # the ports against the frozen corpus, 634 programs
+make golden-check      # the ports against the frozen corpus, 636 programs
 make teach-check       # every lesson solution, and every starter
 make doc-links doc-claims # the guides: links, anchors, and the facts they claim
 make lint-md           # the house Markdown rules

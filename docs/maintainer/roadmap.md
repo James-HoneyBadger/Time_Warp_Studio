@@ -46,7 +46,7 @@ it, so shipping one without correcting the documentation fails a gate.
 | Database | A SQLite Database panel, the shared `SQL` statement in nine languages, scripts, tables and schema; compiled programs link SQLite |
 | Automation | JSON-RPC over stdin and stdout, and the `twc` terminal compiler |
 | Packaging | `make install`; tagged releases build `.deb`, `.rpm`, AppImage, tarball, Flatpak and a container image for Linux |
-| Quality gates | 24 CTest suites in four build configurations; the frozen-corpus gate over 636 programs; 534 command rows run as programs and through the REPL; 67 example programs through the smoke gate; the documentation gates |
+| Quality gates | 23 CTest suites in four build configurations; the frozen-corpus gate over 636 programs; 534 command rows run as programs and through the REPL; 67 example programs through the smoke gate; the documentation gates |
 
 ---
 

@@ -67,7 +67,7 @@ make test-all              # every gate CI runs
 make smoke                 # every example program through the native engines
 make command-matrix        # one row per command, from native/share/command_rows.json
 make repl-matrix           # the same rows through a REPL session
-make golden-check          # the ports against the frozen corpus, 634 programs
+make golden-check          # the ports against the frozen corpus, 636 programs
 make teach-check           # every lesson solution and starter
 make lint-md doc-links doc-claims tree-check registry-check
 
