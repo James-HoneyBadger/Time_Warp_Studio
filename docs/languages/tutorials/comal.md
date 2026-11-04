@@ -18,9 +18,9 @@ Press **F9** to run a document. The output blocks below are what the program pri
 Hello, World!
 ```
 
-The line number is optional and is an address rather than a sort key. `PRINT` writes
-its items and ends the line, and `END` stops the program if it is reached. Nothing
-else is needed: there is no header, no declaration and no semicolon to forget.
+The line number is optional and is an address, not a sort key. `PRINT` writes its
+items and ends the line, and `END` stops the program if it is reached. Nothing else
+is needed: there is no header, no declaration and no semicolon to forget.
 
 ## Step 1: variables and the two PRINT separators
 
@@ -39,11 +39,11 @@ Hello, Ada - 3 new messages
 ```
 
 `:=` assigns. A name ending in `$` holds text and everything else holds a number.
-The two separators are not the same word: `,` prints a space of its own on each side
-of the item, which is why the first line has doubled spaces where the string already
-ends or starts with one, and `;` prints the item with nothing added. A sentence built
-from a fixed part and a value is therefore printed piece by piece with `;` between
-the pieces, since `+` does not join two strings.
+The two separators are not the same word. `,` prints a space of its own on each side
+of the item, so the first line has doubled spaces where the string already ends or
+starts with one, and `;` prints the item with nothing added. A sentence built from a
+fixed part and a value is therefore printed piece by piece with `;` between the
+pieces, since `+` does not join two strings.
 
 ## Step 2: selection
 
@@ -67,8 +67,8 @@ checked
 ```
 
 `ELIF` is part of the language, so one block can carry as many tests as it needs,
-and `ENDIF` closes the whole chain once. Each branch is a block of lines rather than
-a single statement, which is the difference from BASIC that COMAL exists for. The
+and `ENDIF` closes the whole chain once. Each branch is a block of lines, not a
+single statement. That is the difference from BASIC that COMAL exists for. The
 single-line form `IF SCORE > 50 THEN PRINT "pass"` still works for one action.
 
 ## Step 3: counted and conditional loops
@@ -99,7 +99,7 @@ N is 3
 
 `FOR … NEXT` counts its variable from the first value to the last inclusive, and
 `STEP` changes the increment, including downwards as in `STEP -3`. `WHILE … ENDWHILE`
-tests before each pass and runs zero times if the condition is false at the start;
+tests before each pass and runs zero times if the condition is false at the start.
 `REPEAT … UNTIL` is the other way round and always runs once. `EXIT` leaves a loop
 early, and `LOOP … ENDLOOP` repeats until an `EXIT`.
 
@@ -149,8 +149,8 @@ Draw a square with `MOVE` and `TURN`.
 -- 4 line(s), 0 shape(s)
 ```
 
-The turtle words are a Time Warp extension rather than part of COMAL-80, which had
-no graphics. `MOVE` goes forward along the heading, `TURN` turns clockwise and a
+The turtle words are a Time Warp extension, not part of COMAL-80, which had no
+graphics. `MOVE` goes forward along the heading, `TURN` turns clockwise and a
 negative angle turns anticlockwise, `PENUP` and `PENDOWN` control inking, and `HOME`
 returns the turtle to the centre. Inside a counted loop that is a square: four moves
 of 80 units, each followed by a quarter turn.
@@ -194,8 +194,8 @@ program prints its line and looks almost right.
 closes another, so the word has to match the block it ends.
 
 **Line numbers are addresses.** They name a line for `GOTO` and `GOSUB` and do not
-order the program, which runs top to bottom as written. Writing `10` after `20` in
-the file runs the `10` line second, whatever the numbers say.
+order the program. It runs top to bottom as written. Writing `10` after `20` in the
+file runs the `10` line second, whatever the numbers say.
 
 ## Commands used here
 

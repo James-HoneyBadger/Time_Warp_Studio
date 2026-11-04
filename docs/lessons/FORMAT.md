@@ -1,9 +1,9 @@
 # Lessons: technical reference
 
-The curriculum, how a checkpoint is checked down to the detail, where progress is
-kept, and the protocol the IDE drives it with.
+This is the curriculum, the detail of how a checkpoint is checked, where progress is kept,
+and the protocol the IDE drives it with.
 
-Readers who want to *use* the lessons want [the curriculum](README.md) instead.
+If you want to *use* the lessons, read [the curriculum](README.md) instead.
 
 ---
 
@@ -19,15 +19,15 @@ native/src/lessons/  the library that reads it:
   classroom.cpp      rosters, handouts, marking, bundles
 ```
 
-`lessons.json` is data rather than code for three reasons, and each one has been
+`lessons.json` is data instead of code. There are three reasons, and each one has been
 paid for at least once:
 
 - the panels and tools that show the curriculum can be replaced without touching
-  it, which is how the same twenty lessons are reachable from a terminal, from the
+  it. That is how the same twenty lessons are reachable from a terminal, from the
   IDE, and from a printed plan;
 - a teacher can author a lesson without editing C++;
-- **the whole corpus can be verified in one pass**, which is what
-  `time_warp_teach validate` does and what nothing else in the project could do for a
+- **the whole corpus can be verified in one pass**. That is what
+  `time_warp_teach validate` does, and what nothing else in the project could do for a
   curriculum expressed as code.
 
 ## 2. Schema
@@ -76,8 +76,8 @@ paid for at least once:
 | `expect_lines` / `expect_turtle` / `expect_error` | exactly one | See §3. |
 
 Exactly one expectation is required. None means a checkpoint that would pass
-everybody; two means one of them is silently ignored. Both are refused when the
-curriculum loads rather than discovered in front of a class.
+everybody. Two means one of them is silently ignored. Both are refused when the
+curriculum loads, before they can be discovered in front of a class.
 
 | Extra field | Notes |
 | ----------- | ----- |
@@ -94,9 +94,9 @@ curriculum loads rather than discovered in front of a class.
 The lines the program must print, **exactly, in that order**. Compared as a list,
 so printing one line too many is not "close enough".
 
-The comparison ignores the executors' own commentary. Every one of the prefixes
-below is a *report about the run* rather than program output, and a checkpoint
-about arithmetic must not have to predict them:
+The comparison ignores the executors' own commentary. Every prefix below is a
+*report about the run*, not program output. A checkpoint about arithmetic should not
+have to predict them:
 
 ```text
 ✅  ℹ️  🎨  🚀  🐢  📝  💡  📎  ⚠️
@@ -106,11 +106,11 @@ Two details the extraction gets right on purpose:
 
 - **A newline is appended to any output entry that lacks one** before the whole
   output is split. The executors disagree about whether an entry includes its
-  newline, and a whole-program language can return several lines in one entry; a
+  newline, and a whole-program language can return several lines in one entry. A
   language that omitted the newline would otherwise have its first two lines glued
-  together and a *correct* program would fail.
-- **Interior blank lines are kept** — a program may legitimately print one — while
-  the empty tail that a final newline produces is not.
+  together, and a *correct* program would fail.
+- **Interior blank lines are kept**. A program may legitimately print one. The empty
+  tail that a final newline produces is dropped.
 
 ### `expect_turtle`
 
@@ -127,7 +127,7 @@ Two details the extraction gets right on purpose:
 | `returns_home` | The turtle ended within 0.5 of where it started |
 
 Pen segments and filled shapes are counted separately because **two different
-things draw**: a line lays down pen segments, and a filled region paints shapes.
+things draw**. A line lays down pen segments, and a filled region paints shapes.
 A checkpoint about one should not have to care how much of the other the program
 produced.
 
@@ -140,10 +140,10 @@ needs 4" is the sentence that tells a learner what to change.
 "expect_error": "Unknown BASIC command"
 ```
 
-The fragment the program must **report as an error**. Looked for anywhere in the
-output rather than at the start of it, because executors wrap their errors
-differently (`[line 10]` here, a language name there) and a lesson about
-recognising a failure should not depend on the wrapper.
+The fragment the program must **report as an error**. It is looked for anywhere in
+the output, not just at the start. Executors wrap their errors differently
+(`[line 10]` here, a language name there), and a lesson about recognising a failure
+should not depend on the wrapper.
 
 This is checked **before** the generic "your program reported an error" branch.
 That ordering matters: for this checkpoint the failure *is* the answer, and the
@@ -156,22 +156,22 @@ the length of one test.)
 source, and executes it with:
 
 - **a three-second budget** (`VERIFY_TIME_LIMIT`). A check that hangs is worse
-  than a check that fails: a learner cannot tell a program that is thinking from
+  than a check that fails. A learner cannot tell a program that is thinking from
   one that is stuck, and three seconds is far beyond any checkpoint here.
 - **a refusal to be prompted.** A lesson program that waits for keyboard input
   cannot be checked by somebody who is not there, so a pending prompt is appended
-  as an error and the checkpoint fails with it. That is a deliberate limitation
-  rather than an oversight: it is why no checkpoint asks the learner to write a
-  program that reads input.
+  as an error and the checkpoint fails with it. That is a deliberate limitation,
+  not an oversight. It is why no checkpoint asks the learner to write a program
+  that reads input.
 
-An error in the learner's program is reported as itself rather than as a failed
-checkpoint — "you have a typo on line 30" is a different thing to tell somebody
-than "the answer is not right yet".
+An error in the learner's program is reported as itself, not as a failed
+checkpoint. "You have a typo on line 30" is a different thing to tell somebody than
+"the answer is not right yet".
 
 ## 5. What `validate_curriculum` refuses
 
 Run as `time_warp_teach validate`, `time_warp_learn --self-check`, and on every build
-by `lessons_tests`, which asks the same library the same question.
+by `lessons_tests`. Each asks the same library the same question.
 
 For each checkpoint:
 
@@ -209,16 +209,16 @@ exist or that is taught later, and any language in the studio with no lesson.
 ```
 
 - `checkpoint` is the **first unfinished** checkpoint, clamped to the lesson.
-- Written on every change rather than on exit: the application can be closed at any
-  moment and a lost afternoon is worse than a small write.
-- An unreadable file is reported and then ignored rather than raised. Losing the
-  file is bad; refusing to start is worse.
+- Written on every change, not just on exit. The application can be closed at any
+  moment, and a lost afternoon is worse than a small write.
+- An unreadable file is reported and then ignored. Losing the file is bad;
+  refusing to start is worse.
 - Entries for lessons no longer in the curriculum are dropped on the next save.
 - Re-passing an earlier checkpoint does **not** move a learner backwards.
 
 `TIME_WARP_DATA_DIR` relocates all of this. It exists because a test that records
-hints must not write into a learner's file — and because it *did*, the hint
-counter being cumulative is how the leak was noticed.
+hints must not write into a learner's file. It once did, and the hint counter being
+cumulative is how the leak was noticed.
 
 ## 7. The classroom
 
@@ -239,9 +239,9 @@ counter being cumulative is how the leak was noticed.
   a file a teacher collects are the same file. It never overwrites an existing
   hand-in unless the caller asks for it, and says which of the two happened.
 - `mark` reads the file once and the mark is taken from those bytes. It calls the
-  verifier **directly rather than through a `LessonManager`**, so marking writes no
-  progress at all — a teacher collecting a class cannot move a learner's place in
-  the curriculum, nor their own.
+  verifier **directly, not through a `LessonManager`**. Marking writes no progress
+  at all, so a teacher collecting a class cannot move a learner's place in the
+  curriculum, nor their own.
 - `unbundle` resolves each member path before writing and refuses anything outside
   the classroom.
 
@@ -250,7 +250,7 @@ counter being cumulative is how the leak was noticed.
 <!-- history -->
 The IDE and the two commands drive all of this through `timewarp_lessons`, in
 process. What follows is the *reference engine's* harness protocol, recorded for
-anyone reading how the port was checked. Nothing drives it any more: the example and
+anyone reading how the port was checked. Nothing drives it any more. The example and
 command harnesses spawn `native/tools/check.cpp` (`time_warp_check`), which asks the
 same questions of the engines the product ships. The worker and its engine went in
 18.0, and the harnesses that drove them are `time_warp_gates` now.
@@ -274,7 +274,7 @@ Two decisions worth knowing:
   been spoiled before it is read. `LessonCheckpoint` has no field for one.
 - **A `lesson-check` is refused while a program is running.** Both run the engine,
   so two at once would share module state. The refusal is reported as
-  `"a program is running; stop it before checking a lesson"` — the refusal is the
+  `"a program is running; stop it before checking a lesson"`. The refusal is the
   feature, and it is also the useful thing to be told.
 
 An error reply is `{"t":<kind>,"ok":false,"error":"…"}`, and every one of them
@@ -295,7 +295,7 @@ is [`timewarp_lessons`](../../native/include/timewarp/lessons/progress.hpp).
    prints a skeleton the loader accepts.
 3. Author the checkpoints, then run `time_warp_teach validate` until it is silent.
 4. `time_warp_teach plans --write docs/lessons/plans` to refresh the plan documents.
-5. `time_warp_learn list` and the panel should both offer it — no further
+5. `time_warp_learn list` and the panel should both offer it. No further
    registration is needed, because both read the same file.
 
 ## 10. Where this is tested

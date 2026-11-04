@@ -49,10 +49,11 @@ Nothing else opens a socket, starts a process or reads a device.
 
 ### A program is not a sandbox
 
-A program runs in the application's process, with the user's privileges. It is not a
-security boundary and is not presented as one. What it can do, and the fence around each:
+A program runs in the application's process, with your privileges. It is not a security
+boundary, and the Studio never pretends it is one. Here is what a program can do, and the
+fence around each:
 
-- **Files.** BASIC's file channel (`OPEN`, `GET #`, `PUT #`) reads and writes what the user
+- **Files.** BASIC's file channel (`OPEN`, `GET #`, `PUT #`) reads and writes what you
   can, but only inside **one directory**: the process's working directory, which is the
   document's folder when the Studio starts on a file and the launch directory otherwise. A
   name is resolved against it, `..` is followed and then checked, and a path that lands

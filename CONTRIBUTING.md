@@ -66,7 +66,7 @@ Everything is C++ built from this tree. There is no interpreter to install and n
 `make tree-check` fails if a `.py` file or a Python tool's configuration file reappears.
 
 ```bash
-make test              # the 24 C++ suites
+make test              # the 23 C++ suites
 make test-all          # test, smoke, both command matrices, the corpus, curriculum and docs
 make smoke             # every example program through the native engines
 make command-matrix    # every command-table row as a program

@@ -8,8 +8,8 @@ inside the application: the Help pane is built from the headings and tables belo
 listed here is a page you can read from inside the Studio, and one that is not listed is a
 page the Help pane does not know about.
 
-The set is organised by who is reading, because the four audiences want different things
-from the same application.
+The set is organised by who is reading: the four audiences want different things from
+the same application.
 
 ---
 

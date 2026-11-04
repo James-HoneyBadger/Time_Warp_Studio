@@ -1,10 +1,10 @@
 # Logo: drawing by telling a turtle where to go
 
-Logo was written in 1967 at Bolt, Beranek and Newman, and became the usual way to
-introduce children to programming because its turtle turns a program into a
-picture. `FORWARD 100` moves the turtle 100 units along its heading and leaves a
-line behind; `RIGHT 90` turns it. Logo runs as a whole program: the file is read, its
-procedures are defined in the order they appear, and then the statements run.
+Logo was written in 1967 at Bolt, Beranek and Newman. It became the usual way to
+introduce children to programming because its turtle turns a program into a picture.
+`FORWARD 100` moves the turtle 100 units along its heading and leaves a line behind;
+`RIGHT 90` turns it. Logo runs as a whole program: the file is read, its procedures
+are defined in the order they appear, and then the statements run.
 
 Press **F9** to run a document. The output blocks below are what the program prints,
 and for a drawing that is the run report's count of strokes.
@@ -23,10 +23,10 @@ FORWARD 100
 
 The turtle starts at the centre of the canvas facing up, and the drawing is an L:
 one line up from the centre and one to the right of its end. Heading 0 is north and
-the heading increases clockwise, which is the opposite of the mathematical
-convention, so `RIGHT` is the natural turn and `LEFT` is its opposite. The run
-report counts two strokes: the turtle moved twice with the pen down, and nothing was
-filled or outlined.
+the heading increases clockwise. That is the opposite of the mathematical convention,
+so `RIGHT` is the natural turn and `LEFT` is its opposite. The run report counts two
+strokes: the turtle moved twice with the pen down, and nothing was filled or
+outlined.
 
 ## Step 1: REPEAT closes the shape
 
@@ -41,8 +41,8 @@ REPEAT 4 [FD 100 RT 90]
 ```
 
 `REPEAT` takes a count and a bracketed list of commands. The brackets are the
-argument: without them the command list has nowhere to end, and `REPEAT 4 FD 100`
-is refused. `FD` and `RT` are the short spellings of `FORWARD` and `RIGHT`, and the
+argument. Without them the command list has nowhere to end, and `REPEAT 4 FD 100` is
+refused. `FD` and `RT` are the short spellings of `FORWARD` and `RIGHT`, and the
 whole run of drawing words has them.
 
 ## Step 2: the pen, and moving without drawing
@@ -68,7 +68,7 @@ REPEAT 4 [FD 60 RT 90]
 
 `PU` lifts the pen and `PD` lowers it, so the `FD 110` between the squares moves the
 turtle across the canvas and leaves nothing. That is how a picture is made of
-separate parts: the pen is the only thing that decides whether a move marks the
+separate parts. The pen is the only thing that decides whether a move marks the
 canvas. The first square is thick and red, the second thin and blue. A colour is
 written with a quote before the name, `"red`, which is Logo's way of saying "this
 word is data, not a command".
@@ -89,10 +89,10 @@ REPEAT 4 [FD :SIDE RT 90]
 ```
 
 `MAKE` gives a name a value and the name is quoted, because it is the word being
-stored rather than its value. Reading it back needs a colon: `:SIDE` is the value.
-The distinction is the whole of Logo's variable syntax and the most common source of
-a program that draws nothing, since a bare `SIDE` is a word Logo has never been told
-about and evaluates to 0.
+stored, not its value. Reading it back needs a colon: `:SIDE` is the value. The
+distinction is the whole of Logo's variable syntax and the most common source of a
+program that draws nothing. A bare `SIDE` is a word Logo has never been told about
+and evaluates to 0.
 
 ## Step 4: a procedure
 
@@ -118,7 +118,7 @@ SQUARE 30
 it. The body is indented for the reader only, since `END` is what ends it. Once the
 definition has been read, `SQUARE` is a command like `FORWARD`, and `SQUARE 30` runs
 the same body with `:SIZE` holding 30. A procedure is the only place a parameter
-lives, so a shape that must work at two sizes is written once and called twice.
+lives. A shape that must work at two sizes is written once and called twice.
 
 ## Step 5: recursion
 
@@ -144,19 +144,19 @@ TREE 80
 ```
 
 The first line is the stopping rule: below fifteen units the procedure returns
-before drawing, and `STOP` inside an `IF` block ends the call rather than the
-program. Each call draws a trunk, leans left for one smaller tree, leans right for
-another, and undoes both turns so the turtle ends where it started facing where it
-started. The `BK :SIZE` is what makes that true, and it is the part a first attempt
-leaves out: without it every call starts where the last one finished and the branches
-wander across the canvas.
+before drawing, and `STOP` inside an `IF` block ends the call, not the program. Each
+call draws a trunk, leans left for one smaller tree, leans right for another, and
+undoes both turns so the turtle ends where it started facing where it started. The
+`BK :SIZE` is what makes that true, and it is the part a first attempt leaves out.
+Without it every call starts where the last one finished and the branches wander
+across the canvas.
 
 ## Where it catches people out
 
 **`REPEAT` needs brackets.** The count is a number and the body is a list, so the
 list cannot be left implicit. This is refused with the message
-`REPEAT requires [commands]`, and because the two commands after it on the line are
-statements of their own they still run: one stroke and no square.
+`REPEAT requires [commands]`. The two commands after it on the line are statements of
+their own, so they still run: one stroke and no square.
 
 ```logo
 REPEAT 4 FD 100 RT 90
@@ -180,7 +180,7 @@ REPEAT 4 [FD SIDE RT 90]
 applies inside a procedure body, where the parameter is `:SIZE`.
 
 **A definition belongs to one run.** Logo is run whole, so the REPL bar re-runs
-whatever is in its entry as a complete program: a `TO … END` typed at the bar is
+whatever is in its entry as a complete program. A `TO … END` typed at the bar is
 defined and then thrown away with the run. Put definitions and the calls that use
 them in one document.
 

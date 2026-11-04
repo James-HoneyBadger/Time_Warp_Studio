@@ -20,7 +20,7 @@ Press **F9** to run a document. The output blocks below are what the program pri
 Hello, World!
 ```
 
-`display` writes a value and `newline` ends the line. The operator comes first, which
+`display` writes a value and `newline` ends the line. The operator comes first. That
 is the one thing to learn before anything else: `(+ 1 2)` adds. Nothing is printed
 unless a program asks, so a file of definitions produces no output at all.
 
@@ -37,10 +37,10 @@ Add, multiply, divide and subtract with the operator in front.
 (6 42 2.5 5)
 ```
 
-A procedure takes as many arguments as it is given: `+` with three numbers adds
+A procedure takes as many arguments as it is given. `+` with three numbers adds
 three, `-` with two subtracts and `-` with three subtracts both. Division is exact
-where it can be, so `(/ 10 4)` is `2.5` rather than `2`. There is no precedence to
-learn because there is no infix: the parentheses say what is applied to what.
+where it can be, so `(/ 10 4)` is `2.5`, not `2`. There is no precedence to learn
+because there is no infix: the parentheses say what is applied to what.
 
 ## Step 2: definitions
 
@@ -64,7 +64,7 @@ Give a value a name, then define a procedure.
 ```
 
 `(define (square n) …)` is shorthand for `(define square (lambda (n) …))`, and the
-long form can be used directly, as the third expression does: a `lambda` is a
+long form can be used directly, as the third expression does. A `lambda` is a
 procedure, and a procedure in the first position is called. `define` at the top level
 of a file adds to the environment, and the REPL bar keeps those bindings between
 entries, so a definition typed there survives.
@@ -95,8 +95,8 @@ zero
 
 `cond` takes a list of clauses, each a test and the value to answer when the test is
 true; `else` catches the rest. `if` takes exactly three parts: a test, the value when
-it is true and the value when it is false. Both answer a value rather than performing
-an action, so `abs-value` returns its answer as an expression and prints nothing until
+it is true and the value when it is false. Both answer a value, they do not perform
+an action. So `abs-value` returns its answer as an expression and prints nothing until
 the caller displays it.
 
 ## Step 4: lists
@@ -155,10 +155,10 @@ Multiply a factorial out by recursion, then count with a named `let`.
 4
 ```
 
-A recursive procedure is the ordinary way to repeat something: `fact` calls itself
-with a smaller number and multiplies on the way back, and the `if` is both the
-answer and the stopping rule. `let loop` names a block and calls it, which is how a
-loop is written without mutation; `when` runs its body only while the test holds.
+A recursive procedure is the ordinary way to repeat something. `fact` calls itself
+with a smaller number and multiplies on the way back, and the `if` is both the answer
+and the stopping rule. `let loop` names a block and calls it. That is how a loop is
+written without mutation; `when` runs its body only while the test holds.
 
 ## Step 6: the turtle
 
@@ -180,12 +180,12 @@ Draw a hexagon by walking and turning.
 
 The turtle words are `forward` (or `fd`), `backward` (or `bk`), `right`, `left`,
 `goto`, `penup`, `pendown`, `home`, `circle` and `color`, which takes red, green and
-blue as numbers from 0 to 255. The angle is computed rather than written, so the
-same procedure draws any regular polygon: six sides turn by 360 divided by six.
+blue as numbers from 0 to 255. The angle is computed, not written, so the same
+procedure draws any regular polygon: six sides turn by 360 divided by six.
 
 ## Where it catches people out
 
-**The operator is not in the middle.** `(1 + 2)` is a call to the number 1, which
+**The operator is not in the middle.** `(1 + 2)` is a call to the number 1. It
 reports `attempt to call non-procedure: 1` and stops the run; the arithmetic that
 looks natural in every other language is not Scheme.
 
@@ -195,7 +195,7 @@ looks natural in every other language is not Scheme.
 
 `(display (+ 1 2))` is the program that prints 3.
 
-**`display` does not end the line.** Two displays run together, which is useful for
+**`display` does not end the line.** Two displays run together. That is useful for
 building a line and wrong when a line per value was wanted.
 
 ```scheme

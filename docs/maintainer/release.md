@@ -36,7 +36,7 @@ prose, and somebody has to read it.
 ## Before the tag
 
 ```bash
-make test                 # the 24 C++ suites
+make test                 # the 23 C++ suites
 make test-debug           # the same in Debug
 make asan                 # AddressSanitizer; ASAN=undefined for UBSan
 make golden-check         # the ports against the frozen corpus, 636 programs

@@ -1,11 +1,11 @@
 # The curriculum
 
-Twenty lessons in ten languages, two per language, with sixty checkpoints. A checkpoint is
-met when the learner's program **runs** and does what the lesson asked, so the curriculum is
-checked by the engine rather than compared against an answer.
+Twenty lessons across ten languages, two per language, sixty checkpoints in all. A
+checkpoint is met when the learner's program **runs** and does what the lesson asked, so the
+engine checks the curriculum instead of comparing it against an answer.
 
-Nothing in the application assumes the curriculum will be used. It is data, shipped beside
-the application, and the IDE, `time_warp_learn` and `time_warp_teach` all read the same file.
+Nothing in the application assumes the curriculum gets used. It ships as data, beside the
+application, and the IDE, `time_warp_learn` and `time_warp_teach` all read the same file.
 
 ---
 
@@ -24,10 +24,10 @@ the application, and the IDE, `time_warp_learn` and `time_warp_teach` all read t
 | Smalltalk | Objects and Messages in Smalltalk | Classes and Blocks in Smalltalk |
 | Forth | First Words in Forth | Loops, Variables and Recursion in Forth |
 
-The plans — objectives, teacher notes, and both the starting point and the worked answer for
-every checkpoint — are generated from the curriculum into
-[`plans/`](plans/README.md). Those files are output: `time_warp_teach plans --write
-docs/lessons/plans` writes them and CI fails on a diff, so they are never edited by hand.
+The plans live in [`plans/`](plans/README.md): objectives, teacher notes, and both the
+starting point and the worked answer for every checkpoint. The generator writes them.
+`time_warp_teach plans --write docs/lessons/plans` produces the files and CI fails on a
+diff, so nobody edits them by hand.
 
 ### How a checkpoint is checked
 
@@ -38,14 +38,14 @@ behaviour is compared with what the checkpoint asked for:
 - **what it drew** — pen segments, filled shapes, whether the shape closed, or
 - **the error it reported**, where recognising the failure is the lesson.
 
-That is why `PRINT 6 * 7` and `PRINT 42` pass the same checkpoint, and why a checkpoint
-about drawing cannot be passed by printing a description of a drawing. It is also why the
-check runs in the engine: the panel's tick and the teacher's mark are one function's answer
-rather than two opinions that can drift apart.
+That is why `PRINT 6 * 7` and `PRINT 42` pass the same checkpoint, and why you cannot pass
+a drawing checkpoint by printing a description of the drawing. The check runs in the engine
+for the same reason: the panel's tick and the teacher's mark both come from one function, so
+two opinions can never drift apart.
 
 ### The curriculum is checked, not trusted
 
-The lessons are data, so nothing exercises them by accident. One command runs every
+The lessons are data, so nothing runs them by accident. One command pushes every
 checkpoint's own solution and every checkpoint's starting code through the engine:
 
 ```text
@@ -57,9 +57,9 @@ lessons: 20   checkpoints: 60
 ✅ every language has a lesson
 ```
 
-A lesson whose solution does not pass is a lesson nobody can finish, and a lesson whose
-starter already passes has nothing to do. Both are invisible in a file listing and both are
-found here. The same pass runs as an ordinary suite, `lessons_tests`, on every build.
+A lesson whose solution does not pass is a lesson nobody can finish. A lesson whose starter
+already passes has nothing to do. Both hide in a file listing, and both are caught here. The
+same pass runs as an ordinary suite, `lessons_tests`, on every build.
 
 ### Where progress lives
 
@@ -81,26 +81,27 @@ At a terminal:
 ```
 
 In the IDE the Lessons panel does the same: the curriculum by language, the current
-checkpoint, its hints, **Open** to put the starting program in a document, **Check** to run
-what you have, and **Hand In** to write it into the class folder under the checkpoint's
+checkpoint, its hints, **Open** to drop the starting program into a document, **Check** to
+run what you have, and **Hand In** to write it into the class folder under the checkpoint's
 handout name. **Check** runs the document in front of you, so the loop is edit, check, read
-the verdict, edit.
+the verdict, edit again.
 
-A verdict names what failed rather than what it wanted: it reports the lines the program
+A verdict names what failed instead of what it wanted. It shows the lines the program
 printed next to the ones the checkpoint asked for, or the drawing it made next to the one
-required. Nothing is scored until you hand in, and the hint is a step, not the answer —
-**Answer** shows the worked program, and it is there to be read rather than pasted.
+required. Nothing is scored until you hand in. A hint is a step, never the answer.
+**Answer** shows the worked program, and it is there to be read, never pasted.
 
-A lesson in the IDE checks the document in front, so a lesson is a normal editing session:
-the same tabs, the same Run, the same debugger. Nothing here writes outside the data
-directory and the folder you handed in from; a lesson cannot break the machine it runs on.
+A lesson in the IDE checks the document in front of you, so a lesson is just a normal
+editing session: the same tabs, the same Run, the same debugger. Nothing here writes outside
+the data directory and the folder you handed in from; a lesson cannot break the machine it
+runs on.
 
 ---
 
 ## Running a class
 
 `time_warp_teach` is the teacher's command. It works on the same files the Classroom panel
-reads and writes, so either may be used, in any order.
+reads and writes, so you can use either, in any order.
 
 ### Adding the class
 
@@ -112,7 +113,7 @@ reads and writes, so either may be used, in any order.
 ```
 
 The roster lives under `~/.time_warp/classroom`, which `TIME_WARP_DATA_DIR` moves. The
-Classroom panel shows the same list and adds the same way.
+Classroom panel shows the same list and adds names the same way.
 
 ### Setting and handing out work
 
@@ -125,8 +126,8 @@ Classroom panel shows the same list and adds the same way.
 
 `distribute` writes the starting program into each learner's folder under the handout name,
 and `collect` reads what came back. Marking is the same check the learner's own **Check**
-presses: the program is run and its behaviour compared, so a mark is an engine's answer
-rather than a reading of the source.
+button presses. The program runs and its behaviour is compared, so a mark is the engine's
+answer, not a reading of the source.
 
 ### Moving a class between machines
 
@@ -135,9 +136,9 @@ rather than a reading of the source.
 ./native/build/time_warp_teach unbundle class.zip        # --replace to overwrite
 ```
 
-A bundle is a zip, so it opens with the tools a school already has. It carries the roster,
-the assignments, each learner's handed-in program and the marks, and it is the way a class
-moves between a teacher's machine and a classroom one.
+A bundle is just a zip, so it opens with the tools a school already has. It carries the
+roster, the assignments, each learner's handed-in program and the marks, and it is the way a
+class moves between a teacher's machine and a classroom one.
 
 ### A scheme of work
 
@@ -157,8 +158,8 @@ on the pair. Nothing enforces an order beyond the one the curriculum states.
 **View > Presentation Mode** (`Shift+F11`, Escape to leave) hides the authoring chrome and
 takes the lesson panel and the console to a size a room can read. `time_warp_teach present`
 prints the size and window style a projector wants, and `--windowed` asks for a windowed
-class rather than a full-screen one. A lesson session exports as Markdown or PDF with its
-checkpoints, this session's verdicts, the program and the output, which is what a teacher
+class instead of a full-screen one. A lesson session exports as Markdown or PDF with its
+checkpoints, this session's verdicts, the program and the output. That is what a teacher
 keeps after the lesson.
 
 ### Writing a new lesson

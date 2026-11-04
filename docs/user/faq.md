@@ -17,14 +17,14 @@ application for Linux.
 Smalltalk. Each is an implementation of its own dialect, not a common core with different
 keywords — the [reference](../languages/reference.md) lists every command.
 
-**Why these ten?** They span the period when a programming language was designed around a
+**Why these ten?** I wanted the stretch of years when a language was designed around a
 machine and a classroom: a beginner's language (BASIC, COMAL), a notation (APL), a
 teaching tool (Logo, PILOT, FOCAL), a forerunner of structure (Forth, Scheme) and the first
 object system (Smalltalk).
 
-**Who is it for?** Someone who wants to write a program the way it was written then, and to
-see it draw. The checked curriculum is there for teaching, but nothing in the application
-assumes it will be used that way.
+**Who is it for?** Anyone who wants to write a program the way it was written then, and
+watch it draw. The checked curriculum ships for teaching, but nothing in the application
+insists you use it that way.
 
 **Is it free?** MIT licence, and nothing in the application costs money to use.
 

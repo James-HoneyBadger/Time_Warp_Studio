@@ -1,9 +1,9 @@
 # The Studio
 
 This is the manual for the window: documents, projects, the REPL bar, debugging, SQL,
-the embedded terminal and appearance. The commands a language understands are in the
+the embedded terminal and appearance. The commands a language understands live in the
 [language reference](../languages/reference.md); the [automation](automation.md) API has
-its own page, because it is a service you set up separately.
+its own page, because it is a service you set up yourself.
 
 ---
 

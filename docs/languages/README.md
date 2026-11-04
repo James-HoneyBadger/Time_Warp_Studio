@@ -1,8 +1,8 @@
 # The ten languages
 
-Ten interpreters, each an implementation of its own dialect rather than a common core
-wearing different keywords. That is the whole point of the environment: a program written
-for 1975 runs the way it was written, with the constraints its author had.
+Ten interpreters, each a dialect of its own. None of them is a common core wearing
+different keywords. That is the whole point of the environment: a program written for
+1975 runs the way its author wrote it, constraints included.
 
 | Language | Paradigm | Era | Execution | What it is for |
 | --- | --- | --- | --- | --- |
@@ -17,36 +17,36 @@ for 1975 runs the way it was written, with the constraints its author had.
 | **REXX** | Scripting, string processing | 1979 | Line by line | Text: parsing, string functions, and readable control flow |
 | **Smalltalk** | Object-oriented, messages | 1980 | Whole program | Objects, messages, blocks and a class library |
 
-Every command of every language is in [the reference](reference.md), and each language has a
-[tutorial](tutorials/) written to be worked through in an evening.
+Every command of every language lives in [the reference](reference.md), and each language
+has a [tutorial](tutorials/) you can work through in an evening.
 
 ## The execution split is real
 
-Six languages are called **line by line**: BASIC, APL, PILOT, FOCAL, COMAL and REXX. The
-shared loop hands the executor one statement at a time, which is what lets the debugger pause
-between statements, profile per line and walk a run backwards.
+Six languages run **line by line**: BASIC, APL, PILOT, FOCAL, COMAL and REXX. The shared
+loop hands the executor one statement at a time. That is what lets the debugger pause between
+statements, profile per line and walk a run backwards.
 
-Four run as a **whole program**: Logo, Smalltalk, Forth and Scheme. Each has its own loop and
-decides where a pause may land — the end of a Logo statement, a Smalltalk message send, a
-Forth token. Scheme has a runner of its own, because it keeps a call stack and frame bindings
-that the others do not.
+Four run as a **whole program**: Logo, Smalltalk, Forth and Scheme. Each has its own loop
+and decides where a pause may land. For Logo that is the end of a statement, for Smalltalk a
+message send, for Forth a token. Scheme has a runner of its own, because it keeps a call stack
+and frame bindings the others do not.
 
-Nothing about that distinction is visible in a menu: it is why `Step` behaves slightly
-differently in Forth than in BASIC, and the reference says so where it matters.
+None of that shows in a menu. It is why `Step` behaves a little differently in Forth than
+in BASIC, and the reference says so where it matters.
 
 ## What they share
 
-- **One turtle.** Every language draws through the same host, so heading 0 is north and
-  increases clockwise in all of them, `forward` is `x += d·sin(h)`, `y += d·cos(h)`, and a
+- **One turtle.** Every language draws through the same host. Heading 0 is north and
+  increases clockwise in all of them. `forward` is `x += d·sin(h)`, `y += d·cos(h)`, and a
   `circle` is a polygon walk. A drawing made in Logo and one made in COMAL land on the same
   canvas with the same conventions.
 - **One budget.** A run stops after two million statements or ten seconds, whichever comes
-  first, and says which limit ended it.
+  first. It says which limit ended it.
 - **One SQL connection.** `SQL SELECT …` reaches the database the Database panel has open, in
-  nine of the ten. Forth is the exception: it has no statement form to extend, so a Forth
+  nine of the ten. Forth is the exception. It has no statement form to extend, so a Forth
   program reaches the database over the [API](../user/automation.md) or not at all.
-- **One error convention.** An engine returns text, and a failure begins with the error
-  prefix rather than throwing out of the executor. The console, the Errors panel and the
+- **One error convention.** An engine returns text. A failure begins with the error prefix
+  instead of throwing out of the executor. The console, the Errors panel and the
   [API](../user/automation.md) all read the same string.
 
 ## Choosing a first language
@@ -60,20 +60,20 @@ differently in Forth than in BASIC, and the reference says so where it matters.
 | knows a modern language | **Forth** or **Scheme** | Both are a different way of thinking, not a reduced version of what they know |
 | wants objects | **Smalltalk** | Messages all the way down, and a library to send them to |
 
-The [curriculum](../lessons/README.md) takes the same order: two lessons per language, a
-beginner's and an intermediate one.
+The [curriculum](../lessons/README.md) takes the same order. Each language gets two lessons,
+one for beginners and one intermediate.
 
 ## How the ten are checked
 
-The languages are not documented and left to hope. Three gates hold them:
+We do not document the languages and then leave them to hope. Three gates hold them:
 
 - **The command matrix** runs one program per documented command, from
-  `native/share/command_rows.json`, and reports any command the executors dispatch on that no
+  `native/share/command_rows.json`. It reports any command the executors dispatch on that no
   row or waiver mentions.
 - **The parity corpus** compares the engines with the answers the deleted Python reference
-  gave for 444 programs, including every drawing call in order.
-- **The example gate** runs all 68 shipped programs, and fails when a program that should draw
+  gave for 444 programs, every drawing call in order.
+- **The example gate** runs all 68 shipped programs. It fails when a program that should draw
   produces no ink.
 
-[Testing](../maintainer/testing.md) says what each gate is worth, and where a recording is
-weaker than the differential it replaced.
+[Testing](../maintainer/testing.md) says what each gate is worth. It also says where a
+recording is weaker than the differential it replaced.

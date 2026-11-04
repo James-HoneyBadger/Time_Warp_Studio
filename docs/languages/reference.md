@@ -1,15 +1,15 @@
 # Language reference
 
-This page lists every command the ten languages accept, the effect of each, and a
-program fragment that shows it. Each language has a section of its own, and the
-headings form the index.
+This page lists every command the ten languages accept, what each one does, and a
+program fragment that shows it. Each language has a section of its own. The headings
+form the index.
 
 All ten engines are written in C++ and run in process. There is no separate
-interpreter: the IDE, `./twc` and `time_warp_check` call the same code, so a
-program behaves the same however it is started. Six languages are line by line, and
-the interpreter hands each line to its executor: BASIC, APL, PILOT, FOCAL, COMAL and
-REXX. Four are whole program, and the source is read to the end before anything
-runs: Logo, Scheme, Smalltalk and Forth.
+interpreter. The IDE, `./twc` and `time_warp_check` call the same code, so a program
+behaves the same however it is started. Six languages are line by line, and the
+interpreter hands each line to its executor: BASIC, APL, PILOT, FOCAL, COMAL and
+REXX. Four are whole program, and the source is read to the end before anything runs:
+Logo, Scheme, Smalltalk and Forth.
 
 The languages differ in what they are designed to express:
 
@@ -27,17 +27,17 @@ The languages differ in what they are designed to express:
 | Forth | `.fs` `.fth` | whole program | The stack and the dictionary |
 
 Commands are grouped by purpose within each language, so the BASIC graphics
-statements appear together. Several spellings of one command share a row. The first
+statements sit together. Several spellings of one command share a row. The first
 column gives the spelling, the second the effect, and the third an example. Where an
-example needs more than one line, a fenced block near the table demonstrates it and the
-row refers to it. Capitals are the documented spelling. BASIC, COMAL, REXX and Forth
+example needs more than one line, a fenced block near the table shows it and the row
+points to it. Capitals are the documented spelling. BASIC, COMAL, REXX and Forth
 ignore case in source, so either form works. Runtime messages are quoted without the
 mark that prefixes every console line.
 
 ## BASIC
 
 Line by line, in the dialect of a 1981 microcomputer, with additions: pixel screen
-modes, sprites, gradients and sound. Lines may be numbered or unnumbered; a jump
+modes, sprites, gradients and sound. Lines may be numbered or unnumbered. A jump
 requires a number.
 
 ### Program control
@@ -79,13 +79,13 @@ requires a number.
 | `REM`, `'` | A comment to the end of the line, written as a word or as an apostrophe. | `REM ignored` |
 | `:` | Separates two statements on a line. | `PRINT "A": PRINT "B"` |
 
-`SELECT CASE` evaluates the selector once, when the first clause is tested, and runs
-the body of the first clause that matches. `CASE 2` compares against one value,
-`CASE 2, 3` against a list, `CASE 4 TO 9` against a range, `CASE IS > 10` against a
-comparison, and `CASE ELSE` matches whatever is left. A clause that cannot be read
-reports `Invalid CASE expression`, and its body is skipped. Blocks may nest.
+`SELECT CASE` evaluates the selector once, at the first clause, and runs the body of
+the first clause that matches. `CASE 2` compares against one value, `CASE 2, 3`
+against a list, `CASE 4 TO 9` against a range, `CASE IS > 10` against a comparison,
+and `CASE ELSE` matches whatever is left. A clause that cannot be read reports
+`Invalid CASE expression`, and its body is skipped. Blocks may nest.
 
-A variable may begin with a reserved word: `DOUBLE`, `RUNNER`, `CLOSER`, `NEXTX` and
+A variable may begin with a reserved word. `DOUBLE`, `RUNNER`, `CLOSER`, `NEXTX` and
 `LOOPS` are ordinary names.
 
 ### Output and input
@@ -139,13 +139,13 @@ and nowhere else, so `LEN(TIME$)` is 0. Assign the clock to a variable first.
 | `RND` | A random number from 0 up to 1. | `RND(1)` |
 | `RANDOMIZE` | Seeds the generator; `RANDOMIZE TIMER` seeds it from the clock. | `RANDOMIZE 42` |
 
-Numbers print to six significant digits: `PRINT 1 / 3` gives `0.333333`, and a large
-pixel value prints as `1.67772e+07`. Literals may be written with an exponent, with
-or without a sign: `1E6`, `1e-6`, `2.5E+3`.
+Numbers print to six significant digits. `PRINT 1 / 3` gives `0.333333`, and a large
+pixel value prints as `1.67772e+07`. Literals may be written with an exponent, with or
+without a sign: `1E6`, `1e-6`, `2.5E+3`.
 
 ### Graphics
 
-Drawing statements need a screen. `SCREEN 1` is 800 by 600 with 16 colours, and
+Drawing statements need a screen first. `SCREEN 1` is 800 by 600 with 16 colours, and
 `SCREEN 1, w, h` selects another size. Modes 0 for text, 2 at 640 by 200, 7 and 13 at
 320 by 200, 9 at 640 by 350 and 12 at 640 by 480 are also available. An unknown mode
 is refused, and the report lists the valid ones:
@@ -205,13 +205,13 @@ capture it.
 | `STRIG` | A button, 1 while it is held. | `STRIG(0)` |
 | `SHELL` | Refused: `SHELL commands are disabled in IDE for security`. | `SHELL "echo hi"` |
 
-`SLEEP` is taken in two-millisecond slices, so a stop request breaks it, but the
-clock is read between statements: `SLEEP 20` first waits its twenty seconds.
+`SLEEP` is taken in two-millisecond slices, so a stop request can break it. The clock
+is read between statements, though: `SLEEP 20` first waits its twenty seconds.
 
 ### Files
 
-File statements take a channel number written `#n`. The file manager confines them to
-the active workspace.
+File statements take a channel number written `#n`. The file manager keeps them
+inside the active workspace.
 
 | Form | Effect | Example |
 | --- | --- | --- |
@@ -226,12 +226,12 @@ the active workspace.
   the next line.
 - `FOR` leaves the variable at the first value past the limit, so `FOR I = 1 TO 3`
   ends with 4. The limit is tested after the body, so `FOR J = 3 TO 1` runs its body
-  once, whether the loop is written on one line or across several.
+  once, whether the loop sits on one line or several.
 - `INT` rounds down: `INT(-3.7)` is -4. Division by zero is an error.
 - An unknown statement reports `Unknown BASIC command: ...`, and a malformed loop
   reports `FOR requires format: var = start TO end [STEP step]`.
 - `SUB`, `FUNCTION` and `TYPE` bodies need their own lines, since a colon ends the
-  header. A definition split by colons is refused, rather than run as statements:
+  header. A definition split by colons is refused instead of run as statements:
   `SUB ... needs its own lines: a definition cannot be split by colons`. Loops and
   plain statements accept colons: `WHILE X < 3 : PRINT X : X = X + 1 : WEND` and
   `FOR I = 1 TO 3 : PRINT I : NEXT` repeat within the line, and an `EXIT FOR` inside
@@ -241,8 +241,8 @@ the active workspace.
 
 Line by line. Every line is an expression, and its value is displayed. Arrays are
 values, so most functions take vectors and tables as readily as single numbers. Each
-function has a glyph and a keyword, and both are accepted, so a keyboard without `⍳`
-can still write APL.
+function has a glyph and a keyword, and both are accepted. A keyboard without `⍳` can
+still write APL.
 
 ### Values and the line
 
@@ -254,7 +254,7 @@ SIGNUM ¯3
 ```
 
 A bare number is a scalar, and numbers separated by spaces form one vector: `42` is a
-value and `1 2 3` is a value. `'HELLO'` is a character vector and prints without its
+value and `1 2 3` is a value. `'HELLO'` is a character vector, and prints without its
 quotes. `¯` is the negative sign.
 
 | Form | Effect | Example |
@@ -262,11 +262,11 @@ quotes. `¯` is the negative sign.
 | `RHO` | Reshape with two arguments; the shape of its argument with one. | `2 3 RHO 1 2 3 4 5 6` |
 | `RESHAPE`, `SHAPE` | The keyword spellings of the two-argument and one-argument forms. | `3 RHO 1` |
 
-A table prints one row per line, so `2 3 RHO IOTA 6` gives `1 2 3` and then `4 5 6`.
+A table prints one row per line. So `2 3 RHO IOTA 6` gives `1 2 3` and then `4 5 6`.
 
 ### Scalar functions
 
-Scalar functions apply to every element of an array: `1 2 3 + 10` works, and
+Scalar functions apply to every element of an array. `1 2 3 + 10` works, and
 `1 2 + 4 5 6` is a length error.
 
 | Form | Effect | Example |
@@ -316,7 +316,7 @@ are not implemented, so both work along the outermost axis.
 DOUBLE 21
 ```
 
-Defining a function reports `APL: DOUBLE defined`, and calling it displays 42.
+Defining a function reports `APL: DOUBLE defined`. Calling it displays 42.
 
 ### Turtle
 
@@ -328,7 +328,7 @@ Defining a function reports `APL: DOUBLE defined`, and calling it displays 42.
 | `HOME` | Back to the origin, facing up. | `HOME` |
 | `TX`, `TY`, `THETA` | The turtle's position and heading, as reporters. | `FD 100` then `TY` |
 
-`X`, `Y` and `H` are ordinary APL variables; the reporters are `TX`, `TY` and
+`X`, `Y` and `H` are ordinary APL variables. The reporters are `TX`, `TY` and
 `THETA`.
 
 ### Notes
@@ -337,8 +337,8 @@ Defining a function reports `APL: DOUBLE defined`, and calling it displays 42.
   `2 TIMES 3 + 4` is 14.
 - Lengths must agree. `1 2 + 4 5 6` reports `APL: length error: 2 and 3`, naming both
   shapes.
-- A name that holds nothing is an error rather than a zero, and so is an unmatched
-  bracket: `APL: NOSUCHNAME has no value`, `APL: unmatched (`.
+- A name that holds nothing is an error instead of a zero. So is an unmatched bracket:
+  `APL: NOSUCHNAME has no value`, `APL: unmatched (`.
 - Outer product, rank, the composition operators, the system functions and labelled
   branch are not implemented. Each is a read error naming the character it could not
   read, as in `APL: cannot read '.'`.
@@ -346,8 +346,8 @@ Defining a function reports `APL: DOUBLE defined`, and calling it displays 42.
 ## Logo
 
 Whole program. A word takes its inputs after it, as in `FD 50`, and a bracketed list
-is a body, as in `REPEAT 4 [FD 10 RT 90]`. Procedures are written with `TO` and `END`
-and are the unit of composition.
+is a body, as in `REPEAT 4 [FD 10 RT 90]`. Procedures are written with `TO` and `END`.
+They are the unit of composition.
 
 ### Turtle movement
 
@@ -427,23 +427,23 @@ SQUARE 20
 | `[1 2 3]` | a list of three items |
 | `:count` | whatever `count` holds, of whatever kind |
 
-A name holds one value, so `MAKE "X 5` followed by `MAKE "X "hello` leaves the word
-and not the number beside it.
+A name holds one value. `MAKE "X 5` followed by `MAKE "X "hello` leaves the word
+and drops the number.
 
 ### What a procedure's inputs are
 
 `TO SQUARE :S` declares one input. A call takes one value per input, in order, and
-binds it as `MAKE` would: `SQUARE 20` passes a number, `SQUARE :N + 1` passes the
+binds it as `MAKE` would. `SQUARE 20` passes a number, `SQUARE :N + 1` passes the
 result, `SQUARE "green` passes a word and `SQUARE [1 2 3]` passes a list. Fewer values
 than inputs reports `Procedure SQUARE requires 1 inputs`; words after the last input
 are ignored.
 
-An input shadows the caller's value of that name, whatever kind it is, and the
-caller's value is restored when the procedure returns. `LOCAL` declares another name
-on the same frame, restored in the same way.
+An input shadows the caller's value of that name, whatever kind it is. The caller's
+value is restored when the procedure returns. `LOCAL` declares another name on the
+same frame, restored in the same way.
 
 The body ends at `STOP`, at `OUTPUT` whose value the caller receives, or at `BYE`. An
-error ends the body, is reported, and the caller continues. Recursion is limited to
+error ends the body and is reported, and the caller continues. Recursion is limited to
 128 calls.
 
 ### Data and reporters
@@ -474,7 +474,7 @@ SHOW FIRST [1 2 3]
 | `POS` | Where the turtle stands, as a list of two numbers. | `SHOW POS` |
 | `XCOR`, `YCOR`, `HEADING` | One number of that pose: across, up, and the heading in degrees clockwise from north. | `SHOW HEADING` |
 
-Lists print in square brackets with their words quoted: `SHOW LIST 1 2` gives
+Lists print in square brackets with their words quoted. `SHOW LIST 1 2` gives
 `[1.0, 2.0]`, and `SHOW BUTFIRST [1 2 3]` gives `['2', '3']`.
 
 ### Mathematics
@@ -499,7 +499,7 @@ PRINT MAX(3, 7)
 | `SINH`, `COSH`, `TANH` | The hyperbolic forms. | `TANH(0)` |
 | `MAX`, `MIN`, `POW` | The larger, the smaller, and one raised to the other. | `MAX(3, 7)` |
 
-A function takes the one number written after it, so `SQRT 16 + 9` is 13: the root is
+A function takes the one number written after it, so `SQRT 16 + 9` is 13. The root is
 taken of 16 and the 9 is added afterwards. A negative argument, a longer expression or
 a second argument needs the bracket: `ABS(-5)` is 5, `SQRT(16 + 9)` is 5, and
 `MAX(3, 7)` is 7. Numbers print to six significant digits, so `1 / 3` is `0.333333`.
@@ -518,7 +518,7 @@ a second argument needs the bracket: `ABS(-5)` is 5, `SQRT(16 + 9)` is 5, and
 
 ### Notes
 
-- `PRINT` runs a word that reports a value and writes the answer:
+- `PRINT` runs a word that reports a value and writes the answer.
   `PRINT FIRST [1 2 3]` writes 1, and `PRINT COUNT [1 2 3]` writes 3. The words it
   runs are `SUM`, `DIFFERENCE`, `PRODUCT`, `QUOTIENT`, `RANDOM`, `WORD`, `LIST`,
   `SENTENCE`, `FIRST`, `LAST`, `BUTFIRST`, `BUTLAST`, `ITEM`, `THING`, `COUNT`,
@@ -527,12 +527,12 @@ a second argument needs the bracket: `ABS(-5)` is 5, `SQRT(16 + 9)` is 5, and
 - A template is evaluated as an expression before it is run as commands. `MAP [? * 2]`
   and `FILTER [? > 7]` bind `?` to the item, and `REDUCE` binds `?1` and `?2`.
   `FOREACH` runs a command list and does not bind `?`.
-- The closing quote of a word form is optional: `PRINT "HI` and `PRINT "HI"` both
+- The closing quote of a word form is optional. `PRINT "HI` and `PRINT "HI"` both
   write `HI`, and `MAKE "X "HI"` binds `HI`.
 - Word arguments are upper-cased. `SHOW "hello` writes `HELLO`, and
-  `SHOW LIST "abc "def` gives `['ABC', 'DEF']`, while `PRINT "hello` writes `hello`,
-  because the printer reads the text of the line.
-- `TYPE` ends the line. The console stores lines rather than a character stream, so
+  `SHOW LIST "abc "def` gives `['ABC', 'DEF']`. `PRINT "hello` writes `hello`, because
+  the printer reads the text of the line.
+- `TYPE` ends the line. The console stores lines instead of a character stream, so
   `TYPE "A` followed by `PRINT "B` shows two lines.
 - `WHILE`, `UNTIL` and `FOREVER` stop silently after 10,000 passes; `REPEAT` has no
   such cap. Recursion stops at 128 calls:
@@ -543,8 +543,8 @@ a second argument needs the bracket: `ABS(-5)` is 5, `SQRT(16 + 9)` is 5, and
 Line by line. A line is a teaching unit: a letter, a colon, and the text of the unit.
 A lesson asks a question, reads an answer and decides whether the answer matched.
 Every unit also has a long form (`PRINT:`, `ACCEPT:`, `MATCH:`, `JUMP:`, `USE:`,
-`STOP:`, `PAUSE:`, `GRAPHIC:`, `FILE:`, `DELAY:`, `HINT:`, `COMPUTE:`, `NO:`), and
-both spellings are accepted.
+`STOP:`, `PAUSE:`, `GRAPHIC:`, `FILE:`, `DELAY:`, `HINT:`, `COMPUTE:`, `NO:`). Both
+spellings are accepted.
 
 ### Text and answers
 
@@ -580,8 +580,8 @@ T: Hello $NAME
 
 The sequence `T: Q`, `A:`, `M: PARIS`, `TY: Correct`, `TN: Wrong` prints `Correct` for
 an answer of `PARIS` and `Wrong` for anything else. A jump to a label that does not
-exist reports `Label 'NOWHERE' not found` and the lesson continues at the next line,
-so a mistyped label costs a unit rather than the run.
+exist reports `Label 'NOWHERE' not found` and the lesson continues at the next line.
+A mistyped label costs a unit, not the run.
 
 ### Graphics and files
 
@@ -603,10 +603,10 @@ so a mistyped label costs a unit rather than the run.
 - `M:` matches loosely. Case is ignored, commas separate alternatives, `PAR*S` is a
   pattern, and `RI` matches `PARIS`, because plain text only has to appear in the
   answer.
-- `F:` checks the mode rather than the number of words: `F: OPEN notes.txt X` reports
+- `F:` checks the mode, not the number of words. `F: OPEN notes.txt X` reports
   `F: OPEN requires mode R|W|A, got: X`, while `F: OPEN notes.txt` reads.
-- `LINK` chains rather than calls. The second lesson starts at its first unit with the
-  first lesson's variables, and a name it cannot open is reported:
+- `LINK` chains instead of calling. The second lesson starts at its first unit with
+  the first lesson's variables, and a name it cannot open is reported:
   `LINK: cannot open 'name'`.
 - A headless run has no keyboard, so the command harness answers nothing at `A:` and
   every `TN:` path is taken.
@@ -615,14 +615,14 @@ so a mistyped label costs a unit rather than the run.
 
 Line by line, in DEC's teaching language of 1969: a handful of commands, one number
 type, and labels of the form `group.line` so that five lines can be named as a unit.
-Every command has a short letter and a full name, and both are accepted.
+Every command has a short letter and a full name. Both are accepted.
 
 ### Labels and the commands
 
 A label is `NN.NN`, with each part up to two digits. Leading zeroes do not matter, so
-`GOTO 1.40` reaches the line written `01.40`. The second part is a whole number rather
-than a decimal, so `1.3` names group 1 line 3 and not the line written `01.30`. A
-reference to a label that does not exist reports `FOCAL: no line labelled 9.9`.
+`GOTO 1.40` reaches the line written `01.40`. The second part is a whole number, not a
+decimal, so `1.3` names group 1 line 3 and not the line written `01.30`. A reference
+to a label that does not exist reports `FOCAL: no line labelled 9.9`.
 
 | Form | Effect | Example |
 | --- | --- | --- |
@@ -668,10 +668,10 @@ two, and a value is rounded to it. `!` suppresses the newline within one `TYPE`,
 - `IF` has no relational operators. `IF (X) a,b,c` goes to `a` when X is negative,
   `b` when it is zero and `c` when it is positive, so a three-way choice needs the
   `GOTO` lines that a modern language would do without.
-- Undefined variables are 0, so a mistyped name prints `0.00` rather than reporting
+- Undefined variables are 0, so a mistyped name prints `0.00` instead of reporting
   itself.
 - `FOR` keeps the last value it used: after `FOR I=1,3` the variable holds 3.
-- An unrecognised command is an error rather than a comment:
+- An unrecognised command is an error, not a comment:
   `FOCAL: unknown command 'TIPE'`. A `DO` group runs past its end unless a `RETURN` is
   there, and nesting stops at 64 deep.
 
@@ -679,7 +679,7 @@ two, and a value is rounded to it. `!` suppresses the newline within one `TYPE`,
 
 Whole program. A small Lisp: the operator comes first, everything is a list, and a
 procedure is a value. The evaluator uses an explicit stack, so a recursive definition
-a million calls deep runs as a loop rather than overflowing the machine's stack.
+a million calls deep runs as a loop instead of overflowing the machine's stack.
 
 | Form | Effect | Example |
 | --- | --- | --- |
@@ -730,13 +730,13 @@ so the two run together.
   `car: expected 1 argument(s), got 0`. An unknown name reports
   `unbound variable: no-such`.
 - There are no exact rationals. `1/2` is read as a name and reported unbound.
-- The clock is the only budget: no step limit and no recursion limit, and a program
-  that never stops is cut off after ten seconds.
+- The clock is the only budget: no step limit and no recursion limit. A program that
+  never stops is cut off after ten seconds.
 
 ## COMAL
 
 Line by line. Structured BASIC, with blocks that end in a word, `:=` for assignment,
-and procedures that are called rather than jumped to. Lines may be numbered or not.
+and procedures that are called, not jumped to. Lines may be numbered or not.
 
 | Form | Effect | Example |
 | --- | --- | --- |
@@ -767,18 +767,18 @@ and procedures that are called rather than jumped to. Lines may be numbered or n
 
 - `CALL` and an expression are different ways into a function. `PRINT DOUBLE(21)`
   uses the answer; `CALL DOUBLE(21)` runs the body and leaves the result in `RESULT`.
-- `LOCAL` is scoped to the call: a name the caller never had reads 0 afterwards, and
+- `LOCAL` is scoped to the call. A name the caller never had reads 0 afterwards, and
   the caller's own value is restored when the body returns.
 - `FOR` leaves the first value past the limit, so `PRINT I` after `FOR I := 1 TO 3`
   writes 4.
-- An unknown statement is reported rather than skipped:
+- An unknown statement is reported instead of skipped:
   `unrecognised statement: NOSUCH`.
 
 ## REXX
 
 Line by line, and typeless: every value is a string, no variable needs declaring, and
 concatenation is what happens when two values are written next to each other. A name
-that has never been assigned reads as its own name in capitals, so `SAY n` prints `N`.
+that has never been assigned reads as its own name in capitals. `SAY n` prints `N`.
 
 | Form | Effect | Example |
 | --- | --- | --- |
@@ -804,8 +804,8 @@ that has never been assigned reads as its own name in capitals, so `SAY n` print
 | `INDEX`, `SIGN`, `TRUNC`, `DATATYPE` | Position of a substring; the sign; the integer part; `NUM`, `CHAR` or neither. | `INDEX('hello', 'll')` |
 | turtle words | `FORWARD`/`MOVE`, `BACK`, `RIGHT`/`TURN`, `LEFT`, `PENUP`, `PENDOWN`, `HOME`. | `FORWARD 10` |
 
-`SPACE('a b c', 3)` writes `a   b   c`: the count is the spaces between words, not a
-width, which is the opposite of `LEFT` and `RIGHT`.
+`SPACE('a b c', 3)` writes `a   b   c`. The count is the spaces between words, not a
+width, and `LEFT` and `RIGHT` do the opposite.
 
 ### Notes
 
@@ -822,7 +822,7 @@ width, which is the opposite of `LEFT` and `RIGHT`.
 ## Smalltalk
 
 Whole program, and the only object-oriented language of the ten. There is no syntax
-for control flow: `ifTrue:`, `whileTrue:` and `to:do:` are messages. A file defines
+for control flow. `ifTrue:`, `whileTrue:` and `to:do:` are messages. A file defines
 classes and methods and then runs top-level code, so the whole source is read before
 anything runs. A definition is a header followed by indented lines, and it ends at the
 next line that begins in column 0.
@@ -875,19 +875,19 @@ instance variable is nil and the first `bump` fails.
 - Precedence is unary, then binary, then keyword. `2 + 3 * 4` is 20, and
   `1 max: 2 + 3` is 5.
 - `^` returns from the method that made the block, not from the block.
-- A name that is not a variable is not created silently, and a message a receiver does
-  not understand is an error: `unknown variable or global noSuchThing`,
+- A name that is not a variable is not created silently. A message a receiver does not
+  understand is an error: `unknown variable or global noSuchThing`,
   `3 does not understand foo`, `index 9 is out of range for a collection of 3`.
-- A runaway loop is stopped by its own guard: `[true] whileTrue: [...]` reports
+- A runaway loop is stopped by its own guard. `[true] whileTrue: [...]` reports
   `the loop ran for too long` after five million passes.
 
 ## Forth
 
 Whole program, and without syntax in the sense the others have: a program is
 whitespace-separated words, and each word takes what it needs from the stack. `2 3 +`
-pushes two, pushes three and adds, so arguments come before the word and `FD 100` is
-an error where `100 FD` moves the turtle. `: NAME ... ;` adds a word, and from then on
-it is indistinguishable from a built-in one.
+pushes two, pushes three and adds. Arguments come before the word, so `FD 100` is an
+error where `100 FD` moves the turtle. `: NAME ... ;` adds a word, and from then on it
+is indistinguishable from a built-in one.
 
 ### The stack
 
@@ -913,7 +913,7 @@ it is indistinguishable from a built-in one.
 | `=`, `<>`, `<`, `>`, `<=`, `>=`, `0=`, `0<`, `0>` | Comparisons, answering the flag -1 for true and 0 for false. | `5 5 = .` |
 | `AND`, `OR`, `XOR`, `INVERT`, `LSHIFT`, `RSHIFT` | Bitwise logic and shifts. | `12 10 AND .` |
 
-A condition is any non-zero value, and a true comparison is all bits set: `-1`.
+A condition is any non-zero value. A true comparison is all bits set: `-1`.
 
 ### Output and memory
 
@@ -960,19 +960,19 @@ A condition is any non-zero value, and a true comparison is all bits set: `-1`.
 
 - Arguments come first and words act immediately. `FD 100` fails where `100 FD`
   draws.
-- Division is integer division truncated towards zero, `MOD` takes the dividend's sign
+- Division is integer division truncated towards zero. `MOD` takes the dividend's sign
   (`-7 2 /` is -3, `7 -2 MOD` is 1), and there is no floating point.
 - Stack underflow is an error naming the word: `Forth, line 1: .: stack underflow`.
   An unknown word reports `undefined word: NOSUCHWORD`, and a definition with no `;`
   reports `the definition of F was never closed`.
-- The hard limit is instructions rather than time: four million, and a definition that
-  recurses endlessly reports `F: too deep (endless recursion?)`.
+- The hard limit is instructions, not time: four million. A definition that recurses
+  endlessly reports `F: too deep (endless recursion?)`.
 
 ## Limits and budgets
 
-Every language stops eventually. The limit differs by language, and a run cut off by
-one is reported as cut off rather than as a clean run; the `iterationCapped` and
-`timedOut` flags on a run record that.
+Every language stops eventually. The limit differs by language. A run cut off by one
+is reported as cut off, not as a clean run, and the `iterationCapped` and `timedOut`
+flags on a run record that.
 
 The six line-by-line languages share the interpreter loop and therefore its budget. A
 run ends at whichever of the two limits comes first:
@@ -982,10 +982,10 @@ run ends at whichever of the two limits comes first:
 | Statements | 2,000,000 | `Warning: Maximum iterations reached` on the last line of output |
 | Wall clock | 10 seconds | `Error: Execution timeout (10.000000s exceeded)` |
 
-BASIC, APL, PILOT, FOCAL, COMAL and REXX count the statements the loop runs, so a
-tight `GOTO` loop is cut off by the statement budget in about a second and a half.
-Neither budget interrupts a statement in the middle: `SLEEP 20` in BASIC waits its
-twenty seconds, and the timeout is reported on the next statement.
+BASIC, APL, PILOT, FOCAL, COMAL and REXX count the statements the loop runs. A tight
+`GOTO` loop is cut off by the statement budget in about a second and a half. Neither
+budget interrupts a statement in the middle: `SLEEP 20` in BASIC waits its twenty
+seconds, and the timeout is reported on the next statement.
 
 The four whole-program languages run their own loops, and each bounds itself:
 
@@ -996,7 +996,7 @@ The four whole-program languages run their own loops, and each bounds itself:
 | Smalltalk | Five million passes of `whileTrue:`, `whileFalse:` or a loop block, reported as `the loop ran for too long`. |
 | Forth | Four million instructions, reported as `the program ran for 4000000 instructions without stopping`. A definition that recurses endlessly stops at 4,096 frames. |
 
-Two further ceilings apply to a single language each: a FOCAL `DO` group nests at
+Two further ceilings apply to a single language each. A FOCAL `DO` group nests at
 most 64 deep, and a PILOT `D:` waits at most ten seconds.
 
 A stop request, whether from the IDE's Stop button or a cancelled API call, is

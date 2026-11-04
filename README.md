@@ -1,10 +1,10 @@
 # Time Warp Studio
 
 Time Warp Studio is a desktop programming environment for ten languages of the 1960s and
-1970s: BASIC, APL, Logo, PILOT, FOCAL, Forth, Scheme, COMAL, REXX and Smalltalk. Each
-language has its own interpreter inside the application, linked in rather than started as
-a separate process, so a program runs as soon as it is opened and the debugger can stop
-inside it.
+1970s: BASIC, APL, Logo, PILOT, FOCAL, Forth, Scheme, COMAL, REXX and Smalltalk. Each one
+runs through its own interpreter, linked straight into the application rather than started
+as a separate process. Open a program and it runs; the debugger can stop inside it, in
+whichever language the editor is showing.
 
 [![Languages](https://img.shields.io/badge/languages-10-blue)](#the-ten-languages)
 [![Platform](https://img.shields.io/badge/platform-Linux-green)](docs/user/getting-started.md)
@@ -12,15 +12,15 @@ inside it.
 [![Version](https://img.shields.io/badge/Version-28.2.0-orange)](https://github.com/James-HoneyBadger/Time_Warp_Studio)
 
 It is written in C++20 against Qt 6 and runs on Linux. The interpreters are libraries in
-the same process, which is what allows one debugger to serve all ten: a run is stopped,
-inspected and resumed in the same panel whichever language is in the editor.
+the same process, which is what lets one debugger serve all ten: a run is stopped,
+inspected and resumed in the same panel, whichever language is in the editor.
 
 Each interpreter implements the dialect it is named for, including the parts that do not
 carry over from one language to the next. FOCAL is a formula calculator with line labels
 and sign branching. PILOT is letter-coded units. APL has its own glyphs and no operator
 precedence. Forth is a dictionary of words. Scheme is an explicit-stack CEK machine
-without native recursion. Smalltalk sends messages to objects. Programs are written in
-the dialect of their period and behave as they did on the machines they were written for.
+without native recursion. Smalltalk sends messages to objects. A program is written in
+the dialect of its period and behaves as it did on the machines it was written for.
 
 The editor, debugger, canvas, project model and SQL layer are shared by all ten. A
 breakpoint in BASIC and one in Smalltalk are set, inspected and cleared in the same panel.
@@ -84,7 +84,7 @@ command gate exercises each row of it on every push. Each language has a
 | **REXX** | Scripting, string processing | 1979 | Line by line |
 | **Smalltalk** | Object-oriented, messages | 1980 | Whole program |
 
-The Execution column describes how the engine runs a program, and it decides what the
+The Execution column says how the engine runs a program, and that decides what the
 debugger can do. A line-by-line language is called by the shared loop once per statement,
 so a pause lands between statements and profiling counts per line. A whole-program
 language runs its own loop and chooses where a pause may land: at the end of a Logo
@@ -132,7 +132,7 @@ Studio is built from the same files as the manuals in the tree.
   checkpoint cannot be met by printing a description of a drawing.
 - **Notebooks**: prose and programs in one `.twnb` file. A cell is text or a program in a
   language, and **Run** shows its output and its drawing beneath it. Cells do not share
-  variables, because a notebook is a document and not a session.
+  variables: a notebook is a document, not a session.
 - **Error hints** beside an interpreter's message, proposing a correction.
 - **Ten tutorials**, one per language, under
   [docs/languages/tutorials](docs/languages/tutorials/).

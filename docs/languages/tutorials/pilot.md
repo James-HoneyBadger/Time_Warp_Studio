@@ -4,9 +4,9 @@ PILOT (Programmed Inquiry, Learning Or Teaching) was written in 1962 by John
 Starkweather for computer-aided instruction, and it is still the smallest language
 here: a statement is a letter, a colon, and its text. `T:` types a line, `A:` takes
 an answer, `M:` matches the answer against a list, and `J:` jumps. A PILOT listing
-reads as a script for a lesson rather than as code, which is what it is. The
-interpreter runs it line by line and the whole design is that matching: a program
-asks, compares and branches on what was typed.
+reads as a script for a lesson, not as code. That is what it is. The interpreter
+runs it line by line and the whole design is that matching: a program asks, compares
+and branches on what was typed.
 
 Press **F9** to run a document. The output blocks below are what the program prints.
 
@@ -23,7 +23,7 @@ Hello, World
 
 `T:` types the rest of the line, and `$` names inside it are replaced by variables.
 `E:` ends the program; that is its only job outside a subroutine, and a lesson that
-runs out of lines stops anyway. There are no line numbers and no punctuation: the
+runs out of lines stops anyway. There are no line numbers and no punctuation. The
 letter before the colon is the statement.
 
 ## Step 1: variables and arithmetic
@@ -43,7 +43,7 @@ You have 3 messages
 Now 6
 ```
 
-`C:` computes: it evaluates the expression on its right and assigns it to the name
+`C:` computes. It evaluates the expression on its right and assigns it to the name
 on its left, and it prints nothing. `$N` in a `T:` line is the variable's value, not
 the name. Names are not case sensitive, and `$` substitution happens in every text
 statement, so a lesson's wording can carry marks and counts.
@@ -68,8 +68,8 @@ landed
 
 A label is a line beginning with `*` and has no other meaning. `J:` takes a label
 name, not a line number, and there is no `GOTO` arithmetic: `J: SECOND` goes to
-`*SECOND`. Execution continues from there in order, so the jump is a way to choose
-which part of the script runs.
+`*SECOND`. Execution continues from there in order. The jump is a way to choose which
+part of the script runs.
 
 ## Step 3: subroutines
 
@@ -93,7 +93,7 @@ hello from the subroutine
 ```
 
 `U:` uses the block and `E:` inside the block returns to the caller, which is how
-the same block runs twice. That is the same `E:` that ends the program: inside a
+the same block runs twice. That is the same `E:` that ends the program. Inside a
 subroutine it is a return, and outside one it is a stop. Blocks used this way are
 the shared parts of a lesson, and the main script sits between the calls.
 
@@ -113,8 +113,8 @@ What is your name?
 Your name is []
 ```
 
-The answer is empty in this run because the run report has no keyboard to read, and
-the point of the transcript is the second line: `$NAME` printed the answer, and the
+The answer is empty in this run because the run report has no keyboard to read. The
+point of the transcript is the second line: `$NAME` printed the answer, and the
 answer was nothing, so the brackets hold nothing. `A:$NAME` stores what is typed in
 `NAME`; a plain `A:` stores it in `ANSWER$` instead, and its own text is the prompt.
 That is why the question is a `T:` line here: a text prompt on `A:` followed by
@@ -141,16 +141,16 @@ No - it is Paris.
 `M:` matches the last answer against a comma-separated list of alternatives. The
 comparison ignores case, and a plain alternative matches anywhere in the answer;
 `*` and `?` are wildcards for the rest. `TY:` prints only when the match succeeded
-and `TN:` only when it failed, and `JY:` and `JN:` do the same for jumps. With no
+and `TN:` only when it failed. `JY:` and `JN:` do the same for jumps. With no
 keyboard attached every answer is empty, so this run takes the no-match branch.
 Typing `PARIS` at the prompt in the studio prints `Correct.` instead.
 
 ## Where it catches people out
 
-**`M:` matches text, so a menu can match more than one entry.** Because an
-alternative is found anywhere in the answer and case is ignored, `M: A` matches an
-answer of `a`, `Apple` or `Paris` (the `a` inside it). Give the alternatives
-something that cannot collide, and match the longest form:
+**`M:` matches text, so a menu can match more than one entry.** An alternative is
+found anywhere in the answer and case is ignored, so `M: A` matches an answer of `a`,
+`Apple` or `Paris` (the `a` inside it). Give the alternatives something that cannot
+collide, and match the longest form:
 
 ```pilot
 T: Choose: 1 for profile, 2 to leave
@@ -178,7 +178,7 @@ tests a different answer than the one intended.
 
 **There is no counted loop.** Repetition is a `J:` or `JN:` back to a label, so
 every loop needs an answer to leave on. A loop with no matching branch around it
-never ends, and the engine stops it at its iteration limit rather than hanging.
+never ends, and the engine stops it at its iteration limit instead of hanging.
 
 ## Commands used here
 

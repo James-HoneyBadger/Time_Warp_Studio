@@ -3,8 +3,8 @@
 BASIC was written at Dartmouth College in 1964 so that students who were not
 computer scientists could write a program in an afternoon. This dialect is the one
 the home machines shipped in ROM: numbered lines, `PRINT`, `FOR`, `GOTO`, and a
-direct mode that runs a single statement. It runs line by line, and its line numbers
-are addresses for `GOTO` and `GOSUB` rather than a sort order.
+direct mode that runs a single statement. It runs line by line. Its line numbers
+are addresses for `GOTO` and `GOSUB`, not a sort order.
 
 Press **F9** to run a document. Each output block below is what the program prints.
 
@@ -19,9 +19,9 @@ Press **F9** to run a document. Each output block below is what the program prin
 Hello, World!
 ```
 
-Line numbers are optional: the same program without them prints the same line. They
-exist so that another statement can name a line, which is how subroutines work
-below. `END` is not decoration: without it the program runs off the end of the file.
+Line numbers are optional. The same program without them prints the same line. They
+exist so that another statement can name a line, which is how subroutines work below.
+`END` is not decoration: without it the program runs off the end of the file.
 
 ## Step 1: variables and the two PRINT separators
 
@@ -45,7 +45,7 @@ Price is 4.5
 
 `LET` is optional, so line 30 assigns without it. The semicolon and the comma
 separate items the same way: one space, then the next item. A name ending in `$`
-holds text and everything else holds a number, and names are not case sensitive, so
+holds text and everything else holds a number. Names are not case sensitive, so
 `total` and `TOTAL` are one variable.
 
 ## Step 2: decisions
@@ -70,8 +70,8 @@ grade B
 ```
 
 A multi-line `IF` ends with `END IF`, and each `IF` needs its own. There is no
-`ELSEIF`: a third branch is a second `IF` nested in the `ELSE`, which is why the
-program carries two `END IF` lines. A single-line form exists for one action, as in
+`ELSEIF`. A third branch is a second `IF` nested in the `ELSE`, so the program carries
+two `END IF` lines. A single-line form exists for one action, as in
 `IF MARK > 50 THEN PRINT "pass"`. The comparisons are `=`, `<>`, `<`, `>`, `<=` and
 `>=`, joined with `AND`, `OR` and `NOT`.
 
@@ -99,7 +99,7 @@ Count up with a square beside each number, then count down by four.
 2
 ```
 
-`FOR` names its variable, its first value and its limit; `STEP` changes the
+`FOR` names its variable, its first value and its limit. `STEP` changes the
 increment, and a negative step counts down. `NEXT` closes the loop and may name the
 variable or not. The loop runs while the variable has not passed the limit, so the
 second loop stops at 2: its next value, -2, is below it.
@@ -122,9 +122,9 @@ Fill an array from a loop and read two elements back.
 
 `DIM SCORES(3)` sets aside four slots, 0 to 3, and the program uses 1 to 3 as the
 line-numbered machines did. Element 0 exists and answers 0 until something is stored
-there, which is why the third number is 0 rather than an error, while index 4 is
-refused as out of bounds. There is one dimension only, so a table is a flat array with
-the arithmetic done by hand.
+there, so the third number is 0 and not an error. Index 4 is refused as out of bounds.
+There is one dimension only, so a table is a flat array with the arithmetic done by
+hand.
 
 ## Step 5: subroutines by line number
 
@@ -147,8 +147,8 @@ row 1
 
 `GOSUB 100` records where it came from and jumps to line 100; `RETURN` goes back to
 the statement after the `GOSUB`, so the second call resumes at line 20. Line 30
-matters: without `END` the program would fall into the subroutine a third time,
-which is the classic way a BASIC program prints one row too many. `ROWS` was never
+matters. Without `END` the program would fall into the subroutine a third time, and
+that is the classic way a BASIC program prints one row too many. `ROWS` was never
 assigned, and an unassigned variable counts as 0.
 
 ## Step 6: a graphics screen
@@ -171,13 +171,13 @@ The program prints nothing of its own: the result is the picture. `SCREEN 1` giv
 an 800x600 surface with (0, 0) at the top left, so the numbers are pixel positions
 and y grows downwards. `LINE` takes two opposite corners, a colour number and `BF`
 for "both", which fills the rectangle as well as outlining it. `CIRCLE` takes a
-centre and a radius. The run report counts strokes and shapes, which is how a
-drawing is checked when there is nothing to read.
+centre and a radius. The run report counts strokes and shapes. That is how a drawing
+is checked when there is nothing to read.
 
 ## Where it catches people out
 
-**Line numbers do not order the program.** They are addresses, and the program runs
-in the order the lines sit in the file.
+**Line numbers do not order the program.** They are addresses. The program runs in
+the order the lines sit in the file.
 
 ```basic
 30 PRINT "third"
@@ -207,7 +207,7 @@ a
 b
 ```
 
-To join text instead, build one string with `+`, which is what `STR$` is for when a
+To join text instead, build one string with `+`. That is what `STR$` is for when a
 number is involved: `PRINT "row" + STR$(ROWS)`.
 
 **`ELSEIF` is not a word.** It reports an error on its line and execution carries on

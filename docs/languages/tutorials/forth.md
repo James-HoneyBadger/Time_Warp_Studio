@@ -3,11 +3,10 @@
 Charles Moore developed Forth in the late 1960s for programming instruments, and it
 has been the same shape ever since: a program is a sequence of whitespace-separated
 **words**, and a word takes whatever it needs from a **stack**. `2 3 +` is not
-`2 + 3`, it is "push two, push three, add", which is why the order looks backwards
-until it clicks. There is no grammar to learn, and the language grows: `: NAME … ;`
-adds a word, and from then on it is indistinguishable from a built-in one. The
-interpreter runs Forth whole-program, because a definition spans as many lines as it
-likes.
+`2 + 3`, it is "push two, push three, add", so the order looks backwards until it
+clicks. There is no grammar to learn, and the language grows: `: NAME … ;` adds a
+word, and from then on it is indistinguishable from a built-in one. The interpreter
+runs Forth whole-program, because a definition spans as many lines as it likes.
 
 Press **F9** to run a document. The output blocks below are what the program prints.
 
@@ -25,7 +24,7 @@ CR
 Numbers push themselves onto the stack and every other word works on what is there.
 `+` takes the top two items, adds them and pushes the answer; `.` takes the top item,
 prints it and removes it. `.` prints a space after the number, so `CR` is what ends
-the line. Nothing is implicit: a word either finds its arguments on the stack or
+the line. Nothing is implicit. A word either finds its arguments on the stack or
 reports that it did not.
 
 ## Step 1: looking at the stack
@@ -44,11 +43,11 @@ CR
 1 
 ```
 
-`.S` prints the depth and the items without removing anything, which makes it the
-word to reach for while learning: it shows what the next word will find. `DROP`
-throws the top item away, here the 3, and `SWAP` exchanges the top two, so `.` prints
-1 and leaves 2 on the stack. `DUP`, `DROP`, `SWAP`, `OVER`, `ROT` and `NIP` are the
-six that make a Forth program readable, and `DEPTH` answers how many items there are.
+`.S` prints the depth and the items without removing anything. It is the word to
+reach for while learning: it shows what the next word will find. `DROP` throws the
+top item away, here the 3, and `SWAP` exchanges the top two, so `.` prints 1 and
+leaves 2 on the stack. `DUP`, `DROP`, `SWAP`, `OVER`, `ROT` and `NIP` are the six
+that make a Forth program readable, and `DEPTH` answers how many items there are.
 
 ## Step 2: defining words
 
@@ -71,8 +70,8 @@ CR
 `:` begins a definition, the name follows, and `;` ends it. The bracketed comment is a
 stack effect: what the word takes and what it leaves. It is not decoration, since the
 stack is the one thing a reader cannot see. `SQUARE` duplicates its argument and
-multiplies the two copies. `FACT` calls itself with `RECURSE`, and the `IF … THEN`
-around the multiplication is what stops the recursion at 1.
+multiplies the two copies. `FACT` calls itself with `RECURSE`. The `IF … THEN` around
+the multiplication is what stops the recursion at 1.
 
 ## Step 3: decisions
 
@@ -91,11 +90,11 @@ positive or zero
 ```
 
 `IF` consumes a flag from the stack: zero is false and anything else is true. Every
-comparison answers -1 for true and 0 for false, which is why a flag can be produced by
-`0<`, `=`, `<` or anything else that leaves a number. `THEN` closes the branch, with
-`ELSE` between the two arms, and the `." …"` prints text without the trailing space
-that `.` adds. The `DUP` before `0<` is the shape to learn: the test eats a copy, so
-the original survives for the `DROP` at the end.
+comparison answers -1 for true and 0 for false, so a flag can be produced by `0<`,
+`=`, `<` or anything else that leaves a number. `THEN` closes the branch, with `ELSE`
+between the two arms, and the `." …"` prints text without the trailing space that `.`
+adds. The `DUP` before `0<` is the shape to learn: the test eats a copy, so the
+original survives for the `DROP` at the end.
 
 ## Step 4: loops
 
@@ -114,7 +113,7 @@ Print a row of asterisks, then count by two.
 ```
 
 `DO` takes a limit and a start, so `5 0 DO … LOOP` runs the body with `I` from 0 to 4;
-inside `STARS` the 5 is the argument and the 0 is written after it, which is the
+inside `STARS` the 5 is the argument and the 0 is written after it. That is the
 reverse of how it reads in English. `EMIT` prints the character with code 42, an
 asterisk. `+LOOP` steps by whatever is on the stack instead of by one, so the body
 has to leave the step there: `2 +LOOP`. `BEGIN … UNTIL` and
@@ -138,11 +137,11 @@ VARIABLE TOTAL
 ```
 
 `VARIABLE TOTAL` makes a word that pushes the variable's address. `!` is store and `@`
-is fetch; both expect the address on top, which is why `0 TOTAL !` puts the value
-first and the address second. `+!` adds to what the variable holds, so the loop
-accumulates without a second variable. `CONSTANT` is the read-only version: it pops a
-number once and pushes it for ever. `POKE` and `PEEK` reach the program's own 64 KiB
-map of memory, with the same value-then-address order.
+is fetch; both expect the address on top, so `0 TOTAL !` puts the value first and the
+address second. `+!` adds to what the variable holds, so the loop accumulates without
+a second variable. `CONSTANT` is the read-only version: it pops a number once and
+pushes it for ever. `POKE` and `PEEK` reach the program's own 64 KiB map of memory,
+with the same value-then-address order.
 
 ## Step 6: the turtle
 
@@ -160,7 +159,7 @@ Draw a square by looping over the two turtle words.
 The turtle words are postfix like everything else, so a distance is pushed before
 `FD` and an angle before `RT`: `FD 100` would run `FD` with nothing under it. The
 `DUP` inside the loop keeps the size for the next side, and the `DROP` after `LOOP`
-throws away the copy the loop is done with, which is the discipline a Forth program
+throws away the copy the loop is done with. That is the discipline a Forth program
 needs to leave the stack as it found it. `CS` clears the screen, `PU` and `PD` lift
 and lower the pen, and `SETPC` takes a palette slot.
 
@@ -173,9 +172,9 @@ exists, so the word finds an empty stack and reports it.
 FD 100
 ```
 
-The error is `FD: stack underflow`, and it names the word that found the problem
-rather than the expression, because a stack has no expression to point at. `100 FD`
-is the program that moves the turtle.
+The error is `FD: stack underflow`, and it names the word that found the problem,
+not the expression, because a stack has no expression to point at. `100 FD` is the
+program that moves the turtle.
 
 **`.` prints a space and does not end the line.** Four answers printed in a row
 arrive on one line, separated by spaces, unless something ends it.

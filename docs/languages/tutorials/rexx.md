@@ -20,7 +20,7 @@ Hello, World!
 
 `SAY` writes its expression and a newline. Strings take single or double quotes, and
 a quote of the other kind inside them needs no escape. There is no keyword for the
-end of a script: it ends when it runs out of lines.
+end of a script. It ends when it runs out of lines.
 
 ## Step 1: variables and joining text
 
@@ -73,7 +73,7 @@ gamma
 ```
 
 `DO var = a TO b` counts in steps of one and `BY` changes the step, negative
-included. `DO word OVER '…'` walks the words of a string, which is the loop a
+included. `DO word OVER '…'` walks the words of a string. That is the loop a
 text-processing language is expected to have. `DO WHILE condition` and
 `DO UNTIL condition` test at the top and at the foot, `LEAVE` leaves a loop and
 `ITERATE` skips to its next pass.
@@ -122,10 +122,10 @@ bcd
 two
 ```
 
-`PARSE VAR` splits on whitespace and gives each word to the next name, which is how
-a line of input is taken apart. The functions count from 1, so `SUBSTR(s, 2, 3)`
-starts at the second character and takes three. `LENGTH`, `WORDS`, `INDEX`, `LEFT`,
-`STRIP` and `REVERSE` are the rest of the set.
+`PARSE VAR` splits on whitespace and gives each word to the next name. That is how a
+line of input is taken apart. The functions count from 1, so `SUBSTR(s, 2, 3)` starts
+at the second character and takes three. `LENGTH`, `WORDS`, `INDEX`, `LEFT`, `STRIP`
+and `REVERSE` are the rest of the set.
 
 ## Step 5: subroutines
 
@@ -151,9 +151,9 @@ factorial:
 
 `CALL` runs the labelled block with its arguments, and `ARG(1)` is the first of
 them, so arguments arrive by the same mechanism as everything else. `RETURN value`
-gives the answer back in `RESULT`, which the caller reads as a variable rather than
-as the value of the call. The `EXIT` before the label is load-bearing: without it
-the block runs a second time when the script walks into it.
+gives the answer back in `RESULT`, which the caller reads as a variable, not as the
+value of the call. The `EXIT` before the label is load-bearing: without it the block
+runs a second time when the script walks into it.
 
 ## Step 6: the turtle
 
