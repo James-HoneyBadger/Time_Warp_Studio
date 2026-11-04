@@ -140,7 +140,7 @@ difference on the machine that has one and pass on the machine that does not.
 git diff --exit-code --stat docs/lessons/plans          # generated plans match the curriculum
 make lint-md                                            # Markdown style
 make doc-links                                          # every relative link and anchor resolves
-make doc-claims                                         # every path and name a guide mentions exists
+make doc-claims                                         # every path, name and count a guide mentions is right
 ./native/build/time_warp_docs version                   # the version copies agree
 ```
 
@@ -152,7 +152,10 @@ files are never edited by hand.
 `doc-links` walks every Markdown file, resolves each relative link, and checks each `#anchor`
 against the heading GitHub would slug it from. `doc-claims` is the other direction: it reads
 the paths, targets, command names and counts a guide states and fails when one is not there,
-so a claim about a file that has moved cannot survive a push.
+so a claim about a file that has moved cannot survive a push. The counts live in
+`native/share/counts.txt`, one row per number with the exact phrase each page uses to state
+it, so a reword or a drift — such as a suite removed without its count — fails the gate rather
+than lingering as a number nobody re-reads.
 
 `docs/INDEX.md` is load-bearing twice over: the documentation gates check that every guide it
 promises exists, and the application parses it into the table of contents of **Help >

@@ -17,6 +17,7 @@
 #include <vector>
 
 #include "timewarp/tools/cli.hpp"
+#include "docs/counts.hpp"
 #include "docs/pipes.hpp"
 #include "docs/text.hpp"
 
@@ -615,7 +616,9 @@ int run_claims_command(const timewarp::cli::Invocation& invocation) {
     const fs::path& root = invocation.root;
 
     if (invocation.has("--self-test")) {
-        return self_test(root);
+        const int claims = self_test(root);
+        const int counts = counts_self_test();
+        return (claims != 0 || counts != 0) ? 1 : 0;
     }
 
     const std::set<std::string> top_level = top_level_directories(root);
@@ -647,12 +650,14 @@ int run_claims_command(const timewarp::cli::Invocation& invocation) {
     }
 
     failures += check_unbuilt(root);
+    failures += check_counts(root);
 
     if (failures != 0) {
         std::cerr << "\n"
                   << failures
-                  << " false claim(s). A path that moved, a name that was deleted, or a target "
-                     "that does not exist: fix the sentence, or wrap the record in "
+                  << " false claim(s). A path that moved, a name that was deleted, a count "
+                     "that drifted, or a target that does not exist: fix the sentence, or wrap "
+                     "the record in "
                   << kHistoryOpen << " ... " << kHistoryClose << ".\n";
         return 1;
     }

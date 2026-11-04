@@ -110,8 +110,9 @@ doc-links: docs-tool
 	@$(DOCS_TOOL) links
 
 # A link that resolves can still be a false claim: a sentence can name a file that
-# moved, a symbol that was deleted, or a `make` target that never existed. Nothing
-# else checks that, and three such claims survived a release.
+# moved, a symbol that was deleted, a `make` target that never existed, or a count
+# that drifted when the thing it counted did. Nothing else checks that, and three
+# such claims survived a release.
 doc-claims: docs-tool
 	@$(DOCS_TOOL) claims --self-test
 	@$(DOCS_TOOL) claims

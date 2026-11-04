@@ -43,6 +43,7 @@ add_executable(time_warp_docs
     src/docs/pipes.cpp
     src/docs/links.cpp
     src/docs/claims.cpp
+    src/docs/counts.cpp
     src/docs/version.cpp
     src/docs/md_heading_rules.cpp
     src/docs/md_inline_rules.cpp

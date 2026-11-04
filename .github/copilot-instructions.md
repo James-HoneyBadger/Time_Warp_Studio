@@ -122,7 +122,7 @@ Root and `.github/`: `README.md` (the front door), `CONTRIBUTING.md`, `SECURITY.
 `.github/pull_request_template.md`.
 
 The gates: `time_warp_docs links` (every relative link and anchor resolves), `claims` (every
-path, target and name a guide states exists), `version` (the copies of the version agree),
+path, target, name and count a guide states is right), `version` (the copies of the version agree),
 `md` (the house Markdown rules). `docs/INDEX.md` is load-bearing twice: CI checks that every
 guide it promises exists, and the application parses it into the Help tree.
 
