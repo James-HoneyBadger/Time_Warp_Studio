@@ -7,10 +7,11 @@
 # Qt for WebAssembly needs three things that are all the toolchain's business: the
 # emsdk compilers, a host Qt that supplies `moc` and `rcc`, and the WebAssembly Qt
 # that the result links against. Qt ships the file that wires the three together --
-# `qt.toolchain.cmake` in the host Qt's cmake directory -- so this module finds it
-# and hands it to CMake instead of repeating its contents. Repeating them is how a
-# build ends up with the host's `moc` and the wasm Qt's headers, which links and then
-# fails in the browser.
+# `qt.toolchain.cmake`, installed with the *WebAssembly* Qt, which finds the host
+# through `QT_HOST_PATH` -- so this module locates that file and hands it to CMake
+# instead of repeating its contents. Repeating them is how a build ends up with the
+# host's `moc` generating for the host's headers, which links and then fails in the
+# browser.
 
 if(NOT TW_BUILD_WASM)
     return()
@@ -30,11 +31,6 @@ else()
         # The variable the Qt for WebAssembly container sets to its own install, so a
         # build inside that image needs no arguments at all.
         set(TIME_WARP_WASM_TOOLCHAIN "$ENV{QT_WASM}/lib/cmake/Qt6/qt.toolchain.cmake")
-    elseif(QT_HOST_PATH AND EXISTS "${QT_HOST_PATH}/lib/cmake/Qt6/qt.toolchain.cmake")
-        set(TIME_WARP_WASM_TOOLCHAIN "${QT_HOST_PATH}/lib/cmake/Qt6/qt.toolchain.cmake")
-    elseif(DEFINED ENV{QT_HOST_PATH}
-           AND EXISTS "$ENV{QT_HOST_PATH}/lib/cmake/Qt6/qt.toolchain.cmake")
-        set(TIME_WARP_WASM_TOOLCHAIN "$ENV{QT_HOST_PATH}/lib/cmake/Qt6/qt.toolchain.cmake")
     endif()
 
     if(NOT TIME_WARP_WASM_TOOLCHAIN)
@@ -55,9 +51,16 @@ message(STATUS "TW_BUILD_WASM: toolchain ${CMAKE_TOOLCHAIN_FILE}")
 
 # Qt's toolchain refuses to configure without a host Qt: a cross build can compile, but
 # only the host's `moc` and `rcc` can generate code for it. The Qt for WebAssembly
-# container installs the host beside the wasm one (`<prefix>/gcc_64` next to
-# `<prefix>/wasm_singlethread`), and its own `qt-cmake` wrapper passes that path, so the
-# same layout is derived here rather than requiring every caller to repeat it.
+# container installs the host beside the wasm ones (`<prefix>/gcc_64` next to
+# `<prefix>/wasm_singlethread` and `<prefix>/wasm_multithread`), and its own `qt-cmake`
+# wrapper passes that path, so the same layout is derived here rather than requiring
+# every caller to repeat it. A `QT_HOST_PATH` in the environment is promoted to the
+# CMake variable, because Qt's toolchain reads the variable.
+if(NOT QT_HOST_PATH AND DEFINED ENV{QT_HOST_PATH})
+    set(QT_HOST_PATH "$ENV{QT_HOST_PATH}" CACHE PATH
+        "The desktop Qt that supplies moc and rcc" FORCE)
+endif()
+
 if(NOT QT_HOST_PATH)
     get_filename_component(prefix "${CMAKE_TOOLCHAIN_FILE}" DIRECTORY)
     get_filename_component(prefix "${prefix}" DIRECTORY)
