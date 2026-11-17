@@ -32,6 +32,13 @@ namespace timewarp::core {
     if (name.isEmpty()) {
         return {};
     }
+    // A WebAssembly build carries the data inside the module, because the page has no
+    // share directory beside it. The resource is only present in that build, so the
+    // desktop search below is what a desktop build still does.
+    const QString bundled = QStringLiteral(":/share/") + name;
+    if (QFileInfo{bundled}.isFile()) {
+        return bundled;
+    }
     // Without an application object there is no directory to look beside, which is
     // the case for a library user that passes its own path anyway.
     const QString app_dir = QCoreApplication::instance() != nullptr

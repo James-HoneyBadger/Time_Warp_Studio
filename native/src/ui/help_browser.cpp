@@ -56,6 +56,11 @@ QString docsRoot() {
     if (!override.isEmpty()) {
         return QDir::cleanPath(expandHome(override));
     }
+    // A WebAssembly build carries the guides inside the module: the page has no
+    // checkout and no install tree beside it.
+    if (QFileInfo{QStringLiteral(":/docs/INDEX.md")}.isFile()) {
+        return QStringLiteral(":/docs");
+    }
     const QString app_dir = QCoreApplication::applicationDirPath();
     // Installed (`share/doc/time-warp-studio` beside bin/), then a build tree
     // (`native/build/time_warp_ide` two levels below the checkout's `docs/`).

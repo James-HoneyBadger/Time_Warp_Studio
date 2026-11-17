@@ -86,9 +86,9 @@ function(timewarp_enable_wasm target)
 
     # The example programs travel inside the module: the page has no checkout beside it
     # and no install directory to read, so a gallery that looked for `Examples/` on a
-    # disk would show nothing. The glob is deliberate -- the corpus is data, and a new
-    # program should not need a second edit to be listed -- and a fresh configure picks
-    # up a new file.
+    # disk would show nothing, and the browser build would open on an empty editor. The
+    # glob is deliberate -- the corpus is data, and a new program should not need a
+    # second edit to be listed -- and a fresh configure picks up a new file.
     file(GLOB_RECURSE examples "${TIME_WARP_WASM_PAGE_DIR}/../Examples/*")
     if(examples)
         qt_add_resources(${target} "examples"
@@ -97,6 +97,29 @@ function(timewarp_enable_wasm target)
             FILES ${examples})
         list(LENGTH examples example_count)
         message(STATUS "TW_BUILD_WASM: ${example_count} example programs in the module")
+    endif()
+
+    # The three data files and the guides are read at run time by `shareFile()` and
+    # `docsRoot()`, which look beside the binary on a desktop. A page has nothing beside
+    # it, so the same files travel inside the module and both resolvers check their
+    # resource first: the lessons panel, the snippet catalogue, the command reference and
+    # **Help > Documentation** all work without a filesystem.
+    qt_add_resources(${target} "share"
+        PREFIX "/share"
+        BASE "${CMAKE_CURRENT_SOURCE_DIR}/share"
+        FILES
+            "${CMAKE_CURRENT_SOURCE_DIR}/share/command_rows.json"
+            "${CMAKE_CURRENT_SOURCE_DIR}/share/lessons.json"
+            "${CMAKE_CURRENT_SOURCE_DIR}/share/snippets.json")
+
+    file(GLOB_RECURSE guides "${CMAKE_CURRENT_SOURCE_DIR}/../docs/*")
+    if(guides)
+        qt_add_resources(${target} "docs"
+            PREFIX "/docs"
+            BASE "${CMAKE_CURRENT_SOURCE_DIR}/../docs"
+            FILES ${guides})
+        list(LENGTH guides guide_count)
+        message(STATUS "TW_BUILD_WASM: ${guide_count} guides in the module")
     endif()
 
     message(STATUS "TW_BUILD_WASM: ${target} for the browser, output ${TIME_WARP_WASM_OUTPUT_DIR}")
