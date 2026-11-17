@@ -121,6 +121,26 @@ listed -- so a fresh configure picks up a new file.
 
 ---
 
+## What a page cannot offer
+
+Four things in the desktop application have no browser equivalent, and each says so rather
+than failing quietly:
+
+- **The terminal.** `PtySession` reports that a browser has no shell to run, and the tab
+  shows that reason. A serial port (`timewarp::io::SerialPort`) opens nothing.
+- **The joystick.** `Gamepad::available()` is false, which is the answer every machine
+  without one already gives: `STICK` reads a centred stick.
+- **Sound out.** Tones are still synthesised and recorded, so **File > Export Audio**
+  produces the same file, but there is no `QProcess` to hand a WAV to.
+- **Printing.** Qt PrintSupport is not part of the WebAssembly package, so the two Print
+  entries are absent, exactly as on a desktop build that lacks it.
+
+zlib and SQLite are linked from Emscripten's ports (`-sUSE_ZLIB=1`, `-sUSE_SQLITE3=1`),
+because a cross sysroot has no system copies for `find_package` to find; the classroom
+bundle writer and the Database panel are therefore the same code as on the desktop.
+
+---
+
 ## Threads and isolation
 
 The module is built from `wasm_multithread`, and that is not an optimisation: every

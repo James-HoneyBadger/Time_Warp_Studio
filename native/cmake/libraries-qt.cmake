@@ -123,16 +123,27 @@ endif()
 # ---------------------------------------------------------------------------
 
 if(TIME_WARP_QT_FOUND)
-    find_package(SQLite3 REQUIRED)
-    # FindSQLite3 called its imported target SQLite::SQLite3 until CMake 4.3,
-    # when SQLite3::SQLite3 arrived and the old spelling was deprecated. Follow
-    # whichever this CMake provides: 3.20 (the project's floor) has only the
-    # first, and a 4.4 build should not print an author warning on every
-    # configure for a name we chose years ago.
-    if(TARGET SQLite3::SQLite3)
-        set(TIME_WARP_SQLITE_TARGET SQLite3::SQLite3)
+    # Emscripten carries SQLite as a port: `-sUSE_SQLITE3=1` puts `sqlite3.h` on the
+    # include path and links the library, so a cross sysroot has no config package for
+    # `find_package` to read. The flag travels on an interface target so it reaches the
+    # translation unit that includes the header.
+    add_library(timewarp_sqlite INTERFACE)
+    if(TW_BUILD_WASM)
+        target_compile_options(timewarp_sqlite INTERFACE "SHELL:-sUSE_SQLITE3=1")
+        target_link_options(timewarp_sqlite INTERFACE "SHELL:-sUSE_SQLITE3=1")
     else()
-        set(TIME_WARP_SQLITE_TARGET SQLite::SQLite3)
+        find_package(SQLite3 REQUIRED)
+        # FindSQLite3 called its imported target SQLite::SQLite3 until CMake 4.3,
+        # when SQLite3::SQLite3 arrived and the old spelling was deprecated. Follow
+        # whichever this CMake provides: 3.20 (the project's floor) has only the
+        # first, and a 4.4 build should not print an author warning on every
+        # configure for a name we chose years ago.
+        if(TARGET SQLite3::SQLite3)
+            set(TIME_WARP_SQLITE_TARGET SQLite3::SQLite3)
+        else()
+            set(TIME_WARP_SQLITE_TARGET SQLite::SQLite3)
+        endif()
+        target_link_libraries(timewarp_sqlite INTERFACE ${TIME_WARP_SQLITE_TARGET})
     endif()
     add_library(timewarp_sql
         src/sql/database.cpp
@@ -144,7 +155,7 @@ if(TIME_WARP_QT_FOUND)
         PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
     )
     target_compile_features(timewarp_sql PUBLIC cxx_std_20)
-    target_link_libraries(timewarp_sql PUBLIC ${TIME_WARP_QT}::Core ${TIME_WARP_SQLITE_TARGET})
+    target_link_libraries(timewarp_sql PUBLIC ${TIME_WARP_QT}::Core timewarp_sqlite)
 
     target_compile_options(timewarp_sql PRIVATE
         -Wall -Wextra -Wpedantic -Wshadow -Wcast-qual ${TIME_WARP_GNU_WARNING_FLAGS}
@@ -216,7 +227,19 @@ if(TIME_WARP_QT_FOUND)
     # zlib for classroom bundles: a zip a school can open with the tools it
     # already has. Qt does not expose the copy it links internally, so this is a
     # real dependency of the lessons library, and the packaging ships it.
-    find_package(ZLIB REQUIRED)
+    #
+    # Emscripten has no zlib in its sysroot: it is a port, and `-sUSE_ZLIB=1` is what
+    # puts the header on the include path and `-lz` on the link line. There is nothing
+    # for `find_package` to find in a cross sysroot, so the browser build carries the
+    # flag on an interface target and it reaches classroom.cpp the same way.
+    add_library(timewarp_zlib INTERFACE)
+    if(TW_BUILD_WASM)
+        target_compile_options(timewarp_zlib INTERFACE "SHELL:-sUSE_ZLIB=1")
+        target_link_options(timewarp_zlib INTERFACE "SHELL:-sUSE_ZLIB=1")
+    else()
+        find_package(ZLIB REQUIRED)
+        target_link_libraries(timewarp_zlib INTERFACE ZLIB::ZLIB)
+    endif()
     add_library(timewarp_lessons
         src/lessons/classroom.cpp
         src/lessons/curriculum.cpp
@@ -236,7 +259,7 @@ if(TIME_WARP_QT_FOUND)
     )
     target_compile_features(timewarp_lessons PUBLIC cxx_std_20)
     target_link_libraries(timewarp_lessons
-        PUBLIC ${TIME_WARP_QT}::Core timewarp::lang timewarp::scheme ZLIB::ZLIB
+        PUBLIC ${TIME_WARP_QT}::Core timewarp::lang timewarp::scheme timewarp_zlib
     )
 
     target_compile_options(timewarp_lessons PRIVATE

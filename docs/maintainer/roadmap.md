@@ -60,8 +60,9 @@ Two features that used to be on this list shipped and stayed: the examples brows
 **File > Examples Gallery…**, and the accessibility presets became the theme, text-size,
 focus and presentation controls in **View**. A third has left it too: the Studio builds for
 the browser, with every language, the debugger, the REPL and the example corpus, as
-[WebAssembly](wasm.md) describes. What the browser build does not have is the desktop's
-packaging, its terminal and its external sound players, none of which a page can offer.
+[WebAssembly](wasm.md) describes. What the browser build does not have is what a page
+cannot offer: the desktop's packaging, its terminal and serial ports, the joystick, the
+external sound players and printing.
 
 ---
 
