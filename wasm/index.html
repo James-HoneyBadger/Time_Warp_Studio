@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<!--
+  SPDX-License-Identifier: MIT
+
+  The page the WebAssembly build is served from.
+
+  Qt writes three files beside this one -- `time_warp_ide.js`, `time_warp_ide.wasm` and
+  `qtloader.js` -- and this page is the fourth. It replaces the wrapper Qt generates
+  because that wrapper is a debug page: a centred screen at a fixed size, the Qt logo,
+  and a progress line with no room for the reason something failed. Here the screen
+  fills the window, the status bar is a strip along the bottom, and a failure is
+  reported in the same strip instead of in the console where a visitor will not look.
+
+  The loading API is `qtLoad()`, which Qt 6.6 introduced. It replaced the `QtLoader`
+  class of Qt 6.5, so the page needs the module's own entry function -- named after the
+  target, `window.time_warp_ide` -- as well as the loader script. The contract is
+  documented at https://doc.qt.io/qt-6/wasm.html#using-qtloader.
+
+  The module is threaded, so it needs `SharedArrayBuffer` and therefore a
+  cross-origin-isolated page. `coi-serviceworker.js` supplies the two headers where the
+  host cannot, and the page reloads once to be served through it; see that file for why
+  the browser build is threaded at all.
+-->
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Time Warp Studio</title>
+  <style>
+    /* The canvas is the application: everything else is a strip over it, so the layout
+       is a viewport-sized grid with the status bar as the only row that can grow. */
+    :root {
+      --tw-statusbar: #1e1e22;
+      --tw-statusbar-text: #d6d6dc;
+      --tw-accent: #f0a020;
+      --tw-error: #c0392b;
+    }
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      /* 100dvh rather than 100vh: on a phone the browser's own chrome changes the
+         viewport height as it scrolls, and vh is the taller of the two. */
+      height: 100dvh;
+      overflow: hidden;
+      background: #101014;
+      color: var(--tw-statusbar-text);
+      font: 13px/1.4 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    }
+    #tw-root {
+      display: grid;
+      grid-template-rows: 1fr auto;
+      height: 100%;
+    }
+    #qt-screen {
+      display: block;
+      width: 100%;
+      height: 100%;
+      /* No browser panning over the drawing surface: a turtle canvas is a control, and
+         the browser's touch handling would fight the pointer events Qt receives. */
+      touch-action: none;
+      outline: none;
+      position: relative;
+    }
+    #tw-status {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 6px 12px;
+      background: var(--tw-statusbar);
+      border-top: 1px solid #2c2c33;
+      min-height: 24px;
+    }
+    #tw-status[data-state="error"] { background: var(--tw-error); }
+    #tw-status-text { flex: 1 1 auto; }
+    /* The spinner. Its animation is the only motion on the page, and the reduced-motion
+       rule keeps that motion from being a spin for anybody who asked for none. */
+    #tw-spinner {
+      width: 16px;
+      height: 16px;
+      flex: 0 0 auto;
+      border: 2px solid #3a3a44;
+      border-top-color: var(--tw-accent);
+      border-radius: 50%;
+      animation: tw-spin 0.9s linear infinite;
+    }
+    #tw-spinner[hidden] { display: none; }
+    @keyframes tw-spin { to { transform: rotate(360deg); } }
+    @media (prefers-reduced-motion: reduce) {
+      #tw-spinner { animation-duration: 3s; }
+    }
+  </style>
+</head>
+<body>
+  <div id="tw-root">
+    <!-- Qt owns the drawing surface. Since Qt 6.6 the loader creates the canvas inside
+         the element it is given and treats that element as a QScreen, so this is a
+         plain block rather than a canvas the page made itself. -->
+    <div id="qt-screen" tabindex="0" role="application"
+         aria-label="Time Warp Studio"></div>
+    <div id="tw-status" role="status" aria-live="polite">
+      <div id="tw-spinner" aria-hidden="true"></div>
+      <span id="tw-status-text">Loading Time Warp Studio…</span>
+    </div>
+  </div>
+
+  <!-- The module first, then the loader: `qtLoad` is defined by the second script and
+       takes the application's entry function, which the first defines. -->
+  <script src="time_warp_ide.js"></script>
+  <script src="qtloader.js"></script>
+  <script>
+    (async function () {
+      "use strict";
+
+      var screen = document.getElementById("qt-screen");
+      var statusBar = document.getElementById("tw-status");
+      var statusText = document.getElementById("tw-status-text");
+      var spinner = document.getElementById("tw-spinner");
+
+      function say(message) {
+        statusBar.dataset.state = "busy";
+        spinner.hidden = false;
+        statusText.textContent = message;
+      }
+
+      function ready() {
+        statusBar.dataset.state = "ready";
+        spinner.hidden = true;
+        statusText.textContent = "Ready";
+      }
+
+      function fail(message) {
+        statusBar.dataset.state = "error";
+        spinner.hidden = true;
+        statusText.textContent = message;
+        // The whole message in the console as well: the bar is one line, and the reason
+        // an Emscripten module failed to load is usually four.
+        console.error("Time Warp Studio: " + message);
+      }
+
+      // The threaded module asks for `SharedArrayBuffer` before it can draw anything,
+      // and a page may use that only when it is cross-origin isolated. A host that
+      // sends the headers itself passes this immediately; GitHub Pages sends neither,
+      // so the worker beside this page adds them and the page reloads once to be served
+      // through it. The reload is guarded by session storage so a browser that refuses
+      // the worker reports the reason instead of reloading forever.
+      async function ensureIsolated() {
+        if (window.crossOriginIsolated) {
+          try {
+            sessionStorage.removeItem("tw-isolation-attempt");
+          } catch (error) {
+            // Storage can be denied outright; that only costs the guard.
+          }
+          return true;
+        }
+        if (!("serviceWorker" in navigator)) {
+          fail("This browser cannot start the application: a threaded module needs " +
+               "cross-origin isolation, and this browser has no service worker to " +
+               "provide it. Try a current Firefox, Chrome, Edge or Safari.");
+          return false;
+        }
+        var attempted = false;
+        try {
+          attempted = sessionStorage.getItem("tw-isolation-attempt") === "1";
+        } catch (error) {
+          // As above: without the guard, the failure is reported after the reload.
+        }
+        if (attempted) {
+          fail("The application needs cross-origin isolation and could not obtain it. " +
+               "The page was served without the Cross-Origin-Opener-Policy and " +
+               "Cross-Origin-Embedder-Policy headers, and the service worker that " +
+               "would have added them did not take effect.");
+          return false;
+        }
+        try {
+          say("Preparing the application…");
+          try {
+            sessionStorage.setItem("tw-isolation-attempt", "1");
+          } catch (error) {
+            // Ignored: the reload below still happens, once.
+          }
+          await navigator.serviceWorker.register("coi-serviceworker.js");
+          await navigator.serviceWorker.ready;
+          // The worker claims this page as it activates, so the next load is served
+          // through it with both headers.
+          location.reload();
+        } catch (error) {
+          fail("The application needs cross-origin isolation, and the service worker " +
+               "could not be registered: " + error.message);
+        }
+        return false;
+      }
+
+      if (!(await ensureIsolated())) {
+        return;
+      }
+
+      // Both scripts have to have arrived. Naming which one did not is the difference
+      // between a deployment mistake that takes a minute to fix and one that takes an
+      // afternoon.
+      if (typeof qtLoad !== "function") {
+        fail("qtloader.js did not provide the Qt 6.6 loader, so the application " +
+             "cannot start. The browser build needs Qt 6.6 or later.");
+        return;
+      }
+      if (typeof window.time_warp_ide !== "function") {
+        fail("time_warp_ide.js did not load, so the application cannot start.");
+        return;
+      }
+
+      // `onLoaded` fires as the module finishes initialising, before `main()` has built
+      // the window, so the canvas may not exist for a frame or two. Focus belongs on it:
+      // the IDE's shortcuts are window-level, but a click on the page background would
+      // otherwise leave focus on the document and swallow them.
+      function focusCanvasWhenReady() {
+        var attempts = 0;
+        function attempt() {
+          var canvas = screen.querySelector("canvas");
+          if (canvas !== null) {
+            canvas.setAttribute("tabindex", "0");
+            canvas.focus();
+            return;
+          }
+          // Two seconds at 60 frames: long enough for the first paint of a cold module,
+          // and short enough that a canvas which never appears is not polled for ever.
+          if (++attempts < 120) {
+            window.requestAnimationFrame(attempt);
+          }
+        }
+        attempt();
+      }
+
+      say("Loading the interpreters…");
+
+      // `qtLoad` resolves when the module is instantiated and `main()` has been called;
+      // `onLoaded` fires just before that, at the point where the placeholder should give
+      // way to the interface.
+      var loading;
+      try {
+        loading = qtLoad({
+          qt: {
+            containerElements: [screen],
+            entryFunction: window.time_warp_ide,
+            onLoaded: function () {
+              ready();
+              focusCanvasWhenReady();
+            },
+            onExit: function (exit) {
+              if (exit && exit.crashed) {
+                fail("The application stopped: " + (exit.text || "no reason given"));
+              } else if (exit && exit.code) {
+                fail("The application stopped with status " + exit.code + ".");
+              } else {
+                fail("The application stopped.");
+              }
+            }
+          }
+        });
+      } catch (error) {
+        fail("The application did not start: " + error.message);
+        return;
+      }
+
+      if (loading && typeof loading.catch === "function") {
+        // `onExit` usually reports the reason already; this catches a failure that
+        // happened before there was a module to exit.
+        loading.catch(function (error) {
+          fail("The application did not start: " +
+               (error && error.message ? error.message : error));
+        });
+      }
+
+      // A click anywhere over the screen puts focus back on the canvas, so typing
+      // reaches the editor after the user has clicked a panel edge or the status bar.
+      screen.addEventListener("pointerdown", function () {
+        var canvas = screen.querySelector("canvas");
+        if (canvas) {
+          canvas.focus();
+        }
+      });
+    }());
+  </script>
+</body>
+</html>

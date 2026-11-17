@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 
 #include "timewarp/ui/app_paths.hpp"
+#include "timewarp/ui/wasm_storage.hpp"
 
 #include <QApplication>
 #include <QDir>
@@ -43,6 +44,12 @@ QString dataDirFor(const QString& leaf) {
 }
 
 QString examplesDir() {
+    // A WebAssembly build carries the corpus inside the module (the target adds it as
+    // a resource), because a page has no checkout or install directory beside it. The
+    // resource is only present in that build, so a desktop build never takes this path.
+    if (QFileInfo{QStringLiteral(":/examples")}.isDir()) {
+        return QStringLiteral(":/examples");
+    }
     const QString from_environment = qEnvironmentVariable("TIME_WARP_EXAMPLES");
     if (!from_environment.isEmpty() && QFileInfo{from_environment}.isDir()) {
         return QFileInfo{from_environment}.absoluteFilePath();
@@ -68,6 +75,13 @@ QString examplesDir() {
     // binary from inside it has the programs right there.
     if (QFileInfo{QStringLiteral("Examples")}.isDir()) {
         return QFileInfo{QStringLiteral("Examples")}.absoluteFilePath();
+    }
+    return {};
+}
+
+QString defaultFileDialogDir() {
+    if (wasm::available()) {
+        return wasm::projectRoot();
     }
     return {};
 }

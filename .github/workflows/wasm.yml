@@ -1,0 +1,150 @@
+name: WebAssembly
+
+# The browser build of the same Qt application: `TW_BUILD_WASM=ON` against Qt for
+# WebAssembly, assembled into one directory with `wasm/index.html`, uploaded as an
+# artifact, and published to `gh-pages` from a tag.
+#
+# Why a container rather than `install-qt-action`: a WebAssembly build needs three
+# things that have to agree with each other -- emsdk, a host Qt for `moc`/`rcc`, and a
+# WebAssembly Qt of the same version. The image below carries the first two and a
+# single-threaded wasm Qt at one version, and the job installs the threaded wasm Qt from
+# the same repository with aqt, so the three still agree. The image exports
+# `QT_VERSION` and `QT_WASM`; the steps below use the first and replace the second with
+# the threaded install.
+#
+# Why the publish is a `git push` rather than a pages action: the whole tree pins every
+# `uses:` to a commit SHA (see `.github/DEPLOYMENT.md`), and a pages action would be one
+# more SHA to review for a step that is four `git` commands. `GITHUB_TOKEN` is enough.
+
+on:
+  push:
+    # `paths` applies to branch pushes only; a tag always builds, because a tag is the
+    # release that publishes the site.
+    branches: [main]
+    tags:
+      - 'v*'
+    paths:
+      - 'native/**'
+      - 'wasm/**'
+      # The example programs are compiled into the module, so a change to one changes
+      # the artifact.
+      - 'Examples/**'
+      - 'VERSION'
+      - '.github/workflows/wasm.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+# The deployed site is replaced wholesale, so two runs at once would race for the
+# branch. Queued rather than cancelled: a half-pushed site is a broken one.
+concurrency:
+  group: wasm-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Build for the browser
+    runs-on: ubuntu-24.04
+    container:
+      # Pinned by tag, not by digest: the image is the toolchain here, and its tag is
+      # what states which Qt and emsdk this build was proven with. It installs Qt as
+      # `wasm_singlethread` with the desktop Qt that supplies `moc` beside it; the
+      # threaded package it does not carry is added by the next step.
+      image: stateoftheartio/qt6:6.8-wasm-aqt
+      options: --user root
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      # The image installs the single-threaded Qt, and this build needs the threaded
+      # one: every runner in the IDE is a `QThread`, and the single-threaded package
+      # compiles `QThread::start()` to an empty function, so Run would do nothing. aqt
+      # fetches the same version from the same repository the image used, so the host
+      # Qt already in the image still matches it.
+      - name: Install the threaded Qt for WebAssembly
+        run: |
+          set -euo pipefail
+          apt-get update
+          apt-get install -y --no-install-recommends python3-pip
+          # `pip<25` keeps a pip that still installs on the image's Python 3.8.
+          pip3 install --no-cache-dir --upgrade "pip<25" "aqtinstall==3.2.0"
+          aqt install-qt -O /opt/Qt all_os wasm "$QT_VERSION" wasm_multithread
+          echo "QT_WASM=/opt/Qt/$QT_VERSION/wasm_multithread" >> "$GITHUB_ENV"
+
+      # The threaded Qt has to be the one that was found, not the image's singlethreaded
+      # install. This checks the three pieces rather than trusting the tag: a container
+      # that changed its layout should fail here, naming what is missing, instead of as
+      # a C++ error about a Qt header three minutes into the build.
+      - name: Check the toolchain
+        run: |
+          set -euo pipefail
+          : "${QT_WASM:?no Qt for WebAssembly was installed}"
+          case "$QT_WASM" in
+            *wasm_multithread) ;;
+            *) echo "::error::$QT_WASM is not the threaded Qt"; exit 1 ;;
+          esac
+          test -f "$QT_WASM/lib/cmake/Qt6/qt.toolchain.cmake" \
+            || { echo "::error::No qt.toolchain.cmake under $QT_WASM"; exit 1; }
+          test -d "$(dirname "$QT_WASM")/gcc_64/lib/cmake/Qt6" \
+            || { echo "::error::No host Qt beside $QT_WASM"; exit 1; }
+          command -v emcc
+          emcc --version | head -n 1
+
+      - name: Configure
+        run: |
+          set -euo pipefail
+          cmake -S native -B native/build-wasm -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DTW_BUILD_WASM=ON \
+            2>&1 | tee configure.log
+          # A configure that never saw the wasm Qt still succeeds and skips the widget
+          # interface, which is the shape of failure that produces a green job that
+          # built nothing.
+          if grep -q "skipping the widget UI" configure.log; then
+            echo "::error::Qt Widgets was not found, so the interface was skipped."
+            exit 1
+          fi
+
+      - name: Build
+        run: cmake --build native/build-wasm --parallel
+
+      # The build assembles the whole site in `wasm/dist`: the module, its glue, the
+      # loader, the page, the isolation worker and `.nojekyll`. Checking for each is
+      # what makes "the site was built" a fact rather than a hope.
+      - name: Check the site
+        run: |
+          set -euo pipefail
+          for file in index.html coi-serviceworker.js time_warp_ide.js \
+                      time_warp_ide.wasm qtloader.js; do
+            if [ ! -f "wasm/dist/$file" ]; then
+              echo "::error::wasm/dist/$file was not produced."
+              ls -l wasm/dist || true
+              exit 1
+            fi
+          done
+          ls -l wasm/dist
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: time-warp-studio-wasm
+          path: wasm/dist
+          if-no-files-found: error
+
+      # Tags publish. A push to `main` builds and uploads but leaves the live site
+      # alone, so an ordinary commit cannot change what a visitor downloads.
+      - name: Publish to gh-pages
+        if: startsWith(github.ref, 'refs/tags/')
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          cd wasm/dist
+          git init -q
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout -q -b gh-pages
+          git add -A
+          git commit -q -m "WebAssembly build from ${GITHUB_REF_NAME} (${GITHUB_SHA})"
+          git push -q --force \
+            "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" \
+            gh-pages

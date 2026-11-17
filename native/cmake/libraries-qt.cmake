@@ -12,6 +12,15 @@
 # The Qt libraries: the canvas bridge, the debugger, SQL, projects, lessons and their
 # commands, and the JSON-RPC API.
 
+# Host programs beside the application: the teacher's and learner's commands, the
+# automation server, the player. A browser build has exactly one executable -- the page
+# loads `time_warp_ide.wasm` and nothing else -- so this is off there rather than
+# building modules nobody fetches.
+set(TIME_WARP_BUILD_HOST_TOOLS ON)
+if(TW_BUILD_WASM)
+    set(TIME_WARP_BUILD_HOST_TOOLS OFF)
+endif()
+
 # ---------------------------------------------------------------------------
 # Qt bridge (optional)
 #
@@ -257,15 +266,17 @@ if(TIME_WARP_QT_FOUND)
     endif()
 
     # The learner's command, from the same library the panel uses.
-    add_executable(time_warp_learn tools/learn.cpp)
-    target_link_libraries(time_warp_learn PRIVATE timewarp::lessons)
-    timewarp_enable_warnings(time_warp_learn)
+    if(TIME_WARP_BUILD_HOST_TOOLS)
+        add_executable(time_warp_learn tools/learn.cpp)
+        target_link_libraries(time_warp_learn PRIVATE timewarp::lessons)
+        timewarp_enable_warnings(time_warp_learn)
 
-    # The teacher's command: validate the curriculum, and (with --write) the
-    # lesson plans the documentation job compares against it.
-    add_executable(time_warp_teach tools/teach.cpp)
-    target_link_libraries(time_warp_teach PRIVATE timewarp::lessons)
-    timewarp_enable_warnings(time_warp_teach)
+        # The teacher's command: validate the curriculum, and (with --write) the
+        # lesson plans the documentation job compares against it.
+        add_executable(time_warp_teach tools/teach.cpp)
+        target_link_libraries(time_warp_teach PRIVATE timewarp::lessons)
+        timewarp_enable_warnings(time_warp_teach)
+    endif()
 else()
     message(STATUS "Qt not found: skipping the lessons library")
 endif()
@@ -318,9 +329,11 @@ if(TIME_WARP_QT_FOUND AND TARGET timewarp::sql)
         target_compile_options(timewarp_api PRIVATE -Werror)
     endif()
 
-    add_executable(time_warp_api tools/time_warp_api.cpp)
-    target_link_libraries(time_warp_api PRIVATE timewarp::api)
-    timewarp_enable_warnings(time_warp_api)
+    if(TIME_WARP_BUILD_HOST_TOOLS)
+        add_executable(time_warp_api tools/time_warp_api.cpp)
+        target_link_libraries(time_warp_api PRIVATE timewarp::api)
+        timewarp_enable_warnings(time_warp_api)
+    endif()
 
     if(TIME_WARP_EXPR_BUILD_TESTS)
         add_executable(api_tests tests/api_tests.cpp)
@@ -490,6 +503,7 @@ if(TIME_WARP_QT_FOUND)
             src/ui/terminal_widget.cpp
             src/ui/tour.cpp
             src/ui/version_history.cpp
+            src/ui/wasm_storage.cpp
             # Listed so AUTOMOC scans them: the Q_OBJECT classes live in headers
             # outside this target's source directory.
             include/timewarp/ui/benchmark.hpp
@@ -525,6 +539,7 @@ if(TIME_WARP_QT_FOUND)
             include/timewarp/ui/terminal_widget.hpp
             include/timewarp/ui/tour.hpp
             include/timewarp/ui/version_history.hpp
+            include/timewarp/ui/wasm_storage.hpp
         )
         add_library(timewarp::ui ALIAS timewarp_ui)
 
@@ -606,20 +621,34 @@ if(TIME_WARP_QT_FOUND)
         # One program, the canvas it draws on and the output it prints. It links
         # `timewarp::ui_core` rather than `timewarp::ui`, so an artifact compiled
         # for a friend carries the showing and not the authoring.
-        add_executable(time_warp_player tools/player.cpp)
-        target_link_libraries(time_warp_player PRIVATE timewarp::ui_core)
-        # The version string is a definition rather than a header constant, so a
-        # target that prints it has to carry it: `--version` would otherwise be the
-        # one place in the product with no number in it.
-        target_compile_definitions(time_warp_player PRIVATE
-            TIME_WARP_VERSION="${TIME_WARP_VERSION}")
-        timewarp_enable_warnings(time_warp_player)
+        if(TIME_WARP_BUILD_HOST_TOOLS)
+            add_executable(time_warp_player tools/player.cpp)
+            target_link_libraries(time_warp_player PRIVATE timewarp::ui_core)
+            # The version string is a definition rather than a header constant, so a
+            # target that prints it has to carry it: `--version` would otherwise be the
+            # one place in the product with no number in it.
+            target_compile_definitions(time_warp_player PRIVATE
+                TIME_WARP_VERSION="${TIME_WARP_VERSION}")
+            timewarp_enable_warnings(time_warp_player)
+        endif()
 
         # The application, not a harness: it shows the window, opens the files it
         # is given, and can render itself to a PNG for the layout checks.
-        add_executable(time_warp_ide tools/time_warp_ide.cpp)
+        #
+        # `qt_add_executable` for the browser and `add_executable` everywhere else:
+        # the Qt variant is what runs the WebAssembly finalisation -- the memory
+        # settings, the `.js` glue and the module itself are its business, and a plain
+        # `add_executable` would produce a target the deployable page cannot load.
+        if(TW_BUILD_WASM)
+            qt_add_executable(time_warp_ide tools/time_warp_ide.cpp)
+        else()
+            add_executable(time_warp_ide tools/time_warp_ide.cpp)
+        endif()
         target_link_libraries(time_warp_ide PRIVATE timewarp::ui)
         timewarp_enable_warnings(time_warp_ide)
+        if(TW_BUILD_WASM)
+            timewarp_enable_wasm(time_warp_ide)
+        endif()
 
         # ---- install ------------------------------------------------------
         # Four things have to arrive together for an installed tree to work:
@@ -653,9 +682,13 @@ if(TIME_WARP_QT_FOUND)
         # A command, not development scaffolding: "check this program" is one of the
         # things a person who writes programs in eleven languages wants from a terminal,
         # and it is the same report the gates read.
-        install(TARGETS time_warp_check RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
-        install(TARGETS time_warp_api
-                RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
+        if(TARGET time_warp_check)
+            install(TARGETS time_warp_check RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
+        endif()
+        if(TARGET time_warp_api)
+            install(TARGETS time_warp_api
+                    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
+        endif()
         # The player goes beside the IDE because `--compile` looks for it there:
         # an artifact is a copy of whichever of the two it finds, and a package
         # without it would compile programs into copies of the whole IDE.

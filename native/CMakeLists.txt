@@ -17,6 +17,13 @@ cmake_minimum_required(VERSION 3.20)
 # and it used to be repeated at each of the 37 targets.
 include(cmake/warnings.cmake)
 
+# The WebAssembly target, off by default. Its toolchain has to be chosen before
+# `project()` enables a language, which is why the option and the search for the
+# toolchain sit above that call rather than with the other build parts below. A
+# desktop configure reads four lines and a `return()`.
+option(TW_BUILD_WASM "Build the IDE for Qt for WebAssembly (browser) instead of the desktop" OFF)
+include(cmake/wasm-toolchain.cmake)
+
 # The CMake project version of this target set. It is *not* the product version: the
 # product version is read from the repository's VERSION file further down and compiled
 # into the UI as TIME_WARP_VERSION, so the window title and the packaged release cannot
@@ -73,8 +80,15 @@ endif()
 # because a library has to be defined before what links it.
 
 include(cmake/version.cmake)
+# Before the libraries: its memory figures are read when the executable is finalised,
+# and a variable set afterwards would arrive too late.
+include(cmake/wasm.cmake)
 include(cmake/libraries.cmake)
 include(cmake/qt.cmake)
-include(cmake/tools.cmake)
+# The command-line tools and their gates are host programs: a browser has no command
+# line, and each one would link the engines into another module the page never loads.
+if(NOT TW_BUILD_WASM)
+    include(cmake/tools.cmake)
+endif()
 include(cmake/libraries-qt.cmake)
 include(cmake/packaging.cmake)

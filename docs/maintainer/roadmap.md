@@ -46,18 +46,22 @@ it, so shipping one without correcting the documentation fails a gate.
 | Database | A SQLite Database panel, the shared `SQL` statement in nine languages, scripts, tables and schema; compiled programs link SQLite |
 | Automation | JSON-RPC over stdin and stdout, and the `twc` terminal compiler |
 | Packaging | `make install`; tagged releases build `.deb`, `.rpm`, AppImage, tarball, Flatpak and a container image for Linux |
+| Browser | The same application built for WebAssembly: every language, the debugger, the REPL, the example corpus, and a project volume that survives a reload; see [WebAssembly](wasm.md) |
 | Quality gates | 23 CTest suites in four build configurations; the frozen-corpus gate over 636 programs; 534 command rows run as programs and through the REPL; 67 example programs through the smoke gate; the documentation gates |
 
 ---
 
 ## Not built, on purpose
 
-A web (WebAssembly) build, and calling one language from another. Both would have to
-invent a machine that never existed, which is the one thing this environment is not for.
+Calling one language from another would have to invent a machine that never existed, which
+is the one thing this environment is not for.
 
 Two features that used to be on this list shipped and stayed: the examples browser became
 **File > Examples Gallery…**, and the accessibility presets became the theme, text-size,
-focus and presentation controls in **View**.
+focus and presentation controls in **View**. A third has left it too: the Studio builds for
+the browser, with every language, the debugger, the REPL and the example corpus, as
+[WebAssembly](wasm.md) describes. What the browser build does not have is the desktop's
+packaging, its terminal and its external sound players, none of which a page can offer.
 
 ---
 

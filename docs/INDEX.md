@@ -67,6 +67,7 @@ work.
 | [Testing](maintainer/testing.md) | The suites, the example and command gates, the parity corpora, and what each is worth |
 | [Roadmap](maintainer/roadmap.md) | What is built, what is deliberately not, and what is known to be wrong |
 | [Release](maintainer/release.md) | The version, the procedure, and what a release contains |
+| [WebAssembly](maintainer/wasm.md) | The browser build: the target, the page, the storage, and the workflow |
 
 ## The project
 

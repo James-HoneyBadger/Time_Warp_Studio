@@ -6,7 +6,9 @@
 #include <QFile>
 #include <QFileInfo>
 #include <QDateTime>
+#if QT_CONFIG(process)
 #include <QProcess>
+#endif
 #include <QStandardPaths>
 #include <QTemporaryDir>
 
@@ -55,10 +57,12 @@ SoundPlayer::SoundPlayer(QObject* parent) : QObject(parent) {
     QString arguments;
     program_ = findPlayer(&arguments);
     arguments_ = arguments.split(QLatin1Char(' '), Qt::SkipEmptyParts);
+#if QT_CONFIG(process)
     process_ = new QProcess{this};
     // The player exits on its own when the file ends. Its output is not the
     // program's output, so it goes nowhere rather than into the console.
     process_->setProcessChannelMode(QProcess::MergedChannels);
+#endif
 }
 
 SoundPlayer::~SoundPlayer() { stop(); }
@@ -118,21 +122,25 @@ void SoundPlayer::start(const QByteArray& wav) {
     file.write(wav);
     file.close();
 
+#if QT_CONFIG(process)
     QStringList arguments = arguments_;
     arguments << current_file_;
     process_->start(program_, arguments);
+#endif
 }
 
 void SoundPlayer::stop() {
     // The mix is part of what is playing, so silencing the machine clears it:
     // the next note must not arrive on top of a voice nobody can hear.
     mixer_.clear();
+#if QT_CONFIG(process)
     if (process_ != nullptr && process_->state() != QProcess::NotRunning) {
         // `kill` rather than `terminate`: a player told to stop politely may
         // finish the buffer, which is exactly the sound being asked to go away.
         process_->kill();
         process_->waitForFinished(200);
     }
+#endif
     if (!current_file_.isEmpty()) {
         QFile::remove(current_file_);
         current_file_.clear();

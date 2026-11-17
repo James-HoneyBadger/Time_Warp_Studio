@@ -4,6 +4,7 @@
 
 #include <QCoreApplication>
 #include <QGuiApplication>
+#include <QSettings>
 
 // Supplied by CMake from the repository's VERSION file. The fallback keeps a
 // standalone compile of this file working.
@@ -17,6 +18,16 @@ void applyApplicationIdentity() {
     QCoreApplication::setOrganizationName(QStringLiteral("TimeWarpStudio"));
     QCoreApplication::setApplicationName(QStringLiteral("TimeWarpStudio"));
     QCoreApplication::setApplicationVersion(version());
+
+#ifdef __EMSCRIPTEN__
+    // The browser's default is an INI file in the in-memory home directory, which a
+    // reload throws away: the theme, the window layout and the list of open documents
+    // would reset on every visit. `localStorage` is synchronous, so it needs neither
+    // the IndexedDB volume nor a JSPI-enabled build, and the settings are small enough
+    // for its five-megabyte allowance. Set here because a format chosen after the first
+    // `QSettings` object exists is too late.
+    QSettings::setDefaultFormat(QSettings::WebLocalStorageFormat);
+#endif
 
     // The desktop entry this window belongs to. A distribution package names it
     // after the product, and a Flatpak names it after the application id; the

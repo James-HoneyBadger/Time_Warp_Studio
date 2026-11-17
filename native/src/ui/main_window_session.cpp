@@ -8,6 +8,7 @@
 #include "timewarp/lang/executor.hpp"
 #include "timewarp/lang/watch.hpp"
 #include "timewarp/ui/native_runner.hpp"
+#include "timewarp/ui/wasm_storage.hpp"
 
 #include <QAction>
 #include <QApplication>
@@ -994,7 +995,8 @@ bool MainWindow::openFile(const QString& path, OpenFailure failure) {
 }
 
 bool MainWindow::openFileDialog() {
-    const QString path = QFileDialog::getOpenFileName(this, tr("Open file"), QString{},
+    const QString path = QFileDialog::getOpenFileName(this, tr("Open file"),
+                                                      defaultFileDialogDir(),
                                                       openFileFilter());
     return path.isEmpty() ? false : openFile(path);
 }
@@ -1034,6 +1036,12 @@ bool MainWindow::writeDocument(CodeEditor* editor, const QString& path) {
     QSettings breakpoint_settings;
     breakpoints::save(breakpoint_settings, path, editor->breakpoints());
     setExecutionState(tr("ready"), tr("Saved %1").arg(QFileInfo{path}.fileName()));
+#ifdef __EMSCRIPTEN__
+    // A save is the moment the user expects the file to be durable. In the browser
+    // "durable" means IndexedDB has it, not that the in-memory write returned, so the
+    // volume is flushed here rather than left to the thirty-second timer.
+    wasm::saveNow();
+#endif
     return true;
 }
 
@@ -1058,8 +1066,9 @@ bool MainWindow::saveDocumentAs(CodeEditor* editor) {
                         .arg(nameOf(editor).replace(QLatin1Char(' '), QLatin1Char('_')),
                              extensions(defaultLanguage()).first());
     }
-    const QString path = QFileDialog::getSaveFileName(this, tr("Save as"), suggested,
-                                                       openFileFilter());
+    const QString start = QDir{defaultFileDialogDir()}.filePath(suggested);
+    const QString path = QFileDialog::getSaveFileName(this, tr("Save as"), start,
+                                                      openFileFilter());
     return path.isEmpty() ? false : writeDocument(editor, path);
 }
 

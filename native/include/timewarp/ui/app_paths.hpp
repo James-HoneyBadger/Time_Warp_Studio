@@ -42,4 +42,12 @@ namespace timewarp::ui {
 /// teacher can point the application at a folder of their own programs.
 [[nodiscard]] QString examplesDir();
 
+/// The folder a file dialog opens in when the caller has no better one.
+///
+/// Empty on the desktop, which is how these dialogs have always been: Qt then opens
+/// in the process's working directory. In the browser the working directory is not a
+/// place a user can find again, and the home directory is memory that a reload
+/// discards, so the answer is the folder on the IndexedDB volume that survives both.
+[[nodiscard]] QString defaultFileDialogDir();
+
 }  // namespace timewarp::ui

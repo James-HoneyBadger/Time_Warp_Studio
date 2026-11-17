@@ -34,7 +34,10 @@ carries a built application for Linux with the Qt runtime inside it, so no compi
 required.
 
 The project is Linux only. Everything it builds, tests and ships targets Linux; there is
-no Windows or macOS build and no installer for either.
+no Windows or macOS build and no installer for either. It also builds for the browser --
+the same application compiled to WebAssembly and served as a page -- which
+[the WebAssembly guide](docs/maintainer/wasm.md) describes.
+
 [Getting started](docs/user/getting-started.md) covers the full procedure, the build
 requirements and what to do when a build fails.
 

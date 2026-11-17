@@ -34,6 +34,7 @@
 #include "timewarp/ui/main_window.hpp"
 #include "timewarp/ui/standalone.hpp"
 #include "timewarp/ui/turtle_canvas.hpp"
+#include "timewarp/ui/wasm_storage.hpp"
 
 namespace {
 
@@ -88,6 +89,14 @@ int main(int argc, char* argv[]) {
     // layout, theme, recent files -- lands in one known place. See app.cpp for why
     // this is deliberately not the Python IDE's identity.
     timewarp::ui::applyApplicationIdentity();
+
+#ifdef __EMSCRIPTEN__
+    // Before any window exists, because the Projects panel reads the volume as it is
+    // built: a mount that happened afterwards would show an empty folder until the
+    // next reload. The auto-save timer is started here for the same reason.
+    timewarp::ui::wasm::mountProjectStorage();
+    timewarp::ui::wasm::startAutoSave();
+#endif
 
     QCommandLineParser parser;
     parser.setApplicationDescription(
