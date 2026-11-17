@@ -25,6 +25,20 @@ the dialect of its period and behaves as it did on the machines it was written f
 The editor, debugger, canvas, project model and SQL layer are shared by all ten. A
 breakpoint in BASIC and one in Smalltalk are set, inspected and cleared in the same panel.
 
+## A new foundation
+
+Earlier versions were built on a fundamentally different architecture: a Python application
+using PySide6. The current Studio replaces that codebase with a C++20 and Qt 6 system,
+reimplementing the language engines and making the boundaries between interpreters, the
+interface, debugger and canvas explicit. The browser build is the same application carried
+to another platform, not a separate port.
+
+Version 29.0.0 marks a new start for the project. The move from MIT to AGPLv3 accompanies
+that architectural break and extends the source-sharing principle to modified versions
+run as network services. The [project history](docs/project/history.md) records what was
+replaced; the [architecture guide](docs/maintainer/architecture.md) explains the system
+that stands now.
+
 ---
 
 ## Install
