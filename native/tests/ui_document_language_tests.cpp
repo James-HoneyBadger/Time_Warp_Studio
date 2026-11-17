@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: AGPL-3.0-only
 //
 // The language table and the editor widget: the mapping by position, and the widget
 // the rest of these cases type into.

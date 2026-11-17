@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: AGPL-3.0-only
 //
 // The verifier. See `verify.hpp`: this is the reference's semantics, ported
 // rather than reinvented, because the panel and the two commands must agree.

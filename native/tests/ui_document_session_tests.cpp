@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: AGPL-3.0-only
 //
 // The session: recent files, the layout that comes back, where user data lives, and
 // the autosave that keeps unsaved work.

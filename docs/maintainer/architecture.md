@@ -1,10 +1,11 @@
 # Architecture
 
-## Time Warp Studio v28.2.0 — System design
+## Time Warp Studio v29.0.0 — System design
 
-Time Warp Studio 28.2.0 is one desktop process for Linux. Ten interpreters, the Qt 6
-window that drives them, the lesson machinery, the SQLite connection and the JSON-RPC
-server are all libraries in that process. Nothing crosses a process boundary
+Time Warp Studio 29.0.0 is one process on Linux, or the same process compiled to
+WebAssembly for a browser. Ten interpreters, the Qt 6 window that drives them, the lesson
+machinery, the SQLite connection and the JSON-RPC server are all libraries in that
+process. Nothing crosses a process boundary
 to run a program, and there is no interpreter anywhere in the tree: the Python reference
 the ports were judged against was deleted, and what remains of it is a recorded corpus.
 

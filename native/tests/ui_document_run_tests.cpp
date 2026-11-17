@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: AGPL-3.0-only
 //
 // Running a program: what reaches the canvas, what reaches the panels, the terminal,
 // and stopping a run that is still going.

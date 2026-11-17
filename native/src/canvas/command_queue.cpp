@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: AGPL-3.0-only
 //
 // See command_queue.hpp for the design rationale; this file is the mechanics.
 //

@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: AGPL-3.0-only
 //
 // The editor and what hangs off it: panes, minimap, history, snippets, keys.
 

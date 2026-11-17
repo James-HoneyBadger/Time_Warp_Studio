@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MIT
+# SPDX-License-Identifier: AGPL-3.0-only
 #
 # Included by `native/CMakeLists.txt` *before* `project()`, because a toolchain file
 # has to be chosen before any language is enabled. Nothing here runs for a desktop

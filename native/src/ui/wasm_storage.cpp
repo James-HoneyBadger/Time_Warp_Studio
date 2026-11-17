@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: AGPL-3.0-only
 //
 // See `include/timewarp/ui/wasm_storage.hpp` for why this exists.
 //

@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: AGPL-3.0-only
 //
 // The list rules: marker style, indent step, items at a level lining up, ordered
 // numbering, spacing after the marker, and a blank line before the list.

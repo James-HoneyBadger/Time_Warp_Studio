@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: AGPL-3.0-only
 //
 // Editing: find and replace, the snippet picker, run-selection and its history, and
 // the two questions answered from the cursor's position.

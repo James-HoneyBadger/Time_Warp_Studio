@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: AGPL-3.0-only
 //
 // The tokenizer and the run state: what a glyph is, where a name ends, and the
 // variables, functions and definition a program has in flight.

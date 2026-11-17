@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: AGPL-3.0-only
 //
 // Runs a complete Scheme program read from stdin and writes its output to
 // stdout, in exactly the form `execute_scheme()` produces -- including the

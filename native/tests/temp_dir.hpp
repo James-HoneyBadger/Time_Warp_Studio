@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: AGPL-3.0-only
 //
 // A temporary directory that a test cannot forget to clean up, and that reports
 // the path it used when creating it fails.

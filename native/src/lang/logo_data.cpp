@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: AGPL-3.0-only
 //
 // Variables, lists, words, the drawing extras and the higher-order primitives.
 #include "logo_internal.hpp"

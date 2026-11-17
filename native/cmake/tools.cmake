@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MIT
+# SPDX-License-Identifier: AGPL-3.0-only
 #
 # Included by `native/CMakeLists.txt`. `include()` rather than `add_subdirectory()`
 # on purpose: one directory scope keeps every source path in this file relative to

@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: AGPL-3.0-only
 //
 // Logo: the C++ port of `native/bridge/time_warp/languages/logo.py`.
 //

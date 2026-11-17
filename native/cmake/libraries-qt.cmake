@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MIT
+# SPDX-License-Identifier: AGPL-3.0-only
 #
 # Included by `native/CMakeLists.txt`. `include()` rather than `add_subdirectory()`
 # on purpose: one directory scope keeps every source path in this file relative to
@@ -750,7 +750,7 @@ if(TIME_WARP_QT_FOUND)
             DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/../docs/
             DESTINATION ${TIME_WARP_SHARE_DIR}/doc/time-warp-studio
         )
-        # The MIT notice travels with the application rather than in a dialog in
+        # The licence travels with the application rather than in a dialog in
         # front of the disk image (see CPACK_DMG_SLA_USE_RESOURCE_FILE_LICENSE),
         # so this copy is the one a user can read after installing.
         install(

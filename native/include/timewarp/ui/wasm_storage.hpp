@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: AGPL-3.0-only
 //
 // The browser's filesystem, and the one thing a desktop build has no equivalent of: it
 // is thrown away when the page reloads unless it has been written to IndexedDB.

@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: AGPL-3.0-only
 //
 // The code rules: blank lines around a fence, a language on every fence, one fence
 // character and one code style per document.

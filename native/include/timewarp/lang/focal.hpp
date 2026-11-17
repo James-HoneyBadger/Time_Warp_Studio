@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: AGPL-3.0-only
 //
 // FOCAL-69: DEC's line-numbered teaching language from 1969.
 //

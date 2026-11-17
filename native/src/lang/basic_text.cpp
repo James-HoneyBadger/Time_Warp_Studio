@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: AGPL-3.0-only
 //
 // BASIC's text handling: the helpers the statement dispatch shares, and the
 // string expression evaluator (`utils/string_evaluator.py`) it calls.

@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!-- SPDX-License-Identifier: MIT -->
+<!-- SPDX-License-Identifier: AGPL-3.0-only -->
 <!--
   The AppStream file the software centres read and Flathub requires. The id is the
   Flatpak id, and the file is named after it.
@@ -15,8 +15,8 @@
   <name>Time Warp Studio</name>
   <summary>An old-school programming environment with ten languages</summary>
 
-  <metadata_license>MIT</metadata_license>
-  <project_license>MIT</project_license>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>AGPL-3.0-only</project_license>
 
   <description>
     <p>
@@ -66,6 +66,14 @@
   </keywords>
 
   <releases>
+    <release version="29.0.0" date="2026-11-17">
+      <description>
+        <p>The Studio builds for the browser: the same application compiled to
+        WebAssembly, with every language, the debugger, the REPL and the example
+        corpus, and a project volume that survives a reload. The source licence is
+        the GNU Affero General Public License, version 3.</p>
+      </description>
+    </release>
     <release version="28.2.0" date="2026-11-03">
       <description>
         <p>The AI assistant is removed: the page beside the editor, its settings

@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: AGPL-3.0-only
 //
 // Evaluation: operands, strands, the reduce and scan operators, user functions, and
 // the statements that assign, define and print.

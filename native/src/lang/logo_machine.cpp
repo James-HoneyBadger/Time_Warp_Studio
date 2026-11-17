@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: AGPL-3.0-only
 //
 // The machine itself: the loader that turns source into statements, the
 // evaluator, and the loop that runs a program.

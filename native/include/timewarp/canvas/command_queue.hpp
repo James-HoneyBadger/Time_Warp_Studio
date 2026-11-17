@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: AGPL-3.0-only
 //
 // A bounded, lock-free, single-producer/single-consumer canvas command queue.
 //

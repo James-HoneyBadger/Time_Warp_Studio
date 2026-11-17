@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: AGPL-3.0-only
 //
 // The native interpreter: program storage, the execution loop, variables, I/O
 // and the run budget.

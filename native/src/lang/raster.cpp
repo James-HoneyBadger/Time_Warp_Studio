@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: AGPL-3.0-only
 //
 // The raster's operations. See `include/timewarp/lang/raster.hpp` for what it
 // is for and for its coordinate convention.

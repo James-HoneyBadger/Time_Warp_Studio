@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: AGPL-3.0-only
 //
 // Runs one native language program and prints what it did, so
 // `tools/lang_differential_check.py` can compare the C++ engine with the Python

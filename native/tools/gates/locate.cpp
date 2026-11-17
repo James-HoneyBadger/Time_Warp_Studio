@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: AGPL-3.0-only
 //
 // Finding the checkout and the binaries the gates drive, plus the command table
 // they share.

@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MIT
+# SPDX-License-Identifier: AGPL-3.0-only
 #
 # The Flatpak manifest: a sandboxed build of the whole application against a Qt the
 # image carries, so it runs the same on Arch, Fedora and Ubuntu whether or not those

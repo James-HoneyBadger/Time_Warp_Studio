@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: AGPL-3.0-only
 //
 // Sound: a small synthesiser, `PLAY`'s notation, and a WAV file.
 //

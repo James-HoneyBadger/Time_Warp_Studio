@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: AGPL-3.0-only
 //
 // A fixed-size pixel surface for programs that want a screen, not a drawing.
 //

@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: AGPL-3.0-only
 //
 // The commands a program's drawing arrives as, and the geometry each one appends to
 // the display list. The display list, not the pixels, is what the log, the scrubber

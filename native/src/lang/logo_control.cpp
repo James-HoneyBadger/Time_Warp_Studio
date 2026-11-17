@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: AGPL-3.0-only
 //
 // Control flow and output: REPEAT, IF, WHILE, FOREVER, PRINT and friends.
 #include "logo_internal.hpp"

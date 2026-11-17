@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: AGPL-3.0-only
 //
 // The IDE main window: editor column on the left, output and tooling on the
 // right, function-key bar underneath.

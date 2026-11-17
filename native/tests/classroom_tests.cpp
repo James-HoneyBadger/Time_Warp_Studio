@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: AGPL-3.0-only
 //
 // Tests for the classroom: the roster, handing work out, taking it in, marking,
 // and the bundle that moves a class between machines.

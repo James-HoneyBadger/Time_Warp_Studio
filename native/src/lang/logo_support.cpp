@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: AGPL-3.0-only
 //
 // The preamble `LogoMachine` is built on: Python-shaped string and number
 // formatting, and the word lists the reference keeps as module constants.

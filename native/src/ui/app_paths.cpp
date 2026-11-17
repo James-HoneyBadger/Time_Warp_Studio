@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: AGPL-3.0-only
 
 #include "timewarp/ui/app_paths.hpp"
 #include "timewarp/ui/wasm_storage.hpp"

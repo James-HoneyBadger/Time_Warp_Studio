@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: AGPL-3.0-only
 //
 // The text transforms that arrived with the terminal, the notification and the
 // homebrew catalogue.

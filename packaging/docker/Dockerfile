@@ -65,7 +65,7 @@ ARG VERSION=0.0.0
 
 LABEL org.opencontainers.image.title="Time Warp Studio" \
       org.opencontainers.image.description="An old-school programming environment: ten languages and a full IDE" \
-      org.opencontainers.image.licenses="MIT" \
+      org.opencontainers.image.licenses="AGPL-3.0-only" \
       org.opencontainers.image.version="${VERSION}"
 
 # Qt6 brings the platform plugins and the xcb libraries a window needs, and

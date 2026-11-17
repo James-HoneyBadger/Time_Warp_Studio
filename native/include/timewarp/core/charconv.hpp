@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: AGPL-3.0-only
 #pragma once
 
 /// Locale-independent conversions between a double and its text form.

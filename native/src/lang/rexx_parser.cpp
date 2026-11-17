@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: AGPL-3.0-only
 //
 // The tokenizer and the expression parser: REXX's three precedence levels, `||` and
 // abutting concatenation, and comparisons that go numeric when both sides look numeric.

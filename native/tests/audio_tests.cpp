@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: AGPL-3.0-only
 //
 // Tests for the mixer. No device and no Qt: the mix is a pure function of the
 // voices, so "two sounds at once" is a claim about a buffer.

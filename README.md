@@ -8,8 +8,8 @@ whichever language the editor is showing.
 
 [![Languages](https://img.shields.io/badge/languages-10-blue)](#the-ten-languages)
 [![Platform](https://img.shields.io/badge/platform-Linux-green)](docs/user/getting-started.md)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/Version-28.2.0-orange)](https://github.com/James-HoneyBadger/Time_Warp_Studio)
+[![License: AGPL v3](https://img.shields.io/badge/License-AGPL_v3-blue.svg)](LICENSE)
+[![Version](https://img.shields.io/badge/Version-29.0.0-orange)](https://github.com/James-HoneyBadger/Time_Warp_Studio)
 
 It is written in C++20 against Qt 6 and runs on Linux. The interpreters are libraries in
 the same process, which is what lets one debugger serve all ten: a run is stopped,

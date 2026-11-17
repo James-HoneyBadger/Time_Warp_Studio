@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: AGPL-3.0-only
 //
 // The suite's cases, in the order `ui_document_tests.cpp` runs them.
 //

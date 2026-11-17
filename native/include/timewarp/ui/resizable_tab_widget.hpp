@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: AGPL-3.0-only
 //
 // A QTabWidget whose size hints reflect only the *current* page, plus the tab-bar
 // behaviours the IDE wants (drag-to-reorder, middle-click close, right-click menu).

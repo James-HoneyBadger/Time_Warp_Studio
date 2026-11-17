@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: AGPL-3.0-only
 //
 // Reading, splitting and scanning the text the gates read. See text.hpp for why
 // these are scanners rather than regular expressions.

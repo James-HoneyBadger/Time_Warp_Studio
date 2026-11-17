@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: AGPL-3.0-only
 //
 // The painter: what the widget draws for the display list, the grid, the turtle marker,
 // and the two exports.

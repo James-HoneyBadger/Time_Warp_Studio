@@ -106,6 +106,61 @@ the same commit that changes the behaviour.
 Newest first. The headings are the release numbers; the text under each one is what that
 release changed, in the words it was shipped with.
 
+### [29.0.0] - 2026-11-17
+
+**The Studio runs in a browser, and the licence is AGPLv3.**
+The same Qt application now builds for WebAssembly: every language, the debugger, the
+REPL and the example corpus, served as one page whose project volume survives a reload.
+The source moves from MIT to the GNU Affero General Public License, version 3, which adds
+one obligation to the freedoms MIT granted: a modified version run as a network service
+offers its source to the people using it.
+
+#### Added
+
+- **A WebAssembly target.** `TW_BUILD_WASM=ON` compiles the application against the
+  threaded Qt for WebAssembly and assembles a deployable directory: the module, its glue,
+  Qt's loader, a page that fills the window and reports its failures in a status bar, and
+  a service worker that supplies the cross-origin isolation headers a threaded module
+  needs on a host that cannot send them. The module is threaded because every runner in
+  the application is a `QThread`; the single-threaded Qt compiles `QThread::start()` to
+  an empty function, so a single-threaded module would load, paint and edit, and do
+  nothing at all when Run was pressed.
+- **Storage that survives a reload.** IndexedDB is mounted over the home directory, so a
+  document saved in the browser is still there after a reload, and so are lesson
+  progress, the classroom roster and the autosave snapshots under `~/.time_warp`. The
+  volume is flushed on Save, every thirty seconds, and as the page unloads; the settings
+  are kept in `localStorage` instead, because the file they would otherwise use is read
+  before an asynchronous IndexedDB load could have restored it.
+- **The corpus and the guides inside the module.** `Examples/`, the three data files and
+  `docs/` are compiled in as resources, and their resolvers check the resource first, so
+  the examples gallery, the lessons, the snippet catalogue, the command reference and
+  **Help > Documentation** all work without a filesystem.
+- **`wasm.yml`.** A workflow that installs the threaded Qt beside the image's own,
+  builds, checks that the site it assembled contains every file, uploads it as an
+  artifact, and publishes it to `gh-pages` from a tag.
+
+#### Changed
+
+- **The licence, everywhere.** `LICENSE` carries the AGPLv3 text; every source header
+  says `AGPL-3.0-only`; the README badge, the Flatpak metadata, the container image's
+  label and the RPM package field agree with it. Flatpak metadata keeps a permissive
+  licence of its own, which is what AppStream requires of the file rather than of the
+  application. History entries that name MIT are left as they were written.
+- **The project and document dialogs open on the persisted volume** in the browser, where
+  the working directory is not a place a person can find again; the desktop keeps the
+  working directory it has always used.
+- **The README and the guides are rewritten in plainer prose**, and a counts gate now
+  checks the numbers the guides state against the tree.
+
+#### Fixed
+
+- **PILOT resolves a file against the run's own directory.** `F: OPEN notes.txt` opened
+  whatever the process's working directory happened to hold, and `LINK next.pilot` could
+  not find the lesson beside the one running. Both now use the same confined resolver as
+  BASIC, which refuses a name that leaves the directory.
+- **A runaway is stopped by the statements it has spent**, not by a clock the debugger
+  also reads, so the budget says what it means on a slow or instrumented build.
+
 ### [28.2.0] - 2026-11-03
 
 **The assistant is removed.**

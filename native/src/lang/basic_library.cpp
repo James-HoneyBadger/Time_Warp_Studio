@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: AGPL-3.0-only
 //
 // What a BASIC statement reaches that is not BASIC: the shape library
 // (`features/shapes.py`), the L-System renderer (`features/fractals.py`), the

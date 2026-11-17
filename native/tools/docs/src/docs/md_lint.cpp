@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: AGPL-3.0-only
 //
 // The command: what `lint` asks, and what `time_warp_docs md` prints.
 //

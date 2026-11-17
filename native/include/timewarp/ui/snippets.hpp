@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: AGPL-3.0-only
 //
 // The snippet library: a catalogue of small, runnable programs to insert at the
 // cursor.

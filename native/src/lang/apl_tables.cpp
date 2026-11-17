@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: AGPL-3.0-only
 //
 // The function tables: which names APL knows, which of them take a left argument, the
 // turtle words, and how a value is printed.

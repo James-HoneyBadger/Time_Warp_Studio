@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: AGPL-3.0-only
 //
 // The documentation browser: the pages under `docs/`, with a contents tree
 // built from `docs/INDEX.md` itself.

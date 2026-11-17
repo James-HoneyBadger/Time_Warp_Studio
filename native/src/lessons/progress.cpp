@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: AGPL-3.0-only
 //
 // The progress file. See `progress.hpp` for the shape and why a corrupt one is
 // ignored rather than fatal.

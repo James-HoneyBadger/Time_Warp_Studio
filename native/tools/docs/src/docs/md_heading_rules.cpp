@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: AGPL-3.0-only
 //
 // The heading rules: one top-level heading, no skipped levels, one style, space after
 // the hashes, blank lines around it, and a title on the first line.

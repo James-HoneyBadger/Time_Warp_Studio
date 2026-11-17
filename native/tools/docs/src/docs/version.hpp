@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: AGPL-3.0-only
 //
 // `time_warp_docs version`: check, and optionally apply, the hand-written copies of
 // the product version.

@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MIT
+# SPDX-License-Identifier: AGPL-3.0-only
 #
 # Included by `native/CMakeLists.txt` before the libraries, and only when
 # `TW_BUILD_WASM` is ON. It holds the three facts that have to be known before a target

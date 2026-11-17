@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: AGPL-3.0-only
 //
 // `native/share/counts.txt` and the gate that reads it. See counts.hpp for why it
 // exists; the data file documents the row format and the two halves of the check.

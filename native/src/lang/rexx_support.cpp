@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: AGPL-3.0-only
 //
 // The value helpers, the execution-state accessors, the line helpers and the
 // built-in functions: everything the machine and the parser both call.

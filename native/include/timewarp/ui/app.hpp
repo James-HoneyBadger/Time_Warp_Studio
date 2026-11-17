@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: AGPL-3.0-only
 //
 // Application identity: who this build is, as far as the operating system and
 // QSettings are concerned.

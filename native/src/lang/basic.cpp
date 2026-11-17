@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: AGPL-3.0-only
 //
 // BASIC's core: the text helpers the dispatch shares, variables, the load-time
 // scan for DATA and SUB/FUNCTION blocks, and the drawing helpers.

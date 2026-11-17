@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: AGPL-3.0-only
 //
 // Integration tests for the Qt bridge.  These need a real Qt event loop and a
 // real second thread, because the whole point of the bridge is the handshake

@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: AGPL-3.0-only
 //
 // Inline content: raw HTML, a bare URL, one emphasis delimiter, and one table pipe
 // style with rows as wide as the header.

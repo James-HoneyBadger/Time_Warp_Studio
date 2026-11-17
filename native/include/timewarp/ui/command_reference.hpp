@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: AGPL-3.0-only
 //
 // The command reference: every command, the smallest program that runs it, and what
 // it does -- read from the same table the gates drive.

@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: AGPL-3.0-only
 //
 // The menus, the tool bar, the status bar, the tour, and the controls that must
 // not be inert.

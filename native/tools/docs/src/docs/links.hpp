@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: AGPL-3.0-only
 //
 // `time_warp_docs links`: every relative link and every `#anchor` in the guides.
 //

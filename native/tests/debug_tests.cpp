@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: AGPL-3.0-only
 //
 // Tests for the debugging surface: source maps, resumable execution, the
 // suspension controller, and the call-stack / variable inspection API.

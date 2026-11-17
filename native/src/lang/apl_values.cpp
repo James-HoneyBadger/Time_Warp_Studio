@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: AGPL-3.0-only
 //
 // Values: the type, the operations that make and read arrays, and the scalar
 // functions. Everything else is written in terms of these.

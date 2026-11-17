@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MIT
+# SPDX-License-Identifier: AGPL-3.0-only
 #
 # Standalone build for the Time Warp Studio native engines, gates and Qt
 # application. No Python is involved in building or running any of it.

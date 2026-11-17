@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: AGPL-3.0-only
 //
 // `time_warp_docs claims`: what the documentation *claims*, not just what it links
 // to.

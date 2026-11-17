@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: AGPL-3.0-only
 //
 // The tube: `SCREEN`, `LOCATE`, `COLOR`, `PALETTE` and `WIDTH` -- the statements that
 // describe the surface before anything is drawn on it.

@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: AGPL-3.0-only
 //
 // Sprites and pixels: `GET`/`PUT`, the sprite statements and their visibility and
 // movement.

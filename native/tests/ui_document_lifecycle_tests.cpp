@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: AGPL-3.0-only
 //
 // A document's life: open, raise the tab that is already open, edit, choose a
 // language, close, save, and the two files that are read rather than parsed.

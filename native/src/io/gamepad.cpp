@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: AGPL-3.0-only
 //
 // See `include/timewarp/io/gamepad.hpp` for why this exists and what it does.
 //

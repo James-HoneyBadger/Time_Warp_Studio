@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: AGPL-3.0-only
 //
 // The machine around the program: ports, sound and keys, `WAIT`, `SPEED`, the timer,
 // the features reached by name, and the reset that puts state back.
