@@ -73,8 +73,9 @@ jobs:
           set -eu
           apt-get update
           apt-get install -y --no-install-recommends python3-pip
-          # `pip<25` keeps a pip that still installs on the image's Python 3.8.
-          pip3 install --no-cache-dir --upgrade "pip<25" "aqtinstall==3.2.0"
+          # `pip<25` keeps a pip that still installs on the image's Python 3.8, and
+          # 3.1.18 is the last aqt that runs on it: 3.2 onwards requires Python 3.9.
+          pip3 install --no-cache-dir --upgrade "pip<25" "aqtinstall==3.1.18"
           aqt install-qt -O /opt/Qt all_os wasm "$QT_VERSION" wasm_multithread
           echo "QT_WASM=/opt/Qt/$QT_VERSION/wasm_multithread" >> "$GITHUB_ENV"
 

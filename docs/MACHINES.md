@@ -96,7 +96,7 @@ examples:
 | Languages | All ten, one ROM at a time | One: CHIP-8 opcodes | HB-16 machine code, plus nine of the editor's engines on the ROM socket |
 | Storage | HB DOS 1.0, 512 sectors, one volume | Your own files; the ROM library browses a folder you choose | HB DOS 2.0 with two drives, directories and a sector map, and a cassette |
 | Interaction | A prompt with history, BASIC direct mode, F9 to run | A keypad, 60 frames a second, Run/Step/Reset | A prompt, a monitor, a screen and a listing page; eight processes on a desktop |
-| Where it lives | **Tools > HB-1 Computer...** (`Ctrl+Alt+W`), or `native/build/time_warp_hb1` | **Tools > CHIP-8 Emulator...** (`Ctrl+Shift+M`), or `native/build/time_warp_chip8 [file]` | **Tools > HB-2 Model 92...** (`Ctrl+Alt+2`), or `native/build/time_warp_hb2` |
+| Where it lives | **Tools > HB-1 Computer...** (`Ctrl+Alt+W`), or the `time_warp_hb1` program beside the Studio | **Tools > CHIP-8 Emulator...** (`Ctrl+Shift+M`), or the `time_warp_chip8` program beside the Studio | **Tools > HB-2 Model 92...** (`Ctrl+Alt+2`), or the `time_warp_hb2` program beside the Studio |
 | Manual | [HB-1 Owner's Manual](hb1/README.md) | [CHIP-8 Machine Manual](chip8/README.md) | [HB-2 Manual](hb2/README.md) and [HB-16](hb2/instruction-set.md) |
 | Teaches | That a computer is a system: memory, storage, languages, a screen | That a computer is a machine: fetch, decode, execute, 4K at a time | That a system is a set of programs: a bus, a processor, an operating system and a desk to put them on |
 

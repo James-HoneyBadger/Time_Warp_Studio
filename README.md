@@ -116,9 +116,9 @@ and settings of its own — not a mode of the editor — and **Tools** starts th
 
 | Machine | What it is | Start it |
 | --- | --- | --- |
-| **HB-1** | A 1982 home computer that never happened: one ROM socket, ten language cartridges, a CRT, HB DOS and a prompt | **Tools > HB-1 Computer…** (`Ctrl+Alt+W`), or `native/build/time_warp_hb1` |
-| **CHIP-8** | The 1977 virtual machine: 64×32 pixels, sixteen keys, four kilobytes and a keypad | **Tools > CHIP-8 Emulator…** (`Ctrl+Shift+M`), or `native/build/time_warp_chip8 [file]` |
-| **HB-2** | The HB-1's 1992 successor: a bus, a framebuffer, four audio channels and HB-16, a processor of its own | **Tools > HB-2 Model 92…** (`Ctrl+Alt+2`), or `native/build/time_warp_hb2` |
+| **HB-1** | A 1982 home computer that never happened: one ROM socket, ten language cartridges, a CRT, HB DOS and a prompt | **Tools > HB-1 Computer…** (`Ctrl+Alt+W`), or the `time_warp_hb1` program beside the Studio |
+| **CHIP-8** | The 1977 virtual machine: 64×32 pixels, sixteen keys, four kilobytes and a keypad | **Tools > CHIP-8 Emulator…** (`Ctrl+Shift+M`), or the `time_warp_chip8` program beside the Studio |
+| **HB-2** | The HB-1's 1992 successor: a bus, a framebuffer, four audio channels and HB-16, a processor of its own | **Tools > HB-2 Model 92…** (`Ctrl+Alt+2`), or the `time_warp_hb2` program beside the Studio |
 
 A CHIP-8 listing or ROM is also an ordinary document: open a `.ch8` file and press Run to
 assemble it and watch it draw, with gutter breakpoints and a rewind strip like any other
