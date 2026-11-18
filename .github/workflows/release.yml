@@ -262,8 +262,6 @@ jobs:
         with:
           bundle: Time_Warp_Studio-${{ needs.verify.outputs.version }}-x86_64.flatpak
           manifest-path: packaging/flatpak/org.honeybadger.TimeWarpStudio.yml
-          # The manifest builds the checkout, which is already here: no second clone.
-          build-args: --disable-rofiles-fuse
           cache-key: flatpak-builder-${{ hashFiles('native/**', 'packaging/flatpak/**') }}
 
       - name: Checksum the bundle
