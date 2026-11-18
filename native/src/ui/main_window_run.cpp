@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: AGPL-3.0-only
 
 #include "main_window_internal.hpp"
 
@@ -33,6 +33,7 @@
 #include "timewarp/ui/benchmark.hpp"
 #include "timewarp/ui/console.hpp"
 #include "timewarp/ui/breakpoints.hpp"
+#include "timewarp/ui/chip8_text.hpp"
 #include "timewarp/ui/code_editor.hpp"
 #include "timewarp/ui/classroom_marker.hpp"
 #include "timewarp/ui/command_palette.hpp"
@@ -585,6 +586,14 @@ void MainWindow::runSource(CodeEditor* editor, const QString& source) {
         sound_->beginRecording();
     }
 
+    // A CHIP-8 document runs on the machine's own executor. It is not a registry
+    // language, so it is dispatched before the language table is asked, and it
+    // reaches the same canvas the other engines draw on.
+    if (isChip8Document(editor)) {
+        runNatively(editor, timewarp::lang::Language::Basic, source, true);
+        return;
+    }
+
     // A ported language runs in this process. The bridge is only for the ones
     // that have not been ported, and `executor_for` is the question that decides
     // it -- so adding an executor is all it takes for the IDE to use it.
@@ -752,7 +761,7 @@ void MainWindow::stopRunningDocument() {
 }
 
 void MainWindow::runNatively(CodeEditor* editor, timewarp::lang::Language language,
-                             const QString& source) {
+                             const QString& source, bool chip8) {
     // The same clean surface the other engines get, in the same order.
     canvas_bridge_->drainNow();
     turtle_canvas_->reset();
@@ -765,6 +774,11 @@ void MainWindow::runNatively(CodeEditor* editor, timewarp::lang::Language langua
     }
 
     auto* runner = new NativeRunner{language, *canvas_queue_, this};
+    if (chip8) {
+        // The machine takes bytes. A listing is lowered by the same codec a ROM is
+        // decoded with, so what the assembler reads is what the document holds.
+        runner->set_chip8(romTextToBytes(source));
+    }
     native_runner_ = runner;
     // The run's own directory: a project's root, or the document's folder. See
     // `runFileBase` for why the process's working directory is the last resort.

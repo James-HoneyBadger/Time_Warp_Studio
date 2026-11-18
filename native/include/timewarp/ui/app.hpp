@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: AGPL-3.0-only
 //
 // Application identity: who this build is, as far as the operating system and
 // QSettings are concerned.
@@ -39,6 +39,19 @@ namespace timewarp::ui {
 /// an implementation: a program written in one build opens in the other. Only
 /// settings are private.
 void applyApplicationIdentity();
+
+/// Applies the identity for one of the project's other applications.
+///
+/// The machines are processes of their own, so each needs its own settings scope:
+/// one file shared between the Studio and three machines would have their window
+/// layouts and ROM folders overwriting each other. The organisation is the suite,
+/// the application name is the program, and *desktopName* is the desktop entry the
+/// window belongs to, so the dock matches the launcher.
+///
+/// The Studio's identity is unchanged by this: its own call keeps
+/// `TimeWarpStudio`/`TimeWarpStudio`, because renaming that scope would strand the
+/// settings of everyone who already runs it.
+void applyApplicationIdentity(const QString& applicationName, const QString& desktopName);
 
 /// The project version, from the repository's `VERSION` file via CMake, so the
 /// window title and the packaged version cannot drift apart.

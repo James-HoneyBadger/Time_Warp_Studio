@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: AGPL-3.0-only
 //
 // The debugger, in every shape an executor gives it: a statement in a line-by-line
 // language, a top-level statement in Logo and a message send in Smalltalk.

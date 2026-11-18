@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: AGPL-3.0-only
 //
 // The REPL bar's engine: one background thread, one persistent session.
 //
@@ -66,6 +66,7 @@ public:
     void requestStop();
 
     void setSqlCallback(std::function<std::string(std::string_view)> callback);
+    void setMachineBus(timewarp::lang::Interpreter::MachineBus bus);
     /// Wakes the GUI so it drains the canvas queue. The window supplies
     /// `CanvasBridge::wake`; a headless test can leave it unset.
     void setWakeup(std::function<void()> wakeup);
@@ -112,6 +113,7 @@ private:
     bool reset_requested_ = false;
     bool quit_ = false;
     std::function<std::string(std::string_view)> sql_callback_;
+    timewarp::lang::Interpreter::MachineBus machine_bus_;
     std::function<void()> wakeup_;
 };
 

@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: AGPL-3.0-only
 //
 // Whitespace and document shape: trailing spaces, tabs in prose, doubled blank lines,
 // a split block quote, and the one newline a file ends with.

@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: AGPL-3.0-only
 //
 // The suite's cases, in the order `ui_layout_tests.cpp` runs them.
 //
@@ -54,6 +54,7 @@ void test_tool_bar_configuration();
 void test_status_bar_badge_placement();
 void test_outline_dock_starts_hidden();
 void test_menu_structure();
+void test_the_tools_menu_launches_the_three_machines();
 void test_print_entries_follow_the_component();
 void test_help_menu_opens_the_documentation();
 void test_editor_minimap_and_whitespace();
@@ -104,5 +105,6 @@ void test_the_terminal_interrupts_a_running_command();
 void test_repl_bar_runs_and_keeps_bindings();
 void test_repl_basic_direct_mode();
 void test_repl_bar_scheme_errors_and_language_switch();
+void test_the_hb2_window_runs_a_listing();
 
 }  // namespace tw::ui_layout

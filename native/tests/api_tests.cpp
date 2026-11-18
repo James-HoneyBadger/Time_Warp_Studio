@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: AGPL-3.0-only
 //
 // The automation API: requests in, responses out, and the errors a caller has to
 // be able to tell apart.

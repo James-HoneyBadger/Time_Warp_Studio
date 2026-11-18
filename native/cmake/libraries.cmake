@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MIT
+# SPDX-License-Identifier: AGPL-3.0-only
 #
 # Included by `native/CMakeLists.txt`. `include()` rather than `add_subdirectory()`
 # on purpose: one directory scope keeps every source path in this file relative to
@@ -15,6 +15,12 @@
 # ---------------------------------------------------------------------------
 # Library
 # ---------------------------------------------------------------------------
+
+# `std::atomic` and `std::thread` are used by the interpreters, so every Qt-free
+# library links this. On Linux it is nearly a no-op; on the browser build it is
+# what compiles the objects with `atomics` and `bulk-memory`, without which the
+# threaded Qt's `--shared-memory` link refuses them.
+find_package(Threads REQUIRED)
 
 add_library(timewarp_expr
     src/token.cpp
@@ -253,7 +259,8 @@ foreach(objects IN LISTS TIME_WARP_LANGUAGE_OBJECTS)
     target_include_directories(${objects} PUBLIC
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>)
     target_compile_features(${objects} PUBLIC cxx_std_20)
-    target_link_libraries(${objects} PUBLIC timewarp::expr timewarp::audio timewarp::io)
+    target_link_libraries(${objects} PUBLIC timewarp::expr timewarp::audio timewarp::io
+        Threads::Threads)
     timewarp_enable_warnings(${objects})
     target_compile_options(${objects} PRIVATE ${TIME_WARP_GNU_WARNING_FLAGS}
         ${TIME_WARP_NULL_DEREFERENCE}
@@ -270,13 +277,54 @@ endforeach()
 # library cannot carry them.
 add_library(timewarp_lang STATIC)
 add_library(timewarp::lang ALIAS timewarp_lang)
-target_link_libraries(timewarp_lang PUBLIC timewarp::expr timewarp::audio timewarp::io)
+target_link_libraries(timewarp_lang PUBLIC timewarp::expr timewarp::audio timewarp::io
+    Threads::Threads)
 target_include_directories(timewarp_lang PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>)
 target_compile_features(timewarp_lang PUBLIC cxx_std_20)
 foreach(objects IN LISTS TIME_WARP_LANGUAGE_OBJECTS)
     target_sources(timewarp_lang PRIVATE $<TARGET_OBJECTS:${objects}>)
 endforeach()
+
+# CHIP-8 is a machine with its own assembler and processor, not an IDE language.
+# Its engine links the interpreter only for the historical whole-program adapter;
+# it is deliberately absent from TIME_WARP_LANGUAGE_OBJECTS and the registry.
+add_library(timewarp_chip8_engine src/lang/chip8.cpp)
+add_library(timewarp::chip8_engine ALIAS timewarp_chip8_engine)
+target_include_directories(timewarp_chip8_engine
+    PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>)
+target_compile_features(timewarp_chip8_engine PUBLIC cxx_std_20)
+target_link_libraries(timewarp_chip8_engine PUBLIC timewarp::lang)
+timewarp_enable_warnings(timewarp_chip8_engine)
+target_compile_options(timewarp_chip8_engine PRIVATE ${TIME_WARP_GNU_WARNING_FLAGS}
+    ${TIME_WARP_NULL_DEREFERENCE} -ffp-contract=off)
+
+# The HB-2 processor, bus, display, sound, clock and peripherals are Qt-free. The
+# desktop window is a separate target in libraries-qt.cmake.
+add_library(timewarp_hb2
+    src/hb2/asm.cpp
+    src/hb2/audio.cpp
+    src/hb2/bus.cpp
+    src/hb2/cpu.cpp
+    src/hb2/device.cpp
+    src/hb2/dos.cpp
+    src/hb2/hbos.cpp
+    src/hb2/machine.cpp
+    src/hb2/modules.cpp
+    src/hb2/monitor.cpp
+    src/hb2/peripherals.cpp
+    src/hb2/rom.cpp
+    src/hb2/shell.cpp
+    src/hb2/tape.cpp
+    src/hb2/video.cpp
+)
+add_library(timewarp::hb2 ALIAS timewarp_hb2)
+target_include_directories(timewarp_hb2
+    PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>)
+target_compile_features(timewarp_hb2 PUBLIC cxx_std_20)
+target_link_libraries(timewarp_hb2 PUBLIC timewarp::lang)
+timewarp_enable_warnings(timewarp_hb2)
+
 if(TIME_WARP_EXPR_BUILD_TESTS)
     add_executable(lang_tests
         tests/lang_tests.cpp
@@ -297,6 +345,25 @@ if(TIME_WARP_EXPR_BUILD_TESTS)
         TIME_WARP_TEST_EXAMPLES="${CMAKE_CURRENT_SOURCE_DIR}/../Examples")
     timewarp_enable_warnings(lang_tests)
     add_test(NAME lang_tests COMMAND lang_tests)
+
+    add_executable(chip8_engine_tests
+        tests/chip8_engine_tests.cpp
+        tests/lang_chip8_assembler_tests.cpp
+        tests/lang_chip8_machine_tests.cpp)
+    target_link_libraries(chip8_engine_tests PRIVATE timewarp::chip8_engine)
+    target_include_directories(chip8_engine_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/tests)
+    target_compile_definitions(chip8_engine_tests PRIVATE
+        TIME_WARP_TEST_EXAMPLES="${CMAKE_CURRENT_SOURCE_DIR}/../Examples")
+    timewarp_enable_warnings(chip8_engine_tests)
+    add_test(NAME chip8_engine_tests COMMAND chip8_engine_tests)
+
+    add_executable(hb2_tests tests/hb2_tests.cpp)
+    target_link_libraries(hb2_tests PRIVATE timewarp::hb2)
+    target_include_directories(hb2_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/tests)
+    target_compile_definitions(hb2_tests PRIVATE
+        HB2_EXAMPLES="${CMAKE_CURRENT_SOURCE_DIR}/../Examples/hb2")
+    timewarp_enable_warnings(hb2_tests)
+    add_test(NAME hb2_tests COMMAND hb2_tests)
 
     # The mixer is Qt-free and has no device, so its suite runs anywhere the
     # engine builds -- a machine with no sound card is the normal case in CI.
@@ -338,8 +405,6 @@ timewarp_enable_warnings(expr_bench)
 # Qt-free so it can be unit tested, and so timewarp_canvas stays usable from a
 # headless or non-Qt host.
 # ---------------------------------------------------------------------------
-
-find_package(Threads REQUIRED)
 
 add_library(timewarp_canvas
     src/canvas/command.cpp

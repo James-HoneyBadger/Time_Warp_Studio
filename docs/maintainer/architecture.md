@@ -1,10 +1,11 @@
 # Architecture
 
-## Time Warp Studio v28.2.0 — System design
+## Time Warp Studio v30.0.0 — System design
 
-Time Warp Studio 28.2.0 is one desktop process for Linux. Ten interpreters, the Qt 6
-window that drives them, the lesson machinery, the SQLite connection and the JSON-RPC
-server are all libraries in that process. Nothing crosses a process boundary
+Time Warp Studio 30.0.0 is one process on Linux, or the same process compiled to
+WebAssembly for a browser. Ten interpreters, the Qt 6 window that drives them, the lesson
+machinery, the SQLite connection and the JSON-RPC server are all libraries in that
+process. Nothing crosses a process boundary
 to run a program, and there is no interpreter anywhere in the tree: the Python reference
 the ports were judged against was deleted, and what remains of it is a recorded corpus.
 
@@ -17,22 +18,25 @@ The reasoning behind them, and the traps hit on the way, are in
 
 ## One process
 
-`time_warp_ide` is the product. Two other kinds of executable are built from the same
+`time_warp_ide` is the product. Three other kinds of executable are built from the same
 sources: `time_warp_player`, which links only the part of the interface needed to show a
-program, and the command-line tools under `native/tools/`, which link the engines with no
-window at all.
+program; the three machine applications, `time_warp_hb1`, `time_warp_hb2` and
+`time_warp_chip8`, each linking the machine interface it needs; and the command-line tools
+under `native/tools/`, which link the engines with no window at all.
 
-Two child processes can exist, both optional and both asked for. The embedded terminal runs
-the user's own shell on a pseudo-terminal (`native/src/ui/pty_session.cpp`), and the audio
-player is handed a WAV through the first of `pw-play`, `paplay`, `aplay`, `ffplay` or `play`
-that is installed (`native/src/ui/sound_player.cpp`). Neither is on the path a program's
-execution takes.
+Child processes exist only where a person asked for one. The embedded terminal runs the
+user's own shell on a pseudo-terminal (`native/src/ui/pty_session.cpp`), the audio player is
+handed a WAV through the first of `pw-play`, `paplay`, `aplay`, `ffplay` or `play` that is
+installed (`native/src/ui/sound_player.cpp`), and **Tools** starts one of the three machine
+applications (`main_window_actions.cpp` `launchMachine`). None is on the path a program's
+execution inside the Studio takes.
 
 | Library | Sources | Runs in | Role |
 | --- | --- | --- | --- |
 | `timewarp_expr` | `native/src/token.cpp`, `lexer.cpp`, `evaluator.cpp` | engine thread | The expression evaluator every arithmetic executor shares |
 | `timewarp_lang` | `native/src/lang/` | engine thread | The shared interpreter loop, the value type, dispatch, and the nine executors |
 | `timewarp_scheme` | `native/src/scheme/` | engine thread | Scheme on an explicit-stack machine, with no native recursion |
+| `timewarp_chip8_engine` | `native/src/lang/chip8.cpp` | engine thread | The CHIP-8 assembler, the machine, and the whole-program executor the editor runs |
 | `timewarp_canvas` | `native/src/canvas/` | producer and consumer | Carries drawing across the thread boundary |
 | `timewarp_canvas_qt` | `native/src/canvas/qt_bridge.cpp` | GUI thread | Qt glue for that queue: wakeup and draining |
 | `timewarp_audio` | `native/src/audio/` | either | `SOUND` and `PLAY`: notation, tones, mixing, WAV |
@@ -282,8 +286,12 @@ touches it.
 ## The languages
 
 There are ten: BASIC, APL, Logo, PILOT, FOCAL, Scheme, COMAL, REXX, Smalltalk and Forth.
-The three emulated machines that 28.0 removed — the HB-1, the HB-2 and CHIP-8 — were a
-second product inside the first, and the CHIP-8 language went with them.
+CHIP-8 is not one of them. It was a language row until 28.0 and is a machine of its own
+since 29.0: `timewarp_chip8_engine` holds its assembler and its processor, and the Studio
+runs a `.ch8` document through that engine without the document being a registry language.
+The three machines have applications of their own beside the Studio -- `time_warp_hb1`,
+`time_warp_hb2` and `time_warp_chip8` -- and each links the machine interface it needs. The
+IDE starts them as processes; their windows are not linked into it.
 
 ### One table
 

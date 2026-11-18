@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: AGPL-3.0-only
 //
 // The window's panels, lessons and classroom: the right column's pages, the lesson
 // requests the panels make, and the debug panel's wiring.

@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: AGPL-3.0-only
 //
 // See `inventory.hpp`. This is the port of the Python inventory, regex for regex:
 // the shapes it harvests (`cmd == "PRINT"`, `starts_with_upper(line, "TO ")`, a

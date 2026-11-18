@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: AGPL-3.0-only
 
 #include "timewarp/ui/help_browser.hpp"
 
@@ -55,6 +55,11 @@ QString docsRoot() {
     const QString override = qEnvironmentVariable("TIME_WARP_DOCS").trimmed();
     if (!override.isEmpty()) {
         return QDir::cleanPath(expandHome(override));
+    }
+    // A WebAssembly build carries the guides inside the module: the page has no
+    // checkout and no install tree beside it.
+    if (QFileInfo{QStringLiteral(":/docs/INDEX.md")}.isFile()) {
+        return QStringLiteral(":/docs");
     }
     const QString app_dir = QCoreApplication::applicationDirPath();
     // Installed (`share/doc/time-warp-studio` beside bin/), then a build tree

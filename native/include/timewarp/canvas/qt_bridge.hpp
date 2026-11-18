@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: AGPL-3.0-only
 //
 // Qt glue for CanvasCommandQueue.  This is the only Qt-facing file in native/;
 // the queue itself has no Qt dependency, which keeps the core unit-testable

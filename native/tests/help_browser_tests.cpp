@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: AGPL-3.0-only
 //
 // The documentation browser's two halves, tested without opening a window: the
 // resolver that finds the docs and the parser that turns `INDEX.md` into a

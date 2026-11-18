@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: AGPL-3.0-only
 //
 // The tests `editor_services_tests.cpp` calls: the pty's byte stream and the finish
 // notification's wording.

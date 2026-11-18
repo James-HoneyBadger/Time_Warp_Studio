@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: AGPL-3.0-only
 //
 // The native interpreter: program storage, the execution loop, variables, I/O
 // and the run budget.
@@ -385,6 +385,45 @@ public:
     void set_sql_callback(SqlCallback callback) { sql_callback_ = std::move(callback); }
     [[nodiscard]] bool sql_available() const noexcept { return static_cast<bool>(sql_callback_); }
 
+    /// Optional hardware hooks for standalone machine applications. Without a bus,
+    /// BASIC keeps using its own sparse memory map, as it does in the Studio.
+    struct MachineBus {
+        std::function<std::uint8_t(int address)> peek;
+        std::function<bool(int address, std::uint8_t value)> poke;
+        std::function<void(int row, int column)> set_cursor;
+        std::function<void(int index)> set_ink;
+        std::function<void(int index)> set_paper;
+        std::function<void()> clear_screen;
+        std::function<void(const std::string& line)> write_text;
+        std::function<std::string(int address)> sys;
+        std::function<int(int index)> stick;
+        std::function<bool(int index)> strig;
+        int address_limit = 0;
+    };
+    void set_machine_bus(MachineBus bus) { machine_bus_ = std::move(bus); }
+    [[nodiscard]] bool machine_attached() const noexcept {
+        return static_cast<bool>(machine_bus_.poke);
+    }
+    [[nodiscard]] std::uint8_t machine_peek(int address);
+    bool machine_poke(int address, std::uint8_t value);
+    void machine_locate(int row, int column);
+    void machine_ink(int index);
+    void machine_paper(int index);
+    void machine_clear_screen();
+    void machine_write_text(const std::string& line);
+    [[nodiscard]] bool machine_can_sys() const noexcept {
+        return static_cast<bool>(machine_bus_.sys);
+    }
+    std::string machine_sys(int address);
+    [[nodiscard]] bool machine_has_joystick() const noexcept {
+        return static_cast<bool>(machine_bus_.stick);
+    }
+    [[nodiscard]] int machine_stick(int index);
+    [[nodiscard]] int machine_address_limit() const noexcept {
+        return machine_bus_.address_limit > 0 ? machine_bus_.address_limit : 65536;
+    }
+    [[nodiscard]] bool machine_strig(int index);
+
     /// The directory a program's relative file names are confined to.
     ///
     /// Empty means the process's working directory, which is what `time_warp_check`,
@@ -555,6 +594,7 @@ private:
     double elapsed_ms_ = 0.0;
     bool profiling_ = false;
     bool tracing_ = false;
+    MachineBus machine_bus_;
     std::string file_base_;
     std::map<std::size_t, LineProfile> profile_;
     bool timed_out_ = false;

@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: AGPL-3.0-only
 //
 // Runs one program through the native engines and reports what it did.
 //
@@ -24,6 +24,7 @@
 // not make a run. A program's own errors are reported in `--json` and on stdout;
 // they are not exceptions.
 
+#include <algorithm>
 #include <cstdio>
 #include <iostream>
 #include <iterator>
@@ -40,6 +41,7 @@
 #include <QString>
 
 #include "timewarp/graphics/recording_host.hpp"
+#include "timewarp/lang/chip8.hpp"
 #include "timewarp/lang/interpreter.hpp"
 #include "timewarp/lang/language.hpp"
 #include "timewarp/scheme/machine.hpp"
@@ -49,6 +51,9 @@ namespace {
 
 struct Options {
     timewarp::lang::Language language = timewarp::lang::Language::Basic;
+    /// CHIP-8 is a machine of its own rather than a row in the registry, so its key
+    /// is accepted here beside the ten and dispatched to its own entry point.
+    bool chip8 = false;
     bool json = false;
     bool quiet = false;
     std::string path;
@@ -60,7 +65,7 @@ int usage() {
                  "       time_warp_check --language <key> [--json] -   (stdin)\n"
                  "\n"
                  "  --language  basic, apl, logo, pilot, focal, scheme,\n"
-                 "              comal, rexx, smalltalk, forth\n"
+                 "              comal, rexx, smalltalk, forth, chip8\n"
                  "  --json      line-delimited JSON, in the shape the harnesses read\n"
                  "  --quiet     print nothing when the program ran cleanly\n");
     return 2;
@@ -155,12 +160,19 @@ int main(int argc, char** argv) {
             if (index + 1 >= argc) {
                 return usage();
             }
-            const auto language = timewarp::lang::language_from_key(argv[++index]);
-            if (!language.has_value()) {
-                std::fprintf(stderr, "time_warp_check: unknown language: %s\n", argv[index]);
-                return 2;
+            const std::string_view key{argv[++index]};
+            if (key == "chip8") {
+                options.chip8 = true;
+            } else {
+                const auto language = timewarp::lang::language_from_key(key);
+                if (!language.has_value()) {
+                    std::fprintf(stderr, "time_warp_check: unknown language: %s\n",
+                                 argv[index]);
+                    return 2;
+                }
+                options.chip8 = false;
+                options.language = *language;
             }
-            options.language = *language;
         } else if (argument.rfind("--", 0) == 0) {
             return usage();
         } else if (options.path.empty()) {
@@ -216,18 +228,10 @@ int main(int argc, char** argv) {
     std::uint64_t steps = 0;
     double elapsed = 0.0;
 
-    if (options.language == timewarp::lang::Language::Scheme) {
-        // Scheme is not one of the interpreters `executor_for` answers for: it is
-        // the separate explicit-stack machine, and the IDE runs it through its
-        // debugger runner for that reason. The same machine, run to completion,
-        // answers the same question here -- and answers it as Scheme rather than
-        // with `Interpreter`'s "not implemented natively" sentence, which would
-        // have made this tool report a language the product runs as missing.
-        timewarp::scheme::Arena arena;
-        timewarp::scheme::SourceMap source_map;
-        timewarp::scheme::Machine machine{arena, host};
-        const std::string text = machine.execute(source);
-        steps = machine.steps();
+    // The two whole-program machines report what they printed as one string, which
+    // is what the console shows; a line beginning with the error prefix is the run's
+    // verdict and the only thing a gate needs to know about the rest.
+    const auto report = [&](const std::string& text) {
         std::size_t start = 0;
         while (start <= text.size()) {
             const std::size_t end = text.find('\n', start);
@@ -248,6 +252,25 @@ int main(int argc, char** argv) {
             start = end + 1;
         }
         ok = error.empty();
+    };
+
+    if (options.language == timewarp::lang::Language::Scheme) {
+        // Scheme is not one of the interpreters `executor_for` answers for: it is
+        // the separate explicit-stack machine, and the IDE runs it through its
+        // debugger runner for that reason. The same machine, run to completion,
+        // answers the same question here -- and answers it as Scheme rather than
+        // with `Interpreter`'s "not implemented natively" sentence, which would
+        // have made this tool report a language the product runs as missing.
+        timewarp::scheme::Arena arena;
+        timewarp::scheme::SourceMap source_map;
+        timewarp::scheme::Machine machine{arena, host};
+        report(machine.execute(source));
+        steps = machine.steps();
+    } else if (options.chip8) {
+        // CHIP-8 belongs to its own application, so its assembler and machine are a
+        // library rather than a registry row; the interpreter is still the caller's,
+        // because the debugger that can pause and rewind is the one inside it.
+        report(timewarp::lang::execute_chip8(interpreter, source, host));
     } else {
         interpreter.load_program(source);
         interpreter.run();
@@ -259,6 +282,22 @@ int main(int argc, char** argv) {
         ok = error.empty() && !interpreter.timed_out() && !capped;
         steps = interpreter.steps_used();
         elapsed = interpreter.elapsed_ms();
+    }
+
+    // An engine reports a failure as a line prefixed with the error marker, not as
+    // an exception, so the verdict is read from what was printed as well as from
+    // `error()`. A tool that said "ok" beside an error line is the truncation bug
+    // of 27.0 in another shape: a run that did not work, reported as one that did.
+    if (ok) {
+        for (const std::string& line : printed) {
+            if (line.rfind("❌", 0) == 0) {
+                ok = false;
+                if (error.empty()) {
+                    error = line;
+                }
+                break;
+            }
+        }
     }
 
     if (options.json) {

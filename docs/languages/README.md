@@ -72,8 +72,9 @@ We do not document the languages and then leave them to hope. Three gates hold t
   row or waiver mentions.
 - **The parity corpus** compares the engines with the answers the deleted Python reference
   gave for 444 programs, every drawing call in order.
-- **The example gate** runs all 68 shipped programs. It fails when a program that should draw
-  produces no ink.
+- **The example gate** runs the 77 programs in the ten languages and the eighteen CHIP-8
+  listings. It fails when a program that should draw produces no ink, and when a program
+  reports an error.
 
 [Testing](../maintainer/testing.md) says what each gate is worth. It also says where a
 recording is weaker than the differential it replaced.

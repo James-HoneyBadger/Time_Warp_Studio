@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: AGPL-3.0-only
 //
 // The interpreter-side half of the bridge: a `scheme::Host` that translates
 // turtle calls into canvas commands.

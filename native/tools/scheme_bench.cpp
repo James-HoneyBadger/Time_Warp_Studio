@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: AGPL-3.0-only
 //
 // Measures what the port exists to fix: how deep and how fast the evaluator can
 // go.  The reference aborts at roughly 200 Scheme calls, so every workload here

@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: AGPL-3.0-only
 
 #include "timewarp/lang/interpreter.hpp"
 
@@ -618,6 +618,7 @@ void Interpreter::log_output(std::string_view text) {
         // line the program printed.
         if (!(end == std::string_view::npos && line.empty())) {
             output_.emplace_back(line);
+            machine_write_text(output_.back());
             if (output_callback_) {
                 output_callback_(output_.back());
             }
@@ -626,6 +627,56 @@ void Interpreter::log_output(std::string_view text) {
             break;
         }
         start = end + 1;
+    }
+}
+
+std::uint8_t Interpreter::machine_peek(int address) {
+    return machine_bus_.peek ? machine_bus_.peek(address) : std::uint8_t{0};
+}
+
+bool Interpreter::machine_poke(int address, std::uint8_t value) {
+    return machine_bus_.poke ? machine_bus_.poke(address, value) : true;
+}
+
+void Interpreter::machine_locate(int row, int column) {
+    if (machine_bus_.set_cursor) {
+        machine_bus_.set_cursor(row, column);
+    }
+}
+
+void Interpreter::machine_ink(int index) {
+    if (machine_bus_.set_ink) {
+        machine_bus_.set_ink(index);
+    }
+}
+
+void Interpreter::machine_paper(int index) {
+    if (machine_bus_.set_paper) {
+        machine_bus_.set_paper(index);
+    }
+}
+
+void Interpreter::machine_clear_screen() {
+    if (machine_bus_.clear_screen) {
+        machine_bus_.clear_screen();
+    }
+}
+
+bool Interpreter::machine_strig(int index) {
+    return machine_bus_.strig ? machine_bus_.strig(index) : false;
+}
+
+int Interpreter::machine_stick(int index) {
+    return machine_bus_.stick ? machine_bus_.stick(index) : 0;
+}
+
+std::string Interpreter::machine_sys(int address) {
+    return machine_bus_.sys ? machine_bus_.sys(address) : std::string{};
+}
+
+void Interpreter::machine_write_text(const std::string& line) {
+    if (machine_bus_.write_text) {
+        machine_bus_.write_text(line);
     }
 }
 

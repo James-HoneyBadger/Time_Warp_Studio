@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: AGPL-3.0-only
 
 #include "timewarp/ui/sound_player.hpp"
 
@@ -6,7 +6,9 @@
 #include <QFile>
 #include <QFileInfo>
 #include <QDateTime>
+#if QT_CONFIG(process)
 #include <QProcess>
+#endif
 #include <QStandardPaths>
 #include <QTemporaryDir>
 
@@ -55,10 +57,12 @@ SoundPlayer::SoundPlayer(QObject* parent) : QObject(parent) {
     QString arguments;
     program_ = findPlayer(&arguments);
     arguments_ = arguments.split(QLatin1Char(' '), Qt::SkipEmptyParts);
+#if QT_CONFIG(process)
     process_ = new QProcess{this};
     // The player exits on its own when the file ends. Its output is not the
     // program's output, so it goes nowhere rather than into the console.
     process_->setProcessChannelMode(QProcess::MergedChannels);
+#endif
 }
 
 SoundPlayer::~SoundPlayer() { stop(); }
@@ -101,6 +105,21 @@ void SoundPlayer::play(const std::vector<timewarp::audio::Tone>& tones) {
     start(wavFor(tones));
 }
 
+void SoundPlayer::playPcm(const std::vector<std::uint8_t>& samples, int sample_rate) {
+    if (!available() || samples.empty()) {
+        return;
+    }
+    // The machine mixes in unsigned bytes, which is what a 1992 DAC had; the WAV
+    // writer takes signed samples, so the midpoint moves rather than the scale.
+    std::vector<std::int16_t> pcm;
+    pcm.reserve(samples.size());
+    for (const std::uint8_t sample : samples) {
+        pcm.push_back(static_cast<std::int16_t>((static_cast<int>(sample) - 128) * 256));
+    }
+    const std::string bytes = timewarp::audio::wav(pcm, sample_rate > 0 ? sample_rate : 22050);
+    start(QByteArray{bytes.data(), static_cast<int>(bytes.size())});
+}
+
 void SoundPlayer::start(const QByteArray& wav) {
     // A directory rather than one fixed path, so two windows (or a test and the
     // IDE) cannot overwrite each other's tune mid-playback.
@@ -118,21 +137,25 @@ void SoundPlayer::start(const QByteArray& wav) {
     file.write(wav);
     file.close();
 
+#if QT_CONFIG(process)
     QStringList arguments = arguments_;
     arguments << current_file_;
     process_->start(program_, arguments);
+#endif
 }
 
 void SoundPlayer::stop() {
     // The mix is part of what is playing, so silencing the machine clears it:
     // the next note must not arrive on top of a voice nobody can hear.
     mixer_.clear();
+#if QT_CONFIG(process)
     if (process_ != nullptr && process_->state() != QProcess::NotRunning) {
         // `kill` rather than `terminate`: a player told to stop politely may
         // finish the buffer, which is exactly the sound being asked to go away.
         process_->kill();
         process_->waitForFinished(200);
     }
+#endif
     if (!current_file_.isEmpty()) {
         QFile::remove(current_file_);
         current_file_.clear();

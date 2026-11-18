@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: AGPL-3.0-only
 //
 // Reading a Smalltalk file: the chunk splitter, method installation, and the
 // top-level echo. Transcribed from `_install_method`, `_run_code` and

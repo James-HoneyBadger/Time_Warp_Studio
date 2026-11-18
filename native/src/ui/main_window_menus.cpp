@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: AGPL-3.0-only
 
 #include "main_window_internal.hpp"
 
@@ -86,9 +86,10 @@ void MainWindow::buildMenuBar() {
     // would append to it. Nothing ever did, so File and Edit opened onto nothing
     // at all -- the menu bar looked like navigation and behaved like decoration.
     // The rule now is that an entry is added when it works, which is why there
-    // is no Debug or Tools menu: they have nothing to put in them yet, and an
-    // empty menu is worse than an absent one (`ui_layout_tests` asserts no menu
-    // is empty, and that every entry is connected to a receiver).
+    // is no Debug menu: it has nothing to put in it, and an empty menu is worse
+    // than an absent one (`ui_layout_tests` asserts no menu is empty, and that
+    // every entry is connected to a receiver). Tools holds the three machine
+    // applications, which are programs beside this one.
     QMenuBar* bar = menuBar();
     bar->setObjectName(QStringLiteral("mainMenuBar"));
 
@@ -536,6 +537,45 @@ void MainWindow::buildMenuBar() {
         [this] { showCommandPalette(); })
         ->setObjectName(QStringLiteral("commandPaletteAction"));
     buildThemeMenu(view);
+
+    // -- Tools -------------------------------------------------------------
+    //
+    // The machines are applications of their own, not windows of this one, so each
+    // entry starts the executable built beside the Studio. A build that did not
+    // produce it says so rather than offering an entry that does nothing.
+    QMenu* tools = bar->addMenu(tr("&Tools"));
+    tools->setObjectName(QStringLiteral("toolsMenu"));
+    const auto start_machine = [this](const QString& programme, const QString& name,
+                                      const QString& argument) {
+        if (!launchMachine(programme, argument)) {
+            QMessageBox::information(
+                this, tr("Not in this build"),
+                tr("%1 is a separate application, and this build did not produce it. "
+                   "Build it with `cmake --build native/build --target %2`.")
+                    .arg(name, programme));
+        }
+    };
+    // The documented keys, which belonged to the windows when they lived here.
+    add(tools, tr("HB-1 &Computer..."), timewarp::core::keySequence(Qt::CTRL | Qt::ALT, Qt::Key_W),
+        [start_machine] { start_machine(QStringLiteral("time_warp_hb1"),
+                                        QStringLiteral("The HB-1"), {}); })
+        ->setObjectName(QStringLiteral("hb1Action"));
+    add(tools, tr("CHIP-8 &Emulator..."),
+        timewarp::core::keySequence(Qt::CTRL | Qt::SHIFT, Qt::Key_M),
+        [this, start_machine] {
+            // A CHIP-8 document on screen is the one the machine should open on,
+            // which is the same courtesy the editor gives a Run.
+            CodeEditor* editor = currentEditor();
+            const QString document = isChip8Document(editor) ? pathOf(editor) : QString{};
+            start_machine(QStringLiteral("time_warp_chip8"), QStringLiteral("The CHIP-8"),
+                          document);
+        })
+        ->setObjectName(QStringLiteral("chip8Action"));
+    add(tools, tr("HB-2 Model &92..."),
+        timewarp::core::keySequence(Qt::CTRL | Qt::ALT, Qt::Key_2),
+        [start_machine] { start_machine(QStringLiteral("time_warp_hb2"),
+                                        QStringLiteral("The HB-2"), {}); })
+        ->setObjectName(QStringLiteral("hb2Action"));
 
     // -- Help -------------------------------------------------------------
     QMenu* help = bar->addMenu(tr("&Help"));

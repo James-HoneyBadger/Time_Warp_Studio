@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: AGPL-3.0-only
 
 #include "timewarp/core/qt_names.hpp"
 #include "timewarp/ui/design.hpp"

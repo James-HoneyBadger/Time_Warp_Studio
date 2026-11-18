@@ -1,6 +1,8 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: AGPL-3.0-only
 
 #include "timewarp/ui/language.hpp"
+
+#include "timewarp/ui/chip8_text.hpp"
 
 #include "timewarp/core/qt_names.hpp"
 #include "timewarp/lang/registry.hpp"
@@ -101,6 +103,14 @@ QString openFileFilter() {
         }
     }
 
+    // CHIP-8 is a machine rather than one of the ten languages, but its listings and
+    // ROMs are documents the editor opens and runs, so the dialog has to reach them.
+    QStringList chip8Patterns;
+    for (const QString& extension : chip8RomExtensions()) {
+        allPatterns << QStringLiteral("*.") + extension;
+        chip8Patterns << QStringLiteral("*.") + extension;
+    }
+
     QStringList filters;
     filters << QStringLiteral("All programs (%1)").arg(allPatterns.join(QLatin1Char(' ')));
     for (const timewarp::lang::LanguageRow& info : timewarp::lang::kLanguageTable) {
@@ -112,6 +122,7 @@ QString openFileFilter() {
         filters << QStringLiteral("%1 (%2)")
                        .arg(displayName(language), patterns.join(QLatin1Char(' ')));
     }
+    filters << QStringLiteral("CHIP-8 (%1)").arg(chip8Patterns.join(QLatin1Char(' ')));
     filters << QStringLiteral("All files (*)");
     return filters.join(QStringLiteral(";;"));
 }

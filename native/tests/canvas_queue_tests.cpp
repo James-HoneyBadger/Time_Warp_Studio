@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: AGPL-3.0-only
 //
 // Tests for the canvas command queue.  No Qt, no display: the core is
 // deliberately testable without either.

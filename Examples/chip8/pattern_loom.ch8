@@ -1,0 +1,40 @@
+; PATTERN LOOM
+; A woven lattice, drawn with XOR: every overlap inverts, so the
+; second pass changes what the first one drew rather than adding to it.
+; Press Step in the CHIP-8 window to watch VF report each collision.
+
+start:  CLS
+        LD V0, 2            ; x
+        LD V1, 2            ; y
+        LD V2, 0            ; how many threads so far
+        LD I, weave
+thread: DRW V0, V1, 8       ; one thread of the weave
+        ADD V0, 5
+        ADD V1, 3
+        ADD V2, 1
+        SNE V2, 10
+        JP mirror
+        JP thread
+
+mirror: LD V0, 58           ; the same weave, drawn back the other way
+        LD V1, 2
+        LD V3, 0
+        LD V4, 5
+back:   DRW V0, V1, 8
+        SUB V0, V4
+        ADD V1, 3
+        ADD V3, 1
+        SNE V3, 8
+        JP done
+        JP back
+
+done:   HALT
+
+weave:  DB 0xAA
+        DB 0x55
+        DB 0xAA
+        DB 0x55
+        DB 0xAA
+        DB 0x55
+        DB 0xAA
+        DB 0x55

@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: AGPL-3.0-only
 //
 // Breakpoints: a paused run, a whole-program run paused the same way, the gutter marks
 // that persist, and a stale path that is dropped.

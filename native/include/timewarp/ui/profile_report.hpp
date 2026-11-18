@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: AGPL-3.0-only
 //
 // The profile report: which lines ran, how often, and where the time went,
 // longest first. Shown after a run made with View > Profile Run ticked.

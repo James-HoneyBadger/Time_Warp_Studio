@@ -17,7 +17,7 @@ cmake --build native/build -j
 ctest --test-dir native/build --output-on-failure
 ```
 
-There are 23 suites, one binary each, named for what they cover:
+There are 27 suites, one binary each, named for what they cover:
 
 | Suite | Covers |
 | --- | --- |
@@ -38,6 +38,10 @@ There are 23 suites, one binary each, named for what they cover:
 | `sql_tests` | The shared SQLite connection |
 | `cli_tests` | `twc` and the command-line surface |
 | `api_tests` | The JSON-RPC server over an in-memory stream |
+| `chip8_engine_tests` | The CHIP-8 assembler and the machine it drives |
+| `chip8_emulator_tests` | The CHIP-8 window: keypad, rewind, screen, ROM library |
+| `retro_computer_tests` | The HB-1: boot, memory, disk, and the engines on its bus |
+| `hb2_tests` | The HB-2: bus, video, sound, HB-16 and its tools |
 
 Other build trees must stay green:
 
@@ -61,10 +65,17 @@ see: a language that runs "successfully" and draws nothing, which is what a user
 make smoke            # or: ./native/build/time_warp_gates smoke
 ```
 
-Sixty-eight programs ship; `smoke` runs 67, because `basic/star_patrol.bas` uses what the
+Seventy-seven programs ship in the ten languages, and eighteen CHIP-8 listings in
+`Examples/chip8/`; `smoke` runs 94, because `basic/star_patrol.bas` uses what the
 native port added and the reference never had, and is run by `lang_tests` instead. The
 programs that must produce ink are listed in `drawingExamples()` in
 `native/tools/gates/smoke.cpp`: a program on that list that draws nothing fails the run.
+
+A program that **reports an error** fails as well, in either gate. Engines report a failure
+as an output line prefixed with `❌` rather than as a protocol error, so the harness reads
+the printed lines and records each one carrying the marker: a run that printed `❌` is not a
+run that worked, whatever its exit status says. Programs must therefore not print the marker
+as decoration -- it is the engine's, not a program's.
 
 The command matrix is the other half. Every row in `native/share/command_rows.json` is
 executed through `time_warp_check` and must produce output, drawing or a reported error, and

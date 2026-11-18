@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: AGPL-3.0-only
 
 #include "main_window_internal.hpp"
 
@@ -254,6 +254,24 @@ void MainWindow::showSqlSchema(const QString& table) {
 // Projects
 // ---------------------------------------------------------------------------
 
+namespace {
+
+/// Where the project dialogs open: the project's own folder, else the volume that
+/// persists in a browser, else the home directory.
+///
+/// The middle case is what keeps a project made in the browser where it can be found
+/// again; `defaultFileDialogDir()` is empty on the desktop, where the home directory
+/// is what these dialogs have always offered.
+QString projectStartFolder(const timewarp::project::Project& project) {
+    if (project.isValid()) {
+        return project.root();
+    }
+    const QString persisted = defaultFileDialogDir();
+    return persisted.isEmpty() ? QDir::homePath() : persisted;
+}
+
+}  // namespace
+
 QString MainWindow::activeProjectPath() const {
     return project_.isValid() ? project_.filePath() : QString{};
 }
@@ -301,8 +319,7 @@ void MainWindow::noteRecentProject(const QString& path) {
 }
 
 void MainWindow::newProjectDialog() {
-    const QString start =
-        project_.isValid() ? project_.root() : QDir::homePath();
+    const QString start = projectStartFolder(project_);
     const QString folder = QFileDialog::getExistingDirectory(
         this, tr("Choose the folder for the new project"), start);
     if (folder.isEmpty()) {
@@ -342,7 +359,7 @@ void MainWindow::newProjectDialog() {
 }
 
 void MainWindow::openProjectDialog() {
-    const QString start = project_.isValid() ? project_.root() : QDir::homePath();
+    const QString start = projectStartFolder(project_);
     const QString path = QFileDialog::getOpenFileName(
         this, tr("Open Project"), start, timewarp::project::openFileFilter());
     if (!path.isEmpty()) {

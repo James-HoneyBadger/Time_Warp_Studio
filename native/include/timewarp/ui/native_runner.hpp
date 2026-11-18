@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: AGPL-3.0-only
 //
 // Runs a ported language on a background thread and feeds the canvas.
 //
@@ -18,6 +18,7 @@
 #include "timewarp/lang/turtle_host.hpp"
 #include "timewarp/ui/language.hpp"
 
+#include <QByteArray>
 #include <QChar>
 #include <QPointer>
 #include <QString>
@@ -209,6 +210,19 @@ public:
     ~NativeRunner() override;
 
     void load_program(const QString& source);
+    /// Runs *program* as CHIP-8 rather than as a registry language.
+    ///
+    /// CHIP-8 is a machine of its own, so there is no `Language` to name it with and
+    /// its whole-program executor is called directly. The program is bytes rather
+    /// than text because a binary ROM is not text: the caller decodes the document,
+    /// and a listing passes through the same step unchanged. Everything around the
+    /// call is the same -- the same host, the same debug session, the same
+    /// breakpoints and the same history -- because the pause and the rewind belong
+    /// to the interpreter.
+    void set_chip8(const QByteArray& program) {
+        chip8_ = true;
+        chip8_program_ = program;
+    }
     void request_stop();
     void answerInput(const QString& text);
 
@@ -224,6 +238,10 @@ public:
     /// Prints `[line]` before each statement of a line-loop program — the machine's
     /// `TRON`. Set before `start()`; a whole-program language ignores it.
     void set_tracing(bool on) noexcept { tracing_ = on; }
+    /// Connects a standalone machine's memory and screen to the running language.
+    void set_machine_bus(timewarp::lang::Interpreter::MachineBus bus) {
+        machine_bus_ = std::move(bus);
+    }
     /// Zero-based statement indices this run may pause on. Set before `start()`.
     void set_breakpoints(const std::set<std::size_t>& lines);
     /// Variable names whose change pauses this run. Set before `start()`.
@@ -314,6 +332,8 @@ private:
     void publishCallStack(const timewarp::lang::Interpreter& engine);
 
     timewarp::lang::Language language_;
+    bool chip8_ = false;
+    QByteArray chip8_program_;
     std::unique_ptr<NativeCanvasHost> host_;
     QString file_base_;
     QString source_;
@@ -332,6 +352,7 @@ private:
     bool profiling_ = false;
     bool tracing_ = false;
     std::size_t history_depth_ = 0;
+    timewarp::lang::Interpreter::MachineBus machine_bus_;
 
     std::mutex input_mutex_;
     std::condition_variable input_ready_;

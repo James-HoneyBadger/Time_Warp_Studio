@@ -26,7 +26,10 @@ object system (Smalltalk).
 watch it draw. The checked curriculum ships for teaching, but nothing in the application
 insists you use it that way.
 
-**Is it free?** MIT licence, and nothing in the application costs money to use.
+**Is it free?** Yes -- AGPLv3, and nothing in the application costs money to use. The
+licence is copyleft: if you pass on a modified version, or run one as a network service,
+you have to offer its source under the same terms. The full text is in
+[LICENSE](../../LICENSE).
 
 **Does it need a network?** No. The application makes no network calls of its own.
 

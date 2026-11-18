@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: AGPL-3.0-only
 //
 // See `include/timewarp/io/gamepad.hpp` for why this exists and what it does.
 //
@@ -7,6 +7,34 @@
 // false, which is the behaviour every machine without one already had.
 
 #include "timewarp/io/gamepad.hpp"
+
+#ifdef __EMSCRIPTEN__
+
+// A browser has no `/dev/input` and no joystick device to read, and no kernel header
+// to decode it with. `available()` answers false, which is the answer every machine
+// without a gamepad already gives: `STICK` reads a centred stick rather than failing.
+namespace timewarp::io {
+
+Gamepad& Gamepad::instance() {
+    static Gamepad pad;
+    return pad;
+}
+
+Gamepad::~Gamepad() = default;
+
+bool Gamepad::available() { return false; }
+
+const char* Gamepad::device() const noexcept { return ""; }
+
+void Gamepad::poll() {}
+
+int Gamepad::axis(int) { return 128; }
+
+bool Gamepad::button(int) { return false; }
+
+}  // namespace timewarp::io
+
+#else
 
 #include <cstdlib>
 #include <fcntl.h>
@@ -97,3 +125,5 @@ bool Gamepad::button(int index) {
 }
 
 }  // namespace timewarp::io
+
+#endif  // __EMSCRIPTEN__

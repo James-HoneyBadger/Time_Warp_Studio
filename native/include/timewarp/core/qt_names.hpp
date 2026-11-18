@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: AGPL-3.0-only
 #pragma once
 
 /// Two Qt spellings this tree builds a value with in more than one place.

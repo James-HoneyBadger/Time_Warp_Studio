@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: AGPL-3.0-only
 //
 // Playing the synth's output through whatever the machine has.
 //
@@ -67,6 +67,11 @@ public:
               timewarp::audio::Waveform waveform = timewarp::audio::Waveform::Square);
     /// Silence. Safe when nothing is playing.
     void stop();
+
+    /// Plays unsigned 8-bit PCM at `sample_rate`, which is what the HB-2's four-channel
+    /// mixer produces. A machine with four voices hands the device one buffer rather
+    /// than four tones, because its mixer is the machine's and this is only the speaker.
+    void playPcm(const std::vector<std::uint8_t>& samples, int sample_rate);
 
     /// What the current run has sounded, in the order it asked for it. Recorded
     /// whether or not a player was found, because the export is a file rather than a

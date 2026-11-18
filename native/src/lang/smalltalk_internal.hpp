@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: AGPL-3.0-only
 //
 // The object model shared by the Smalltalk port's four translation units.
 // Everything a value can be is one struct with a tag, because a Smalltalk

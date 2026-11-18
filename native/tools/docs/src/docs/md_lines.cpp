@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: AGPL-3.0-only
 //
 // The line model: one pass over the text, one `Line` per source line, with what the
 // rules need to know about it already decided -- is it a fence, a heading, a table

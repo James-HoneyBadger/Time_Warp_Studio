@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: AGPL-3.0-only
 //
 // See command_queue.hpp for the design rationale; this file is the mechanics.
 //
@@ -15,6 +15,7 @@
 
 #include <algorithm>
 #include <cstring>
+#include <limits>
 #include <thread>
 
 namespace timewarp::canvas {
@@ -31,8 +32,10 @@ constexpr int kSpinBeforeWait = 128;
 constexpr std::chrono::microseconds kBoundedWaitPoll{200};
 
 /// Ceiling for capacity rounding, so a nonsense request cannot overflow the
-/// shift loop.
-constexpr std::size_t kCapacityCeiling = std::size_t{1} << 40;
+/// shift loop.  The largest power of two a `std::size_t` holds: 8 EiB on a
+/// 64-bit build, 1 GiB on the 32-bit one the browser compiles.
+constexpr std::size_t kCapacityCeiling =
+    std::size_t{1} << (std::numeric_limits<std::size_t>::digits - 1);
 
 }  // namespace
 

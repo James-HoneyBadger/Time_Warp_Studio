@@ -15,6 +15,7 @@ repository settings. The release procedure and the artifacts are in
 | `markdown-lint.yml` | Push and pull request to `main`, when any `*.md` changes | `time_warp_docs md`, the project's own thirty rules from `native/tools/docs/src/docs/md_*_rules.cpp`, over `git ls-files '*.md'`. This step fails a pull request, because it is the project's tool with a verdict it stands behind. The spell check beside it stays advisory: a dictionary is not the project's to enforce |
 | `version.yml` | Push and pull request to `main`, when `VERSION`, the README, the history or the tool's own source changes | That every hand-written copy of the version agrees with `VERSION`. Separate from the native build because it has to run on documentation changes, which the C++ job does not watch |
 | `security.yml` | Push and pull request to `main`, weekly on a schedule, and by hand | Trivy over the tree — the Dockerfile the release packages from, every file no secret should be in, and any lockfile a dependency brings later — uploaded as SARIF so a finding lands in the repository's Security tab. Advisory rather than a gate: the SARIF is the record and the scan's exit code is 0, because a CVE in an upstream package is not a change a pull request here can make. The upload is skipped for a pull request from a fork, where the token is read-only; the scan still runs |
+| `wasm.yml` | Push to `main` or pull request into `main` that touches `native/`, `wasm/`, `Examples/`, `VERSION` or the workflow; a `v*` tag; or by hand | Builds the same application for the browser with `TW_BUILD_WASM=ON` inside `stateoftheartio/qt6:6.8-wasm-aqt`, which carries emsdk and the host Qt, adds the threaded WebAssembly Qt with aqt, assembles the deployable directory in `wasm/dist`, and uploads it as an artifact. <!-- doc-claims: ignore --> From a tag a separate job deploys the Pages artifact through GitHub's deployment API; PR builds stay read-only. The target is described in [the WebAssembly guide](../docs/maintainer/wasm.md) |
 | `release.yml` | A `v*` tag, or `workflow_dispatch` with a version | Refuses a tag that disagrees with `VERSION`, builds on `ubuntu-24.04` and `ubuntu-24.04-arm`, packages the four formats plus a Flatpak bundle, runs the suites and an offscreen screenshot against each tree before packaging it, attaches every artifact with a `.sha256`, and pushes the container image. The release job runs in the `production` environment, which is what makes GitHub record a Deployment |
 
 ### Why the actions are pinned to SHAs
@@ -98,9 +99,13 @@ invisible until somebody clicks New issue.
 1. **Settings > Actions > General > Workflow permissions** — read and write, or the default
    plus the `permissions:` block in `release.yml`, which asks for `contents: write` to create
    the release and `packages: write` to push the image.
-2. **Settings > Environments** — a `production` environment. The first run creates it; add
-   it by hand only to attach protection rules such as required reviewers first.
-3. **Package visibility** — a package pushed by `GITHUB_TOKEN` starts private even when the
+2. **Settings > Pages > Build and deployment** — set the source to **GitHub Actions**. The
+   tagged WebAssembly release deploys through the Pages deployment API and does not push a
+   `gh-pages` branch.
+3. **Settings > Environments** — a `production` environment. The first run creates it; add
+   it by hand only to attach protection rules such as required reviewers first. The Pages
+   workflow uses the `github-pages` environment for its deployment URL.
+4. **Package visibility** — a package pushed by `GITHUB_TOKEN` starts private even when the
    repository is public, and the first pull then fails with `unauthorized` for everybody.
    Set it public once, from the package page.
 

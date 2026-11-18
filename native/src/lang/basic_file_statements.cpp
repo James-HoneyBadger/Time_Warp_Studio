@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: AGPL-3.0-only
 //
 // Files: the confined path resolver, `OPEN`/`CLOSE`, printing to a file, `INPUT #`,
 // `LINE INPUT #`, and the record statements.

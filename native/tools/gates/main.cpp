@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: AGPL-3.0-only
 //
 // The gates, as one command with seven questions. See `gates.hpp` for why they are
 // one binary and what each subcommand answers.

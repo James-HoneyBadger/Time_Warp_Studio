@@ -1,9 +1,13 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: AGPL-3.0-only
 //
 // The language table and the editor widget: the mapping by position, and the widget
 // the rest of these cases type into.
 
 #include "ui_document/support.hpp"
+
+#include "timewarp/ui/chip8_text.hpp"
+
+#include <QTextDocument>
 
 namespace tw::ui_document {
 
@@ -77,6 +81,65 @@ void test_language_mapping() {
             TW_CHECK(filter.contains(QStringLiteral("*.%1").arg(extension)));
         }
     }
+}
+
+// A CHIP-8 ROM is bytes the editor has to carry. The two edges of the codec are
+// the bytes a `QTextDocument` rewrites on its own -- a carriage return becomes a
+// newline and a no-break space becomes a space -- so those are the ones a plain
+// Latin-1 decode would lose, silently, on the next save.
+void test_a_chip8_rom_round_trips_through_the_editor() {
+    announce("a CHIP-8 ROM round-trips through the editor");
+    using timewarp::ui::chip8RomExtensions;
+    using timewarp::ui::isChip8RomFile;
+    using timewarp::ui::romBytesToText;
+    using timewarp::ui::romTextToBytes;
+
+    QByteArray rom;
+    for (int byte = 0; byte <= 0xFF; ++byte) {
+        rom.append(static_cast<char>(byte));
+    }
+    // Every byte, and again through a real QTextDocument, which is what the editor
+    // holds: the document's own normalisation must not reach the program.
+    TW_CHECK_EQ(romTextToBytes(romBytesToText(rom)), rom);
+    QTextDocument document;
+    document.setPlainText(romBytesToText(rom));
+    TW_CHECK_EQ(romTextToBytes(document.toPlainText()), rom);
+
+    // A binary ROM opens read-only, because a keystroke in bytes is a corrupt
+    // program; the listing in the same extension stays editable source.
+    QTemporaryDir dir;
+    const QString rom_path = writeFile(
+        dir, QStringLiteral("binary.ch8"),
+        QByteArray{"\x60\x0B\x00\x00", 4});
+    TW_CHECK(!rom_path.isEmpty());
+    MainWindow window;
+    TW_CHECK(window.openFile(rom_path));
+    CodeEditor* opened = window.currentEditor();
+    TW_CHECK(opened != nullptr);
+    if (opened != nullptr) {
+        TW_CHECK(opened->isReadOnly());
+        TW_CHECK_EQ(timewarp::ui::romTextToBytes(opened->toPlainText()),
+                    (QByteArray{"\x60\x0B\x00\x00", 4}));
+    }
+    const QString listing_path = writeFile(
+        dir, QStringLiteral("listing.ch8"), QByteArray{"; a listing\nstart: HALT\n"});
+    TW_CHECK(window.openFile(listing_path));
+    CodeEditor* listing = window.currentEditor();
+    TW_CHECK(listing != nullptr);
+    TW_CHECK(listing == nullptr || !listing->isReadOnly());
+
+    // The suffixes the emulator's library browses for, so one file is one program
+    // wherever it is opened from.
+    for (const QString& extension : chip8RomExtensions()) {
+        TW_CHECK(isChip8RomFile(QStringLiteral("paint.") + extension));
+        TW_CHECK(isChip8RomFile(QStringLiteral("PAINT.") + extension.toUpper()));
+    }
+    TW_CHECK(!isChip8RomFile(QStringLiteral("paint.bas")));
+
+    // The open dialog has to reach them, or the editor cannot open what it runs.
+    const QString filter = timewarp::ui::openFileFilter();
+    TW_CHECK(filter.contains(QStringLiteral("CHIP-8")));
+    TW_CHECK(filter.contains(QStringLiteral("*.ch8")));
 }
 
 // ---------------------------------------------------------------------------

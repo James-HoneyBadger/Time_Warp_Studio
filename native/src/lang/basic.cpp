@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: AGPL-3.0-only
 //
 // BASIC's core: the text helpers the dispatch shares, variables, the load-time
 // scan for DATA and SUB/FUNCTION blocks, and the drawing helpers.
@@ -236,9 +236,10 @@ std::optional<expr::UserFunction> Machine::user_function(std::string_view raw_na
     if (name == "PEEK") {
         return expr::UserFunction{1, [this](std::span<const double> arguments) {
                                       const int address = static_cast<int>(arguments[0]);
-                                      // `PEEK(n)` reads the same byte `PEEK n` reports,
-                                      // because a program that draws with `POKE` has to
-                                      // be able to read back what it wrote.
+                                      if (interpreter_.machine_attached()) {
+                                          return static_cast<double>(
+                                              interpreter_.machine_peek(address));
+                                      }
                                       const auto found = state_.memory.find(address);
                                       return found == state_.memory.end()
                                                  ? 0.0
@@ -261,6 +262,13 @@ std::optional<expr::UserFunction> Machine::user_function(std::string_view raw_na
         const bool stick = name == "STICK";
         return expr::UserFunction{1, [this, stick](std::span<const double> arguments) {
                                       const int index = static_cast<int>(arguments[0]);
+                                      if (interpreter_.machine_has_joystick()) {
+                                          return stick
+                                                     ? static_cast<double>(
+                                                           interpreter_.machine_stick(index))
+                                                     : (interpreter_.machine_strig(index) ? 1.0
+                                                                                         : 0.0);
+                                      }
                                       if (!state_.joystick_initialised) {
                                           return 0.0;
                                       }

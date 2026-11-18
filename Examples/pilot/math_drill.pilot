@@ -368,12 +368,30 @@ C: DISPLAY_PCT = PCT
 T:Best streak:
 C: DISPLAY_STREAK = MAXSTREAK
 T:
-IF PCT = 100 THEN T:Grade: A+  ★★★ PERFECT SCORE! Outstanding!
-IF PCT >= 90 THEN T:Grade: A   ★★★ Excellent!
-IF PCT >= 80 THEN T:Grade: B   ★★  Very good!
-IF PCT >= 70 THEN T:Grade: C   ★   Good work!
-IF PCT >= 60 THEN T:Grade: D   Keep practicing!
-IF PCT < 60 THEN T:Grade: F   Review your arithmetic!
+B: ABS(PCT - 100) < 1 = *grade_ap
+B: PCT > 89 = *grade_a
+B: PCT > 79 = *grade_b
+B: PCT > 69 = *grade_c
+B: PCT > 59 = *grade_d
+J: *grade_f
+*grade_ap
+T:Grade: A+  ★★★ PERFECT SCORE! Outstanding!
+J: *grades_done
+*grade_a
+T:Grade: A   ★★★ Excellent!
+J: *grades_done
+*grade_b
+T:Grade: B   ★★  Very good!
+J: *grades_done
+*grade_c
+T:Grade: C   ★   Good work!
+J: *grades_done
+*grade_d
+T:Grade: D   Keep practicing!
+J: *grades_done
+*grade_f
+T:Grade: F   Review your arithmetic!
+*grades_done
 T:
 T:━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 E:

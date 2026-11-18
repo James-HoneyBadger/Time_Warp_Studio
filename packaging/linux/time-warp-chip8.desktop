@@ -1,0 +1,13 @@
+[Desktop Entry]
+Type=Application
+Version=1.0
+Name=Time Warp CHIP-8
+GenericName=CHIP-8 Emulator
+Comment=Assemble and play CHIP-8 programs
+Exec=time_warp_chip8 %f
+TryExec=time_warp_chip8
+Icon=applications-games
+Terminal=false
+Categories=Game;Emulator;
+Keywords=CHIP-8;emulator;retro;assembler;games;
+StartupNotify=true

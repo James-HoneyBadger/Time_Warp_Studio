@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: AGPL-3.0-only
 //
 // A pseudo-terminal's byte stream, turned into the text a person should read.
 //

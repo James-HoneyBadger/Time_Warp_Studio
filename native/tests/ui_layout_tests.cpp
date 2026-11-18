@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: AGPL-3.0-only
 //
 // Structural tests for the ported main-window layout.
 //
@@ -103,10 +103,12 @@ int main(int argc, char** argv) {
     test_command_palette();
     test_standalone_payload();
     test_standalone_player_layout();
+    test_the_hb2_window_runs_a_listing();
     test_tool_bar_configuration();
     test_status_bar_badge_placement();
     test_outline_dock_starts_hidden();
     test_menu_structure();
+    test_the_tools_menu_launches_the_three_machines();
     test_print_entries_follow_the_component();
     test_help_menu_opens_the_documentation();
     test_edit_menu_has_find_in_files();

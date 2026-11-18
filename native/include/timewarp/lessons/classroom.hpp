@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: AGPL-3.0-only
 //
 // The teacher's side of the lessons: a roster, an assignment, marking and bundles.
 //

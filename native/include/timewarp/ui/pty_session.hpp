@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: AGPL-3.0-only
 //
 // A real pseudo-terminal for the Terminal tab.
 //
@@ -85,10 +85,15 @@ private:
     bool reap();
 
     int master_ = -1;
+#ifndef __EMSCRIPTEN__
+    // The browser build has no child process: its half of the implementation is
+    // the stub in `pty_session.cpp`, so these would be state nothing reads --
+    // which clang refuses with `-Wunused-private-field`.
     int pid_ = -1;
     int status_ = 0;
     bool exited_ = false;
     bool eof_ = false;
+#endif
     /// Typed at the widget and not yet accepted by the terminal. Bounded, because a
     /// queue nobody drains is a memory leak that looks like a keyboard.
     QByteArray pending_;

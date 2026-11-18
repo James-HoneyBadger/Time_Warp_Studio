@@ -1,9 +1,11 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: AGPL-3.0-only
 //
 // The menus, the tool bar, the status bar, the tour, and the controls that must
 // not be inert.
 
 #include "ui_layout/support.hpp"
+
+#include "timewarp/core/qt_names.hpp"
 
 namespace tw::ui_layout {
 
@@ -152,9 +154,10 @@ void test_menu_structure() {
         titles << action->text();
     }
     // Debug is absent on purpose: a menu with nothing to put in it is a promise
-    // the window cannot keep.
+    // the window cannot keep. Tools is there because the three machines are
+    // applications beside the Studio and each has a launcher.
     TW_CHECK_EQ(titles.join(QLatin1Char('|')).toStdString(),
-                std::string{"&File|&Project|&Edit|&Run|&View|&Help"});
+                std::string{"&File|&Project|&Edit|&Run|&View|&Tools|&Help"});
 
     // That the titles exist is not the interesting part. This test used to check
     // only the titles, which is how seven menus with no entries in them passed
@@ -173,6 +176,43 @@ void test_menu_structure() {
             }
         }
         TW_CHECK(entries >= 1);
+    }
+}
+
+/// The three machines are applications beside the Studio, not windows inside it.
+/// The entries are the documented way to reach them, and each one is connected --
+/// the structure test above cannot see a receiver, only that an action exists.
+void test_the_tools_menu_launches_the_three_machines() {
+    announce("Tools menu");
+    MainWindow window;
+    struct Entry {
+        const char* name;
+        int modifiers;
+        Qt::Key key;
+    };
+    const Entry entries[] = {
+        {"hb1Action", Qt::CTRL | Qt::ALT, Qt::Key_W},
+        {"chip8Action", Qt::CTRL | Qt::SHIFT, Qt::Key_M},
+        {"hb2Action", Qt::CTRL | Qt::ALT, Qt::Key_2},
+    };
+    for (const Entry& entry : entries) {
+        QAction* action =
+            window.findChild<QAction*>(QString::fromLatin1(entry.name));
+        TW_CHECK(action != nullptr);
+        if (action == nullptr) {
+            continue;
+        }
+        // Owned by the Tools menu rather than merely present in the window.
+        auto* menu = qobject_cast<QMenu*>(action->parent());
+        TW_CHECK(menu != nullptr);
+        if (menu != nullptr) {
+            TW_CHECK_EQ(menu->objectName(), QStringLiteral("toolsMenu"));
+        }
+        // The keys the manuals print. A shortcut that disagrees with the manual is
+        // a key that does nothing where the reader was told to press it.
+        const QKeySequence expected =
+            timewarp::core::keySequence(entry.modifiers, entry.key);
+        TW_CHECK(action->shortcut() == expected);
     }
 }
 

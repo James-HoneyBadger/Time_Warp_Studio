@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: AGPL-3.0-only
 
 #include "timewarp/ui/repl_runner.hpp"
 
@@ -45,6 +45,13 @@ ReplRunner::ReplRunner(timewarp::lang::Language language,
 ReplRunner::~ReplRunner() {
     requestStop();
     wait();
+}
+
+void ReplRunner::setMachineBus(timewarp::lang::Interpreter::MachineBus bus) {
+    machine_bus_ = std::move(bus);
+    if (session_ != nullptr) {
+        session_->set_machine_bus(machine_bus_);
+    }
 }
 
 void ReplRunner::submit(const QString& command) {

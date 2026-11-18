@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: AGPL-3.0-only
 //
 // The IDE's entry point.
 //
@@ -34,6 +34,7 @@
 #include "timewarp/ui/main_window.hpp"
 #include "timewarp/ui/standalone.hpp"
 #include "timewarp/ui/turtle_canvas.hpp"
+#include "timewarp/ui/wasm_storage.hpp"
 
 namespace {
 
@@ -88,6 +89,13 @@ int main(int argc, char* argv[]) {
     // layout, theme, recent files -- lands in one known place. See app.cpp for why
     // this is deliberately not the Python IDE's identity.
     timewarp::ui::applyApplicationIdentity();
+
+#ifdef __EMSCRIPTEN__
+    // Populate before any window exists, because the Projects panel and session restore
+    // read the volume during construction. Auto-save starts only after population.
+    timewarp::ui::wasm::mountProjectStorage();
+    timewarp::ui::wasm::startAutoSave();
+#endif
 
     QCommandLineParser parser;
     parser.setApplicationDescription(

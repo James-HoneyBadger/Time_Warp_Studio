@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: AGPL-3.0-only
 
 #include "main_window_internal.hpp"
 
@@ -7,7 +7,9 @@
 
 #include "timewarp/lang/executor.hpp"
 #include "timewarp/lang/watch.hpp"
+#include "timewarp/ui/chip8_text.hpp"
 #include "timewarp/ui/native_runner.hpp"
+#include "timewarp/ui/wasm_storage.hpp"
 
 #include <QAction>
 #include <QApplication>
@@ -24,6 +26,7 @@
 #include <QMenu>
 #include <QMessageBox>
 #include <QPlainTextEdit>
+#include <QPointer>
 #ifdef TIME_WARP_HAVE_PRINT
 #endif
 #include <QSaveFile>
@@ -498,6 +501,10 @@ Language MainWindow::languageOf(const CodeEditor* editor) {
     return fromPath == Language::Unknown ? defaultLanguage() : fromPath;
 }
 
+bool MainWindow::isChip8Document(const CodeEditor* editor) {
+    return editor != nullptr && isChip8RomFile(pathOf(editor));
+}
+
 QTabWidget* MainWindow::activeEditorTabs() const {
     // Focus, not a stored "active pane": the user's idea of the current document
     // is the one their cursor is in, and clicking a tab moves focus with it.
@@ -881,12 +888,15 @@ void MainWindow::refreshDocumentState() {
     setWindowTitle(editor->document()->isModified()
                        ? tr("%1 \u2014 %2*").arg(base, nameOf(editor))
                        : tr("%1 \u2014 %2").arg(base, nameOf(editor)));
-    language_badge_->setText(
-        displayName(languageOf(editor)));
+    // A CHIP-8 document is a program but not one of the ten languages, so it has a
+    // name of its own and no colouring: the listing is hex and mnemonics, and the
+    // language rules would paint half of it as BASIC.
+    const bool chip8 = isChip8Document(editor);
+    language_badge_->setText(chip8 ? tr("CHIP-8") : displayName(languageOf(editor)));
     // The highlighter follows the document's language. Done here, in the one
     // place that already answers "what language is this document?", so a rename
     // that changes the language cannot recolour every tab but this one.
-    editor->setLanguage(languageOf(editor));
+    editor->setLanguage(chip8 ? Language::Unknown : languageOf(editor));
     // Same reasoning for the find bar: it searches the document the user is
     // looking at, and switching tabs has to move it.
     if (find_bar_ != nullptr) {
@@ -968,7 +978,11 @@ bool MainWindow::openFile(const QString& path, OpenFailure failure) {
     QByteArray bytes = file.readAll();
     file.close();
 
-    QString text = QString::fromUtf8(bytes);
+    // A CHIP-8 ROM is bytes, not UTF-8: the codec keeps 0x0D and 0xA0 through the
+    // document, which would otherwise save back as 0x0A and 0x20. A listing is
+    // ordinary text and takes the path below.
+    QString text = isChip8RomFile(absolute) ? romBytesToText(bytes)
+                                            : QString::fromUtf8(bytes);
     // A byte-order mark is not part of the program. Left in place it is an
     // invisible first character, so the first token of the first line fails to
     // parse with an error pointing at a column that looks empty.
@@ -978,6 +992,12 @@ bool MainWindow::openFile(const QString& path, OpenFailure failure) {
 
     auto* editor = new CodeEditor{editor_tabs_};
     editor->setPlainText(text);
+    // A binary ROM opens read-only: its bytes are not source, and a keystroke in
+    // it would be a corrupt program waiting to be saved. A listing in the same
+    // extension is text and stays editable.
+    if (isChip8RomFile(absolute) && bytes.contains('\0')) {
+        editor->setReadOnly(true);
+    }
     editor->setProperty(kFilePathProperty, absolute);
     adoptEditor(editor);
     // `setPlainText` already clears the modified flag; being explicit means a
@@ -994,7 +1014,8 @@ bool MainWindow::openFile(const QString& path, OpenFailure failure) {
 }
 
 bool MainWindow::openFileDialog() {
-    const QString path = QFileDialog::getOpenFileName(this, tr("Open file"), QString{},
+    const QString path = QFileDialog::getOpenFileName(this, tr("Open file"),
+                                                      defaultFileDialogDir(),
                                                       openFileFilter());
     return path.isEmpty() ? false : openFile(path);
 }
@@ -1012,7 +1033,12 @@ bool MainWindow::writeDocument(CodeEditor* editor, const QString& path) {
                                       file.errorString()));
         return false;
     }
-    const QByteArray bytes = editor->toPlainText().toUtf8();
+#ifdef __EMSCRIPTEN__
+    const int saved_revision = editor->document()->revision();
+#endif
+    const QByteArray bytes = isChip8RomFile(path)
+                                 ? romTextToBytes(editor->toPlainText())
+                                 : editor->toPlainText().toUtf8();
     if (file.write(bytes) != bytes.size() || !file.commit()) {
         QMessageBox::warning(this, tr("Save failed"),
                              tr("Could not write %1.").arg(QDir::toNativeSeparators(path)));
@@ -1020,19 +1046,57 @@ bool MainWindow::writeDocument(CodeEditor* editor, const QString& path) {
     }
 
     editor->setProperty(kFilePathProperty, path);
-    editor->document()->setModified(false);
     // A file that has just been saved under a name is a file the user will want
     // back, which is what the recent list is for.
     noteRecentFile(path);
+    // Breakpoints follow the document to its new name: they were set against this
+    // program, and Save As is the same program.
+    QSettings breakpoint_settings;
+    breakpoints::save(breakpoint_settings, path, editor->breakpoints());
+#ifdef __EMSCRIPTEN__
+    // A save is the moment the user expects the file to be durable. In the browser
+    // "durable" means IndexedDB confirmed it, not that the in-memory write returned.
+    QPointer<CodeEditor> editor_guard{editor};
+    QPointer<MainWindow> window_guard{this};
+    const bool was_enabled = isEnabled();
+    setEnabled(false);
+    setExecutionState(tr("busy"), tr("Saving to browser storage..."));
+    const bool durable = wasm::saveNow();
+    if (window_guard.isNull()) {
+        return durable;
+    }
+    setEnabled(was_enabled);
+    if (editor_guard.isNull()) {
+        return durable;
+    }
+    const bool unchanged = editor_guard->document()->revision() == saved_revision;
+#else
+    constexpr bool durable = true;
+    constexpr bool unchanged = true;
+#endif
+    // Keep the modified marker until the browser has confirmed the IndexedDB write.
+    // If it failed, the in-memory copy remains available and the user can retry.
+    if (durable && unchanged) {
+        editor->document()->setModified(false);
+    }
     // The new path may name a different language -- saving `untitled` as `draw.logo`
     // has to turn it into a Logo document -- so the label, the badges and the
     // language selector are all refreshed from the path that just changed.
     updateTabLabel(editor);
     refreshDocumentState();
-    // Breakpoints follow the document to its new name: they were set against this
-    // program, and Save As is the same program.
-    QSettings breakpoint_settings;
-    breakpoints::save(breakpoint_settings, path, editor->breakpoints());
+    if (!durable) {
+        setExecutionState(
+            tr("error"),
+            tr("Saved in memory only; browser storage failed. The document remains unsaved."));
+        return false;
+    }
+    if (!unchanged) {
+        setExecutionState(
+            tr("ready"),
+            tr("Saved %1, but newer edits remain unsaved.")
+                .arg(QFileInfo{path}.fileName()));
+        return false;
+    }
     setExecutionState(tr("ready"), tr("Saved %1").arg(QFileInfo{path}.fileName()));
     return true;
 }
@@ -1058,8 +1122,9 @@ bool MainWindow::saveDocumentAs(CodeEditor* editor) {
                         .arg(nameOf(editor).replace(QLatin1Char(' '), QLatin1Char('_')),
                              extensions(defaultLanguage()).first());
     }
-    const QString path = QFileDialog::getSaveFileName(this, tr("Save as"), suggested,
-                                                       openFileFilter());
+    const QString start = QDir{defaultFileDialogDir()}.filePath(suggested);
+    const QString path = QFileDialog::getSaveFileName(this, tr("Save as"), start,
+                                                      openFileFilter());
     return path.isEmpty() ? false : writeDocument(editor, path);
 }
 

@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: AGPL-3.0-only
 //
 // The suite's cases, in the order `lang_tests.cpp` runs them.
 //
@@ -145,6 +145,7 @@ void test_basic_dollar_string_functions_are_calls_not_array_reads();
 void test_basic_string_array_index_is_an_expression();
 void test_basic_unreadable_print_reports_the_evaluator_message();
 void test_basic_str_of_an_array_element_is_printed();
+void test_basic_str_takes_a_numeric_expression();
 void test_basic_user_functions_run_their_bodies();
 void test_basic_logo_words_draw_through_the_fallback();
 void test_basic_unknown_word_is_still_an_error();

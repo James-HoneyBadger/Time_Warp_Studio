@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: AGPL-3.0-only
 //
 // The rules, one declaration each, so `lint` can call them and a reader can see the
 // whole set in one place. The numbers are the house rules' own names -- MD018 is

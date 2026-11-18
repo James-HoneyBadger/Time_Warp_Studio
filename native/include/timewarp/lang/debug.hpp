@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: AGPL-3.0-only
 //
 // A debugging session: breakpoints, and the command word that decides whether
 // the interpreter may run the next statement.

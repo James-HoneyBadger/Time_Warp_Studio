@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: AGPL-3.0-only
 
 #include "main_window_internal.hpp"
 
@@ -69,8 +69,6 @@
 #endif
 
 namespace timewarp::ui {
-
-namespace icons = timewarp::ui::icons;
 
 // The settings keys and the small helpers the sections share; they were an
 // anonymous namespace in the one-file version, and a `using` is what keeps the call

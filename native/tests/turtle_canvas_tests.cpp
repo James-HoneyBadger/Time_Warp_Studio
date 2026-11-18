@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: AGPL-3.0-only
 //
 // Tests for the turtle canvas: the state mirror, the ink it records, and the
 // projection.

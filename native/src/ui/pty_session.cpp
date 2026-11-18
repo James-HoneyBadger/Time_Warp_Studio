@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: AGPL-3.0-only
 
 #include "timewarp/ui/pty_session.hpp"
 
@@ -7,12 +7,53 @@
 #include <cstdlib>
 #include <cstring>
 
+#ifndef __EMSCRIPTEN__
 #include <fcntl.h>
 #include <sys/ioctl.h>
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <termios.h>
 #include <unistd.h>
+#endif
+
+#ifdef __EMSCRIPTEN__
+
+// A browser has no process to put on a terminal: no `fork`, no pty device node and no
+// shell to run on one. The class exists so the Terminal tab compiles, and `start()`
+// says why the tab is empty in the one place the widget reports a failure -- a
+// terminal that silently did nothing would be the bug this project keeps fixing.
+namespace timewarp::ui {
+
+PtySession::~PtySession() = default;
+
+bool PtySession::start(const QString&, const QString&, int, int, QString* error) {
+    if (error != nullptr) {
+        *error = QStringLiteral(
+            "The terminal runs a shell, and a browser has no process to run one in. "
+            "The desktop build has it.");
+    }
+    return false;
+}
+
+bool PtySession::isRunning() { return false; }
+
+QByteArray PtySession::read() { return {}; }
+
+bool PtySession::write(const QByteArray&) { return false; }
+
+int PtySession::flush() { return 0; }
+
+void PtySession::setWindowSize(int, int) {}
+
+void PtySession::stop() {}
+
+int PtySession::exitCode() { return -1; }
+
+bool PtySession::reap() { return false; }
+
+}  // namespace timewarp::ui
+
+#else
 
 namespace timewarp::ui {
 
@@ -319,3 +360,5 @@ bool PtySession::reap() {
 }
 
 }  // namespace timewarp::ui
+
+#endif  // __EMSCRIPTEN__

@@ -1,0 +1,60 @@
+10 REM ============================================================
+20 REM HB-1 IN LOGO: A HOUSE WITH A GARDEN
+30 REM The same machine, a different ROM. Nothing here is BASIC:
+40 REM in, or CS, or SETPC. Select LOGO in the ROM socket, load
+50 REM this listing, and the turtle draws on the graphics pane
+60 REM beside the tube -- the canvas the machine and the IDE share.
+70 REM ============================================================
+80 CS
+90 SETPC 6
+100 SETPENWIDTH 2
+110 REPEAT 4 [ FD 90 RT 90 ]
+120 REM --- the roof, a triangle over the walls ------------------
+130 PU
+140 HOME
+150 FD 90
+160 RT 90
+170 FD 90
+180 LT 90
+190 PD
+200 SETPC 4
+210 REPEAT 3 [ FD 90 RT 120 ]
+220 REM --- a door, in the middle of the front wall --------------
+230 PU
+240 HOME
+250 FD 90
+260 RT 90
+270 FD 40
+280 LT 90
+290 PD
+300 SETPC 1
+310 REPEAT 2 [ FD 40 RT 90 FD 25 RT 90 ]
+320 REM --- a sun, and a garden of flowers -----------------------
+330 PU
+340 HOME
+350 RT 90
+360 FD 200
+370 LT 90
+380 PD
+390 SETPC 6
+400 REPEAT 12 [ FD 30 BK 30 RT 30 ]
+410 PU
+420 HOME
+430 FD 130
+440 LT 90
+450 FD 60
+460 PD
+470 SETPC 2
+480 REPEAT 5 [ FD 20 RT 90 FD 40 RT 90 FD 20 LT 180 ]
+490 PU
+500 HOME
+510 FD 130
+520 LT 90
+530 FD 100
+540 PD
+550 REPEAT 5 [ FD 20 RT 90 FD 40 RT 90 FD 20 LT 180 ]
+560 PU
+570 HOME
+580 SETPC 7
+590 REPEAT 8 [ FD 90 RT 45 ]
+600 PRINT "THE TURTLE IS THE OTHER HALF OF THE MACHINE."

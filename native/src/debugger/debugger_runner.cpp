@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: AGPL-3.0-only
 //
 // Implementation of the background debugger runner.  See the header for why the
 // control channel is atomic rather than slot-based.

@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MIT
+# SPDX-License-Identifier: AGPL-3.0-only
 #
 # Included by `native/CMakeLists.txt`. `include()` rather than `add_subdirectory()`
 # on purpose: one directory scope keeps every source path in this file relative to
@@ -11,6 +11,15 @@
 #
 # The Qt libraries: the canvas bridge, the debugger, SQL, projects, lessons and their
 # commands, and the JSON-RPC API.
+
+# Host programs beside the application: the teacher's and learner's commands, the
+# automation server, the player. A browser build has exactly one executable -- the page
+# loads `time_warp_ide.wasm` and nothing else -- so this is off there rather than
+# building modules nobody fetches.
+set(TIME_WARP_BUILD_HOST_TOOLS ON)
+if(TW_BUILD_WASM)
+    set(TIME_WARP_BUILD_HOST_TOOLS OFF)
+endif()
 
 # ---------------------------------------------------------------------------
 # Qt bridge (optional)
@@ -114,16 +123,27 @@ endif()
 # ---------------------------------------------------------------------------
 
 if(TIME_WARP_QT_FOUND)
-    find_package(SQLite3 REQUIRED)
-    # FindSQLite3 called its imported target SQLite::SQLite3 until CMake 4.3,
-    # when SQLite3::SQLite3 arrived and the old spelling was deprecated. Follow
-    # whichever this CMake provides: 3.20 (the project's floor) has only the
-    # first, and a 4.4 build should not print an author warning on every
-    # configure for a name we chose years ago.
-    if(TARGET SQLite3::SQLite3)
-        set(TIME_WARP_SQLITE_TARGET SQLite3::SQLite3)
+    # Emscripten carries SQLite as a port: `-sUSE_SQLITE3=1` puts `sqlite3.h` on the
+    # include path and links the library, so a cross sysroot has no config package for
+    # `find_package` to read. The flag travels on an interface target so it reaches the
+    # translation unit that includes the header.
+    add_library(timewarp_sqlite INTERFACE)
+    if(TW_BUILD_WASM)
+        target_compile_options(timewarp_sqlite INTERFACE "SHELL:-sUSE_SQLITE3=1")
+        target_link_options(timewarp_sqlite INTERFACE "SHELL:-sUSE_SQLITE3=1")
     else()
-        set(TIME_WARP_SQLITE_TARGET SQLite::SQLite3)
+        find_package(SQLite3 REQUIRED)
+        # FindSQLite3 called its imported target SQLite::SQLite3 until CMake 4.3,
+        # when SQLite3::SQLite3 arrived and the old spelling was deprecated. Follow
+        # whichever this CMake provides: 3.20 (the project's floor) has only the
+        # first, and a 4.4 build should not print an author warning on every
+        # configure for a name we chose years ago.
+        if(TARGET SQLite3::SQLite3)
+            set(TIME_WARP_SQLITE_TARGET SQLite3::SQLite3)
+        else()
+            set(TIME_WARP_SQLITE_TARGET SQLite::SQLite3)
+        endif()
+        target_link_libraries(timewarp_sqlite INTERFACE ${TIME_WARP_SQLITE_TARGET})
     endif()
     add_library(timewarp_sql
         src/sql/database.cpp
@@ -135,7 +155,7 @@ if(TIME_WARP_QT_FOUND)
         PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
     )
     target_compile_features(timewarp_sql PUBLIC cxx_std_20)
-    target_link_libraries(timewarp_sql PUBLIC ${TIME_WARP_QT}::Core ${TIME_WARP_SQLITE_TARGET})
+    target_link_libraries(timewarp_sql PUBLIC ${TIME_WARP_QT}::Core timewarp_sqlite)
 
     target_compile_options(timewarp_sql PRIVATE
         -Wall -Wextra -Wpedantic -Wshadow -Wcast-qual ${TIME_WARP_GNU_WARNING_FLAGS}
@@ -207,7 +227,19 @@ if(TIME_WARP_QT_FOUND)
     # zlib for classroom bundles: a zip a school can open with the tools it
     # already has. Qt does not expose the copy it links internally, so this is a
     # real dependency of the lessons library, and the packaging ships it.
-    find_package(ZLIB REQUIRED)
+    #
+    # Emscripten has no zlib in its sysroot: it is a port, and `-sUSE_ZLIB=1` is what
+    # puts the header on the include path and `-lz` on the link line. There is nothing
+    # for `find_package` to find in a cross sysroot, so the browser build carries the
+    # flag on an interface target and it reaches classroom.cpp the same way.
+    add_library(timewarp_zlib INTERFACE)
+    if(TW_BUILD_WASM)
+        target_compile_options(timewarp_zlib INTERFACE "SHELL:-sUSE_ZLIB=1")
+        target_link_options(timewarp_zlib INTERFACE "SHELL:-sUSE_ZLIB=1")
+    else()
+        find_package(ZLIB REQUIRED)
+        target_link_libraries(timewarp_zlib INTERFACE ZLIB::ZLIB)
+    endif()
     add_library(timewarp_lessons
         src/lessons/classroom.cpp
         src/lessons/curriculum.cpp
@@ -227,7 +259,7 @@ if(TIME_WARP_QT_FOUND)
     )
     target_compile_features(timewarp_lessons PUBLIC cxx_std_20)
     target_link_libraries(timewarp_lessons
-        PUBLIC ${TIME_WARP_QT}::Core timewarp::lang timewarp::scheme ZLIB::ZLIB
+        PUBLIC ${TIME_WARP_QT}::Core timewarp::lang timewarp::scheme timewarp_zlib
     )
 
     target_compile_options(timewarp_lessons PRIVATE
@@ -257,15 +289,17 @@ if(TIME_WARP_QT_FOUND)
     endif()
 
     # The learner's command, from the same library the panel uses.
-    add_executable(time_warp_learn tools/learn.cpp)
-    target_link_libraries(time_warp_learn PRIVATE timewarp::lessons)
-    timewarp_enable_warnings(time_warp_learn)
+    if(TIME_WARP_BUILD_HOST_TOOLS)
+        add_executable(time_warp_learn tools/learn.cpp)
+        target_link_libraries(time_warp_learn PRIVATE timewarp::lessons)
+        timewarp_enable_warnings(time_warp_learn)
 
-    # The teacher's command: validate the curriculum, and (with --write) the
-    # lesson plans the documentation job compares against it.
-    add_executable(time_warp_teach tools/teach.cpp)
-    target_link_libraries(time_warp_teach PRIVATE timewarp::lessons)
-    timewarp_enable_warnings(time_warp_teach)
+        # The teacher's command: validate the curriculum, and (with --write) the
+        # lesson plans the documentation job compares against it.
+        add_executable(time_warp_teach tools/teach.cpp)
+        target_link_libraries(time_warp_teach PRIVATE timewarp::lessons)
+        timewarp_enable_warnings(time_warp_teach)
+    endif()
 else()
     message(STATUS "Qt not found: skipping the lessons library")
 endif()
@@ -318,9 +352,11 @@ if(TIME_WARP_QT_FOUND AND TARGET timewarp::sql)
         target_compile_options(timewarp_api PRIVATE -Werror)
     endif()
 
-    add_executable(time_warp_api tools/time_warp_api.cpp)
-    target_link_libraries(time_warp_api PRIVATE timewarp::api)
-    timewarp_enable_warnings(time_warp_api)
+    if(TIME_WARP_BUILD_HOST_TOOLS)
+        add_executable(time_warp_api tools/time_warp_api.cpp)
+        target_link_libraries(time_warp_api PRIVATE timewarp::api)
+        timewarp_enable_warnings(time_warp_api)
+    endif()
 
     if(TIME_WARP_EXPR_BUILD_TESTS)
         add_executable(api_tests tests/api_tests.cpp)
@@ -387,6 +423,7 @@ if(TIME_WARP_QT_FOUND)
         add_library(timewarp_ui_core
             src/ui/design.cpp
             src/ui/language.cpp
+            src/ui/chip8_text.cpp
             src/ui/native_runner.cpp
             src/ui/sound_player.cpp
             src/ui/standalone.cpp
@@ -398,6 +435,7 @@ if(TIME_WARP_QT_FOUND)
             src/ui/ui_style.cpp
             include/timewarp/ui/design.hpp
             include/timewarp/ui/language.hpp
+            include/timewarp/ui/chip8_text.hpp
             include/timewarp/ui/native_runner.hpp
             include/timewarp/ui/sound_player.hpp
             include/timewarp/ui/standalone.hpp
@@ -415,7 +453,8 @@ if(TIME_WARP_QT_FOUND)
             target_link_libraries(timewarp_ui_core PRIVATE timewarp::canvas_qt)
         endif()
         # The engines. A player with no interpreter has nothing to play.
-        target_link_libraries(timewarp_ui_core PRIVATE timewarp::lang)
+        target_link_libraries(timewarp_ui_core PRIVATE timewarp::lang
+                                  timewarp::chip8_engine)
         target_compile_definitions(timewarp_ui_core PRIVATE
             TIME_WARP_VERSION="${TIME_WARP_VERSION}"
         )
@@ -490,6 +529,7 @@ if(TIME_WARP_QT_FOUND)
             src/ui/terminal_widget.cpp
             src/ui/tour.cpp
             src/ui/version_history.cpp
+            src/ui/wasm_storage.cpp
             # Listed so AUTOMOC scans them: the Q_OBJECT classes live in headers
             # outside this target's source directory.
             include/timewarp/ui/benchmark.hpp
@@ -525,6 +565,7 @@ if(TIME_WARP_QT_FOUND)
             include/timewarp/ui/terminal_widget.hpp
             include/timewarp/ui/tour.hpp
             include/timewarp/ui/version_history.hpp
+            include/timewarp/ui/wasm_storage.hpp
         )
         add_library(timewarp::ui ALIAS timewarp_ui)
 
@@ -602,24 +643,164 @@ if(TIME_WARP_QT_FOUND)
             target_compile_options(timewarp_ui PRIVATE -Werror)
         endif()
 
+        # The three historical machines are separate applications. Their
+        # windows are not linked into time_warp_ide.
+        if(NOT TW_BUILD_WASM)
+            add_library(timewarp_chip8_ui
+                src/ui/chip8_archive.cpp
+                src/ui/chip8_emulator.cpp
+                src/ui/chip8_library.cpp
+                src/ui/chip8_screen.cpp
+                src/ui/chip8_window.cpp
+                include/timewarp/ui/chip8_archive.hpp
+                include/timewarp/ui/chip8_emulator.hpp
+                include/timewarp/ui/chip8_library.hpp
+                include/timewarp/ui/chip8_screen.hpp
+                include/timewarp/ui/chip8_window.hpp
+            )
+            add_library(timewarp::chip8_ui ALIAS timewarp_chip8_ui)
+            target_include_directories(timewarp_chip8_ui
+                PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>)
+            target_compile_features(timewarp_chip8_ui PUBLIC cxx_std_20)
+            target_link_libraries(timewarp_chip8_ui
+                PUBLIC timewarp::ui timewarp::chip8_engine)
+            target_compile_definitions(timewarp_chip8_ui PRIVATE
+                TIME_WARP_VERSION="${TIME_WARP_VERSION}")
+            set_target_properties(timewarp_chip8_ui PROPERTIES AUTOMOC ON)
+            timewarp_enable_warnings(timewarp_chip8_ui)
+
+            find_package(Qt6 QUIET COMPONENTS Network)
+            if(TARGET Qt6::Network)
+                target_link_libraries(timewarp_chip8_ui PUBLIC Qt6::Network)
+                target_compile_definitions(timewarp_chip8_ui PRIVATE TIME_WARP_HAVE_NETWORK=1)
+            endif()
+
+            add_library(timewarp_hb1_ui
+                src/ui/hb_bbs.cpp
+                src/ui/hb_clock.cpp
+                src/ui/hb_dos.cpp
+                src/ui/hb_memory.cpp
+                src/ui/hb_tube.cpp
+                src/ui/machine_image.cpp
+                src/ui/machine_voice.cpp
+                src/ui/retro_computer_basic.cpp
+                src/ui/retro_computer_bbs.cpp
+                src/ui/retro_computer_boot.cpp
+                src/ui/retro_computer_dos.cpp
+                src/ui/retro_computer_machine.cpp
+                src/ui/retro_computer_settings.cpp
+                src/ui/retro_computer_support.cpp
+                src/ui/retro_computer_ui.cpp
+                src/ui/retro_settings.cpp
+                include/timewarp/ui/hb_bbs.hpp
+                include/timewarp/ui/hb_clock.hpp
+                include/timewarp/ui/hb_dos.hpp
+                include/timewarp/ui/hb_memory.hpp
+                include/timewarp/ui/hb_tube.hpp
+                include/timewarp/ui/machine_image.hpp
+                include/timewarp/ui/machine_voice.hpp
+                include/timewarp/ui/retro_computer.hpp
+                include/timewarp/ui/retro_settings.hpp
+            )
+            add_library(timewarp::hb1_ui ALIAS timewarp_hb1_ui)
+            target_include_directories(timewarp_hb1_ui
+                PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>)
+            target_compile_features(timewarp_hb1_ui PUBLIC cxx_std_20)
+            target_link_libraries(timewarp_hb1_ui PUBLIC timewarp::ui timewarp::lang)
+            set_target_properties(timewarp_hb1_ui PROPERTIES AUTOMOC ON)
+            timewarp_enable_warnings(timewarp_hb1_ui)
+
+            add_library(timewarp_hb2_ui
+                src/ui/hb2_window.cpp
+                include/timewarp/ui/hb2_window.hpp
+            )
+            add_library(timewarp::hb2_ui ALIAS timewarp_hb2_ui)
+            target_include_directories(timewarp_hb2_ui
+                PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>)
+            target_compile_features(timewarp_hb2_ui PUBLIC cxx_std_20)
+            target_link_libraries(timewarp_hb2_ui PUBLIC timewarp::ui timewarp::hb2)
+            set_target_properties(timewarp_hb2_ui PROPERTIES AUTOMOC ON)
+            timewarp_enable_warnings(timewarp_hb2_ui)
+
+            add_executable(time_warp_chip8 tools/time_warp_chip8.cpp)
+            target_link_libraries(time_warp_chip8 PRIVATE timewarp::chip8_ui)
+            timewarp_enable_warnings(time_warp_chip8)
+
+            add_executable(time_warp_hb1 tools/time_warp_hb1.cpp)
+            target_link_libraries(time_warp_hb1 PRIVATE timewarp::hb1_ui)
+            timewarp_enable_warnings(time_warp_hb1)
+
+            add_executable(time_warp_hb2 tools/time_warp_hb2.cpp)
+            target_link_libraries(time_warp_hb2 PRIVATE timewarp::hb2_ui)
+            timewarp_enable_warnings(time_warp_hb2)
+
+            if(TIME_WARP_EXPR_BUILD_TESTS)
+                if(TARGET Qt6::Network)
+                    add_executable(chip8_emulator_tests tests/chip8_emulator_tests.cpp)
+                    target_link_libraries(chip8_emulator_tests PRIVATE timewarp::chip8_ui)
+                    target_include_directories(chip8_emulator_tests
+                        PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/tests)
+                    target_compile_definitions(chip8_emulator_tests PRIVATE
+                        TIME_WARP_TEST_EXAMPLES="${CMAKE_CURRENT_SOURCE_DIR}/../Examples")
+                    timewarp_enable_warnings(chip8_emulator_tests)
+                    add_test(NAME chip8_emulator_tests COMMAND chip8_emulator_tests)
+                endif()
+
+                add_executable(retro_computer_tests
+                    tests/retro_computer_tests.cpp
+                    tests/retro_basic_tests.cpp
+                    tests/retro/example_tests.cpp
+                    tests/retro/paper_tests.cpp
+                    tests/retro/bbs_tests.cpp
+                    tests/retro_boot_tests.cpp
+                    tests/retro_config_tests.cpp
+                    tests/retro_dos_tests.cpp
+                    tests/retro_hardware_tests.cpp
+                    tests/retro_image_tests.cpp
+                    tests/retro_memory_tests.cpp
+                )
+                target_link_libraries(retro_computer_tests PRIVATE timewarp::hb1_ui)
+                target_include_directories(retro_computer_tests
+                    PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/tests)
+                target_compile_definitions(retro_computer_tests PRIVATE
+                    TIME_WARP_TEST_SOURCE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/..")
+                timewarp_enable_warnings(retro_computer_tests)
+                add_test(NAME retro_computer_tests COMMAND retro_computer_tests)
+            endif()
+        endif()
+
         # ---- the player, not the workshop ---------------------------------
         # One program, the canvas it draws on and the output it prints. It links
         # `timewarp::ui_core` rather than `timewarp::ui`, so an artifact compiled
         # for a friend carries the showing and not the authoring.
-        add_executable(time_warp_player tools/player.cpp)
-        target_link_libraries(time_warp_player PRIVATE timewarp::ui_core)
-        # The version string is a definition rather than a header constant, so a
-        # target that prints it has to carry it: `--version` would otherwise be the
-        # one place in the product with no number in it.
-        target_compile_definitions(time_warp_player PRIVATE
-            TIME_WARP_VERSION="${TIME_WARP_VERSION}")
-        timewarp_enable_warnings(time_warp_player)
+        if(TIME_WARP_BUILD_HOST_TOOLS)
+            add_executable(time_warp_player tools/player.cpp)
+            target_link_libraries(time_warp_player PRIVATE timewarp::ui_core)
+            # The version string is a definition rather than a header constant, so a
+            # target that prints it has to carry it: `--version` would otherwise be the
+            # one place in the product with no number in it.
+            target_compile_definitions(time_warp_player PRIVATE
+                TIME_WARP_VERSION="${TIME_WARP_VERSION}")
+            timewarp_enable_warnings(time_warp_player)
+        endif()
 
         # The application, not a harness: it shows the window, opens the files it
         # is given, and can render itself to a PNG for the layout checks.
-        add_executable(time_warp_ide tools/time_warp_ide.cpp)
+        #
+        # `qt_add_executable` for the browser and `add_executable` everywhere else:
+        # the Qt variant is what runs the WebAssembly finalisation -- the memory
+        # settings, the `.js` glue and the module itself are its business, and a plain
+        # `add_executable` would produce a target the deployable page cannot load.
+        if(TW_BUILD_WASM)
+            qt_add_executable(time_warp_ide tools/time_warp_ide.cpp)
+        else()
+            add_executable(time_warp_ide tools/time_warp_ide.cpp)
+        endif()
         target_link_libraries(time_warp_ide PRIVATE timewarp::ui)
         timewarp_enable_warnings(time_warp_ide)
+        if(TW_BUILD_WASM)
+            timewarp_enable_wasm(time_warp_ide)
+        endif()
 
         # ---- install ------------------------------------------------------
         # Four things have to arrive together for an installed tree to work:
@@ -643,6 +824,17 @@ if(TIME_WARP_QT_FOUND)
         set(TIME_WARP_SHARE_DIR "${CMAKE_INSTALL_DATADIR}")
         install(TARGETS time_warp_ide
                 RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
+        if(TARGET time_warp_chip8)
+            install(TARGETS time_warp_chip8 time_warp_hb1 time_warp_hb2
+                    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
+            install(
+                FILES
+                    ${CMAKE_CURRENT_SOURCE_DIR}/../packaging/linux/time-warp-chip8.desktop
+                    ${CMAKE_CURRENT_SOURCE_DIR}/../packaging/linux/time-warp-hb1.desktop
+                    ${CMAKE_CURRENT_SOURCE_DIR}/../packaging/linux/time-warp-hb2.desktop
+                DESTINATION ${CMAKE_INSTALL_DATADIR}/applications
+            )
+        endif()
         # The teacher's and the learner's commands, beside the IDE. A package that
         # shipped only the window would make "the panel and the tool agree" a
         # claim about a checkout.
@@ -653,9 +845,13 @@ if(TIME_WARP_QT_FOUND)
         # A command, not development scaffolding: "check this program" is one of the
         # things a person who writes programs in eleven languages wants from a terminal,
         # and it is the same report the gates read.
-        install(TARGETS time_warp_check RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
-        install(TARGETS time_warp_api
-                RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
+        if(TARGET time_warp_check)
+            install(TARGETS time_warp_check RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
+        endif()
+        if(TARGET time_warp_api)
+            install(TARGETS time_warp_api
+                    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
+        endif()
         # The player goes beside the IDE because `--compile` looks for it there:
         # an artifact is a copy of whichever of the two it finds, and a package
         # without it would compile programs into copies of the whole IDE.
@@ -686,6 +882,12 @@ if(TIME_WARP_QT_FOUND)
             FILES ${CMAKE_CURRENT_SOURCE_DIR}/share/command_rows.json
             DESTINATION ${TIME_WARP_SHARE_DIR}/time-warp-studio
         )
+        if(TARGET time_warp_chip8)
+            install(
+                FILES ${CMAKE_CURRENT_SOURCE_DIR}/share/chip8_archive.json
+                DESTINATION ${TIME_WARP_SHARE_DIR}/time-warp-studio
+            )
+        endif()
         # The documentation browser reads these. `docsRoot()` looks in
         # `share/doc/time-warp-studio` first, so a package and a checkout show the
         # same pages; without this rule an installed help window would explain
@@ -694,7 +896,7 @@ if(TIME_WARP_QT_FOUND)
             DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/../docs/
             DESTINATION ${TIME_WARP_SHARE_DIR}/doc/time-warp-studio
         )
-        # The MIT notice travels with the application rather than in a dialog in
+        # The licence travels with the application rather than in a dialog in
         # front of the disk image (see CPACK_DMG_SLA_USE_RESOURCE_FILE_LICENSE),
         # so this copy is the one a user can read after installing.
         install(
@@ -748,13 +950,14 @@ if(TIME_WARP_QT_FOUND)
                 tests/ui_layout_tests.cpp
                 tests/ui_layout_appearance_tests.cpp
                 tests/ui_layout_editor_tests.cpp
+                tests/ui_layout_hb2_tests.cpp
                 tests/ui_layout_menu_tests.cpp
                 tests/ui_layout_panel_tests.cpp
                 tests/ui_layout_run_tests.cpp
                 tests/ui_layout_shell_tests.cpp
                 tests/ui_layout_turtle_tests.cpp
             )
-            target_link_libraries(ui_layout_tests PRIVATE timewarp::ui)
+            target_link_libraries(ui_layout_tests PRIVATE timewarp::ui timewarp::hb2_ui)
             target_include_directories(ui_layout_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/tests)
             # The snippet picker's suite reads the checkout's catalogue. The
             # resolver walks up from the executable, which reaches the checkout

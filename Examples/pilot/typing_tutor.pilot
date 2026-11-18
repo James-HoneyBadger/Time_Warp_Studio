@@ -24,8 +24,8 @@ T:  "the quick brown fox"
 T:
 A:
 M:the quick brown fox
-TY:✅ Perfect match!
-TN:❌ Not quite — keep trying!
+TY:Perfect match!
+TN:Not quite — keep trying!
 CY:SCORE = SCORE + 1
 C:ROUND = ROUND + 1
 
@@ -38,8 +38,8 @@ T:  "hello world 2025"
 T:
 A:
 M:hello world 2025
-TY:✅ Correct!
-TN:❌ Almost — watch the numbers!
+TY:Correct!
+TN:Almost — watch the numbers!
 CY:SCORE = SCORE + 1
 C:ROUND = ROUND + 1
 
@@ -52,8 +52,8 @@ T:  "practice makes perfect"
 T:
 A:
 M:practice makes perfect
-TY:✅ Nailed it!
-TN:❌ Close! Check your spelling.
+TY:Nailed it!
+TN:Close! Check your spelling.
 CY:SCORE = SCORE + 1
 C:ROUND = ROUND + 1
 
@@ -66,8 +66,8 @@ T:  "PILOT is a teaching language"
 T:
 A:
 M:PILOT is a teaching language
-TY:✅ Excellent typing!
-TN:❌ Case matters — try again next time.
+TY:Excellent typing!
+TN:Case matters — try again next time.
 CY:SCORE = SCORE + 1
 C:ROUND = ROUND + 1
 
@@ -80,8 +80,8 @@ T:  "Time Warp Studio rocks"
 T:
 A:
 M:Time Warp Studio rocks
-TY:✅ You're a typing champion!
-TN:❌ So close!
+TY:You're a typing champion!
+TN:So close!
 CY:SCORE = SCORE + 1
 
 *RESULTS

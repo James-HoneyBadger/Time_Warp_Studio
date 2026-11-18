@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MIT
+# SPDX-License-Identifier: AGPL-3.0-only
 #
 # Included by `native/CMakeLists.txt`. `include()` rather than `add_subdirectory()`
 # on purpose: one directory scope keeps every source path in this file relative to
@@ -78,7 +78,7 @@ elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "aarch64|arm64|ARM64")
     set(CPACK_DEBIAN_PACKAGE_ARCHITECTURE "arm64")
 endif()
 
-set(CPACK_RPM_PACKAGE_LICENSE "MIT")
+set(CPACK_RPM_PACKAGE_LICENSE "AGPL-3.0-only")
 set(CPACK_RPM_PACKAGE_GROUP "Education")
 set(CPACK_RPM_PACKAGE_REQUIRES "qt6-qtbase-gui, sqlite-libs, zlib")
 if(${TIME_WARP_QT}Svg_FOUND)

@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: AGPL-3.0-only
 //
 // The version history: what autosave has kept for this document, newest first,
 // with the text beside it.

@@ -20,12 +20,15 @@ native/                     the Qt application (the product)
     scheme/                 the explicit-stack Scheme machine
     lessons/                curriculum, verifier, progress, classroom
     debugger/ project/ sql/ api/ canvas/
-  share/                    lessons.json, snippets.json, command_rows.json
+  share/                    lessons.json, snippets.json, command_rows.json,
+                            counts.txt, unbuilt.txt, chip8_archive.json
   tools/
-    gates/                  time_warp_gates: smoke, commands, repl, golden, tree
+    gates/                  time_warp_gates: smoke, commands, repl, golden, tree,
+                            registry, structure
     docs/                   time_warp_docs: links, claims, version, md (no Qt)
     icon/                   time_warp_icon: the packaged icons
-Examples/                   68 programs across the ten languages
+Examples/                   77 programs in the ten languages, 18 CHIP-8 listings,
+                            9 HB-2 assembly programs, 9 HB-1 programs and a disk
 docs/                       the documentation set, by audience (see the table below)
 ```
 
@@ -55,6 +58,11 @@ launches it.
   the active theme, `style::sheet()` builds the stylesheet from those tokens, and
   `icons::glyph()` draws the icons with an icon engine that follows the palette. All 35 themes
   are data in `native/src/ui/theme_table.inc`.
+- **The three machines are applications, not modes.** `time_warp_hb1`, `time_warp_hb2` and
+  `time_warp_chip8` are separate executables beside the IDE, started by **Tools** and each with
+  its own `QSettings` scope (`applyApplicationIdentity`). CHIP-8 is not a row in the language
+  registry: its assembler and machine are `timewarp_chip8_engine`, and a `.ch8` document is run
+  through `execute_chip8` by `NativeRunner`'s chip8 mode.
 
 ---
 
@@ -62,7 +70,7 @@ launches it.
 
 ```bash
 make -C native run         # build if needed, then launch
-make test                  # the 24 C++ suites
+make test                  # the 27 C++ suites
 make test-all              # every gate CI runs
 make smoke                 # every example program through the native engines
 make command-matrix        # one row per command, from native/share/command_rows.json
@@ -113,7 +121,8 @@ Each fact has one home. The set is organised by audience:
 | `docs/user/` | Getting started, the Studio's window and panels, the automation API, questions |
 | `docs/languages/` | The ten languages, their reference, and one tutorial per language |
 | `docs/lessons/` | The curriculum, the lesson format, and the generated plans |
-| `docs/maintainer/` | Architecture, decisions, testing, roadmap, release |
+| `docs/maintainer/` | Architecture, decisions, testing, roadmap, release, WebAssembly |
+| `docs/MACHINES.md`, `docs/hb1/`, `docs/hb2/`, `docs/chip8/`, `docs/tutorials/chip8.md` | The three machine applications and their manuals |
 | `docs/project/` | The history archive: the PySide6 port, and every release |
 | `docs/INDEX.md` | The map. It is also the table of contents of **Help > Documentation**, built by `native/src/ui/help_browser.cpp` from its headings and tables |
 

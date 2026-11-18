@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: AGPL-3.0-only
 //
 // The classroom. See `classroom.hpp` for the layout, the bundle format and what
 // marking deliberately does not touch.

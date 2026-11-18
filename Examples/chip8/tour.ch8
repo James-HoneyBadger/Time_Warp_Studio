@@ -1,0 +1,176 @@
+; tour.ch8 -- a five-page tour of what this machine actually does.
+;
+; Press any key to turn the page. Nothing here needs the keypad's layout:
+; `LD V0, K` is the machine saying "wait for a key", and any key will do.
+;
+; Each page shows one behaviour that is easy to assume and easy to get wrong:
+;
+;   1  the character set        digits are the machine's, not the screen's
+;   2  XOR and the collision    drawing twice over the same pixels erases them
+;   3  carry                   VF is a register, and arithmetic borrows it
+;   4  wrapping                64 and 32 are a mask, not a wall
+;   5  the shift               1977 shifts the register in place
+;
+; It is a listing rather than a blob so that reading it is part of the tour:
+; every page below is the few instructions it demonstrates.
+
+start:  CLS
+        CALL page_font
+        CALL wait_key
+        CLS
+        CALL page_collision
+        CALL wait_key
+        CLS
+        CALL page_carry
+        CALL wait_key
+        CLS
+        CALL page_wrap
+        CALL wait_key
+        CLS
+        CALL page_shift
+        CALL wait_key
+        CLS
+        HALT
+
+; ---------------------------------------------------------------------------
+; 1. The character set. FX29 turns a value into the address of its glyph and
+;    DRW draws five rows of it, so "1977" is four font lookups and four sprites.
+; ---------------------------------------------------------------------------
+page_font:
+        LD V1, 6            ; x
+        LD V2, 4            ; y
+        LD V0, 1
+        LD F, V0
+        DRW V1, V2, 5
+        LD V0, 9
+        ADD V1, 6
+        LD F, V0
+        DRW V1, V2, 5
+        LD V0, 7
+        ADD V1, 6
+        LD F, V0
+        DRW V1, V2, 5
+        ADD V1, 6
+        LD F, V0            ; the same glyph twice, from the same lookup
+        DRW V1, V2, 5
+        LD V1, 6
+        LD V2, 14
+        LD I, rule
+        DRW V1, V2, 3
+        RET
+
+; ---------------------------------------------------------------------------
+; 2. XOR and collision. A sprite is drawn by exclusive-or, so the second copy
+;    erases the pixels it lands on and leaves only the one-pixel overhang. VF
+;    says a collision happened, and the marker in the corner is VF made visible.
+; ---------------------------------------------------------------------------
+page_collision:
+        LD V0, 8
+        LD V1, 10
+        LD I, block
+        DRW V0, V1, 8       ; an 8x8 solid block; VF is 0 afterwards
+        ADD V0, 1
+        DRW V0, V1, 8       ; one pixel right: the overlap goes, VF is 1
+        SE VF, 0            ; skip the marker when nothing collided
+        JP collision_mark
+        RET
+collision_mark:
+        LD V0, 2
+        LD V1, 2
+        LD I, pixel
+        DRW V0, V1, 1
+        RET
+
+; ---------------------------------------------------------------------------
+; 3. Carry. 200 + 100 does not fit in a byte: V0 keeps 44 and VF keeps the one
+;    that did not, which is why the "44" below is not a bug and the block beside
+;    it is the flag.
+; ---------------------------------------------------------------------------
+page_carry:
+        LD V0, 200
+        LD V1, 100
+        ADD V0, V1          ; V0 = 44, VF = 1
+        LD I, scratch
+        LD B, V0            ; hundreds, tens, units into memory at I
+        LD I, scratch
+        LD V1, [I]          ; tens: 4 (hundreds is 0 and not drawn)
+        LD V2, [I]          ; units: 4
+        LD V3, 10
+        LD V4, 4
+        LD F, V1
+        DRW V3, V4, 5
+        ADD V3, 6
+        LD F, V2
+        DRW V3, V4, 5
+        ADD V3, 18
+        LD I, marker        ; the carry, drawn as a block because VF is 1
+        DRW V3, V4, 4
+        RET
+
+; ---------------------------------------------------------------------------
+; 4. Wrapping. A four-pixel sprite at x = 62 does not stop at the edge: the last
+;    two columns come round to x = 0. The same is true of a row below 31.
+; ---------------------------------------------------------------------------
+page_wrap:
+        LD V0, 62
+        LD V1, 8
+        LD I, wide
+        DRW V0, V1, 4       ; two pixels on each edge of the same row
+        LD V0, 30
+        LD V1, 30
+        LD I, wide
+        DRW V0, V1, 4       ; two rows at the bottom, two at the top
+        RET
+
+; ---------------------------------------------------------------------------
+; 5. The shift. On this machine SHR shifts Vx in place -- there is no source
+;    register, as 1977 had none -- so 129 becomes 64 and the bit that fell off
+;    the end is in VF. On a machine that shifts Vy into Vx the answer is the same
+;    here only because both registers hold 129; the listing says which it is.
+; ---------------------------------------------------------------------------
+page_shift:
+        LD V0, 129          ; 1000 0001
+        SHR V0              ; V0 = 64, VF = 1
+        LD I, scratch
+        LD B, V0
+        LD I, scratch
+        LD V1, [I]          ; tens: 6
+        LD V2, [I]          ; units: 4
+        LD V3, 24
+        LD V4, 10
+        LD F, V1
+        DRW V3, V4, 5
+        ADD V3, 6
+        LD F, V2
+        DRW V3, V4, 5
+        RET
+
+; ---------------------------------------------------------------------------
+wait_key:
+        LD V0, K            ; blocks until a key goes down; the key is V0
+        RET
+
+rule:   DB 0xFF
+        DB 0xFF
+        DB 0xFF
+block:  DB 0xFF
+        DB 0xFF
+        DB 0xFF
+        DB 0xFF
+        DB 0xFF
+        DB 0xFF
+        DB 0xFF
+        DB 0xFF
+wide:   DB 0xF0
+        DB 0xF0
+        DB 0xF0
+        DB 0xF0
+marker: DB 0xF0
+        DB 0xF0
+        DB 0xF0
+        DB 0xF0
+pixel:  DB 0x80
+scratch:
+        DB 0
+        DB 0
+        DB 0

@@ -4,8 +4,8 @@ This page records what is built, what is deliberately not built, and what is kno
 wrong. The release-by-release record — what each version changed and why — is in
 [the history](../project/history.md).
 
-The current design is 28.x: ten languages, the IDE, the curriculum and this documentation
-set, with the gates in [testing](testing.md) running on every push. The feature set is not
+The current design is 30.x: ten languages in the IDE, three machine applications beside
+it, the curriculum and this documentation set, with the gates in [testing](testing.md) running on every push. The feature set is not
 frozen, and a later release takes fixes and features alike, each arriving with the test
 that proves it.
 
@@ -40,24 +40,29 @@ it, so shipping one without correcting the documentation fails a gate.
 | Display | 35 themes derived through one token layer, high contrast, the 100/125/150% text ladder, focus mode, presentation mode, CRT settings with four monitor presets |
 | Execution | Run, run the selection, stop, and one program at a time; a budget of two million statements or ten seconds in every engine |
 | Input | A program can ask for a line and wait: `INPUT`, FOCAL's `ASK`, PILOT's `ACCEPT`, REXX's `PULL` |
-| Languages | Ten, with 68 example programs |
+| Languages | Ten, with 77 example programs |
 | Engines | All ten native and in process: BASIC, FOCAL, PILOT, COMAL, APL and REXX line by line; Logo, Smalltalk, Scheme and Forth whole-program |
 | Debugging | Breakpoints, pause, continue, step, watch expressions and data breakpoints in all ten; rewind in eight — every language but Smalltalk, which has no checkpoint yet, and Scheme, whose state is an arena and a continuation chain |
 | Database | A SQLite Database panel, the shared `SQL` statement in nine languages, scripts, tables and schema; compiled programs link SQLite |
 | Automation | JSON-RPC over stdin and stdout, and the `twc` terminal compiler |
 | Packaging | `make install`; tagged releases build `.deb`, `.rpm`, AppImage, tarball, Flatpak and a container image for Linux |
-| Quality gates | 23 CTest suites in four build configurations; the frozen-corpus gate over 636 programs; 534 command rows run as programs and through the REPL; 67 example programs through the smoke gate; the documentation gates |
+| Browser | The same application built for WebAssembly: every language, the debugger, the REPL, the example corpus, and a project volume that survives a reload; see [WebAssembly](wasm.md) |
+| Quality gates | 27 CTest suites in four build configurations; the frozen-corpus gate over 636 programs; 534 command rows run as programs and through the REPL; 94 example programs through the smoke gate; the documentation gates |
 
 ---
 
 ## Not built, on purpose
 
-A web (WebAssembly) build, and calling one language from another. Both would have to
-invent a machine that never existed, which is the one thing this environment is not for.
+Calling one language from another would have to invent a machine that never existed, which
+is the one thing this environment is not for.
 
 Two features that used to be on this list shipped and stayed: the examples browser became
 **File > Examples Gallery…**, and the accessibility presets became the theme, text-size,
-focus and presentation controls in **View**.
+focus and presentation controls in **View**. A third has left it too: the Studio builds for
+the browser, with every language, the debugger, the REPL and the example corpus, as
+[WebAssembly](wasm.md) describes. What the browser build does not have is what a page
+cannot offer: the desktop's packaging, its terminal and serial ports, the joystick, the
+external sound players and printing.
 
 ---
 

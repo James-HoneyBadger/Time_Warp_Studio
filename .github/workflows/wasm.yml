@@ -1,0 +1,165 @@
+name: WebAssembly
+
+# The browser build of the same Qt application: `TW_BUILD_WASM=ON` against Qt for
+# WebAssembly, assembled into one directory with `wasm/index.html`, uploaded as an
+# artifact, and deployed through GitHub Pages from a tag.
+#
+# Why a container rather than `install-qt-action`: a WebAssembly build needs three
+# things that have to agree with each other -- emsdk, a host Qt for `moc`/`rcc`, and a
+# WebAssembly Qt of the same version. The image below carries the first two and a
+# single-threaded wasm Qt at one version, and the job installs the threaded wasm Qt from
+# the same repository with aqt, so the three still agree. The image exports
+# `QT_VERSION` and `QT_WASM`; the steps below use the first and replace the second with
+# the threaded install.
+#
+# Publishing uses GitHub's Pages deployment actions rather than pushing `gh-pages` with
+# `GITHUB_TOKEN`, which does not trigger a Pages deployment.
+
+on:
+  push:
+    # `paths` applies to branch pushes only; a tag always builds, because a tag is the
+    # release that publishes the site.
+    branches: [main]
+    tags:
+      - 'v*'
+    paths:
+      - 'native/**'
+      - 'wasm/**'
+      # The example programs are compiled into the module, so a change to one changes
+      # the artifact.
+      - 'Examples/**'
+      - 'VERSION'
+      - '.github/workflows/wasm.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'native/**'
+      - 'wasm/**'
+      - 'Examples/**'
+      - 'VERSION'
+      - '.github/workflows/wasm.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# The deployed site is replaced wholesale, so two runs at once would race for the
+# branch. Queued rather than cancelled: a half-pushed site is a broken one.
+concurrency:
+  group: wasm-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Build for the browser
+    runs-on: ubuntu-24.04
+    container:
+      # Pinned by tag, not by digest: the image is the toolchain here, and its tag is
+      # what states which Qt and emsdk this build was proven with. It installs Qt as
+      # `wasm_singlethread` with the desktop Qt that supplies `moc` beside it; the
+      # threaded package it does not carry is added by the next step.
+      image: stateoftheartio/qt6:6.8-wasm-aqt
+      options: --user root
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      # The image installs the single-threaded Qt, and this build needs the threaded
+      # one: every runner in the IDE is a `QThread`, and the single-threaded package
+      # compiles `QThread::start()` to an empty function, so Run would do nothing. aqt
+      # fetches the same version from the same repository the image used, so the host
+      # Qt already in the image still matches it.
+      - name: Install the threaded Qt for WebAssembly
+        run: |
+          set -eu
+          apt-get update
+          # The image's Python is 3.8, and the `wasm` target arrived in aqt 3.2,
+          # which requires 3.9 -- 3.1.18 accepts neither. Focal carries 3.9 in
+          # universe, so the installer runs under it in a venv of its own rather
+          # than replacing the image's interpreter. `python3.9-dev` and a compiler
+          # are there in case a dependency has no wheel for 3.9.
+          apt-get install -y --no-install-recommends \
+            python3.9 python3.9-venv python3.9-dev build-essential
+          python3.9 -m venv /opt/aqt
+          /opt/aqt/bin/pip install --no-cache-dir --upgrade "aqtinstall==3.2.0"
+          /opt/aqt/bin/aqt install-qt -O /opt/Qt all_os wasm "$QT_VERSION" wasm_multithread
+          echo "QT_WASM=/opt/Qt/$QT_VERSION/wasm_multithread" >> "$GITHUB_ENV"
+
+      # The threaded Qt has to be the one that was found, not the image's singlethreaded
+      # install. This checks the three pieces rather than trusting the tag: a container
+      # that changed its layout should fail here, naming what is missing, instead of as
+      # a C++ error about a Qt header three minutes into the build.
+      - name: Check the toolchain
+        run: |
+          set -eu
+          : "${QT_WASM:?no Qt for WebAssembly was installed}"
+          case "$QT_WASM" in
+            *wasm_multithread) ;;
+            *) echo "::error::$QT_WASM is not the threaded Qt"; exit 1 ;;
+          esac
+          test -f "$QT_WASM/lib/cmake/Qt6/qt.toolchain.cmake" \
+            || { echo "::error::No qt.toolchain.cmake under $QT_WASM"; exit 1; }
+          test -d "$(dirname "$QT_WASM")/gcc_64/lib/cmake/Qt6" \
+            || { echo "::error::No host Qt beside $QT_WASM"; exit 1; }
+          command -v emcc
+          emcc --version
+
+      - name: Configure
+        run: |
+          set -eu
+          cmake -S native -B native/build-wasm -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DTW_BUILD_WASM=ON \
+            > configure.log 2>&1 || { cat configure.log; exit 1; }
+          cat configure.log
+          # A configure that never saw the wasm Qt still succeeds and skips the widget
+          # interface, which is the shape of failure that produces a green job that
+          # built nothing.
+          if grep -q "skipping the widget UI" configure.log; then
+            echo "::error::Qt Widgets was not found, so the interface was skipped."
+            exit 1
+          fi
+
+      - name: Build
+        run: cmake --build native/build-wasm --parallel
+
+      # The build assembles the whole site in `wasm/dist`: the module, its glue, the
+      # loader, the page, the isolation worker and `.nojekyll`. Checking for each is
+      # what makes "the site was built" a fact rather than a hope.
+      - name: Check the site
+        run: |
+          set -eu
+          for file in index.html coi-serviceworker.js time_warp_ide.js \
+                      time_warp_ide.wasm qtloader.js; do
+            if [ ! -f "wasm/dist/$file" ]; then
+              echo "::error::wasm/dist/$file was not produced."
+              ls -l wasm/dist || true
+              exit 1
+            fi
+          done
+          ls -l wasm/dist
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: time-warp-studio-wasm
+          path: wasm/dist
+          if-no-files-found: error
+
+      - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
+        with:
+          path: wasm/dist
+
+  # Publishing is separated from the build so PR code runs with read-only
+  # permissions. Only a tag receives the permissions needed to deploy the site.
+  deploy:
+    if: startsWith(github.ref, 'refs/tags/')
+    needs: build
+    runs-on: ubuntu-24.04
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1

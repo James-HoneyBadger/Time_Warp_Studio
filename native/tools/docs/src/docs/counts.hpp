@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: AGPL-3.0-only
 //
 // `native/share/counts.txt` and the gate that reads it. This is the fifth claims
 // rule: the numbers a guide states must still be the numbers the tree produces.

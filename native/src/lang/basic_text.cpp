@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: AGPL-3.0-only
 //
 // BASIC's text handling: the helpers the statement dispatch shares, and the
 // string expression evaluator (`utils/string_evaluator.py`) it calls.
@@ -851,6 +851,14 @@ std::string Strings::evaluate_function(std::string_view input) {
     const std::vector<std::string> arguments =
         parse_arguments(expr.substr(open + 1, close - open - 1));
 
+    /// A number as the machine prints it: no trailing `.0` on a whole value.
+    const auto number_text = [](double number) {
+        if (number == std::trunc(number) && std::fabs(number) < 9.0e18) {
+            return std::to_string(static_cast<long long>(number));
+        }
+        return printed_number(number);
+    };
+
     const auto text_at = [&](std::size_t index) {
         if (index >= arguments.size()) {
             throw BasicError(name + " requires more arguments");
@@ -978,29 +986,25 @@ std::string Strings::evaluate_function(std::string_view input) {
         if (arguments.empty()) {
             throw BasicError("STR requires 1 argument");
         }
+        // The argument is a *value*, so the numeric evaluator answers first: it is
+        // the one that knows `INT(X)` and treats `N + 1` as arithmetic. The string
+        // evaluator would read `N + 1` as text *concatenation* of an unset string
+        // variable, which turned `STR$(N + 1)` into "1" and made a function inside
+        // the brackets an unknown name.
+        try {
+            return number_text(interpreter_.evaluate_expression(arguments[0]));
+        } catch (const std::exception&) {
+            // Not arithmetic: a text value, which `evaluate_arg` reads.
+        }
         const Argument value = evaluate_arg(arguments[0]);
         if (const auto* number = std::get_if<double>(&value)) {
-            if (*number == std::trunc(*number) && std::fabs(*number) < 9.0e18) {
-                return std::to_string(static_cast<long long>(*number));
-            }
-            return printed_number(*number);
+            return number_text(*number);
         }
         double parsed = 0.0;
         if (parse_float(std::get<std::string>(value), parsed)) {
-            if (parsed == std::trunc(parsed) && std::fabs(parsed) < 9.0e18) {
-                return std::to_string(static_cast<long long>(parsed));
-            }
-            return printed_number(parsed);
+            return number_text(parsed);
         }
-        try {
-            const double computed = interpreter_.evaluate_expression(arguments[0]);
-            if (computed == std::trunc(computed) && std::fabs(computed) < 9.0e18) {
-                return std::to_string(static_cast<long long>(computed));
-            }
-            return printed_number(computed);
-        } catch (const std::exception&) {
-            return std::get<std::string>(value);
-        }
+        return std::get<std::string>(value);
     }
     if (name == "VAL") {
         if (arguments.empty()) {

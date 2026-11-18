@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: AGPL-3.0-only
 //
 // The internals of the BASIC executor: its state, the text helpers the
 // reference leans on, and the two classes the statements are split across.

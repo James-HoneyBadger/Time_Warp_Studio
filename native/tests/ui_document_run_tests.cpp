@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: AGPL-3.0-only
 //
 // Running a program: what reaches the canvas, what reaches the panels, the terminal,
 // and stopping a run that is still going.
@@ -61,6 +61,69 @@ void test_running_scheme_draws_on_the_canvas() {
     TW_CHECK(console == nullptr || console->toPlainText().isEmpty());
 }
 
+
+// CHIP-8 is a machine of its own rather than one of the ten languages, so a `.ch8`
+// document takes the run path the registry does not describe: the machine's
+// executor assembles the listing and paints through the same canvas queue.
+void test_running_a_chip8_document_draws_on_the_canvas() {
+    announce("running a CHIP-8 document");
+    QTemporaryDir dir;
+    // One row of eight lit pixels: load the sprite's address, draw it, halt.
+    const QString path = writeFile(
+        dir, QStringLiteral("dot.ch8"),
+        QByteArray{"; one row\nstart: LD I, dot\n       DRW V0, V1, 1\n"
+                   "       HALT\ndot: DB 0xFF\n"});
+    TW_CHECK(!path.isEmpty());
+
+    MainWindow window;
+    TW_CHECK(window.openFile(path));
+    TurtleCanvas* canvas = window.turtleCanvas();
+    TW_CHECK(canvas != nullptr);
+    if (canvas == nullptr) {
+        return;
+    }
+
+    window.runCurrentDocument();
+    TW_CHECK(waitFor([&window] {
+        return badgeText(window, "executionBadge") != QStringLiteral("running");
+    }));
+    TW_CHECK_EQ(badgeText(window, "executionBadge"), QStringLiteral("ready"));
+
+    // The machine paints rectangles, one per lit pixel, and draws no turtle line:
+    // the count is the machine's own screen rather than a program's strokes.
+    TW_CHECK(canvas->shapeCount() >= 8);
+    TW_CHECK_EQ(canvas->strokeCount(), 0);
+
+    // A binary ROM is bytes rather than source, and it takes a different step through
+    // the editor: the document holds the codec's encoding and the run gets the bytes
+    // back. `A2 06 D0 01 00 00 FF` sets I to the sprite, draws one row, halts.
+    const QString binary = writeFile(dir, QStringLiteral("binary.ch8"),
+                                     QByteArray{"\xA2\x06\xD0\x01\x00\x00\xFF", 7});
+    TW_CHECK(!binary.isEmpty());
+    TW_CHECK(window.openFile(binary));
+    window.runCurrentDocument();
+    TW_CHECK(waitFor([&window] {
+        return badgeText(window, "executionBadge") != QStringLiteral("running");
+    }));
+    TW_CHECK_EQ(badgeText(window, "executionBadge"), QStringLiteral("ready"));
+    TW_CHECK(canvas->shapeCount() >= 8);
+
+    // A listing the assembler refuses says so in the console. A machine that drew
+    // nothing and explained nothing is the failure this project treats as the bug.
+    const QString refused =
+        writeFile(dir, QStringLiteral("refused.ch8"), QByteArray{"start: FROB V0\n"});
+    TW_CHECK(!refused.isEmpty());
+    TW_CHECK(window.openFile(refused));
+    window.runCurrentDocument();
+    TW_CHECK(waitFor([&window] {
+        return badgeText(window, "executionBadge") != QStringLiteral("running");
+    }));
+    QPlainTextEdit* console = viewOf(window, "consoleOutput");
+    TW_CHECK(console != nullptr);
+    if (console != nullptr) {
+        TW_CHECK(console->toPlainText().contains(QStringLiteral("not an instruction form")));
+    }
+}
 
 void test_pen_up_moves_without_drawing() {
     announce("pen up");

@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: AGPL-3.0-only
 //
 // FOCAL-69, ported from `time_warp/languages/focal.py`.
 //

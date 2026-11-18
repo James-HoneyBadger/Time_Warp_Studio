@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MIT
+# SPDX-License-Identifier: AGPL-3.0-only
 #
 # Included by `native/CMakeLists.txt`. `include()` rather than `add_subdirectory()`
 # on purpose: one directory scope keeps every source path in this file relative to
@@ -23,7 +23,8 @@
 # did is answered by running it here rather than by asking a second interpreter.
 
 add_executable(time_warp_check tools/check.cpp)
-target_link_libraries(time_warp_check PRIVATE ${TIME_WARP_QT}::Core timewarp::lang timewarp::scheme)
+target_link_libraries(time_warp_check PRIVATE ${TIME_WARP_QT}::Core timewarp::lang
+                                  timewarp::scheme timewarp::chip8_engine)
 timewarp_enable_warnings(time_warp_check)
 
 # ---------------------------------------------------------------------------

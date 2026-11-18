@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: AGPL-3.0-only
 //
 // The Smalltalk class library: one primitive per message the language is taught
 // with, in the same shape as `_build_library()` in the reference.

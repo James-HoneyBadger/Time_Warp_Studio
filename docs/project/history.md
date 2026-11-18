@@ -106,6 +106,119 @@ the same commit that changes the behaviour.
 Newest first. The headings are the release numbers; the text under each one is what that
 release changed, in the words it was shipped with.
 
+### [30.0.0] - 2026-11-17
+
+**The three machines come back, each as its own application.**
+The HB-1 of 1982, the HB-2 of 1992 and the CHIP-8 of 1977 return to the product, and the
+mistake that took them away at 28.0 is not repeated: they are programs beside the Studio
+rather than windows inside it. The Studio keeps its ten languages; each machine has its
+own executable, its own settings scope and a **Tools** entry that starts it.
+
+#### Added
+
+- **Three machine applications.** `time_warp_hb1`, `time_warp_hb2` and `time_warp_chip8`
+  are built beside `time_warp_ide`, each with its own `QSettings` scope, so one machine's
+  window layout and ROM folder cannot overwrite another's. `time_warp_chip8` takes a
+  program on its command line. The Studio's own settings scope is unchanged, so an
+  existing installation keeps its layout.
+- **A Tools menu** that starts them: **HB-1 Computer...** (`Ctrl+Alt+W`),
+  **CHIP-8 Emulator...** (`Ctrl+Shift+M`) and **HB-2 Model 92...** (`Ctrl+Alt+2`). The
+  CHIP-8 entry hands the machine the `.ch8` document in front, if there is one. A build
+  that did not produce a machine says so rather than offering an entry that does nothing.
+- **CHIP-8 documents in the editor.** A `.ch8`, `.c8`, `.rom` or `.bin` file opens as a
+  document and **Run** assembles it and draws it on the turtle canvas, with gutter
+  breakpoints and a rewind strip: the executor pauses and checkpoints through the same
+  debug session the other languages use. A binary ROM opens read-only and its bytes are
+  carried through the document unchanged. The open dialog reaches the four extensions.
+- **The machine manuals** — [the machines](../MACHINES.md), the HB-1's five books, the
+  CHIP-8's three and the HB-2's two — listed in [the documentation map](../INDEX.md) and
+  therefore in **Help > Documentation**.
+
+#### Changed
+
+- **Forth `POKE` and `PEEK` reach the machine.** On a machine with a bus the two words
+  read and write the machine's own memory, so a Forth program that pokes the HB-1's tube
+  draws on it. In the Studio they still address the program's own 64K, and a write to ROM
+  is refused with a message rather than silently dropped.
+- **The HB-1 counts the ROMs it has.** The self-test sums the ten ROMs the socket actually
+  holds, and its banner, its manual and its ROM library say ten.
+- **A failed program is a failed run, everywhere.** `time_warp_check` said `-- ok` and exited
+  0 beside an `❌` line, so the example gate could not see a program that reported an error;
+  the three tutorials' listings and five shipped examples were wrong underneath it. The tool
+  now fails a run that printed the error marker, the gate records those lines as errors, and
+  the examples that used the marker as decoration carry plain words instead.
+- **`STR$` takes a value, not a piece of text.** `STR$(N + 1)` answered `1` because the string
+  evaluator read `N + 1` as the concatenation of an unset string variable, and
+  `STR$(INT(X))` failed as an unknown function. The numeric evaluator answers first now, so
+  both spellings work.
+- **The browser release deploys through GitHub Pages.** The tagged job uses
+  `actions/upload-pages-artifact` and `actions/deploy-pages` rather than pushing a `gh-pages`
+  branch, which never triggered a Pages deployment.
+
+#### Fixed
+
+- **The CHIP-8 engine suite** runs the machine directly rather than through a language
+  row that no longer exists, and the duplicated debugging cases that had been copied into
+  it were removed: they live in `lang_debugging_tests` once.
+- **`make smoke` covers the CHIP-8 listings.** `time_warp_check --language chip8` calls
+  the engine, and the eighteen listings under `Examples/chip8/` are gated like the
+  language examples: a listing that runs and draws nothing fails.
+
+### [29.0.0] - 2026-11-17
+
+**The Studio runs in a browser, and the licence is AGPLv3.**
+The same Qt application now builds for WebAssembly: every language, the debugger, the
+REPL and the example corpus, served as one page whose project volume survives a reload.
+The source moves from MIT to the GNU Affero General Public License, version 3, which adds
+one obligation to the freedoms MIT granted: a modified version run as a network service
+offers its source to the people using it.
+
+#### Added
+
+- **A WebAssembly target.** `TW_BUILD_WASM=ON` compiles the application against the
+  threaded Qt for WebAssembly and assembles a deployable directory: the module, its glue,
+  Qt's loader, a page that fills the window and reports its failures in a status bar, and
+  a service worker that supplies the cross-origin isolation headers a threaded module
+  needs on a host that cannot send them. The module is threaded because every runner in
+  the application is a `QThread`; the single-threaded Qt compiles `QThread::start()` to
+  an empty function, so a single-threaded module would load, paint and edit, and do
+  nothing at all when Run was pressed.
+- **Storage that survives a reload.** IndexedDB is mounted over the home directory, so a
+  document saved in the browser is still there after a reload, and so are lesson
+  progress, the classroom roster and the autosave snapshots under `~/.time_warp`. The
+  volume is flushed on Save, every thirty seconds, and as the page unloads; the settings
+  are kept in `localStorage` instead, because the file they would otherwise use is read
+  before an asynchronous IndexedDB load could have restored it.
+- **The corpus and the guides inside the module.** `Examples/`, the three data files and
+  `docs/` are compiled in as resources, and their resolvers check the resource first, so
+  the examples gallery, the lessons, the snippet catalogue, the command reference and
+  **Help > Documentation** all work without a filesystem.
+- **`wasm.yml`.** A workflow that installs the threaded Qt beside the image's own,
+  builds, checks that the site it assembled contains every file, uploads it as an
+  artifact, and publishes it to `gh-pages` from a tag.
+
+#### Changed
+
+- **The licence, everywhere.** `LICENSE` carries the AGPLv3 text; every source header
+  says `AGPL-3.0-only`; the README badge, the Flatpak metadata, the container image's
+  label and the RPM package field agree with it. Flatpak metadata keeps a permissive
+  licence of its own, which is what AppStream requires of the file rather than of the
+  application. History entries that name MIT are left as they were written.
+- **The project and document dialogs open on the persisted volume** in the browser, where
+  the working directory is not a place a person can find again; the desktop keeps the
+  working directory it has always used.
+- **The README and the guides are rewritten in plainer prose**, and a counts gate now
+  checks the numbers the guides state against the tree.
+
+#### Fixed
+
+- **PILOT resolves a file against the run's own directory.** `F: OPEN notes.txt` opened
+  whatever the process's working directory happened to hold, and `LINK next.pilot` could
+  not find the lesson beside the one running. Both now use the same confined resolver as
+  BASIC, which refuses a name that leaves the directory.
+- **A runaway is stopped by the statements it has spent**, not by a clock the debugger
+  also reads, so the budget says what it means on a slow or instrumented build.
+
 ### [28.2.0] - 2026-11-03
 
 **The assistant is removed.**

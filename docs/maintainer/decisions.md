@@ -57,8 +57,16 @@ second implementation of the product with no remaining job.
 
 **The HB-1, the HB-2 and CHIP-8, at 28.0.** Three emulated computers lived inside the
 application, each with its own clock, storage, manuals and caveats, and each was a second
-product. Removing them removed the language that ran on the last one. Ten languages remain, and
-the application is what it was for: write a program, run it, watch it draw, stop it, read why.
+product. Removing them removed the language that ran on the last one. Ten languages remained, and
+the application was what it was for: write a program, run it, watch it draw, stop it, read why.
+
+**Their return, at 29.0, as separate applications.** The machines came back, and the
+mistake that took them away was not repeated: each is a program of its own, with its own
+settings scope, its own executable and a Tools entry that starts it. The Studio's language
+table did not grow back to eleven; CHIP-8 stayed out of it, and a `.ch8` document is run by
+the CHIP-8 engine rather than by a language row. The HB-1 keeps its one-socket idea, at the
+ten languages the Studio has, and a machine that needs a second product to exist is the
+thing the split was for.
 
 **The two-row toolbar, at 28.1.** Two stacked bars plus a third row of function keys made the
 chrome look like a 1994 application with a second row bolted on. The split it bought, keeping

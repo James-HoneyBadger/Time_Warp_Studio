@@ -1,0 +1,286 @@
+; CATCH
+; A small arcade game: drops fall, a paddle catches them.
+;
+;     4 / 6   move the paddle left and right
+;
+; Every catch scores a point and sends the next drop down faster. Three misses
+; end the game; ten catches win it, which is what makes it a game rather than an
+; endless thing to watch.
+;
+; Two things make this a game rather than a demonstration. The keypad is read
+; with `SKP`, which asks whether a key is down instead of blocking until one is,
+; so the machine keeps moving while nobody is playing. And drawing is XOR: a
+; sprite drawn twice in the same place erases itself, which is how the paddle
+; moves -- erase where it was, draw where it is -- and why the scoreboard sits in
+; the top six rows, above where a drop can ever fall.
+;
+; The score is BCD: `LD B, V5` splits a byte into three decimal digits in memory,
+; and the font turns each digit back into the sprite that draws it.
+
+start:  CLS
+        LD V0, 24           ; paddle x the keys ask for
+        LD V1, 30           ; paddle y: a two-row paddle ends on the bottom row
+        LD V4, 1            ; drop speed, in pixels a step
+        LD V5, 0            ; score
+        LD V6, 3            ; lives
+        LD VA, 24           ; paddle x as drawn
+        LD VB, 0            ; score as drawn
+        CALL scoreboard
+        LD VD, VA
+        CALL draw_paddle    ; drawn once, where it starts
+        CALL respawn
+
+loop:   CALL steer
+        CALL fall
+        CALL redraw_score
+        CALL pace
+        JP loop
+
+; ---------------------------------------------------------------------------
+; The paddle. `SKP` is the only non-blocking way a 1977 program can ask about a
+; key, so every movement on this machine is written this way.
+; ---------------------------------------------------------------------------
+steer:  LD V7, 4
+        SKP V7
+        JP steer_left_done
+        ADD V0, 0xFD        ; minus three, which is a byte
+steer_left_done:
+        LD V7, 6
+        SKP V7
+        JP steer_right_done
+        ADD V0, 3
+steer_right_done:
+        ; Off the left edge is a wrap to 253 and up: put it back at nothing.
+        LD V7, V0
+        LD V8, 200
+        SUB V7, V8
+        SE VF, 0
+        LD V0, 0
+        ; And past the right edge the last pixel would be off the screen at 48.
+        LD V7, 48
+        SUB V7, V0
+        SE VF, 1
+        LD V0, 48
+        ; Nothing moved, so nothing to draw: a second draw would erase the paddle.
+        SNE V0, VA
+        JP steer_done
+        LD VD, VA
+        CALL draw_paddle    ; where it was: the same draw, and XOR takes it back
+        LD VD, V0
+        CALL draw_paddle    ; where it is
+        LD VA, V0
+steer_done:
+        RET
+
+; A 16-pixel paddle is two eight-pixel halves, because one DRW is eight pixels
+; wide per row and no more. Drawn twice, XOR erases it, so this is both the
+; "draw" and the "rub out" of the paddle.
+draw_paddle:
+        LD I, paddle
+        DRW VD, V1, 2
+        LD V8, 8
+        ADD V8, VD
+        DRW V8, V1, 2
+        RET
+
+; ---------------------------------------------------------------------------
+; The drop: erase where it was, move it, and decide what it reached.
+; ---------------------------------------------------------------------------
+fall:   LD I, drop
+        DRW V2, V3, 2       ; erase
+        ADD V3, V4
+        LD V7, V3
+        LD V8, 29
+        SUB V7, V8          ; VF is 1 once the drop is at the paddle row
+        SE VF, 1
+        JP fall_live
+        LD V7, V2
+        SUB V7, V0          ; VF is 1 when the drop is at or right of the paddle
+        SE VF, 1
+        JP fall_missed
+        LD V7, V0
+        ADD V7, 14          ; the last column the paddle covers
+        LD V8, V7
+        SUB V8, V2          ; VF is 1 while the drop is still over it
+        SE VF, 1
+        JP fall_missed
+        ; Caught: a point, a note, a faster drop next time.
+        ADD V5, 1
+        LD V7, 1
+        LD ST, V7
+        CALL faster
+        CALL respawn
+        RET
+fall_missed:
+        LD V7, 1
+        SUB V6, V7
+        CALL lives_changed
+        CALL respawn
+        RET
+fall_live:
+        LD I, drop
+        DRW V2, V3, 2
+        RET
+
+; A point is worth a little speed, up to a drop that crosses the field quickly.
+; The speed is the difficulty: the paddle never gets slower.
+faster: LD V7, 6
+        SUB V7, V5          ; VF is 1 while the score is below six
+        SE VF, 1
+        RET
+        LD V7, 1
+        ADD V4, V7
+        RET
+
+; A drop starts at a random column, at the top of the field -- row six, because
+; rows zero to five belong to the scoreboard and a drop must never cross it.
+respawn:
+        RND V2, 0x3C
+        ADD V2, 1
+        LD V3, 6
+        LD I, drop
+        DRW V2, V3, 2
+        RET
+
+; ---------------------------------------------------------------------------
+; The scoreboard: two digits from BCD, and a pixel per life, all above the field.
+; ---------------------------------------------------------------------------
+scoreboard:
+        LD V7, V6
+        LD V8, 61
+        LD V9, 1
+scoreboard_lives:
+        SE V7, 0            ; skips the next line when there are no lives left
+        JP draw_life
+        JP digits_at        ; the digits, where the scoreboard keeps them
+draw_life:
+        LD I, dot
+        DRW V8, V9, 1
+        ADD V8, 0xFD
+        LD VC, 1
+        SUB V7, VC
+        JP scoreboard_lives
+
+; A lost life has to show: the three positions are cleared with the same XOR that
+; drew them, and then as many as are left are drawn again.
+lives_changed:
+        LD VE, V6
+        LD V6, 3
+        CALL draw_dots
+        LD V6, VE
+draw_dots:
+        LD V7, V6
+        LD V8, 61
+        LD V9, 1
+draw_dots_loop:
+        SE V7, 0
+        JP draw_one_dot
+        RET
+draw_one_dot:
+        LD I, dot
+        DRW V8, V9, 1
+        ADD V8, 0xFD
+        LD VC, 1
+        SUB V7, VC
+        JP draw_dots_loop
+
+; The digits are redrawn only when the score changes, and the old pair is erased
+; by drawing it again with the old value in place: `digits_at` draws what V5
+; holds, so the two calls below are an erase and a draw.
+redraw_score:
+        SNE V5, VB
+        JP redraw_done
+        LD VC, V5           ; this point
+        LD V5, VB           ; what is on the screen
+        CALL digits_at
+        LD V5, VC           ; back to this point
+        LD VB, V5
+        CALL digits_at
+redraw_done:
+        ; Ten catches is a round won: the score minus ten does not borrow, so VF
+        ; is the win flag.
+        LD V7, V5
+        LD V8, 10
+        SUB V7, V8
+        SE VF, 0
+        JP won
+        ; Out of lives: a shape rather than a word, and the machine stops.
+        SE V6, 0
+        RET
+        LD I, over
+        LD V7, 13
+        LD V8, 12
+        DRW V7, V8, 7
+        LD V7, 120
+        LD DT, V7
+over_wait:
+        LD V7, DT
+        SE V7, 0
+        JP over_wait
+        HALT
+
+; The two digits of V5, where the scoreboard keeps them.
+;
+; `LD Vx, [I]` fills V0 up to Vx, not Vx alone -- a 1977 detail that is easy to
+; read the other way and costs a paddle if it is. So the digit is read into V0,
+; which is the one register this routine has to put back.
+digits_at:
+        LD VE, V0
+        LD I, digits
+        LD B, V5            ; hundreds, tens and ones, as decimal digits
+        LD I, tens
+        LD V0, [I]
+        LD F, V0
+        LD V8, 2
+        LD V9, 0
+        DRW V8, V9, 5
+        LD I, ones
+        LD V0, [I]
+        LD F, V0
+        LD V8, 7
+        DRW V8, V9, 5
+        LD V0, VE           ; the paddle is not a digit
+        RET
+
+won:    LD I, bar
+        LD V7, 8
+        LD V8, 12
+        DRW V7, V8, 4
+        LD V7, 180
+        LD DT, V7
+won_wait:
+        LD V7, DT
+        SE V7, 0
+        JP won_wait
+        HALT
+
+; One step every two frames: the delay timer is the machine's only clock, and it
+; ticks once a frame whether the program looks or not.
+pace:   LD V7, 2
+        LD DT, V7
+pace_wait:
+        LD V7, DT
+        SE V7, 0
+        JP pace_wait
+        RET
+
+; One half of the paddle: eight pixels wide, two rows tall.
+paddle: DB 0xFF
+        DB 0xFF
+drop:   DB 0xC0
+        DB 0xC0
+dot:    DB 0x80
+digits: DB 0
+tens:   DB 0
+ones:   DB 0
+bar:    DB 0xFF
+        DB 0xFF
+        DB 0xFF
+        DB 0xFF
+over:   DB 0x08
+        DB 0x08
+        DB 0x7F
+        DB 0x08
+        DB 0x08
+        DB 0x08
+        DB 0x08

@@ -50,6 +50,28 @@ work.
 | [The ten languages](languages/README.md) | What each one is, how they differ, and how to choose a first |
 | [Language reference](languages/reference.md) | Every command of every language, and the limits that stop a run |
 
+## The machines
+
+Three machines ship beside the Studio, each an application of its own. Their manuals are
+listed here because the Help pane should be able to reach them too.
+
+| Guide | What it covers |
+| --- | --- |
+| [The machines](MACHINES.md) | What the three are, how they differ, and what they share |
+| [HB-1 Owner's Manual](hb1/README.md) | The 1982 home computer: front panel, first boot, everyday operation |
+| [The ROM library](hb1/roms.md) | The ten language ROMs: banner, prompt, direct mode, session |
+| [HB DOS 1.0](hb1/hb-dos.md) | The disk: every word, the catalogue, the errors, the image format |
+| [HB-1 CONFIG](hb1/config.md) | Every setting, every default, the phosphors and the glass |
+| [Inside the HB-1](hb1/inside.md) | How a keystroke becomes ink |
+| [WARP BOARD](hb1/bbs.md) | The bulletin board on the other end of the line |
+| [The Model 92 proposal](hb1/model-92.md) | The specification the HB-2 was built from |
+| [CHIP-8 Machine Manual](chip8/README.md) | The 1977 virtual machine: the window, the keypad, debugging, sound |
+| [The CHIP-8 assembler](chip8/assembly.md) | Listings: syntax, labels, directives, errors |
+| [The CHIP-8 instruction set](chip8/instruction-set.md) | Every opcode as implemented, quirks and timing |
+| [CHIP-8 tutorial](tutorials/chip8.md) | Writing a listing from the first instruction |
+| [HB-2 Manual](hb2/README.md) | The 1992 workstation: the bus, the screen, the sound, HB DOS 2.0 |
+| [HB-16](hb2/instruction-set.md) | The HB-2's own processor, instruction by instruction |
+
 ## The curriculum
 
 | Guide | What it covers |
@@ -67,6 +89,7 @@ work.
 | [Testing](maintainer/testing.md) | The suites, the example and command gates, the parity corpora, and what each is worth |
 | [Roadmap](maintainer/roadmap.md) | What is built, what is deliberately not, and what is known to be wrong |
 | [Release](maintainer/release.md) | The version, the procedure, and what a release contains |
+| [WebAssembly](maintainer/wasm.md) | The browser build: the target, the page, the storage, and the workflow |
 
 ## The project
 
@@ -78,7 +101,7 @@ work.
 | [Code of conduct](../CODE_OF_CONDUCT.md) | What is expected in this project's spaces |
 | [Support](../.github/SUPPORT.md) | Where to ask, and what is supported |
 | [CI and deployment](../.github/DEPLOYMENT.md) | What each workflow checks, and the settings it needs |
-| [Examples](../Examples/CATALOG.md) | The 68 programs that ship, and the gate that runs them |
+| [Examples](../Examples/CATALOG.md) | The 77 programs that ship, and the gate that runs them |
 
 ---
 
@@ -94,7 +117,7 @@ work.
 | Understand or change the code | [Architecture](maintainer/architecture.md), then [testing](maintainer/testing.md) |
 | Report a bug or ask for a feature | [.github/SUPPORT.md](../.github/SUPPORT.md) |
 | Report a security problem | [SECURITY.md](../SECURITY.md), privately |
-| Read about the removed machines | [History](project/history.md), where the 28.0 release records their removal |
+| Use one of the machines | [The machines](MACHINES.md), then that machine's manual |
 
 ---
 
@@ -107,7 +130,9 @@ describing the old interface — its user guide, its how-to guides, its shortcut
 debugger and troubleshooting guides — were removed with it rather than left to mislead. The
 port's record, and what replaced each feature, is in [the history](project/history.md).
 
-**The three emulated machines** — the HB-1 home computer, the HB-2 of 1992 and the CHIP-8
-virtual machine — were removed at 28.0, with the language that ran on the last of them and
-the four manuals that documented them. What remains is the IDE and the ten languages. The
-release entry that records it, and the reasoning, are in [the history](project/history.md).
+**The three machines** — the HB-1 home computer, the HB-2 of 1992 and the CHIP-8 virtual
+machine — were removed at 28.0, with the language that ran on the last of them and the four
+manuals that documented them. They returned at 29.0 as applications of their own rather than
+windows inside the IDE, so the Studio kept its ten languages and each machine got a program,
+a settings scope and a manual of its own. [The machines](MACHINES.md) is the map; the two
+release entries are in [the history](project/history.md).

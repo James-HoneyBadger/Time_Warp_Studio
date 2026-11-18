@@ -1,0 +1,13 @@
+[Desktop Entry]
+Type=Application
+Version=1.0
+Name=Time Warp HB-2
+GenericName=HB-2 Home Computer
+Comment=Use the HB-2 computer and its native operating system
+Exec=time_warp_hb2
+TryExec=time_warp_hb2
+Icon=computer
+Terminal=false
+Categories=Development;Education;
+Keywords=HB-2;HB-16;retro;computer;programming;
+StartupNotify=true

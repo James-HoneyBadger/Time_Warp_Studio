@@ -8,8 +8,8 @@ whichever language the editor is showing.
 
 [![Languages](https://img.shields.io/badge/languages-10-blue)](#the-ten-languages)
 [![Platform](https://img.shields.io/badge/platform-Linux-green)](docs/user/getting-started.md)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/Version-28.2.0-orange)](https://github.com/James-HoneyBadger/Time_Warp_Studio)
+[![License: AGPL v3](https://img.shields.io/badge/License-AGPL_v3-blue.svg)](LICENSE)
+[![Version](https://img.shields.io/badge/Version-30.0.0-orange)](https://github.com/James-HoneyBadger/Time_Warp_Studio)
 
 It is written in C++20 against Qt 6 and runs on Linux. The interpreters are libraries in
 the same process, which is what lets one debugger serve all ten: a run is stopped,
@@ -25,6 +25,20 @@ the dialect of its period and behaves as it did on the machines it was written f
 The editor, debugger, canvas, project model and SQL layer are shared by all ten. A
 breakpoint in BASIC and one in Smalltalk are set, inspected and cleared in the same panel.
 
+## A new foundation
+
+Earlier versions were built on a fundamentally different architecture: a Python application
+using PySide6. The current Studio replaces that codebase with a C++20 and Qt 6 system,
+reimplementing the language engines and making the boundaries between interpreters, the
+interface, debugger and canvas explicit. The browser build is the same application carried
+to another platform, not a separate port.
+
+Version 29.0.0 marks a new start for the project. The move from MIT to AGPLv3 accompanies
+that architectural break and extends the source-sharing principle to modified versions
+run as network services. The [project history](docs/project/history.md) records what was
+replaced; the [architecture guide](docs/maintainer/architecture.md) explains the system
+that stands now.
+
 ---
 
 ## Install
@@ -34,7 +48,10 @@ carries a built application for Linux with the Qt runtime inside it, so no compi
 required.
 
 The project is Linux only. Everything it builds, tests and ships targets Linux; there is
-no Windows or macOS build and no installer for either.
+no Windows or macOS build and no installer for either. It also builds for the browser --
+the same application compiled to WebAssembly and served as a page -- which
+[the WebAssembly guide](docs/maintainer/wasm.md) describes.
+
 [Getting started](docs/user/getting-started.md) covers the full procedure, the build
 requirements and what to do when a build fails.
 
@@ -92,6 +109,23 @@ statement, at a Smalltalk message send, at a Forth token.
 
 ---
 
+## The three machines
+
+Three machines ship beside the Studio. Each is a complete program with a window, a manual
+and settings of its own — not a mode of the editor — and **Tools** starts them:
+
+| Machine | What it is | Start it |
+| --- | --- | --- |
+| **HB-1** | A 1982 home computer that never happened: one ROM socket, ten language cartridges, a CRT, HB DOS and a prompt | **Tools > HB-1 Computer…** (`Ctrl+Alt+W`), or the `time_warp_hb1` program beside the Studio |
+| **CHIP-8** | The 1977 virtual machine: 64×32 pixels, sixteen keys, four kilobytes and a keypad | **Tools > CHIP-8 Emulator…** (`Ctrl+Shift+M`), or the `time_warp_chip8` program beside the Studio |
+| **HB-2** | The HB-1's 1992 successor: a bus, a framebuffer, four audio channels and HB-16, a processor of its own | **Tools > HB-2 Model 92…** (`Ctrl+Alt+2`), or the `time_warp_hb2` program beside the Studio |
+
+A CHIP-8 listing or ROM is also an ordinary document: open a `.ch8` file and press Run to
+assemble it and watch it draw, with gutter breakpoints and a rewind strip like any other
+program. [The machines](docs/MACHINES.md) is the map; each has its own manual.
+
+---
+
 ## What the Studio does
 
 | Capability | What it covers |
@@ -123,7 +157,8 @@ Studio is built from the same files as the manuals in the tree.
 
 ## What ships with it
 
-- **68 example programs** across the ten languages, each run by a gate. **File > Examples
+- **77 example programs** across the ten languages, plus eighteen CHIP-8 listings, nine
+  HB-2 assembly programs and nine HB-1 programs, each run by a gate. **File > Examples
   Gallery…** lists them with the drawing each program makes; the picture is the program
   run headlessly, not a stored image. The catalogue is
   [Examples/CATALOG.md](Examples/CATALOG.md).

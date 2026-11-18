@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: AGPL-3.0-only
 //
 // The Studio's automation API: JSON-RPC 2.0 over newline-delimited JSON.
 //

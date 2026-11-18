@@ -1,6 +1,8 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: AGPL-3.0-only
 
 #include "timewarp/ui/native_runner.hpp"
+
+#include "timewarp/lang/chip8.hpp"
 
 #include "timewarp/audio/music.hpp"
 #include "timewarp/lang/debug.hpp"
@@ -867,14 +869,30 @@ void NativeRunner::run() {
     engine->set_sql_callback(sql_callback_);
     engine->set_profiling(profiling_);
     engine->set_tracing(tracing_);
+    engine->set_machine_bus(machine_bus_);
     engine->set_file_base(file_base_.toStdString());
 
-    engine->load_program(source_.toStdString());
-    // After the program: loading resets the run, which empties the history.
-    engine->set_history(history_depth_);
-    host_->begin_run();
-    engine->run();
-    host_->flush();
+    std::string chip8_report;
+    if (chip8_) {
+        // CHIP-8's executor assembles the listing, draws through the same host and
+        // reports in one string. It pauses and rewinds through the same session, so
+        // the breakpoints and the history set above apply unchanged.
+        engine->set_history(history_depth_);
+        host_->begin_run();
+        chip8_report = timewarp::lang::execute_chip8(
+            *engine,
+            std::string_view{chip8_program_.constData(),
+                             static_cast<std::size_t>(chip8_program_.size())},
+            *host_);
+        host_->flush();
+    } else {
+        engine->load_program(source_.toStdString());
+        // After the program: loading resets the run, which empties the history.
+        engine->set_history(history_depth_);
+        host_->begin_run();
+        engine->run();
+        host_->flush();
+    }
 
     publishVariables(*engine);
     publishCallStack(*engine);
@@ -887,9 +905,29 @@ void NativeRunner::run() {
         profile_ = engine->line_profiles();
     }
 
+    // The CHIP-8 executor answers with the console text rather than streaming it
+    // through the callback: the same lines, handed over once the machine has stopped.
+    std::string chip8_error;
+    for (std::size_t start = 0; start < chip8_report.size();) {
+        const std::size_t end = chip8_report.find('\n', start);
+        const std::string line = chip8_report.substr(
+            start, end == std::string::npos ? std::string::npos : end - start);
+        if (!line.empty()) {
+            emit outputAvailable(QString::fromStdString(line));
+            if (line.rfind("❌", 0) == 0) {
+                chip8_error = line;
+            }
+        }
+        if (end == std::string::npos) {
+            break;
+        }
+        start = end + 1;
+    }
+
     const bool completed = !stop_requested_.load(std::memory_order_acquire) &&
-                           !engine->timed_out();
-    const QString error = QString::fromStdString(engine->error());
+                           !engine->timed_out() && chip8_error.empty();
+    const QString error = QString::fromStdString(
+        chip8_ ? chip8_error : engine->error());
 
     {
         const std::lock_guard<std::mutex> lock{interpreter_mutex_};

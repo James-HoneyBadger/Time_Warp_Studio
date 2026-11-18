@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: AGPL-3.0-only
 //
 // The suite's cases, in the order `ui_document_tests.cpp` runs them.
 //
@@ -18,6 +18,7 @@ void test_opening_the_same_file_twice_raises_the_first_tab();
 void test_moving_the_cursor_updates_the_status_bar();
 void test_editing_marks_the_document_and_the_title();
 void test_choosing_a_language_sticks();
+void test_a_chip8_rom_round_trips_through_the_editor();
 void test_closing_tabs();
 void test_closing_documents_in_a_split();
 void test_the_split_keeps_its_documents_in_step();
@@ -28,6 +29,7 @@ void test_saving_a_document();
 void test_a_file_that_cannot_be_read_is_refused();
 void test_a_byte_order_mark_is_not_part_of_the_program();
 void test_running_scheme_draws_on_the_canvas();
+void test_running_a_chip8_document_draws_on_the_canvas();
 void test_pen_up_moves_without_drawing();
 void test_the_native_host_blits_a_sprite();
 void test_running_basic_prints_natively();

@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: AGPL-3.0-only
 #include "timewarp/expr/token.hpp"
 
 #include "timewarp/core/charconv.hpp"
