@@ -16,6 +16,12 @@
 # Library
 # ---------------------------------------------------------------------------
 
+# `std::atomic` and `std::thread` are used by the interpreters, so every Qt-free
+# library links this. On Linux it is nearly a no-op; on the browser build it is
+# what compiles the objects with `atomics` and `bulk-memory`, without which the
+# threaded Qt's `--shared-memory` link refuses them.
+find_package(Threads REQUIRED)
+
 add_library(timewarp_expr
     src/token.cpp
     src/lexer.cpp
@@ -253,7 +259,8 @@ foreach(objects IN LISTS TIME_WARP_LANGUAGE_OBJECTS)
     target_include_directories(${objects} PUBLIC
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>)
     target_compile_features(${objects} PUBLIC cxx_std_20)
-    target_link_libraries(${objects} PUBLIC timewarp::expr timewarp::audio timewarp::io)
+    target_link_libraries(${objects} PUBLIC timewarp::expr timewarp::audio timewarp::io
+        Threads::Threads)
     timewarp_enable_warnings(${objects})
     target_compile_options(${objects} PRIVATE ${TIME_WARP_GNU_WARNING_FLAGS}
         ${TIME_WARP_NULL_DEREFERENCE}
@@ -270,7 +277,8 @@ endforeach()
 # library cannot carry them.
 add_library(timewarp_lang STATIC)
 add_library(timewarp::lang ALIAS timewarp_lang)
-target_link_libraries(timewarp_lang PUBLIC timewarp::expr timewarp::audio timewarp::io)
+target_link_libraries(timewarp_lang PUBLIC timewarp::expr timewarp::audio timewarp::io
+    Threads::Threads)
 target_include_directories(timewarp_lang PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>)
 target_compile_features(timewarp_lang PUBLIC cxx_std_20)
@@ -397,8 +405,6 @@ timewarp_enable_warnings(expr_bench)
 # Qt-free so it can be unit tested, and so timewarp_canvas stays usable from a
 # headless or non-Qt host.
 # ---------------------------------------------------------------------------
-
-find_package(Threads REQUIRED)
 
 add_library(timewarp_canvas
     src/canvas/command.cpp
