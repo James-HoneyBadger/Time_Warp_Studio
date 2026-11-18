@@ -20,6 +20,15 @@ endif()
 # on the prebuilt package's default exception model.
 add_compile_options(-fexceptions)
 
+# The threaded Qt asks the linker for `--shared-memory`, and wasm-ld refuses any
+# object that was not compiled with the `atomics` and `bulk-memory` features --
+# `-pthread` is those two plus the pthread runtime. Qt's own objects carry it
+# because Qt's package asks for it; this project's do not, and the first one the
+# linker named was the CHIP-8 engine. Directory scope, so every target created
+# below -- the engines, the tools, the window -- is compiled the same way. The
+# desktop build never reads this file.
+add_compile_options(-pthread)
+
 # The Qt packages for WebAssembly come in two flavours, and this build needs the
 # threaded one: every runner in the IDE is a `QThread`, and Qt built without thread
 # support compiles `QThread::start()` to an empty function. A single-threaded module
