@@ -70,8 +70,6 @@
 
 namespace timewarp::ui {
 
-namespace icons = timewarp::ui::icons;
-
 // The settings keys and the small helpers the sections share; they were an
 // anonymous namespace in the one-file version, and a `using` is what keeps the call
 // sites reading the same.
