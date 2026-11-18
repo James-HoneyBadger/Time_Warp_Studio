@@ -72,13 +72,16 @@ jobs:
         run: |
           set -eu
           apt-get update
-          # `python3-dev` and a compiler are for aqt's own `pyzstd` dependency,
-          # which has no wheel for Python 3.8 and is built from source here.
-          apt-get install -y --no-install-recommends python3-pip python3-dev build-essential
-          # `pip<25` keeps a pip that still installs on the image's Python 3.8, and
-          # 3.1.18 is the last aqt that runs on it: 3.2 onwards requires Python 3.9.
-          pip3 install --no-cache-dir --upgrade "pip<25" "aqtinstall==3.1.18"
-          aqt install-qt -O /opt/Qt all_os wasm "$QT_VERSION" wasm_multithread
+          # The image's Python is 3.8, and the `wasm` target arrived in aqt 3.2,
+          # which requires 3.9 -- 3.1.18 accepts neither. Focal carries 3.9 in
+          # universe, so the installer runs under it in a venv of its own rather
+          # than replacing the image's interpreter. `python3.9-dev` and a compiler
+          # are there in case a dependency has no wheel for 3.9.
+          apt-get install -y --no-install-recommends \
+            python3.9 python3.9-venv python3.9-dev build-essential
+          python3.9 -m venv /opt/aqt
+          /opt/aqt/bin/pip install --no-cache-dir --upgrade "aqtinstall==3.2.0"
+          /opt/aqt/bin/aqt install-qt -O /opt/Qt all_os wasm "$QT_VERSION" wasm_multithread
           echo "QT_WASM=/opt/Qt/$QT_VERSION/wasm_multithread" >> "$GITHUB_ENV"
 
       # The threaded Qt has to be the one that was found, not the image's singlethreaded
