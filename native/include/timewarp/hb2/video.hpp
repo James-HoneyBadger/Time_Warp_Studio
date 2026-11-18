@@ -220,7 +220,6 @@ private:
     std::vector<std::uint8_t> cells_;
     std::vector<std::uint8_t> attributes_;
     std::array<Rgb, 256> palette_{};
-    std::array<std::uint64_t, kSpriteCount> last_tick_frame_{};
     mutable std::vector<std::uint8_t> composed_;
     mutable bool dirty_ = true;
     mutable bool collision_ = false;
