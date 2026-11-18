@@ -72,7 +72,9 @@ jobs:
         run: |
           set -eu
           apt-get update
-          apt-get install -y --no-install-recommends python3-pip
+          # `python3-dev` and a compiler are for aqt's own `pyzstd` dependency,
+          # which has no wheel for Python 3.8 and is built from source here.
+          apt-get install -y --no-install-recommends python3-pip python3-dev build-essential
           # `pip<25` keeps a pip that still installs on the image's Python 3.8, and
           # 3.1.18 is the last aqt that runs on it: 3.2 onwards requires Python 3.9.
           pip3 install --no-cache-dir --upgrade "pip<25" "aqtinstall==3.1.18"
