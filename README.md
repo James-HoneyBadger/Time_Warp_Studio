@@ -1,19 +1,16 @@
 # Time Warp Studio
 
-Time Warp Studio is a desktop programming environment for ten languages of the 1960s and
-1970s: BASIC, APL, Logo, PILOT, FOCAL, Forth, Scheme, COMAL, REXX and Smalltalk. Each one
-runs through its own interpreter, linked straight into the application rather than started
-as a separate process. Open a program and it runs; the debugger can stop inside it, in
-whichever language the editor is showing.
+Ten languages of the 1960s and 1970s -- BASIC, APL, Logo, PILOT, FOCAL, Forth, Scheme,
+COMAL, REXX and Smalltalk -- in one C++20 and Qt 6 desktop environment, each with its own
+interpreter linked straight into the process rather than started as a separate program.
+Because the interpreters are libraries rather than processes, the editor, the debugger,
+the turtle canvas, the project model and the SQL layer are shared: a breakpoint in BASIC
+and a breakpoint in Smalltalk are set, inspected and cleared in the same panel.
 
 [![Languages](https://img.shields.io/badge/languages-10-blue)](#the-ten-languages)
 [![Platform](https://img.shields.io/badge/platform-Linux-green)](docs/user/getting-started.md)
 [![License: AGPL v3](https://img.shields.io/badge/License-AGPL_v3-blue.svg)](LICENSE)
 [![Version](https://img.shields.io/badge/Version-30.0.0-orange)](https://github.com/James-HoneyBadger/Time_Warp_Studio)
-
-It is written in C++20 against Qt 6 and runs on Linux. The interpreters are libraries in
-the same process, which is what lets one debugger serve all ten: a run is stopped,
-inspected and resumed in the same panel, whichever language is in the editor.
 
 Each interpreter implements the dialect it is named for, including the parts that do not
 carry over from one language to the next. FOCAL is a formula calculator with line labels
@@ -22,38 +19,46 @@ precedence. Forth is a dictionary of words. Scheme is an explicit-stack CEK mach
 without native recursion. Smalltalk sends messages to objects. A program is written in
 the dialect of its period and behaves as it did on the machines it was written for.
 
-The editor, debugger, canvas, project model and SQL layer are shared by all ten. A
-breakpoint in BASIC and one in Smalltalk are set, inspected and cleared in the same panel.
-
-## A new foundation
-
-Earlier versions were built on a fundamentally different architecture: a Python application
-using PySide6. The current Studio replaces that codebase with a C++20 and Qt 6 system,
-reimplementing the language engines and making the boundaries between interpreters, the
-interface, debugger and canvas explicit. The browser build is the same application carried
-to another platform, not a separate port.
-
-Version 29.0.0 marks a new start for the project. The move from MIT to AGPLv3 accompanies
-that architectural break and extends the source-sharing principle to modified versions
-run as network services. The [project history](docs/project/history.md) records what was
-replaced; the [architecture guide](docs/maintainer/architecture.md) explains the system
-that stands now.
-
----
-
-## Install
+## Quick start (no compile)
 
 Each [release](https://github.com/James-HoneyBadger/Time_Warp_Studio/releases/latest)
-carries a built application for Linux with the Qt runtime inside it, so no compiler is
-required.
+carries a built application for Linux with the Qt runtime inside it: no compiler, no
+package manager, and no Qt to fetch. The AppImage is the shortest path.
 
-The project is Linux only. Everything it builds, tests and ships targets Linux; there is
-no Windows or macOS build and no installer for either. It also builds for the browser --
-the same application compiled to WebAssembly and served as a page -- which
-[the WebAssembly guide](docs/maintainer/wasm.md) describes.
+```bash
+chmod +x Time_Warp_Studio-*-x86_64.AppImage
+./Time_Warp_Studio-*-x86_64.AppImage
+```
 
-[Getting started](docs/user/getting-started.md) covers the full procedure, the build
-requirements and what to do when a build fails.
+The `.deb`, `.rpm`, Flatpak bundle and tarball that ship in the same release are in the
+[install table](#install) below. The project is Linux only -- there is no Windows or macOS
+build and no installer for either -- and it also builds for the browser, the same
+application compiled to WebAssembly, which [the WebAssembly
+guide](docs/maintainer/wasm.md) describes.
+
+## Five-minute smoke test
+
+Three programs, three different corners of the application. The last one is the one that
+matters most: the debugger.
+
+1. **Turtle graphics.** Open `Examples/logo/mandala.logo` from **File > Open Example** and
+   press **F9**. The canvas fills with a colour-cycled mandala -- nested loops, procedures
+   and turtle geometry, in the Logo that was taught in 1967.
+2. **Arrays and the right-to-left rule.** Open `Examples/apl/showcase.apl` and press
+   **F9**. The output shows APL evaluating arrays without operator precedence: `2 3 ⍴ ⍳ 6`
+   builds a 2-by-3 table, because `1 2 3` is one value there and not three.
+3. **The debugger.** Click the gutter beside a line inside `TO CYCLECOLOR` in the mandala
+   to set a breakpoint, then press **Debug** in the toolbar. The run stops before that
+   line executes, the Debug panel lists the variables the procedure has, and the canvas
+   holds the ink drawn so far. **Continue** resumes; the scrubber under the canvas steps
+   the drawing back. A breakpoint in a BASIC program behaves the same way, because the
+   panel is the same panel.
+
+If something answered oddly, or a language printed something it should not have, the
+[smoke report template](.github/ISSUE_TEMPLATE/tester-smoke-report.md) asks for exactly
+the facts that make it fixable.
+
+## Install
 
 | You have | Take | Then |
 | --- | --- | --- |
@@ -64,6 +69,25 @@ requirements and what to do when a build fails.
 | any other Linux, or arm64 | `time-warp-studio-<version>-linux-<arch>.tar.gz` | `tar -xzf … -C / --strip-components=1` |
 
 `uname -m` reports the architecture, `x86_64` or `aarch64`.
+
+[Getting started](docs/user/getting-started.md) covers the full procedure, the build
+requirements and what to do when a build fails.
+
+## A new foundation
+
+Earlier versions were built on a different architecture: a Python application using
+PySide6. The current Studio replaces that codebase with a C++20 and Qt 6 system,
+reimplementing the language engines and making the boundaries between interpreters, the
+interface, debugger and canvas explicit. The browser build is the same application carried
+to another platform, not a separate port.
+
+The 29.0.0 release marked a new start for the project. The move from MIT to AGPLv3
+accompanied that architectural break and extends the source-sharing principle to modified
+versions run as network services. The [project history](docs/project/history.md) records
+what was replaced; the [architecture guide](docs/maintainer/architecture.md) explains the
+system that stands now.
+
+---
 
 ## Run from a checkout
 
