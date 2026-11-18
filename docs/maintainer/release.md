@@ -19,7 +19,7 @@ One number lives in four places, and `time_warp_docs version` is what keeps them
 | `VERSION` | The number itself; everything else is derived from it or checked against it |
 | `README.md` | The badge |
 | `docs/maintainer/architecture.md` | The title line |
-| `docs/project/history.md` | A section headed `## [X.Y.Z] - YYYY-MM-DD` |
+| `docs/project/history.md` | A release section headed `[X.Y.Z] - YYYY-MM-DD` |
 
 ```bash
 ./native/tools/docs/build/time_warp_docs version          # check
@@ -36,11 +36,11 @@ prose, and somebody has to read it.
 ## Before the tag
 
 ```bash
-make test                 # the 23 C++ suites
+make test                 # the 27 C++ suites
 make test-debug           # the same in Debug
 make asan                 # AddressSanitizer; ASAN=undefined for UBSan
 make golden-check         # the ports against the frozen corpus, 636 programs
-make smoke                # 67 example programs through the native engines
+make smoke                # 94 example programs through the native engines
 make command-matrix       # every command row as a program
 make repl-matrix          # every command row through the REPL
 ./native/build/time_warp_teach validate
@@ -63,7 +63,7 @@ before the reference is complete.
 ```bash
 # 1. Move the version
 $EDITOR VERSION                                  # X.Y.Z
-$EDITOR docs/project/history.md                  # a new ## [X.Y.Z] - YYYY-MM-DD section
+$EDITOR docs/project/history.md                  # a new [X.Y.Z] - YYYY-MM-DD section
 ./native/tools/docs/build/time_warp_docs version --write
 ./native/tools/docs/build/time_warp_docs version  # exits 0
 

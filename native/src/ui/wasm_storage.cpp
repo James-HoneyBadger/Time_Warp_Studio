@@ -155,8 +155,12 @@ namespace {
 /// makes every open tab write to the database constantly, longer than this and a crash
 /// costs the user a paragraph rather than a clause.
 constexpr int kAutoSaveMilliseconds = 30000;
+// The browser build is the only one with a volume to keep in step, so the flags
+// that describe its state exist only there; a desktop build would warn on them.
+#ifdef __EMSCRIPTEN__
 bool g_storage_ready = false;
 bool g_storage_sync_in_progress = false;
+#endif
 }  // namespace
 
 QString projectRoot() {

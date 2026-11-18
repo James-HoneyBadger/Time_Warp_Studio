@@ -19,6 +19,10 @@ namespace timewarp::gates {
 
 namespace {
 
+/// The project's error convention, the same marker `judge.cpp` reads: an engine
+/// reports a failure as an output line prefixed with it.
+constexpr QChar kErrorMarker{0x274C};
+
 /// The kinds a drawing command can have, from `CanvasCommandKind`. Only these
 /// count as ink: `SetColor` is a drawing command that draws nothing.
 constexpr const char* kDrawnKinds[] = {"line", "poly", "rect", "point", "ellipse", "text"};
@@ -73,7 +77,16 @@ Outcome runProgram(const QString& check, const QString& language, const QString&
             }
             outcome.actions += message.value(QStringLiteral("actions")).toInt();
         } else if (kind == QLatin1String("out")) {
-            printed += message.value(QStringLiteral("text")).toString();
+            const QString text = message.value(QStringLiteral("text")).toString();
+            printed += text;
+            // An engine reports a failure as an output line carrying the error
+            // marker rather than as an `err` message -- see `judge.cpp` -- so a
+            // harness that only collected `err` would call a failing program a
+            // quiet success. `smoke` is that harness, and this is the line that
+            // makes "a program that ran and explained nothing" a failure there.
+            if (text.contains(kErrorMarker)) {
+                outcome.errors.append(text);
+            }
         } else if (kind == QLatin1String("err")) {
             outcome.errors.append(message.value(QStringLiteral("text")).toString());
         } else if (kind == QLatin1String("done")) {

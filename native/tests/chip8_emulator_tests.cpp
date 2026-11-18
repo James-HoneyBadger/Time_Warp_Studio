@@ -618,7 +618,11 @@ int main(int argc, char** argv) {
     test_ld_key_waits_for_a_press();
     test_rewind_keeps_history_and_goes_back();
     test_resuming_from_the_past_forgets_the_future();
+#ifdef TIME_WARP_HAVE_AI
+    // The assistant is compiled in only when a build finds it, so the case that
+    // exercises it travels with the same switch as the code it tests.
     test_the_window_offers_the_assistant();
+#endif
     test_the_window_offers_the_rewind_strip();
     test_the_window_offers_the_rom_library();
     test_a_hires_program_reaches_the_screen();

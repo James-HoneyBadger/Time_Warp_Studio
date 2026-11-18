@@ -375,10 +375,11 @@ void test_chip8_rpl_flags_round_trip() {
 void test_chip8_hires_display_halves_the_pixel_size() {
     RecordingHost host;
     Interpreter interpreter{Language::Basic, host};
-    interpreter.load_program(
+    static_cast<void>(timewarp::lang::execute_chip8(
+        interpreter,
         "start: DW 0x00FF\n       LD I, dot\n       DRW V0, V1, 1\n"
-        "       HALT\ndot: DB 0xFF");
-    interpreter.run();
+        "       HALT\ndot: DB 0xFF",
+        host));
     std::string lit;
     for (const std::string& op : host.ops) {
         if (op.rfind("rect ", 0) == 0 && op.find("#8CFF8C") != std::string::npos) {
@@ -484,8 +485,9 @@ void test_chip8_binary_rom_respects_memory() {
 void test_chip8_display_uses_the_palette() {
     RecordingHost host;
     Interpreter interpreter{Language::Basic, host};
-    interpreter.load_program("start: LD I, dot\n       DRW V0, V1, 1\n       HALT\ndot: DB 0xFF");
-    interpreter.run();
+    static_cast<void>(timewarp::lang::execute_chip8(
+        interpreter, "start: LD I, dot\n       DRW V0, V1, 1\n       HALT\ndot: DB 0xFF",
+        host));
     const std::size_t lit = static_cast<std::size_t>(
         std::count_if(host.ops.begin(), host.ops.end(), [](const std::string& op) {
             return op.rfind("rect ", 0) == 0 && op.find("#8CFF8C") != std::string::npos;
@@ -496,8 +498,8 @@ void test_chip8_display_uses_the_palette() {
 void test_chip8_display_is_cleared_before_the_first_frame() {
     RecordingHost host;
     Interpreter interpreter{Language::Basic, host};
-    interpreter.load_program("start: CLS\n       HALT");
-    interpreter.run();
+    static_cast<void>(
+        timewarp::lang::execute_chip8(interpreter, "start: CLS\n       HALT", host));
     // svga, two palette entries, then the clear rectangle.
     TW_CHECK_EQ(host.ops.size(), std::size_t{4});
     TW_CHECK_EQ(host.ops.at(3), std::string{"rect -256 128 256 -128 #101014"});
@@ -535,8 +537,7 @@ void test_chip8_run_can_be_walked_back() {
 
     RecordingHost plain_host;
     Interpreter plain{Language::Basic, plain_host};
-    plain.load_program(source);
-    plain.run();
+    static_cast<void>(timewarp::lang::execute_chip8(plain, source, plain_host));
 
     RecordingHost host;
     Interpreter interpreter{Language::Basic, host};
@@ -561,8 +562,7 @@ void test_chip8_run_can_be_walked_back() {
     };
     interpreter.set_debug_session(&session);
     interpreter.set_history(16);
-    interpreter.load_program(source);
-    interpreter.run();
+    static_cast<void>(timewarp::lang::execute_chip8(interpreter, source, host));
 
     TW_CHECK_EQ(rewound_to, 3);
     TW_CHECK(was_a_rewind);
@@ -596,8 +596,7 @@ void test_chip8_rewind_restores_frame_phase() {
 
     RecordingHost plain_host;
     Interpreter plain{Language::Basic, plain_host};
-    plain.load_program(source);
-    plain.run();
+    static_cast<void>(timewarp::lang::execute_chip8(plain, source, plain_host));
 
     RecordingHost host;
     Interpreter interpreter{Language::Basic, host};
@@ -619,8 +618,7 @@ void test_chip8_rewind_restores_frame_phase() {
     };
     interpreter.set_debug_session(&session);
     interpreter.set_history(32);
-    interpreter.load_program(source);
-    interpreter.run();
+    static_cast<void>(timewarp::lang::execute_chip8(interpreter, source, host));
 
     TW_CHECK_EQ(rewound_to, 4);
     TW_CHECK_EQ(pauses, 3);

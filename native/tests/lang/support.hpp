@@ -33,6 +33,7 @@
 #include "check.hpp"
 #include "timewarp/core/charconv.hpp"
 #include "timewarp/io/gamepad.hpp"
+#include "timewarp/lang/chip8.hpp"
 #include "timewarp/lang/debug.hpp"
 #include "timewarp/lang/interpreter.hpp"
 #include "timewarp/lang/mersenne_random.hpp"
@@ -47,6 +48,8 @@
 
 namespace tw::lang_tests {
 
+using timewarp::lang::Chip8Machine;
+using timewarp::lang::Chip8Program;
 using timewarp::lang::Interpreter;
 using timewarp::lang::Language;
 using timewarp::lang::MersenneRandom;
@@ -209,6 +212,41 @@ inline bool any_error(const std::vector<std::string>& output) {
     return std::any_of(output.begin(), output.end(), [](const std::string& line) {
         return line.rfind("❌", 0) == 0;
     });
+}
+
+inline Chip8Program assemble(std::string_view source) {
+    return timewarp::lang::assemble_chip8(source);
+}
+
+inline Chip8Machine run_to_halt(std::string_view source, unsigned keys = 0) {
+    Chip8Program program = assemble(source);
+    Chip8Machine machine{std::move(program.memory), program.entry, keys};
+    int guard = 0;
+    while (!machine.halted()) {
+        machine.step();
+        if (++guard > 100'000) {
+            throw std::runtime_error("the program did not halt");
+        }
+    }
+    return machine;
+}
+
+inline std::size_t lit_pixels(const Chip8Machine& machine) {
+    return static_cast<std::size_t>(
+        std::count(machine.framebuffer().begin(), machine.framebuffer().end(), 1));
+}
+
+/// CHIP-8 is its own application now, so the engine is called directly instead of
+/// through the language registry. The interpreter is still the caller's, because
+/// it is what a pause lands in.
+inline std::vector<std::string> run_chip8(std::string_view source) {
+    RecordingHost host;
+    Interpreter interpreter{Language::Basic, host};
+    std::string text = timewarp::lang::execute_chip8(interpreter, source, host);
+    while (!text.empty() && text.back() == '\n') {
+        text.pop_back();
+    }
+    return text.empty() ? std::vector<std::string>{} : std::vector<std::string>{text};
 }
 
 }  // namespace tw::lang_tests

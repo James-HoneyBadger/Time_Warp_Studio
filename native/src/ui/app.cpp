@@ -41,6 +41,15 @@ void applyApplicationIdentity() {
     QGuiApplication::setDesktopFileName(desktop);
 }
 
+void applyApplicationIdentity(const QString& applicationName, const QString& desktopName) {
+    QCoreApplication::setOrganizationName(QStringLiteral("TimeWarpUniverse"));
+    QCoreApplication::setApplicationName(applicationName);
+    QCoreApplication::setApplicationVersion(version());
+    if (!desktopName.isEmpty()) {
+        QGuiApplication::setDesktopFileName(desktopName);
+    }
+}
+
 QString version() { return QString::fromUtf8(TIME_WARP_VERSION); }
 
 }  // namespace timewarp::ui

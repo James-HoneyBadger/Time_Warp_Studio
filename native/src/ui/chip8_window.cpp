@@ -4,6 +4,7 @@
 #include "timewarp/ui/chip8_window.hpp"
 
 #include "timewarp/ui/chip8_library.hpp"
+#include "timewarp/ui/chip8_text.hpp"
 #include "timewarp/ui/chip8_screen.hpp"
 #include "timewarp/ui/app_paths.hpp"
 #include "timewarp/ui/sound_player.hpp"
@@ -334,11 +335,7 @@ void Chip8Window::buildInspector(QVBoxLayout* column) {
     column->addWidget(tabs, 1);
 }
 
-bool Chip8Window::isRomFile(const QString& path) {
-    const QString suffix = QFileInfo{path}.suffix().toLower();
-    return suffix == QLatin1String("ch8") || suffix == QLatin1String("c8") ||
-           suffix == QLatin1String("rom") || suffix == QLatin1String("bin");
-}
+bool Chip8Window::isRomFile(const QString& path) { return isChip8RomFile(path); }
 
 bool Chip8Window::openFile(const QString& path) {
     QString error;

@@ -1,8 +1,8 @@
 # HB-1 enhancements
 
-Time Warp Studio 27.0 is the current release — 24.0, the golden one, is archived —
+Time Warp Studio 30.0.0 is the current release — 24.0, the golden one, is archived —
 and the machine described in [the owner's manual](README.md) is finished and
-validated by the gates in [README_TESTING](../README_TESTING.md). Everything on this
+validated by the gates in [the testing guide](../maintainer/testing.md). Everything on this
 page was written as a **proposal for after 25.0** and is **still open**: 26.0 and 27.0
 built the HB-2, the same company's 1992 machine, rather than adding to this one. Each
 item is written down rather than wished for, so a future release has a specification
@@ -17,7 +17,7 @@ would count as proof. Nothing here changes what the machine does today.
 
 The HB-1 has the parts a home computer of 1982 had: a processor, memory the screen
 is part of, a disk, a printer, a modem, a tape motor that sounds and does nothing
-else, and eleven ROMs. The gaps are the ones a period machine would have filled:
+else, and ten ROMs. The gaps are the ones a period machine would have filled:
 
 | Gap | Why it matters |
 | --- | --- |

@@ -70,10 +70,12 @@ Sixteen 8-bit registers `V0`-`VF`, plus `I`, a 12-bit address register used to
 point at memory.
 
 ```chip8
-LD   V0, 0x41       V0 := 65
-LD   V1, V0         V1 := V0
-ADD  V0, 1          V0 := V0 + 1
-LD   I, gfx         I now points at the data labelled gfx
+start:  LD   V0, 0x41    ; V0 := 65
+        LD   V1, V0      ; V1 := V0
+        ADD  V0, 1       ; V0 := V0 + 1
+        LD   I, gfx      ; I now points at the data labelled gfx
+        HALT
+gfx:    DB   0xF0
 ```
 
 `VF` doubles as a flag register: arithmetic and `DRW` set it, and that is how you
@@ -82,16 +84,17 @@ test for a carry or a collision.
 ## 5. Arithmetic and logic
 
 ```chip8
-ADD  V0, 1          V0 := V0 + 1
-ADD  V0, V1         V0 := V0 + V1
-SUB  V0, V1         V0 := V0 - V1
-SUBN V0, V1         V0 := V1 - V0
-OR   V0, V1         V0 := V0 OR V1
-AND  V0, V1         V0 := V0 AND V1
-XOR  V0, V1         V0 := V0 XOR V1
-SHR  V0             V0 := V0 >> 1, in place
-SHL  V0             V0 := V0 << 1, in place
-RND  V0, 0x0F       V0 := random AND 0x0F
+start:  ADD  V0, 1       ; V0 := V0 + 1
+        ADD  V0, V1      ; V0 := V0 + V1
+        SUB  V0, V1      ; V0 := V0 - V1
+        SUBN V0, V1      ; V0 := V1 - V0
+        OR   V0, V1      ; V0 := V0 OR V1
+        AND  V0, V1      ; V0 := V0 AND V1
+        XOR  V0, V1      ; V0 := V0 XOR V1
+        SHR  V0          ; V0 := V0 >> 1, in place
+        SHL  V0          ; V0 := V0 << 1, in place
+        RND  V0, 0x0F    ; V0 := random AND 0x0F
+        HALT
 ```
 
 `SHR` and `SHL` shift `V0` **in place**. A later generation of emulators shifted
@@ -101,14 +104,17 @@ operand is accepted and ignored, so both spellings assemble.
 ## 6. Skipping and branching
 
 ```chip8
-JP   draw           jump
-JP   V0, draw       jump to draw + V0, the jump table
-CALL sub            call a subroutine
-RET                 return from it
-SE   V0, 1          skip the next instruction if V0 = 1
-SNE  V0, 1          skip the next instruction if V0 != 1
-SKP  V0             skip if the key in V0 is held
-SKNP V0             skip if it is not held
+start:  JP   draw        ; jump
+        JP   V0, draw    ; jump to draw + V0, the jump table
+        CALL sub         ; call a subroutine
+        RET              ; return from it
+        SE   V0, 1       ; skip the next instruction if V0 = 1
+        SNE  V0, 1       ; skip the next instruction if V0 != 1
+        SKP  V0          ; skip if the key in V0 is held
+        SKNP V0          ; skip if it is not held
+        HALT
+draw:   HALT
+sub:    RET
 ```
 
 Testing a register is a *skip*, not a branch: you put the jump straight after the
@@ -124,8 +130,9 @@ hosted the original interpreter, which this machine cannot run.
 ## 7. Drawing
 
 ```chip8
-LD   F, V0          I points at the glyph for the hex digit in V0
-DRW  V0, V1, 5      draw 5 rows at (V0, V1)
+start:  LD   F, V0       ; I points at the glyph for the hex digit in V0
+        DRW  V0, V1, 5   ; draw 5 rows at (V0, V1)
+        HALT
 ```
 
 `DRW` draws an n-byte sprite with its top-left corner at the coordinates in two
@@ -136,12 +143,16 @@ registers. Two behaviours are worth knowing:
   erases, and how it detects a collision.
 
 ```chip8
-        LD   V0, 0x2C
+start:  LD   V0, 0x2C
         LD   V1, 0x06
         LD   I, frame
-        DRW  V0, V1, 3      draw it
+        DRW  V0, V1, 3      ; draw it
         ADD  V0, 1
-        DRW  V0, V1, 3      draw it one pixel right: the shared pixels go out
+        DRW  V0, V1, 3      ; draw it one pixel right: the shared pixels go out
+        HALT
+frame:  DB   0xFF
+        DB   0xFF
+        DB   0xFF
 ```
 
 `LD F, Vx` uses the machine's built-in font, a 4x5 hex digit set the machine keeps
@@ -160,7 +171,7 @@ input to something that never yields control. Keypad state is therefore
 
 ```chip8
 ; keys 13
-start:  LD   V0, K          V0 := the first held key, or 0
+start:  LD   V0, K          ; V0 := the first held key, or 0
         LD   V1, 6
         LD   I, dot
         DRW  V0, V1, 1
@@ -175,8 +186,9 @@ dot:    DB   0x80
 There are two timers: `DT` (delay) and `ST` (sound).
 
 ```chip8
-LD   DT, V0         set the delay timer
-LD   V0, DT         read it
+start:  LD   DT, V0      ; set the delay timer
+        LD   V0, DT      ; read it
+        HALT
 ```
 
 Frames are **simulated**, not timed: ten opcodes make a frame and the timers tick
@@ -295,4 +307,4 @@ unknown opcode rather than half-drawn.
 See also
 [`Examples/chip8/font_and_frames.ch8`](../../Examples/chip8/font_and_frames.ch8),
 [`Examples/chip8/hires.ch8`](../../Examples/chip8/hires.ch8), and the
-[CHIP-8 reference](../LANGUAGE_GUIDE.md#chip-8).
+[CHIP-8 reference](../chip8/README.md).

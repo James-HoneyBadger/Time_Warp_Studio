@@ -50,6 +50,7 @@ int main(int argc, char** argv) {
     test_moving_the_cursor_updates_the_status_bar();
     test_editing_marks_the_document_and_the_title();
     test_choosing_a_language_sticks();
+    test_a_chip8_rom_round_trips_through_the_editor();
     test_closing_tabs();
     test_closing_documents_in_a_split();
     test_the_split_keeps_its_documents_in_step();
@@ -72,6 +73,7 @@ int main(int argc, char** argv) {
     test_a_whole_program_run_pauses_at_a_breakpoint();
 
     test_running_scheme_draws_on_the_canvas();
+    test_running_a_chip8_document_draws_on_the_canvas();
     test_pen_up_moves_without_drawing();
     test_running_basic_prints_natively();
     test_the_native_host_blits_a_sprite();

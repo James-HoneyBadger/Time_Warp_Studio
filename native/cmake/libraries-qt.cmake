@@ -423,6 +423,7 @@ if(TIME_WARP_QT_FOUND)
         add_library(timewarp_ui_core
             src/ui/design.cpp
             src/ui/language.cpp
+            src/ui/chip8_text.cpp
             src/ui/native_runner.cpp
             src/ui/sound_player.cpp
             src/ui/standalone.cpp
@@ -434,6 +435,7 @@ if(TIME_WARP_QT_FOUND)
             src/ui/ui_style.cpp
             include/timewarp/ui/design.hpp
             include/timewarp/ui/language.hpp
+            include/timewarp/ui/chip8_text.hpp
             include/timewarp/ui/native_runner.hpp
             include/timewarp/ui/sound_player.hpp
             include/timewarp/ui/standalone.hpp
@@ -451,7 +453,8 @@ if(TIME_WARP_QT_FOUND)
             target_link_libraries(timewarp_ui_core PRIVATE timewarp::canvas_qt)
         endif()
         # The engines. A player with no interpreter has nothing to play.
-        target_link_libraries(timewarp_ui_core PRIVATE timewarp::lang)
+        target_link_libraries(timewarp_ui_core PRIVATE timewarp::lang
+                                  timewarp::chip8_engine)
         target_compile_definitions(timewarp_ui_core PRIVATE
             TIME_WARP_VERSION="${TIME_WARP_VERSION}"
         )

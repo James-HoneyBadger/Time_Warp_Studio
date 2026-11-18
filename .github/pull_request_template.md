@@ -25,16 +25,16 @@ a reader of the merged history scrolls to.
 
 | Gate | Command | Result |
 | --- | --- | --- |
-| C++ suites | `make test` | <!-- 24/24 --> |
-| Debug tree | `make test-debug` | <!-- 24/24, or "not run: no C++ changed" --> |
+| C++ suites | `make test` | <!-- 27/27 --> |
+| Debug tree | `make test-debug` | <!-- 27/27, or "not run: no C++ changed" --> |
 | Sanitizers | `make asan` | <!-- clean, or "not run: no C++ changed" --> |
-| Example corpus | `make smoke` | <!-- all 67, stroke counts unmoved --> |
-| Command coverage | `make command-matrix` | <!-- 532 rows, 0 failed, 0 gaps --> |
-| REPL coverage | `make repl-matrix` | <!-- 532 rows, 0 failed --> |
+| Example corpus | `make smoke` | <!-- all 94, stroke counts unmoved --> |
+| Command coverage | `make command-matrix` | <!-- 534 rows, 0 failed, 0 gaps --> |
+| REPL coverage | `make repl-matrix` | <!-- 534 rows, 0 failed --> |
 | Parity | `make golden-check` | <!-- 0 differences, or which corpus entries you changed and why --> |
 | Lesson curriculum | `./native/build/time_warp_teach validate` | <!-- clean, or "not run: no lesson changed" --> |
 | Documentation lint | `make lint-md` | <!-- 0 issues --> |
-| Documentation links | `make doc-links` | <!-- 275 checked, all resolve --> |
+| Documentation links | `make doc-links` | <!-- all resolve --> |
 | Documentation claims | `make doc-claims` | <!-- no false claims --> |
 
 ## Checklist

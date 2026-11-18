@@ -339,6 +339,7 @@ if(TIME_WARP_EXPR_BUILD_TESTS)
     add_test(NAME lang_tests COMMAND lang_tests)
 
     add_executable(chip8_engine_tests
+        tests/chip8_engine_tests.cpp
         tests/lang_chip8_assembler_tests.cpp
         tests/lang_chip8_machine_tests.cpp)
     target_link_libraries(chip8_engine_tests PRIVATE timewarp::chip8_engine)

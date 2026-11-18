@@ -38,12 +38,19 @@ struct LanguageExamples {
 /// Both halves come from `timewarp/lang/registry.hpp` -- the key and the first
 /// extension of each row -- because a second copy of "what extension is Logo" is
 /// how the smoke gate and the IDE end up disagreeing about which files are examples.
+/// CHIP-8 is the one machine whose programs this harness can run, and it is appended
+/// below because it is not a row in that table.
 std::vector<LanguageExamples> language_examples() {
     std::vector<LanguageExamples> languages;
     for (const timewarp::lang::LanguageRow& row : timewarp::lang::kLanguageTable) {
         languages.push_back(LanguageExamples{std::string{row.key},
                                              std::string{row.extensions.front()}});
     }
+    // CHIP-8 is a machine of its own rather than a row in the registry, so its key
+    // and extension are named here. Its twenty listings are the only machine programs
+    // a language-shaped runner can drive: `time_warp_check --language chip8` calls the
+    // engine directly, and every one of them has to draw.
+    languages.push_back(LanguageExamples{"chip8", "ch8"});
     return languages;
 }
 
@@ -207,7 +214,9 @@ int runSmoke(const QStringList& arguments) {
             }
 
             // Drawing is expected only where it is real: see `drawingExamples()`.
-            const bool must_draw = drawingExamples().contains(identifier);
+            // CHIP-8 is the exception that needs no list: the machine has no text
+            // mode, so a CHIP-8 program that drew nothing did nothing.
+            const bool must_draw = drawingExamples().contains(identifier) || key == "chip8";
             if (must_draw && outcome.drawings == 0) {
                 ++counts[key].failed;
                 failures.append(identifier + QStringLiteral(

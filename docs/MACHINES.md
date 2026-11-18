@@ -1,11 +1,11 @@
 # The machines
 
-Time Warp Studio is a time machine that pretends to be an IDE. Three machines are
-built into it, and they are the reason it exists rather than being another editor
-with a Run button:
+Time Warp Studio is a time machine that pretends to be an IDE. Three machines ship
+beside it — three applications of their own, not modes of the editor — and they are
+the reason it exists rather than being another editor with a Run button:
 
 - the **[HB-1](hb1/README.md)** — a personal computer from a 1982 that never
-  happened, shipped with eleven language ROMs in one socket, a prompt, a CRT and a
+  happened, shipped with ten language ROMs in one socket, a prompt, a CRT and a
   disk; and
 - the **[CHIP-8](chip8/README.md)** — the 1977 virtual machine: sixty-four by
   thirty-two pixels, sixteen keys, four kilobytes, and more instruction per byte
@@ -15,8 +15,9 @@ with a Run button:
   blitter, four channels of sampled audio, hardware sprites, and HB-16, a processor
   of the machine's own, with a desktop, a disk of its own and a prompt.
 
-All three are real programs. The HB-1 and the CHIP-8 run the editor's own engines, and
-the HB-2 runs nine of them on its own bus as well as an instruction set of its own. None is a screenshot, a theme, or a video of a
+All three are real programs, each in a window of its own application. The HB-1 and
+the CHIP-8 run the Studio's native engines, and the HB-2 runs nine of them on its own
+bus as well as an instruction set of its own. None is a screenshot, a theme, or a video of a
 computer: the two home computers are places you can type at, break and come back to,
 and the HB-2 is a machine you can disassemble.
 
@@ -30,9 +31,9 @@ the next four decades taught us about making computers kind to learn on.
 
 That single premise decides everything about it:
 
-- **One ROM socket, eleven languages.** The parallel 1982 did not have a format war
+- **One ROM socket, ten languages.** The parallel 1982 did not have a format war
   over BASIC. Its machine shipped with BASIC, Logo, PILOT, FOCAL, COMAL, REXX,
-  Scheme, APL, Smalltalk, CHIP-8 and Forth, each a cartridge you select from the
+  Scheme, APL, Smalltalk and Forth, each a cartridge you select from the
   front panel, each keeping its own memory when you switch away.
 - **A disk in the old measurements.** The volume is 512 sectors of 256 bytes,
   named files with a lock bit, a catalogue with a `*` beside the protected ones,
@@ -71,8 +72,7 @@ would recognise; the right is what is actually running.
 | A CRT with phosphor and glass | `retroPalette` plus `CrtOverlay`, applied to the whole machine | The fantasy is total: choosing amber recolours header, editor, canvas and glass together |
 | A settings screen you reach with `CONFIG` | A live-preview dialog that persists under `retroComputer/config` | The ritual is period; the preview and Cancel are courtesy |
 | A 64×32 CHIP-8 screen | A 60 Hz machine with timers, a keypad, a register inspector and a memory view | The chip is small; the tools around it are not |
-| A prompt | A persistent REPL with bindings in eight of the eleven ROMs | You can learn interactively, as the 1980s promised, and keep what you defined |
-| A machine that answers questions about itself | The Studio's assistant, in a dialog opened from the HB-1's header or the CHIP-8's toolbar | The 1982 face stays; the explanation is one button away, and what it is sent is the program the machine is holding -- see [AI.md](AI.md) |
+| A prompt | A persistent REPL with bindings in eight of the ten ROMs | You can learn interactively, as the 1980s promised, and keep what you defined |
 
 The machines also disagree with history where history was simply wrong. Two
 examples:
@@ -93,10 +93,10 @@ examples:
 | What it is | A complete home computer: CRT, prompt, ROM socket, editor, canvas, disk | A virtual machine: 4K of memory, sixteen registers, sixteen keys | A 1992 workstation: a bus, a framebuffer, four channels of sampled audio, a desktop |
 | Year, in its universe | 1982 | 1977 | 1992 |
 | Screen | TEXT / SPLIT / GRAPHICS sharing one CRT | 64×32 monochrome, or 128×64 in SuperChip hi-res | 80×25 text, 320×200×256 and 640×480×16, with the 1982 map as `MODE 0` |
-| Languages | All eleven, one ROM at a time | One: CHIP-8 opcodes | HB-16 machine code, plus nine of the editor's engines on the ROM socket |
+| Languages | All ten, one ROM at a time | One: CHIP-8 opcodes | HB-16 machine code, plus nine of the editor's engines on the ROM socket |
 | Storage | HB DOS 1.0, 512 sectors, one volume | Your own files; the ROM library browses a folder you choose | HB DOS 2.0 with two drives, directories and a sector map, and a cassette |
 | Interaction | A prompt with history, BASIC direct mode, F9 to run | A keypad, 60 frames a second, Run/Step/Reset | A prompt, a monitor, a screen and a listing page; eight processes on a desktop |
-| Where it lives | Tools > **HB-1 Computer…** (`Ctrl+Alt+W`), or `./run.sh --computer` | Tools > **CHIP-8 Emulator…** (`Ctrl+Shift+M`) | Tools > **HB-2 Model 92…** (`Ctrl+Alt+2`), or `./run.sh --hb2` |
+| Where it lives | **Tools > HB-1 Computer...** (`Ctrl+Alt+W`), or `native/build/time_warp_hb1` | **Tools > CHIP-8 Emulator...** (`Ctrl+Shift+M`), or `native/build/time_warp_chip8 [file]` | **Tools > HB-2 Model 92...** (`Ctrl+Alt+2`), or `native/build/time_warp_hb2` |
 | Manual | [HB-1 Owner's Manual](hb1/README.md) | [CHIP-8 Machine Manual](chip8/README.md) | [HB-2 Manual](hb2/README.md) and [HB-16](hb2/instruction-set.md) |
 | Teaches | That a computer is a system: memory, storage, languages, a screen | That a computer is a machine: fetch, decode, execute, 4K at a time | That a system is a set of programs: a bus, a processor, an operating system and a desk to put them on |
 
@@ -111,14 +111,15 @@ at once.
 
 ## What they share
 
-None of the three is a special case inside the application:
+None of the three is a special case: each is an application of its own, built
+from the same libraries the Studio uses:
 
 - the HB-1 and the CHIP-8 draw through the same `CanvasCommandQueue` the editor
   drains into the turtle canvas, and the HB-2 composes its own framebuffer from the
   same kind of command the machine's `INT` services leave behind;
 - all three run programs on the same native engines — `timewarp_lang` for the
-  line-by-line languages, `timewarp_scheme` for Scheme, and the CHIP-8 assembler and
-  machine that the editor's whole-program Run uses. The HB-2's ROM socket puts nine of
+  line-by-line languages, `timewarp_scheme` for Scheme, and `timewarp_chip8_engine`
+  for the CHIP-8 assembler and machine. The HB-2's ROM socket puts nine of
   those engines on the machine's own bus through `Interpreter::MachineBus`, so a
   language program's `POKE` reaches the machine rather than a map beside it;
 - the two home computers use `NativeRunner` for a run that finishes and `ReplRunner`
@@ -130,7 +131,7 @@ None of the three is a special case inside the application:
 
 All three are native and none involves a second interpreter. What the
 parity gate compares against is a recorded corpus, not a live engine — see
-[ARCHITECTURE.md](ARCHITECTURE.md) and [README_TESTING.md](README_TESTING.md).
+[the architecture](maintainer/architecture.md) and [the testing guide](maintainer/testing.md).
 
 ---
 
@@ -141,7 +142,7 @@ parity gate compares against is a recorded corpus, not a live engine — see
 | Book | What it covers |
 | --- | --- |
 | [Owner's Manual](hb1/README.md) | The front panel, first boot, everyday operation, what the machine remembers, the limits |
-| [The ROM library](hb1/roms.md) | All eleven languages as ROMs: banner, prompt, direct mode, session, worked examples |
+| [The ROM library](hb1/roms.md) | All ten languages as ROMs: banner, prompt, direct mode, session, worked examples |
 | [HB DOS 1.0](hb1/hb-dos.md) | The disk: every word, the catalogue, the errors, the image format |
 | [CONFIG](hb1/config.md) | Every setting, every default, the phosphors and the glass, where it is stored |
 | [Inside the HB-1](hb1/inside.md) | How a keystroke becomes ink: the objects behind the screen |
@@ -156,10 +157,10 @@ parity gate compares against is a recorded corpus, not a live engine — see
 
 ### Around them
 
-- [USER_GUIDE.md](USER_GUIDE.md) — the IDE the machines live in: projects, the
+- [The Studio](user/the-studio.md) — the IDE the machines come with: projects, the
   REPL bar, debugging, SQL, automation.
-- [LANGUAGE_GUIDE.md](LANGUAGE_GUIDE.md) — the command reference for all eleven
-  languages, reachable from either machine.
+- [The reference](languages/reference.md) — the command reference for all ten
+  languages.
 - [tutorials/](tutorials/) — one tutorial per language.
-- [ARCHITECTURE.md](ARCHITECTURE.md) — how the pieces are put together, for
+- [Architecture](maintainer/architecture.md) — how the pieces are put together, for
   people changing them.

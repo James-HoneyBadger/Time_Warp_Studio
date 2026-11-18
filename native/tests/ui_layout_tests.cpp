@@ -108,6 +108,7 @@ int main(int argc, char** argv) {
     test_status_bar_badge_placement();
     test_outline_dock_starts_hidden();
     test_menu_structure();
+    test_the_tools_menu_launches_the_three_machines();
     test_print_entries_follow_the_component();
     test_help_menu_opens_the_documentation();
     test_edit_menu_has_find_in_files();

@@ -95,7 +95,7 @@ Read left to right:
 
 - **`*`** — the file is locked. A space means it is not.
 - **The type column** — the ROM that can run the file, in capitals, padded to ten
-  characters: `BASIC`, `LOGO`, `SMALLTALK`, `CHIP-8`.
+  characters: `BASIC`, `LOGO`, `SMALLTALK`, `FORTH`.
 - **The size** — three digits, zero-padded: sectors used by that file.
 - **The name** — as catalogued.
 

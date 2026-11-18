@@ -23,7 +23,8 @@
 # did is answered by running it here rather than by asking a second interpreter.
 
 add_executable(time_warp_check tools/check.cpp)
-target_link_libraries(time_warp_check PRIVATE ${TIME_WARP_QT}::Core timewarp::lang timewarp::scheme)
+target_link_libraries(time_warp_check PRIVATE ${TIME_WARP_QT}::Core timewarp::lang
+                                  timewarp::scheme timewarp::chip8_engine)
 timewarp_enable_warnings(time_warp_check)
 
 # ---------------------------------------------------------------------------

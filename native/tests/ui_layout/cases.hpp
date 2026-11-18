@@ -54,6 +54,7 @@ void test_tool_bar_configuration();
 void test_status_bar_badge_placement();
 void test_outline_dock_starts_hidden();
 void test_menu_structure();
+void test_the_tools_menu_launches_the_three_machines();
 void test_print_entries_follow_the_component();
 void test_help_menu_opens_the_documentation();
 void test_editor_minimap_and_whitespace();

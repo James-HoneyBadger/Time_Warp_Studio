@@ -222,11 +222,10 @@ worst case is a frame that shows the previous character, never a half-written va
 ## Why the Python engine is not involved
 
 Every ROM runs on a native engine: `timewarp_lang` for the line-by-line
-languages, `timewarp_scheme` for Scheme, and the assembler and machine behind
-CHIP-8. The machine never starts `python3`, and neither does anything else in the product:
+languages and `timewarp_scheme` for Scheme. The machine never starts `python3`, and neither does anything else in the product:
 the native engines are the only implementation. The parity gate compares them with a
 recorded corpus rather than with a live reference. See
-[ARCHITECTURE.md](../ARCHITECTURE.md).
+[the architecture](../maintainer/architecture.md).
 
 That is also why the HB-1 loads instantly and cannot fail for want of an
 interpreter: it is the same in-process code the editor runs, wearing a CRT.
@@ -241,9 +240,7 @@ the comments say so where it mattered:
 - `hb_dos.hpp` — why a disk is a JSON file and why `INIT` asks twice;
 - `retro_settings.hpp` — why a monitor is a palette and not a tint;
 - `retro_computer.hpp` — why the prompt is a session and `RUN` is not;
-- `panels.hpp` (`CrtOverlay`) — why curvature is a bezel and not a shader;
-- `chip8.hpp` — why the machine keeps the 1977 quirks rather than the convenient
-  ones.
+- `panels.hpp` (`CrtOverlay`) — why curvature is a bezel and not a shader.
 
-Reading those five comments is the fastest way to understand what this machine is
+Reading those four comments is the fastest way to understand what this machine is
 for.

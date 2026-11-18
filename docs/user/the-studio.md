@@ -28,6 +28,14 @@ A document's language comes from its extension. Choosing another language in the
 records an override on that document, so selecting REXX for a file called `thing.txt` is
 not undone the next time the badges refresh.
 
+A CHIP-8 program is a document too. A `.ch8`, `.c8`, `.rom` or `.bin` file opens with
+**CHIP-8** in the badge, and **Run** assembles it and draws the machine's screen on the
+canvas, with gutter breakpoints and a rewind strip like any other program. A file of bytes
+rather than text opens read-only, because a keystroke in a binary ROM is a corrupt program
+waiting to be saved; a listing in the same extension stays editable. The machine's own
+window is [a separate application](../MACHINES.md), and **Tools > CHIP-8 Emulator...**
+opens it on the document in front.
+
 Everything that acts on a set of documents covers both panes: a document in the split is
 unsaved work like any other, so it carries the same unsaved marker, is snapshotted by
 autosave, is asked about when the window closes, and is raised rather than opened a
@@ -52,6 +60,15 @@ The tab's context menu:
 Closing asks first when a document has unsaved changes. For the two multi-tab entries it
 asks about every one of them before removing any, so Cancel leaves the window exactly as
 it was.
+
+### The three machines
+
+**Tools** starts the three machine applications, which are programs beside the Studio
+rather than windows inside it: **HB-1 Computer...** (`Ctrl+Alt+W`), **CHIP-8 Emulator...**
+(`Ctrl+Shift+M`) and **HB-2 Model 92...** (`Ctrl+Alt+2`). Each has its own window, its own
+settings and [its own manual](../MACHINES.md); the Studio keeps running while one is open,
+and closing the machine does not close the Studio. A build that did not produce a machine
+says so when the entry is chosen, rather than doing nothing.
 
 ### Finding things
 
@@ -391,3 +408,4 @@ directory, which is how the tests avoid touching a real learner's files.
 | `Ctrl+Alt+A`, `Ctrl+Alt+H` | Text size, high contrast |
 | `Shift+F10`, `F11`, `Shift+F11` | Next theme, focus mode, presentation mode |
 | `F1`, `Ctrl+F1`, `F12`, `F10` | Context help, keyword inspector, guided tour, command palette |
+| `Ctrl+Alt+W`, `Ctrl+Shift+M`, `Ctrl+Alt+2` | Start the HB-1, the CHIP-8 window, the HB-2 (see [the machines](../MACHINES.md)) |

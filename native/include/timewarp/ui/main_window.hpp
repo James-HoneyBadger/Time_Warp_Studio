@@ -788,6 +788,10 @@ private:
     /// application was installed, and a menu built once would be a menu of the
     /// directories that happened to exist when the window was created.
     void rebuildExamplesMenu();
+    /// Starts one of the three machine applications, which are executables beside
+    /// the Studio rather than windows inside it. Returns false when the build did
+    /// not produce it, so the caller can say so instead of doing nothing.
+    bool launchMachine(const QString& programme, const QString& argument = {});
     /// Opens an example program as a document.
     void openExample(const QString& path);
 
@@ -877,6 +881,10 @@ private:
     /// The language shown for an editor: from its path, or the default when the
     /// document has no name yet.
     [[nodiscard]] static Language languageOf(const CodeEditor* editor);
+    /// Whether the editor holds a CHIP-8 program. The machine has no `Language` of
+    /// its own -- it is not one of the ten the registry lists -- so its documents are
+    /// recognised by their extension and run through the machine's own executor.
+    [[nodiscard]] static bool isChip8Document(const CodeEditor* editor);
     /// The name shown for an editor: the file name, or its untitled label.
     [[nodiscard]] static QString nameOf(const CodeEditor* editor);
 
@@ -1143,9 +1151,10 @@ private:
     /// because three callers need it and a missed one means two programs drawing
     /// into the same canvas.
     void stopEngines();
-    /// Runs `editor` on the native engine for a language that has been ported.
+    /// Runs `editor` on the native engine for a language that has been ported, or
+    /// as CHIP-8 when `chip8` is set.
     void runNatively(CodeEditor* editor, timewarp::lang::Language language,
-                     const QString& source);
+                     const QString& source, bool chip8 = false);
     /// Tears down the current run and waits for its thread, then empties the
     /// queue so no command from the old run can land on the fresh canvas.
     void finishRun(const QString& error, bool completed);

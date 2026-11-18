@@ -1,6 +1,6 @@
 10 REM ============================================================
 20 REM HB-1: THE MAP, READ RATHER THAN BELIEVED
-30 REM The self-test says the machine has 32K, a screen and eleven
+30 REM The self-test says the machine has 32K, a screen and ten
 40 REM ROMs. This asks the address space instead: four PEEKs, one
 50 REM from each region the map documents, and a line about what
 60 REM answered. A hole in the map answers zero, which is a thing

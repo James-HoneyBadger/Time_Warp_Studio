@@ -83,7 +83,7 @@ FD 30
 RT 30
 HOME
 'Then the mean: a square whose side is the average, times four.'
-S ← ((+/ V) ÷ (⍴ V)) × 4
+S ← +/((+/ V) ÷ (⍴ V)) × 4
 FD S
 RT 90
 FD S

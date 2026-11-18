@@ -138,8 +138,8 @@ it makes.
 ## Check the build
 
 ```bash
-ctest --test-dir native/build --output-on-failure   # the 23 suites
-make smoke                                          # the 67 example programs it runs
+ctest --test-dir native/build --output-on-failure   # the 27 suites
+make smoke                                          # the 94 example programs it runs
 make command-matrix                                 # one row per command
 make repl-matrix                                    # the same rows through the REPL
 ./native/build/time_warp_teach validate             # every lesson solution and starter

@@ -807,27 +807,48 @@ void ForthMachine::run_primitive(Primitive primitive, const char* name) {
             turtle_.hide_turtle();
             return;
         case Primitive::Poke: {
-            // `POKE ( value address -- )` writes this program's own 64K, so a poke
-            // and a peek always agree instead of the write vanishing.
+            // `POKE ( value address -- )`. On a machine with a bus the write lands in
+            // the machine's own memory, which is what makes a ROM a language of *this*
+            // computer rather than a program running beside it; in the Studio it goes
+            // to the program's own 64K, so a poke and a peek still agree.
             const long long address = pop(name);
             const long long value = pop(name);
-            constexpr long long limit = 0xFFFF;
+            const long long limit = interpreter_.machine_attached()
+                                        ? static_cast<long long>(
+                                              interpreter_.machine_address_limit()) -
+                                              1
+                                        : 0xFFFF;
             if (address < 0 || address > limit) {
                 throw ForthError{"POKE address must be 0-" + std::to_string(limit)};
             }
             if (value < 0 || value > 255) {
                 throw ForthError{"POKE value must be 0-255"};
             }
+            if (interpreter_.machine_attached()) {
+                if (!interpreter_.machine_poke(static_cast<int>(address),
+                                               static_cast<std::uint8_t>(value))) {
+                    throw ForthError{"POKE " + std::to_string(address) +
+                                     " is ROM: it cannot be written"};
+                }
+                return;
+            }
             memory_[static_cast<std::size_t>(address)] = static_cast<std::uint8_t>(value);
             return;
         }
         case Primitive::Peek: {
             const long long address = pop(name);
-            constexpr long long limit = 0xFFFF;
+            const long long limit = interpreter_.machine_attached()
+                                        ? static_cast<long long>(
+                                              interpreter_.machine_address_limit()) -
+                                              1
+                                        : 0xFFFF;
             if (address < 0 || address > limit) {
                 throw ForthError{"PEEK address must be 0-" + std::to_string(limit)};
             }
-            push(static_cast<long long>(memory_[static_cast<std::size_t>(address)]));
+            push(static_cast<long long>(interpreter_.machine_attached()
+                                            ? interpreter_.machine_peek(
+                                                  static_cast<int>(address))
+                                            : memory_[static_cast<std::size_t>(address)]));
             return;
         }
         case Primitive::Bye:

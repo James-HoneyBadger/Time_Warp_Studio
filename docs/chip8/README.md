@@ -292,8 +292,7 @@ says the program had not halted, rather than calling it a failure.
 
 - Write a listing: [the assembler](assembly.md).
 - Read the opcodes: [the instruction set](instruction-set.md).
-- Learn the language: [tutorials/chip8.md](../tutorials/chip8.md) and
-  [LANGUAGE_GUIDE.md](../LANGUAGE_GUIDE.md#chip-8).
+- Learn the language: [tutorials/chip8.md](../tutorials/chip8.md).
 - See what a later release could add: [enhancements](enhancements.md), the
   proposals written down for after 25.0 and still open.
 - Compare machines: [the HB-1](../hb1/README.md).
@@ -302,7 +301,7 @@ says the program had not halted, rather than calling it a failure.
 
 ## Programs to run on it
 
-Ten listings ship in [`Examples/chip8/`](../../Examples/chip8/). Four of them are
+Eighteen listings ship in [`Examples/chip8/`](../../Examples/chip8/). A few are
 machine-wide tours; the rest each teach one idea, and every one of them assembles
 and draws under the smoke gate.
 
@@ -319,3 +318,10 @@ and draws under the smoke gate.
 | [`font_ledger.ch8`](../../Examples/chip8/font_ledger.ch8) | `LD B, Vx` and `FX29`: 147 becomes three font digits on the screen |
 | [`keypad_probe.ch8`](../../Examples/chip8/keypad_probe.ch8) | `FX0A` with a seeded key in the editor and a real keypad in the window |
 | [`rewind_lab.ch8`](../../Examples/chip8/rewind_lab.ch8) | Three sprites placed for the editor's breakpoint-and-rewind exercise |
+| [`font_and_frames.ch8`](../../Examples/chip8/font_and_frames.ch8) | The built-in digit font, drawn and tested |
+| [`bounce.ch8`](../../Examples/chip8/bounce.ch8) | A comet that bounces off the four edges and leaves its trail behind |
+| [`catch.ch8`](../../Examples/chip8/catch.ch8) | A small arcade game: drops fall, a paddle catches them |
+| [`countdown.ch8`](../../Examples/chip8/countdown.ch8) | Nine to zero once a second, with a bar that drains as it goes |
+| [`maze.ch8`](../../Examples/chip8/maze.ch8) | A box with walls in it and a dot you walk around them |
+| [`spinner.ch8`](../../Examples/chip8/spinner.ch8) | Four shapes turning in place, twelve frames apart |
+| [`typewriter.ch8`](../../Examples/chip8/typewriter.ch8) | Type on the keypad and the machine writes it down |

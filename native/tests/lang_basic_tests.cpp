@@ -300,6 +300,21 @@ void test_basic_str_of_an_array_element_is_printed() {
     TW_CHECK_EQ(run.output.at(1), std::string{"14"});
 }
 
+// `STR$` takes a *value*, so a nested function and an arithmetic sum both work. The
+// argument used to be read by the string evaluator, which turned `N + 1` into the
+// concatenation of an unset string variable (`1`) and failed `INT(...)` outright.
+void test_basic_str_takes_a_numeric_expression() {
+    const BasicRun run = run_basic(
+        "N = 42\nPRINT STR$(N)\nPRINT STR$(N + 1)\nPRINT STR$(INT(3.7))\n"
+        "PRINT STR$(INT(3.7) * 2)\nA$ = \"12\"\nPRINT STR$(A$)");
+    TW_CHECK_EQ(run.output.size(), std::size_t{5});
+    TW_CHECK_EQ(run.output.at(0), std::string{"42"});
+    TW_CHECK_EQ(run.output.at(1), std::string{"43"});
+    TW_CHECK_EQ(run.output.at(2), std::string{"3"});
+    TW_CHECK_EQ(run.output.at(3), std::string{"6"});
+    TW_CHECK_EQ(run.output.at(4), std::string{"12"});
+}
+
 // A `FUNCTION ... END FUNCTION` the program defined is callable from an expression:
 // the body's statements are run by the machine, parameters are bound and restored,
 // and what the body printed appears before the line that called it.

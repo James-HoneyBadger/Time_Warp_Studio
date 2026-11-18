@@ -2,7 +2,7 @@ name: WebAssembly
 
 # The browser build of the same Qt application: `TW_BUILD_WASM=ON` against Qt for
 # WebAssembly, assembled into one directory with `wasm/index.html`, uploaded as an
-# artifact, and published to `gh-pages` from a tag.
+# artifact, and deployed through GitHub Pages from a tag.
 #
 # Why a container rather than `install-qt-action`: a WebAssembly build needs three
 # things that have to agree with each other -- emsdk, a host Qt for `moc`/`rcc`, and a

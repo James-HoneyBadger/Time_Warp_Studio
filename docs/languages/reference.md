@@ -583,6 +583,11 @@ an answer of `PARIS` and `Wrong` for anything else. A jump to a label that does 
 exist reports `Label 'NOWHERE' not found` and the lesson continues at the next line.
 A mistyped label costs a unit, not the run.
 
+`B:` reads the label after its **first** `=`, so a condition cannot contain one: `B: X >= 3
+= *HIT` puts the label after the `=` inside `>=` and the condition reads `X >`. Write the
+same test without the character — `B: X > 2 = *HIT` — or make it a difference, as
+`B: ABS(PCT - 100) < 1 = *PERFECT` does for an equality.
+
 ### Graphics and files
 
 | Form | Effect | Example |

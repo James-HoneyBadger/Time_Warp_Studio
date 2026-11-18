@@ -14,7 +14,7 @@
   0 DO 42 EMIT LOOP CR ;
 
 ." *** HB-1 FORTH ***" CR
-." The eleventh language, in a socket." CR
+." The tenth language, in a socket." CR
 CR
 
 ." Two and three make " 2 3 + . CR

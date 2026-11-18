@@ -2,6 +2,8 @@
 
 #include "timewarp/ui/chip8_library.hpp"
 
+#include "timewarp/ui/chip8_text.hpp"
+
 #include "timewarp/ui/chip8_archive.hpp"
 
 #include <QDialogButtonBox>
@@ -26,13 +28,6 @@ namespace {
 
 constexpr auto kFolderKey = "chip8/romFolder";
 
-/// A ROM may be a listing or a raw image. CHIP-8 is a separate application, so its
-/// file suffixes do not belong in the Studio's language registry.
-[[nodiscard]] bool isRomSuffix(const QString& suffix) {
-    const std::string lower = suffix.toLower().toStdString();
-    return lower == "ch8" || lower == "c8" || lower == "rom" || lower == "bin";
-}
-
 }  // namespace
 
 QList<Chip8Rom> chip8RomsIn(const QString& folder) {
@@ -52,7 +47,7 @@ QList<Chip8Rom> chip8RomsIn(const QString& folder) {
                           QDirIterator::Subdirectories};
     while (iterator.hasNext()) {
         const QString path = iterator.next();
-        if (!isRomSuffix(QFileInfo{path}.suffix())) {
+        if (!isChip8RomFile(path)) {
             continue;
         }
         roms.append(Chip8Rom{path, root.relativeFilePath(path)});

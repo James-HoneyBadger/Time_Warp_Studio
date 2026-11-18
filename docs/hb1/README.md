@@ -10,11 +10,13 @@ READY.
 ```
 
 This is the manual for the machine the Studio carries: a home computer from a
-1982 that never happened, where one socket accepted eleven language ROMs and the
+1982 that never happened, where one socket accepted ten language ROMs and the
 disk was measured in sectors because disks were still physical things. The
 machine is real software — everything in this book happens when you type it.
 
-- **Open it:** Tools > **HB-1 Computer…** (`Ctrl+Alt+W`), or `./run.sh --computer`.
+- **Open it:** **Tools > HB-1 Computer...** (`Ctrl+Alt+W`) in the Studio, or
+  `./native/build/time_warp_hb1`. The machine is an application of its own, not a window
+  inside the Studio.
 - **The surrounding story:** [the machines](../MACHINES.md).
 - **The rest of this book:** [ROMs](roms.md) · [HB DOS](hb-dos.md) · [WARP BOARD](bbs.md) ·
   [CONFIG](config.md) · [Inside](inside.md).
@@ -26,7 +28,7 @@ machine is real software — everything in this book happens when you type it.
 | | |
 | --- | --- |
 | Model | HB-1 Personal Computer System |
-| ROM socket | Eleven language ROMs: BASIC, APL, Logo, PILOT, FOCAL, Scheme, CHIP-8, COMAL, REXX, Smalltalk, Forth |
+| ROM socket | Ten language ROMs: BASIC, APL, Logo, PILOT, FOCAL, Scheme, COMAL, REXX, Smalltalk, Forth |
 | Program memory | 64K, one buffer per ROM, kept when you switch away |
 | Display | One CRT, three modes: TEXT, SPLIT (the default), GRAPHICS |
 | Text side | PROGRAM (a real code editor) and SCREEN (the tube, painted from memory) |
@@ -51,7 +53,7 @@ otherwise — and prints its **self-test** and then the banner above:
 HB-1 SELF TEST
 32768 BYTES FREE
 RAM CHECK OK (128 CELLS)
-ROM CHECK OK (11 ROMS, 3352561743)
+ROM CHECK OK (10 ROMS, 2335301572)
 HB DOS 1.0  HBWARP
 *** HB-1 ***
 …
@@ -339,7 +341,7 @@ control, or make one by hand:
 }
 ```
 
-`language` is a ROM's protocol key (`basic`, `logo`, `pilot`, … — the eleven the Studio
+`language` is a ROM's protocol key (`basic`, `logo`, `pilot`, … — the ten the Studio
 has), `mode` is `0` TEXT, `1` GRAPHICS or `2` SPLIT (the order of the machine's own
 `ScreenMode`, which is what the number is), and `volume` is the HB DOS volume
 itself — the file it lives in is the reader's business, so a disk handed to somebody
@@ -347,27 +349,19 @@ else is a volume rather than a path on this machine.
 
 ---
 
-## Running the machine from a terminal
+## Running the machine
+
+The HB-1 is its own application. **Tools > HB-1 Computer...** (`Ctrl+Alt+W`) starts it, and
+so does the executable the build writes beside the Studio:
 
 ```bash
-./run.sh --computer                                  # open the machine
-./run.sh --computer Examples/basic/hello.bas --run    # boot its language and run it
-./run.sh --computer --screenshot hb1.png             # photograph the machine
-./run.sh --computer Examples/logo/mandala.logo --run --export mandala.png
-./run.sh --machine hv.hb1                            # boot a machine image
-./run.sh --machine hv.hb1 --screenshot hv.png        # photograph that machine
+cmake --build native/build --target time_warp_hb1   # build the machine
+./native/build/time_warp_hb1                        # open it
 ```
 
-With `--computer`, `--run`, `--screenshot` and `--export` act on the machine
-rather than the editor: the screenshot is of the machine's window, and the export
-is the ink on the machine's canvas. A script that demonstrates the boot screen
-therefore captures the boot screen, not the IDE with a small window on top of it.
-
-The binary takes the same options directly:
-
-```bash
-./native/build/time_warp_ide --computer --help
-```
+It opens on the ROM it last used, with the program that ROM was holding if
+*Remember each ROM's program* is on. There is no editor beside it and no window
+on top of it: the machine is the application.
 
 ---
 
@@ -377,7 +371,7 @@ A machine is defined by what it will not do.
 
 | Limit | Value | What happens at the edge |
 | --- | --- | --- |
-| ROMs | Eleven, one at a time | Nothing else exists to select |
+| ROMs | Ten, one at a time | Nothing else exists to select |
 | Program memory | One buffer per ROM | Switching keeps it; closing the machine keeps it only if *Remember each ROM's program* is on |
 | Screen | TEXT, SPLIT, GRAPHICS | A whole-program run cannot show more |
 | Disk volume | One, named `HBWARP` | There are no directories and no second volume |
@@ -437,7 +431,7 @@ their ROM, so the disk cannot rot without a test failing.
 
 ## Where next
 
-- Learn the eleven ROMs: [the ROM library](roms.md).
+- Learn the ten ROMs: [the ROM library](roms.md).
 - Keep a program: [HB DOS 1.0](hb-dos.md).
 - Call somebody: [WARP BOARD](bbs.md), the board on the other end of the line.
 - Make it yours: [CONFIG](config.md).

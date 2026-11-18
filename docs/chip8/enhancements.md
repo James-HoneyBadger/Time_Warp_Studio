@@ -1,9 +1,9 @@
 # CHIP-8 enhancements
 
-Time Warp Studio 27.0 is the current release — 24.0, the golden one, is archived —
+Time Warp Studio 30.0.0 is the current release — 24.0, the golden one, is archived —
 and the machine described in [the machine manual](README.md), its
 [assembler](assembly.md) and its [instruction set](instruction-set.md) are finished
-and validated by the gates in [README_TESTING](../README_TESTING.md). Everything here
+and validated by the gates in [the testing guide](../maintainer/testing.md). Everything here
 is a **proposal written for after 25.0 and still open** — specified with a way to
 prove each item, so a future release has something to build to.
 

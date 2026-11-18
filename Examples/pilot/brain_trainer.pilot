@@ -394,9 +394,9 @@ T: Percentage: $PCT%
 T: Hints used: $HINTS_USED
 T:
 M: *
-B: SCORE >= 13 = *genius
-B: SCORE >= 10 = *excellent
-B: SCORE >= 7 = *good
+B: SCORE > 12 = *genius
+B: SCORE > 9 = *excellent
+B: SCORE > 6 = *good
 J: *needs_work
 
 *genius

@@ -10,8 +10,8 @@
 # the same commit, exactly like unbuilt.txt.
 #
 # One row: label | value | page:phrase, `;`-separated, `#` starts a comment.
-suites | 23 | docs/maintainer/roadmap.md:23 CTest suites; docs/maintainer/testing.md:There are 23 suites; docs/user/getting-started.md:the 23 suites; CONTRIBUTING.md:the 23 C++ suites; docs/maintainer/release.md:the 23 C++ suites
+suites | 27 | docs/maintainer/roadmap.md:27 CTest suites; docs/maintainer/testing.md:There are 27 suites; docs/user/getting-started.md:the 27 suites; CONTRIBUTING.md:the 27 C++ suites; docs/maintainer/release.md:the 27 C++ suites
 golden | 636 | docs/maintainer/roadmap.md:636 programs; docs/maintainer/release.md:636 programs; docs/maintainer/testing.md:636 programs; CONTRIBUTING.md:636 programs; .github/copilot-instructions.md:636 programs
 command-rows | 534 | docs/maintainer/roadmap.md:534 command rows
-smoke | 67 | docs/maintainer/roadmap.md:67 example programs; docs/user/getting-started.md:the 67 example programs; docs/maintainer/release.md:67 example programs
-examples | 68 | .github/copilot-instructions.md:68 programs across; docs/maintainer/roadmap.md:with 68 example programs
+smoke | 94 | docs/maintainer/roadmap.md:94 example programs; docs/user/getting-started.md:the 94 example programs; docs/maintainer/release.md:94 example programs
+examples | 77 | .github/copilot-instructions.md:77 programs in the ten languages; docs/maintainer/roadmap.md:with 77 example programs

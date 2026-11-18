@@ -37,6 +37,7 @@
 #include <QPrintDialog>
 #include <QPrinter>
 #endif
+#include <QProcess>
 #include <QPushButton>
 #include <QSaveFile>
 #include <QSet>
@@ -1097,6 +1098,28 @@ void MainWindow::copyDrawingToClipboard() {
     }
     QGuiApplication::clipboard()->setImage(turtle_canvas_->renderedDrawing());
     setExecutionState(tr("ready"), tr("Copied the drawing"));
+}
+
+bool MainWindow::launchMachine(const QString& programme, const QString& argument) {
+#ifdef __EMSCRIPTEN__
+    // The browser build has no sibling executables to start: the Studio is the
+    // whole page.
+    static_cast<void>(programme);
+    static_cast<void>(argument);
+    return false;
+#else
+    // Beside the Studio, because that is where the build writes all four programs
+    // and an installed package puts them.
+    const QString path = QCoreApplication::applicationDirPath() + QLatin1Char('/') + programme;
+    if (!QFileInfo{path}.isExecutable()) {
+        return false;
+    }
+    QStringList arguments;
+    if (!argument.isEmpty()) {
+        arguments << argument;
+    }
+    return QProcess::startDetached(path, arguments);
+#endif
 }
 
 QPlainTextEdit* MainWindow::editTarget() const {

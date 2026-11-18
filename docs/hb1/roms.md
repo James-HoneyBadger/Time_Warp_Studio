@@ -1,6 +1,6 @@
 # The ROM library
 
-Eleven languages, one socket. Selecting a ROM on the front panel cold-boots the
+Ten languages, one socket. Selecting a ROM on the front panel cold-boots the
 machine into it: both engines stop, the screen clears, the ROM's program memory is
 brought back, and the banner names the language you are about to use.
 
@@ -8,7 +8,7 @@ This is the parallel-universe premise made concrete. A 1982 machine with a ROM
 socket could have shipped the languages of the era as cartridges; this one
 does, and each cartridge knows how to talk to the learner in its own voice.
 
-- **Eleven ROMs:** BASIC, APL, Logo, PILOT, FOCAL, Scheme, CHIP-8, COMAL, REXX,
+- **Ten ROMs:** BASIC, APL, Logo, PILOT, FOCAL, Scheme, COMAL, REXX,
   Smalltalk, Forth.
 - **One prompt each:** the machine echoes what you type in the ROM's prompt —
   `READY.` for BASIC, `?` for Logo, `]` for COMAL, and so on.
@@ -27,7 +27,6 @@ does, and each cartridge knows how to talk to the learner in its own voice.
 | PILOT | `V1.0` | `PILOT:` | `PROGRAMMED INSTRUCTION` |
 | FOCAL | `V1969` | `*` | `FORMULA CALCULATOR` |
 | Scheme | `V84` | `>` | `LISP MACHINE` |
-| CHIP-8 | `V1.0` | `CHIP8>` | `VIRTUAL CONSOLE` |
 | COMAL | `V2.1` | `]` | `STRUCTURED BASIC` |
 | REXX | `V3.0` | `REXX>` | `SCRIPT PROCESSOR` |
 | Smalltalk | `V80` | `ST>` | `OBJECT WORKBENCH` |
@@ -66,12 +65,12 @@ lines:
 `PRINT X` works, in whatever spelling the language uses. Scheme additionally
 keeps definitions and echoes the value of an expression.
 
-**Smalltalk, CHIP-8 and Forth** — each submission is a whole program and nothing is
+**Smalltalk and Forth** — each submission is a whole program and nothing is
 carried between lines (Logo is whole-program too, and keeps its variables while its
 procedure definitions do not survive an entry). A Forth definition spans as many lines as it likes, so the prompt
 takes the whole entry as one program and the dictionary it built goes with it. That is the languages' own nature, not a limitation of the
-machine: a Smalltalk workspace is rebuilt per submission, and a CHIP-8 listing is
-assembled and run to completion.
+machine: a Smalltalk workspace is rebuilt per submission, and a Forth dictionary
+is rebuilt with it.
 
 `RUN` (F9) always runs the PROGRAM page as one program, on the language's own
 engine, and ends the prompt session first. See
@@ -166,24 +165,6 @@ expression typed alone echoes its value.
 
 ---
 
-## CHIP-8
-
-The odd one out, and deliberately: in the HB-1 the CHIP-8 ROM takes a **listing**
-at the prompt or on the PROGRAM page, assembles it, and runs it on the 64×32
-virtual screen, drawing into the canvas. `RUN` executes the whole listing once,
-ten opcodes to a frame, up to the frame limit.
-
-That is the right model for demonstrating an instruction, not for playing a
-game: there is no keypad on the HB-1's front panel. For a live CHIP-8 — 60 frames
-a second, sixteen keys, sound, a register inspector — open the
-[CHIP-8 machine](../chip8/README.md) instead. The two share the assembler and the
-machine; only the clock and the keypad differ.
-
-**Start with:** `Examples/chip8/paint.ch8` in the CHIP-8 window, or a short
-listing at this ROM's prompt from [the assembler](../chip8/assembly.md).
-
----
-
 ## COMAL
 
 Structured BASIC, `]` prompt, procedures that behave. The ROM is the bridge
@@ -236,7 +217,7 @@ Selecting a ROM is a cold boot, not a tab switch:
 3. The new ROM's program is brought back.
 4. The screen and the canvas are cleared and the banner is printed.
 
-Nothing on the disk moves: `CATALOG` looks the same in all eleven ROMs, because the
+Nothing on the disk moves: `CATALOG` looks the same in all ten ROMs, because the
 disk is the machine's, not the language's. A saved file records the ROM that can
 run it, so `LOAD "SQUARE"` cold-boots the machine into Logo before the program
 arrives. See [HB DOS](hb-dos.md#files-and-their-roms).
@@ -247,6 +228,6 @@ arrives. See [HB DOS](hb-dos.md#files-and-their-roms).
 
 The socket is the `Language` enum, and a ROM is a row in the machine's table
 (version, prompt and banner note) plus an engine. Adding one is the same work as
-adding a language to the Studio; `docs/ARCHITECTURE.md` and `native/README.md`
+adding a language to the Studio; `docs/maintainer/architecture.md` and `native/README.md`
 have the recipe, and [Inside the HB-1](inside.md) shows where the ROM table
 lives.

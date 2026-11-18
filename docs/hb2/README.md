@@ -6,8 +6,8 @@ a processor of its own. It is the machine the [Model 92 proposal](../hb1/model-9
 described, and this page is its owner's manual.
 
 ```bash
-# The machine, in the window: Tools > HB-2 Model 92 (Ctrl+Alt+2)
-./native/build/time_warp_ide --hb2
+# The machine, in its own window: Tools > HB-2 Model 92 (Ctrl+Alt+2)
+./native/build/time_warp_hb2
 
 # Assemble and run a listing, and see what it did
 ./native/build/time_warp_gates hb Examples/hb2/desktop.s --ticks 4 --screen
@@ -212,7 +212,8 @@ Eight listings in [Examples/hb2](../../Examples/hb2), each gated by `hb2_tests` 
 
 ## The window
 
-**Tools > HB-2 Model 92…** (`Ctrl+Alt+2`), or `time_warp_ide --hb2`. Four pages:
+**Tools > HB-2 Model 92...** (`Ctrl+Alt+2`), or `./native/build/time_warp_hb2`, opens the
+machine in an application of its own. Four pages:
 
 | Page | What it is |
 | --- | --- |
@@ -258,7 +259,7 @@ back, and `INT 20`-`23` are the same four operations from machine code.
 
 ## The ROM socket
 
-The HB-1's socket held eleven languages. The HB-2's holds the same idea with a processor
+The HB-1's socket held ten languages. The HB-2's holds the same idea with a processor
 underneath it: **nine** of the editor's engines — BASIC, APL, Logo, PILOT, FOCAL, COMAL,
 REXX, Smalltalk and Forth — run on the machine's own hardware through
 [`rom.hpp`](../../native/include/timewarp/hb2/rom.hpp). Scheme is its own machine and
@@ -352,4 +353,4 @@ window, with the socket selector and the gamepad; and the harness.
 Nothing on this page is promised and missing.
 
 [The proposal](../hb1/model-92.md) is the specification all of this was written
-against, and [the roadmap](../ROADMAP.md) says what it cost.
+against, and [the roadmap](../maintainer/roadmap.md) says what it cost.

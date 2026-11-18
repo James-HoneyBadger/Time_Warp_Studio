@@ -37,6 +37,7 @@ struct Chip8Rom {
 /// The folder the library last used, from `QSettings`. Empty until one is chosen;
 /// the dialog then starts at the user's home directory.
 [[nodiscard]] QString storedChip8RomFolder();
+
 /// Stores the folder. An empty string removes the key.
 void storeChip8RomFolder(const QString& folder);
 

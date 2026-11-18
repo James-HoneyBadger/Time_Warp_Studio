@@ -2,7 +2,7 @@
 
 The Studio also builds for the browser: the same Qt application, compiled to
 WebAssembly, served as one page and one `.wasm` module. Every language runs, the
-debugger pauses, the REPL answers and the 68 example programs travel inside the module.
+debugger pauses, the REPL answers and the 77 example programs travel inside the module.
 The project volume survives a reload because it is written to IndexedDB.
 
 This is a build target, not a second application. No interpreter knows about the browser,
@@ -23,7 +23,7 @@ is off.
 | The isolation worker | `wasm/coi-serviceworker.js` | Adds the two headers a threaded module needs, on a host that cannot set them |
 | The examples | `Examples/` | Copied into the module as a resource by `native/cmake/wasm.cmake` |
 | The storage | `native/src/ui/wasm_storage.cpp` | Mounts IndexedDB over the home directory and flushes it at the three points that matter |
-| The workflow | `.github/workflows/wasm.yml` | Validates pull requests, installs the threaded Qt, builds and uploads an artifact; a separate tag job publishes to `gh-pages` |
+| The workflow | `.github/workflows/wasm.yml` | Validates pull requests, installs the threaded Qt, builds and uploads an artifact; a separate tag job deploys it through GitHub Pages |
 
 `wasm/index.html` and `wasm/coi-serviceworker.js` are copied beside the module by the
 build, so `wasm/dist` is the site. <!-- doc-claims: ignore --> Qt's own generated `.html` is a debug wrapper with a

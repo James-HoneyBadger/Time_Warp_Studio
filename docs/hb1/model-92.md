@@ -3,11 +3,11 @@
 Time Warp Studio 25.0 was the current release when this page was written — 24.0, the
 golden one, is archived — and the machine described in
 [the owner's manual](README.md) is finished and validated by the gates in
-[README_TESTING](../README_TESTING.md). This page is the **proposal for after 25.0**
+[the testing guide](../maintainer/testing.md). This page is the **proposal for after 25.0**
 that the HB-2 was built from, kept as it was written so that a reader can compare the
 specification with the machine and see what it cost.
 
-**Status at 27.0.** All eight proposals are built, as the machine now called the
+**Status at 30.0.0.** All eight proposals are built, as the machine now called the
 **HB-2** ([its manual](../hb2/README.md)): the bus and the machine object, the video
 and audio chips, HB DOS 2.0, the input devices, HB-16 with its assembler, disassembler
 and monitor, HB-OS with the desktop, the module bay -- and the window the whole page
@@ -16,10 +16,13 @@ HB-16 from a program's computed address, the cassette is a device with its own w
 its own four services, the joystick registers are fed by the IDE's gamepad so `STICK`
 answers on the machine, and the module bay's fourth kind -- a package of processes --
 boots onto a machine as it stands rather than replacing it. The desktop runs eight
-processes at a time, which is what the specification table below asks for: the eleven of
-the slogan are the eleven languages, not eleven windows on a 320-pixel screen. [The roadmap](../ROADMAP.md) carries the same list, and
+processes at a time, which is what the specification table below asks for: the ten of
+the slogan are the ten languages, not ten windows on a 320-pixel screen. [The roadmap](../maintainer/roadmap.md) carries the same list, and
 [the HB-2 manual's status section](../hb2/README.md#what-is-built-and-what-is-not) is
-the page to read before assuming a proposal here is not done.
+the page to read before assuming a proposal here is not done. The machine itself is a
+program of its own since 30.0.0 (`time_warp_hb2`, or **Tools > HB-2 Model 92...**), and
+the implementation sits in `native/src/hb2/` and `native/include/timewarp/hb2/` -- the
+paths named under *What changes* below are the plan's, not the tree's.
 
 Where [enhancements](enhancements.md) proposes what a 1982 machine left undone, this
 page proposes the machine the same company would have shipped ten years later. It is
@@ -45,7 +48,7 @@ has taken none of them:
 | Concurrency | a desktop, a pointer, and several programs resident | one language at a time: selecting a ROM cold-boots the machine |
 
 The last one is the real gap, and it is the one this project is unusually placed to
-close. Today the ROM socket is mutually exclusive — eleven listings are kept, and one
+close. Today the ROM socket is mutually exclusive — ten listings are kept, and one
 prompt and one run are live. In 1982 that exclusivity *was* the machine: one language
 at a time was what a home computer could afford. In 1992 it was the thing the whole
 industry spent its money abolishing.
@@ -55,11 +58,11 @@ industry spent its money abolishing.
 ## The thesis
 
 > The Model 92 is the machine where the ROM socket became an operating system, and
-> the eleven languages became eleven things running at once.
+> the ten languages became ten things running at once.
 
 That is the 1992 answer to the premise in [the machines](../MACHINES.md): the 1982
-machine's signature idea was *one socket, eleven languages*, so its successor's is
-*one desktop, eleven processes*. The eleven languages stop being cartridges and become
+machine's signature idea was *one socket, ten languages*, so its successor's is
+*one desktop, ten processes*. The ten languages stop being cartridges and become
 the built-in process images, which is also — wryly — what the IDE around this machine
 has been all along. The machine stops being a place you run one thing and becomes a
 place you keep several.
@@ -275,7 +278,7 @@ visible, which is what makes the panel worth having.
 
 ---
 
-### 7. HB-OS: the desktop, and eleven processes
+### 7. HB-OS: the desktop, and ten processes
 
 **What.** A windowed desktop on the machine's own screen: a pointer, windows that move,
 resize, overlap and take focus, an icon strip, and a bar that lists what is running.
@@ -286,7 +289,7 @@ desktop survives it.
 
 **Why.** This is the proposal the rest of the page exists to make possible, and it is
 the one that makes the machine a place rather than an appliance. It is also the honest
-1992 answer to the eleven-language socket: in 1982 you chose a language and cold-booted
+1992 answer to the ten-language socket: in 1982 you chose a language and cold-booted
 into it; in 1992 you keep four of them open. Nothing in the engine layer has to change
 to allow it — a session is already per-visit and per-language — which is the strongest
 argument that the idea belongs to this machine and not to a wish.
@@ -312,7 +315,7 @@ calls; and an **image** module, which is a saved machine. `MODULE` lists what is
 bay, and a loaded module appears in the selector and boots like a built-in ROM.
 
 **Why.** 1992 is the year the cartridge gave way to the floppy and the CD, and in this
-parallel universe the eleven built-in ROMs stay exactly where they are while the socket
+parallel universe the ten built-in ROMs stay exactly where they are while the socket
 becomes something a user can fill. It is the payoff of proposals 4, 6 and 7 together:
 storage to hold a module, a processor to run one, and a desktop to show one in.
 
@@ -357,7 +360,7 @@ table:
 - **Not an emulator of a real computer.** The Model 92 is what this parallel universe
   built, so it is designed to be kind in exactly the places a real 1992 machine was
   cruel — and documented where it chooses to be.
-- **Not a twelfth language.** The eleven stay eleven. They stop taking turns.
+- **Not an eleventh language.** The ten stay ten. They stop taking turns.
 - **Not a theme.** No part of this is a skin: every pixel is a byte, every byte is at an
   address, and every address is in the map the manual prints.
 
