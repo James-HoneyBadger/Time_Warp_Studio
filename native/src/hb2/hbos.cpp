@@ -17,7 +17,6 @@ constexpr std::uint8_t kTitleInk = 15;
 constexpr std::uint8_t kBodyInk = 7;
 constexpr std::uint8_t kShadow = 0;
 constexpr int kTitleHeight = 10;
-constexpr int kBorder = 1;
 constexpr int kTaskBarHeight = 14;
 
 std::string padded(std::string text, std::size_t width) {
