@@ -294,6 +294,7 @@ std::string Machine::execute_statement(std::string_view command) {
     if (cmd == "CLS") {
         turtle_.clear();
         state_.raster.clear(state_.raster.background());
+        interpreter_.machine_clear_screen();
         return "🎨 Screen cleared\n";
     }
     if (starts_with(cmd, "SCREEN ")) {
@@ -459,6 +460,17 @@ std::string Machine::execute_statement(std::string_view command) {
     }
     if (starts_with(cmd, "IN ")) {
         return in_port(strip_comment(tail(text, 3)));
+    }
+    if (starts_with(cmd, "SYS ")) {
+        const std::string argument = strip_comment(trim(tail(text, 4)));
+        if (argument.empty()) {
+            return "❌ SYS needs an address\n";
+        }
+        if (!interpreter_.machine_can_sys()) {
+            return "❌ SYS needs a machine with a processor attached\n";
+        }
+        const int address = static_cast<int>(eval(argument));
+        return interpreter_.machine_sys(address);
     }
     if (starts_with(cmd, "SHELL ")) {
         return shell(strip_comment(tail(text, 6)));

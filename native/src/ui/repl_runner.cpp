@@ -47,6 +47,13 @@ ReplRunner::~ReplRunner() {
     wait();
 }
 
+void ReplRunner::setMachineBus(timewarp::lang::Interpreter::MachineBus bus) {
+    machine_bus_ = std::move(bus);
+    if (session_ != nullptr) {
+        session_->set_machine_bus(machine_bus_);
+    }
+}
+
 void ReplRunner::submit(const QString& command) {
     {
         const std::lock_guard<std::mutex> lock{mutex_};

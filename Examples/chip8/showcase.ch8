@@ -1,0 +1,126 @@
+; ============================================================
+; THE CHIP-8 SHOWCASE
+; A montage that uses the font, sprites, collision, BCD,
+; arithmetic, the keypad, calls and SuperChip hi-res.
+; Run it, then step it in Tools > CHIP-8 Emulator.
+; ============================================================
+; keys 3
+
+start:  DW 0x00FF          ; SuperChip hi-res: 128x64, cleared
+        LD V0, 20
+        LD V1, 10
+        LD I, ring16
+        DRW V0, V1, 0      ; DXY0: a 16x16 sprite in hi-res
+        DW 0x00FB          ; scroll right four pixels
+        DW 0x00FC          ; scroll left four pixels
+        DW 0x00C4          ; scroll down four rows
+        DW 0x00FE          ; back to 64x32, cleared
+
+        ; --- the font: digits 0 to 9 in a row ---------------
+        LD V0, 0
+        LD V1, 2
+        LD V2, 2
+digits: LD F, V0
+        DRW V1, V2, 5
+        ADD V0, 1
+        ADD V1, 6
+        SE V0, 10
+        JP digits
+
+        ; --- an 8x8 sprite, drawn twice ---------------------
+        ; XOR drawing erases it and sets VF on the collision.
+        LD V3, 8
+        LD V4, 12
+        LD I, smiley
+        DRW V3, V4, 8
+        LD V3, 8
+        LD V4, 12
+        DRW V3, V4, 8
+        SE VF, 0           ; skip unless the collision happened
+        CALL collide
+
+        ; --- BCD: 205 becomes the digits 2, 0 and 5 ---------
+        LD V0, 205
+        LD I, bcd
+        LD B, V0
+        LD I, bcd
+        LD V0, [I]         ; hundreds; I advances past it
+        LD V5, 40
+        LD V6, 12
+        LD F, V0
+        DRW V5, V6, 5
+        LD V5, 46
+        LD V0, [I]         ; tens
+        LD F, V0
+        DRW V5, V6, 5
+        LD V5, 52
+        LD V0, [I]         ; units
+        LD F, V0
+        DRW V5, V6, 5
+
+        ; --- arithmetic: 12 + 7 = 19, drawn as 019 ----------
+        LD V0, 12
+        ADD V0, 7
+        LD I, bcd
+        LD B, V0
+        LD I, bcd
+        LD V0, [I]
+        LD V5, 40
+        LD V6, 22
+        LD F, V0
+        DRW V5, V6, 5
+        LD V5, 46
+        LD V0, [I]
+        LD F, V0
+        DRW V5, V6, 5
+        LD V5, 52
+        LD V0, [I]
+        LD F, V0
+        DRW V5, V6, 5
+
+        ; --- the keypad: key 3 is held by the directive -----
+        LD V0, K
+        SE V0, 0
+        CALL keydraw
+        HALT
+
+collide: LD V7, 30         ; a marker where the collision happened
+        LD V8, 22
+        LD I, dot
+        DRW V7, V8, 1
+        RET
+
+keydraw: LD V9, 2          ; the held key, drawn in the font
+        LD VA, 22
+        LD F, V0
+        DRW V9, VA, 5
+        RET
+
+smiley: DB 0x3C
+        DB 0x42
+        DB 0xA5
+        DB 0x81
+        DB 0xA5
+        DB 0x99
+        DB 0x42
+        DB 0x3C
+dot:    DB 0x80
+bcd:    DB 0
+        DB 0
+        DB 0
+ring16: DW 0x0FF0
+        DW 0x1008
+        DW 0x2004
+        DW 0x4002
+        DW 0x8001
+        DW 0x8001
+        DW 0x8001
+        DW 0x8001
+        DW 0x8001
+        DW 0x8001
+        DW 0x8001
+        DW 0x8001
+        DW 0x4002
+        DW 0x2004
+        DW 0x1008
+        DW 0x0FF0

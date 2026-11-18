@@ -1,0 +1,39 @@
+; TYPEWRITER
+; Type on the keypad and the machine writes it down.
+;
+; The sixteen keys are the sixteen hexadecimal digits, so this is also a way to
+; see the whole character set at once: press 0 to F and watch the font draw
+; them. There is no text, no string and no print statement here -- a character
+; is a sprite, and writing is drawing at the next place a character fits.
+;
+; `LD Vx, K` waits, which is the one blocking instruction on the machine. A
+; whole-program run has no hands to press anything, so it reads zero again and
+; again and fills the screen with zeroes, which is a demonstration of the same
+; path rather than a different one.
+
+start:  CLS
+        LD V0, 2            ; x of the next character
+        LD V1, 2            ; y
+
+loop:   LD V3, K            ; wait for a key: 0 to F
+        LD F, V3
+        DRW V0, V1, 5
+        ADD V0, 5
+
+        ; Off the right edge wraps to the next line, and off the bottom clears.
+        LD V4, 60
+        SUB V4, V0          ; VF is 1 while there is still room on this line
+        SE VF, 1
+        CALL next_line
+        JP loop
+
+next_line:
+        LD V0, 2
+        ADD V1, 6
+        LD V4, 26
+        SUB V4, V1          ; VF is 1 while there is still room on the screen
+        SE VF, 0            ; skips the return when there is not, and clears
+        RET
+        CLS
+        LD V1, 2
+        RET

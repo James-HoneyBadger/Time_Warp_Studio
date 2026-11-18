@@ -224,6 +224,10 @@ public:
     /// Prints `[line]` before each statement of a line-loop program — the machine's
     /// `TRON`. Set before `start()`; a whole-program language ignores it.
     void set_tracing(bool on) noexcept { tracing_ = on; }
+    /// Connects a standalone machine's memory and screen to the running language.
+    void set_machine_bus(timewarp::lang::Interpreter::MachineBus bus) {
+        machine_bus_ = std::move(bus);
+    }
     /// Zero-based statement indices this run may pause on. Set before `start()`.
     void set_breakpoints(const std::set<std::size_t>& lines);
     /// Variable names whose change pauses this run. Set before `start()`.
@@ -332,6 +336,7 @@ private:
     bool profiling_ = false;
     bool tracing_ = false;
     std::size_t history_depth_ = 0;
+    timewarp::lang::Interpreter::MachineBus machine_bus_;
 
     std::mutex input_mutex_;
     std::condition_variable input_ready_;

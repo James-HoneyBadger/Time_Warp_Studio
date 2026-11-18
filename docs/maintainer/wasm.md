@@ -18,7 +18,7 @@ is off.
 | --- | --- | --- |
 | The option | `native/CMakeLists.txt` | `TW_BUILD_WASM`, default `OFF` |
 | The toolchain search | `native/cmake/wasm-toolchain.cmake` | Chosen before `project()`, because a toolchain file has to be named before a language is enabled |
-| The target settings | `native/cmake/wasm.cmake` | Memory, output directory, tests off, and the one function the executable calls |
+| The target settings | `native/cmake/wasm.cmake` | Memory, output directory, tests off, Asyncify for browser suspension, and exception catching for interpreter errors |
 | The page | `wasm/index.html` | Full-window screen, status bar, spinner, and the Qt 6.6 `qtLoad()` call |
 | The isolation worker | `wasm/coi-serviceworker.js` | Adds the two headers a threaded module needs, on a host that cannot set them |
 | The examples | `Examples/` | Copied into the module as a resource by `native/cmake/wasm.cmake` |
@@ -30,10 +30,10 @@ build, so `wasm/dist` is the site. <!-- doc-claims: ignore --> Qt's own generate
 fixed-size screen and the Qt logo; the page here fills the window and reports a failure in
 the status bar instead of the console.
 
-The page uses `qtLoad()`, the loading API Qt 6.6 introduced. It needs the module's own
-entry function -- `window.time_warp_ide`, named after the target -- and a `<script>` tag
-for `time_warp_ide.js`, because since 6.6 the loader no longer evaluates that file
-itself. The browser build therefore needs Qt 6.8: the loader API arrived in 6.6, and the
+The page uses `qtLoad()`, the loading API Qt 6.6 introduced. Qt 6.8 exports the module's
+entry function as `window.time_warp_ide_entry`; the page passes that to the loader and
+loads `time_warp_ide.js` separately, because since 6.6 the loader no longer evaluates
+that file itself. The browser build therefore needs Qt 6.8: the loader API arrived in 6.6, and the
 `WebLocalStorageFormat` the settings use arrived in 6.8, which is what the workflow
 installs.
 
@@ -83,6 +83,15 @@ python3 -m http.server 8000 --directory wasm/dist
 The executable is the desktop `time_warp_ide`: there is no separate launcher and no
 second entry point.
 
+The browser target links with Emscripten Asyncify (`-sASYNCIFY -Os`). Qt's default
+WebAssembly build cannot re-enter its event loop, which the Studio's file dialogs,
+gallery and other synchronous Qt dialogs use. Asyncify lets those calls yield to browser
+events without changing the desktop dialog paths. The Studio's C++ translation units
+and final executable also use Emscripten exception catching (`-fexceptions`): the
+interpreters catch program errors and report them as output rather than aborting the
+module. This is Emscripten's JavaScript-based exception implementation; it does not turn
+on Qt's separate WebAssembly-exception build feature.
+
 ---
 
 ## Storage
@@ -102,6 +111,10 @@ The mounted volume is the home directory Emscripten gives the process, and the P
 dialogs open on `/home/web_user/projects` inside it. Mounting the home rather than that
 one folder is what keeps the IDE's own data -- lesson progress, the classroom roster and
 the autosave snapshots, all under `~/.time_warp` -- on the same footing as the documents.
+The application waits for IndexedDB population before it creates the Projects directory
+and restores the session. A save is only marked clean after the IndexedDB write succeeds;
+on failure, the modified marker remains and both the application and page status report
+that the copy is only in memory.
 The settings are separate: they are kept in `localStorage` through Qt's
 `WebLocalStorageFormat`, because the INI file they would otherwise use is read before an
 asynchronous IndexedDB load could have restored it. A desktop build compiles every one of
@@ -235,9 +248,9 @@ carries emsdk and a host Qt at the version Qt for WebAssembly needs, and install
 threaded WebAssembly Qt into it with aqt. Pull requests into `main` and branch pushes that
 touch the native application, browser target, examples, version or workflow build and upload
 `wasm/dist` <!-- doc-claims: ignore --> as an artifact. A separate job publishes it to the
-`gh-pages` branch only from a `v*`
-tag, keeping pull-request builds read-only.
+GitHub Pages deployment only from a `v*` tag, keeping pull-request builds read-only.
 
-The publish job downloads the build artifact and pushes it with a write-scoped
-`GITHUB_TOKEN`. That is deliberate: every `uses:` in this tree is pinned to a commit SHA,
-and a pages action would be one more pin to review for a step that needs no third party.
+The build uploads both a downloadable artifact and the Pages artifact. The tag job uses
+the pinned `actions/deploy-pages` action with `pages: write` and `id-token: write`; the
+repository's Pages source must be set to **GitHub Actions**. A `GITHUB_TOKEN` push to
+`gh-pages` does not itself trigger a Pages deployment.

@@ -91,9 +91,8 @@ int main(int argc, char* argv[]) {
     timewarp::ui::applyApplicationIdentity();
 
 #ifdef __EMSCRIPTEN__
-    // Before any window exists, because the Projects panel reads the volume as it is
-    // built: a mount that happened afterwards would show an empty folder until the
-    // next reload. The auto-save timer is started here for the same reason.
+    // Populate before any window exists, because the Projects panel and session restore
+    // read the volume during construction. Auto-save starts only after population.
     timewarp::ui::wasm::mountProjectStorage();
     timewarp::ui::wasm::startAutoSave();
 #endif

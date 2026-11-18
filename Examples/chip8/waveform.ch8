@@ -1,0 +1,47 @@
+; WAVEFORM
+; A plotted curve: sixteen y values from a table, one pixel each,
+; read in sequence with LD Vx, [I]. It is the smallest useful
+; demonstration of a data table and a drawing loop.
+
+start:  CLS
+        LD V0, 8            ; x of the first sample
+        LD V3, 0            ; samples drawn
+        LD I, samples
+plot:   LD V1, [I]          ; y of this sample; I advances past it
+        DRW V0, V1, 1
+        ADD V0, 2
+        ADD V3, 1
+        SNE V3, 16
+        JP axis
+        JP plot
+
+axis:   LD V0, 6            ; a dotted baseline under the curve
+        LD V1, 24
+        LD V4, 20
+        LD V5, 1
+line:   LD I, dot
+        DRW V0, V1, 1
+        ADD V0, 4
+        SUB V4, V5
+        SE V4, 0
+        JP line
+        HALT
+
+dot:    DB 0x80
+
+samples: DB 14
+         DB 12
+         DB 10
+         DB 9
+         DB 9
+         DB 10
+         DB 12
+         DB 14
+         DB 16
+         DB 18
+         DB 20
+         DB 21
+         DB 21
+         DB 20
+         DB 18
+         DB 16

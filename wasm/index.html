@@ -12,8 +12,8 @@
   reported in the same strip instead of in the console where a visitor will not look.
 
   The loading API is `qtLoad()`, which Qt 6.6 introduced. It replaced the `QtLoader`
-  class of Qt 6.5, so the page needs the module's own entry function -- named after the
-  target, `window.time_warp_ide` -- as well as the loader script. The contract is
+  class of Qt 6.5, so the page needs the module's own entry function,
+  `window.time_warp_ide_entry` in Qt 6.8, as well as the loader script. The contract is
   documented at https://doc.qt.io/qt-6/wasm.html#using-qtloader.
 
   The module is threaded, so it needs `SharedArrayBuffer` and therefore a
@@ -116,6 +116,7 @@
       var statusBar = document.getElementById("tw-status");
       var statusText = document.getElementById("tw-status-text");
       var spinner = document.getElementById("tw-spinner");
+      var storageStatus = null;
 
       function say(message) {
         statusBar.dataset.state = "busy";
@@ -124,10 +125,23 @@
       }
 
       function ready() {
+        if (storageStatus !== null) {
+          statusBar.dataset.state = storageStatus.failed ? "error" : "ready";
+          spinner.hidden = true;
+          statusText.textContent = storageStatus.message;
+          return;
+        }
         statusBar.dataset.state = "ready";
         spinner.hidden = true;
         statusText.textContent = "Ready";
       }
+
+      window.timeWarpStorageStatus = function (message, failed) {
+        storageStatus = { message: message, failed: failed };
+        statusBar.dataset.state = failed ? "error" : "ready";
+        spinner.hidden = true;
+        statusText.textContent = message;
+      };
 
       function fail(message) {
         statusBar.dataset.state = "error";
@@ -203,7 +217,7 @@
              "cannot start. The browser build needs Qt 6.6 or later.");
         return;
       }
-      if (typeof window.time_warp_ide !== "function") {
+      if (typeof window.time_warp_ide_entry !== "function") {
         fail("time_warp_ide.js did not load, so the application cannot start.");
         return;
       }
@@ -240,7 +254,7 @@
         loading = qtLoad({
           qt: {
             containerElements: [screen],
-            entryFunction: window.time_warp_ide,
+            entryFunction: window.time_warp_ide_entry,
             onLoaded: function () {
               ready();
               focusCanvasWhenReady();

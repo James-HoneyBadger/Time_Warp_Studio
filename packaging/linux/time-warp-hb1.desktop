@@ -1,0 +1,13 @@
+[Desktop Entry]
+Type=Application
+Version=1.0
+Name=Time Warp HB-1
+GenericName=HB-1 Home Computer
+Comment=Use the HB-1 home computer and its language ROMs
+Exec=time_warp_hb1
+TryExec=time_warp_hb1
+Icon=computer
+Terminal=false
+Categories=Development;Education;
+Keywords=HB-1;BASIC;retro;computer;programming;
+StartupNotify=true

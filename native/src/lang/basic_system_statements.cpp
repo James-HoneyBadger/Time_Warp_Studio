@@ -325,13 +325,21 @@ std::string Machine::poke(const std::string& args) {
     try {
         const auto address = static_cast<long>(eval(address_text));
         const auto value = static_cast<long>(eval(value_text));
-        // The language's own map has always been 16 bits.
-        const long limit = kBasicMemoryLimit;
+        const long limit = interpreter_.machine_attached()
+                               ? static_cast<long>(interpreter_.machine_address_limit()) - 1
+                               : kBasicMemoryLimit;
         if (address < 0 || address > limit) {
             return "❌ POKE address must be 0-" + std::to_string(limit) + "\n";
         }
         if (value < 0 || value > 255) {
             return "❌ POKE value must be 0-255\n";
+        }
+        if (interpreter_.machine_attached()) {
+            if (!interpreter_.machine_poke(static_cast<int>(address),
+                                           static_cast<std::uint8_t>(value))) {
+                return "❌ POKE " + std::to_string(address) + " is ROM: it cannot be written\n";
+            }
+            return {};
         }
         state_.memory[static_cast<int>(address)] = static_cast<int>(value);
     } catch (const std::exception& error) {
@@ -345,13 +353,20 @@ std::string Machine::peek(const std::string& args) {
     // cell it computed.
     try {
         const auto address = static_cast<long>(eval(trim(args)));
-        const long limit = kBasicMemoryLimit;
+        const long limit = interpreter_.machine_attached()
+                               ? static_cast<long>(interpreter_.machine_address_limit()) - 1
+                               : kBasicMemoryLimit;
         if (address < 0 || address > limit) {
             return "❌ PEEK address must be 0-" + std::to_string(limit) + ": got " +
                    std::to_string(address) + "\n";
         }
-        const auto found = state_.memory.find(static_cast<int>(address));
-        const int value = found == state_.memory.end() ? 0 : found->second;
+        const int value =
+            interpreter_.machine_attached()
+                ? static_cast<int>(interpreter_.machine_peek(static_cast<int>(address)))
+                : [this, address] {
+                      const auto found = state_.memory.find(static_cast<int>(address));
+                      return found == state_.memory.end() ? 0 : found->second;
+                  }();
         return "ℹ️ PEEK(" + std::to_string(address) + ") = " + std::to_string(value) + "\n";
     } catch (const std::exception& error) {
         return "❌ PEEK error: " + std::string{error.what()} + "\n";

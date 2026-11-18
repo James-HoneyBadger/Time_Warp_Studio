@@ -14,6 +14,12 @@ if(NOT TW_BUILD_WASM)
     return()
 endif()
 
+# The language engines catch exceptions to turn invalid programs into useful
+# output. Emscripten disables exception catching by default, so compile the
+# Studio's C++ code with its JavaScript-based exception support. Qt itself stays
+# on the prebuilt package's default exception model.
+add_compile_options(-fexceptions)
+
 # The Qt packages for WebAssembly come in two flavours, and this build needs the
 # threaded one: every runner in the IDE is a `QThread`, and Qt built without thread
 # support compiles `QThread::start()` to an empty function. A single-threaded module
@@ -61,7 +67,12 @@ function(timewarp_enable_wasm target)
     # Emscripten does not link a filesystem backend that a C++ translation unit never
     # names, and the name is inside an `EM_JS` block the linker cannot see; without
     # this the mount throws at run time and the volume is never persisted.
-    target_link_options(${target} PRIVATE "SHELL:-lidbfs.js")
+    target_link_options(${target} PRIVATE
+        "SHELL:-lidbfs.js"
+        "SHELL:-sASYNCIFY"
+        -Os
+        -fexceptions
+    )
 
     # `qt_add_executable` puts its output in the build directory's root unless told
     # otherwise; the deployment directory is named so `wasm/index.html` can sit beside

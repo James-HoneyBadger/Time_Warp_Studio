@@ -1,0 +1,65 @@
+; BOUNCE
+; A comet that bounces off the four edges and paints where it has been.
+;
+; The point of it is that nothing is erased: every step leaves its dot behind, so
+; the path is the shape. When the screen is full the program clears it and starts
+; again, which is what a screen saver did before screens had anything to save.
+;
+; The velocity is one byte per axis, and "-1" is $FF -- the machine has no signed
+; numbers, so a step backwards is a step forward by 255 and the edge test is an
+; equality rather than a comparison, because a step of one lands exactly on the
+; edge it must turn at.
+
+start:  CLS
+        LD V0, 20           ; x
+        LD V1, 12           ; y
+        LD V2, 1            ; dx
+        LD V3, 1            ; dy
+        LD V4, 0            ; dots painted since the last clear
+
+loop:   LD I, dot
+        DRW V0, V1, 1       ; leave it behind
+        ADD V4, 1
+
+        ; Move, then turn at an edge. Both axes are one pixel a step, so the
+        ; edge is hit exactly and `SE` is the whole comparison.
+        ADD V0, V2
+        ADD V1, V3
+
+        SE V0, 0
+        JP not_left
+        LD V2, 1
+not_left:
+        SE V0, 62           ; two wide: 62 is the last column it fits in
+        JP not_right
+        LD V2, 0xFF
+not_right:
+        SE V1, 0
+        JP not_top
+        LD V3, 1
+not_top:
+        SE V1, 31           ; the last row
+        JP not_bottom
+        LD V3, 0xFF
+not_bottom:
+
+        ; One dot a frame, which is fast enough to look alive and slow enough
+        ; to watch. The delay timer ticks a frame at a time and is the machine's
+        ; only clock.
+        LD V5, 1
+        LD DT, V5
+wait:   LD V5, DT
+        SE V5, 0            ; skips the jump once the timer reaches zero
+        JP wait
+
+        ; The counter wraps at 255 dots, which is most of a screen, and a wrap is
+        ; the signal to clear: a picture that never changes is a picture nobody
+        ; looks at.
+        SE V4, 0
+        JP loop
+        CLS
+        JP loop
+
+; Two pixels wide and one row tall: a step diagonally never overlaps the step
+; before it, so the trail is continuous instead of cancelling itself out.
+dot:    DB 0xC0

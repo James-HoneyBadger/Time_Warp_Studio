@@ -1,0 +1,23 @@
+; KEYPAD PROBE
+; FX0A waits for a key and stores its number. The editor's run has
+; no hands, so the listing seeds key 2 with the `keys` line below;
+; the CHIP-8 window ignores that line and uses the real keypad.
+; Whichever key arrives, its digit is drawn from the font.
+
+; keys 2
+
+start:  CLS
+        LD V0, K            ; wait for, and read, one key
+        SE V0, 0            ; key 0 is a real answer, so test the mask
+        JP show
+        HALT
+
+show:   LD F, V0            ; I = the glyph for that digit
+        LD V1, 12
+        LD V2, 10
+        DRW V2, V1, 5
+        LD V3, 0
+wait:   ADD V3, 1            ; a short visible pause before the halt
+        SNE V3, 40
+        HALT
+        JP wait

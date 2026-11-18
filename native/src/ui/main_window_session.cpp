@@ -25,6 +25,7 @@
 #include <QMenu>
 #include <QMessageBox>
 #include <QPlainTextEdit>
+#include <QPointer>
 #ifdef TIME_WARP_HAVE_PRINT
 #endif
 #include <QSaveFile>
@@ -1014,6 +1015,9 @@ bool MainWindow::writeDocument(CodeEditor* editor, const QString& path) {
                                       file.errorString()));
         return false;
     }
+#ifdef __EMSCRIPTEN__
+    const int saved_revision = editor->document()->revision();
+#endif
     const QByteArray bytes = editor->toPlainText().toUtf8();
     if (file.write(bytes) != bytes.size() || !file.commit()) {
         QMessageBox::warning(this, tr("Save failed"),
@@ -1022,26 +1026,58 @@ bool MainWindow::writeDocument(CodeEditor* editor, const QString& path) {
     }
 
     editor->setProperty(kFilePathProperty, path);
-    editor->document()->setModified(false);
     // A file that has just been saved under a name is a file the user will want
     // back, which is what the recent list is for.
     noteRecentFile(path);
+    // Breakpoints follow the document to its new name: they were set against this
+    // program, and Save As is the same program.
+    QSettings breakpoint_settings;
+    breakpoints::save(breakpoint_settings, path, editor->breakpoints());
+#ifdef __EMSCRIPTEN__
+    // A save is the moment the user expects the file to be durable. In the browser
+    // "durable" means IndexedDB confirmed it, not that the in-memory write returned.
+    QPointer<CodeEditor> editor_guard{editor};
+    QPointer<MainWindow> window_guard{this};
+    const bool was_enabled = isEnabled();
+    setEnabled(false);
+    setExecutionState(tr("busy"), tr("Saving to browser storage..."));
+    const bool durable = wasm::saveNow();
+    if (window_guard.isNull()) {
+        return durable;
+    }
+    setEnabled(was_enabled);
+    if (editor_guard.isNull()) {
+        return durable;
+    }
+    const bool unchanged = editor_guard->document()->revision() == saved_revision;
+#else
+    constexpr bool durable = true;
+    constexpr bool unchanged = true;
+#endif
+    // Keep the modified marker until the browser has confirmed the IndexedDB write.
+    // If it failed, the in-memory copy remains available and the user can retry.
+    if (durable && unchanged) {
+        editor->document()->setModified(false);
+    }
     // The new path may name a different language -- saving `untitled` as `draw.logo`
     // has to turn it into a Logo document -- so the label, the badges and the
     // language selector are all refreshed from the path that just changed.
     updateTabLabel(editor);
     refreshDocumentState();
-    // Breakpoints follow the document to its new name: they were set against this
-    // program, and Save As is the same program.
-    QSettings breakpoint_settings;
-    breakpoints::save(breakpoint_settings, path, editor->breakpoints());
+    if (!durable) {
+        setExecutionState(
+            tr("error"),
+            tr("Saved in memory only; browser storage failed. The document remains unsaved."));
+        return false;
+    }
+    if (!unchanged) {
+        setExecutionState(
+            tr("ready"),
+            tr("Saved %1, but newer edits remain unsaved.")
+                .arg(QFileInfo{path}.fileName()));
+        return false;
+    }
     setExecutionState(tr("ready"), tr("Saved %1").arg(QFileInfo{path}.fileName()));
-#ifdef __EMSCRIPTEN__
-    // A save is the moment the user expects the file to be durable. In the browser
-    // "durable" means IndexedDB has it, not that the in-memory write returned, so the
-    // volume is flushed here rather than left to the thirty-second timer.
-    wasm::saveNow();
-#endif
     return true;
 }
 

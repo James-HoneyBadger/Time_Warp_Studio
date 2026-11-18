@@ -12,9 +12,8 @@ name: WebAssembly
 # `QT_VERSION` and `QT_WASM`; the steps below use the first and replace the second with
 # the threaded install.
 #
-# Why the publish is a `git push` rather than a pages action: the whole tree pins every
-# `uses:` to a commit SHA (see `.github/DEPLOYMENT.md`), and a pages action would be one
-# more SHA to review for a step that is four `git` commands. `GITHUB_TOKEN` is enough.
+# Publishing uses GitHub's Pages deployment actions rather than pushing `gh-pages` with
+# `GITHUB_TOKEN`, which does not trigger a Pages deployment.
 
 on:
   push:
@@ -71,7 +70,7 @@ jobs:
       # Qt already in the image still matches it.
       - name: Install the threaded Qt for WebAssembly
         run: |
-          set -euo pipefail
+          set -eu
           apt-get update
           apt-get install -y --no-install-recommends python3-pip
           # `pip<25` keeps a pip that still installs on the image's Python 3.8.
@@ -85,7 +84,7 @@ jobs:
       # a C++ error about a Qt header three minutes into the build.
       - name: Check the toolchain
         run: |
-          set -euo pipefail
+          set -eu
           : "${QT_WASM:?no Qt for WebAssembly was installed}"
           case "$QT_WASM" in
             *wasm_multithread) ;;
@@ -96,15 +95,16 @@ jobs:
           test -d "$(dirname "$QT_WASM")/gcc_64/lib/cmake/Qt6" \
             || { echo "::error::No host Qt beside $QT_WASM"; exit 1; }
           command -v emcc
-          emcc --version | head -n 1
+          emcc --version
 
       - name: Configure
         run: |
-          set -euo pipefail
+          set -eu
           cmake -S native -B native/build-wasm -G Ninja \
             -DCMAKE_BUILD_TYPE=Release \
             -DTW_BUILD_WASM=ON \
-            2>&1 | tee configure.log
+            > configure.log 2>&1 || { cat configure.log; exit 1; }
+          cat configure.log
           # A configure that never saw the wasm Qt still succeeds and skips the widget
           # interface, which is the shape of failure that produces a green job that
           # built nothing.
@@ -121,7 +121,7 @@ jobs:
       # what makes "the site was built" a fact rather than a hope.
       - name: Check the site
         run: |
-          set -euo pipefail
+          set -eu
           for file in index.html coi-serviceworker.js time_warp_ide.js \
                       time_warp_ide.wasm qtloader.js; do
             if [ ! -f "wasm/dist/$file" ]; then
@@ -138,32 +138,22 @@ jobs:
           path: wasm/dist
           if-no-files-found: error
 
+      - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
+        with:
+          path: wasm/dist
+
   # Publishing is separated from the build so PR code runs with read-only
-  # permissions. Only a tag gets a token that can update the live site.
-  publish:
+  # permissions. Only a tag receives the permissions needed to deploy the site.
+  deploy:
     if: startsWith(github.ref, 'refs/tags/')
     needs: build
     runs-on: ubuntu-24.04
     permissions:
-      contents: write
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
     steps:
-      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
-        with:
-          name: time-warp-studio-wasm
-          path: wasm/dist
-
-      - name: Publish to gh-pages
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          set -euo pipefail
-          cd wasm/dist
-          git init -q
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git checkout -q -b gh-pages
-          git add -A
-          git commit -q -m "WebAssembly build from ${GITHUB_REF_NAME} (${GITHUB_SHA})"
-          git push -q --force \
-            "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" \
-            gh-pages
+      - id: deployment
+        uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1

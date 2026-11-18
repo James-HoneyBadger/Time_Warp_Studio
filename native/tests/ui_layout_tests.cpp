@@ -103,6 +103,7 @@ int main(int argc, char** argv) {
     test_command_palette();
     test_standalone_payload();
     test_standalone_player_layout();
+    test_the_hb2_window_runs_a_listing();
     test_tool_bar_configuration();
     test_status_bar_badge_placement();
     test_outline_dock_starts_hidden();

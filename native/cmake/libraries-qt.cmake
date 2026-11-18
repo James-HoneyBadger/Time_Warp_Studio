@@ -640,6 +640,132 @@ if(TIME_WARP_QT_FOUND)
             target_compile_options(timewarp_ui PRIVATE -Werror)
         endif()
 
+        # The three historical machines are separate applications. Their
+        # windows are not linked into time_warp_ide.
+        if(NOT TW_BUILD_WASM)
+            add_library(timewarp_chip8_ui
+                src/ui/chip8_archive.cpp
+                src/ui/chip8_emulator.cpp
+                src/ui/chip8_library.cpp
+                src/ui/chip8_screen.cpp
+                src/ui/chip8_window.cpp
+                include/timewarp/ui/chip8_archive.hpp
+                include/timewarp/ui/chip8_emulator.hpp
+                include/timewarp/ui/chip8_library.hpp
+                include/timewarp/ui/chip8_screen.hpp
+                include/timewarp/ui/chip8_window.hpp
+            )
+            add_library(timewarp::chip8_ui ALIAS timewarp_chip8_ui)
+            target_include_directories(timewarp_chip8_ui
+                PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>)
+            target_compile_features(timewarp_chip8_ui PUBLIC cxx_std_20)
+            target_link_libraries(timewarp_chip8_ui
+                PUBLIC timewarp::ui timewarp::chip8_engine)
+            target_compile_definitions(timewarp_chip8_ui PRIVATE
+                TIME_WARP_VERSION="${TIME_WARP_VERSION}")
+            set_target_properties(timewarp_chip8_ui PROPERTIES AUTOMOC ON)
+            timewarp_enable_warnings(timewarp_chip8_ui)
+
+            find_package(Qt6 QUIET COMPONENTS Network)
+            if(TARGET Qt6::Network)
+                target_link_libraries(timewarp_chip8_ui PUBLIC Qt6::Network)
+                target_compile_definitions(timewarp_chip8_ui PRIVATE TIME_WARP_HAVE_NETWORK=1)
+            endif()
+
+            add_library(timewarp_hb1_ui
+                src/ui/hb_bbs.cpp
+                src/ui/hb_clock.cpp
+                src/ui/hb_dos.cpp
+                src/ui/hb_memory.cpp
+                src/ui/hb_tube.cpp
+                src/ui/machine_image.cpp
+                src/ui/machine_voice.cpp
+                src/ui/retro_computer_basic.cpp
+                src/ui/retro_computer_bbs.cpp
+                src/ui/retro_computer_boot.cpp
+                src/ui/retro_computer_dos.cpp
+                src/ui/retro_computer_machine.cpp
+                src/ui/retro_computer_settings.cpp
+                src/ui/retro_computer_support.cpp
+                src/ui/retro_computer_ui.cpp
+                src/ui/retro_settings.cpp
+                include/timewarp/ui/hb_bbs.hpp
+                include/timewarp/ui/hb_clock.hpp
+                include/timewarp/ui/hb_dos.hpp
+                include/timewarp/ui/hb_memory.hpp
+                include/timewarp/ui/hb_tube.hpp
+                include/timewarp/ui/machine_image.hpp
+                include/timewarp/ui/machine_voice.hpp
+                include/timewarp/ui/retro_computer.hpp
+                include/timewarp/ui/retro_settings.hpp
+            )
+            add_library(timewarp::hb1_ui ALIAS timewarp_hb1_ui)
+            target_include_directories(timewarp_hb1_ui
+                PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>)
+            target_compile_features(timewarp_hb1_ui PUBLIC cxx_std_20)
+            target_link_libraries(timewarp_hb1_ui PUBLIC timewarp::ui timewarp::lang)
+            set_target_properties(timewarp_hb1_ui PROPERTIES AUTOMOC ON)
+            timewarp_enable_warnings(timewarp_hb1_ui)
+
+            add_library(timewarp_hb2_ui
+                src/ui/hb2_window.cpp
+                include/timewarp/ui/hb2_window.hpp
+            )
+            add_library(timewarp::hb2_ui ALIAS timewarp_hb2_ui)
+            target_include_directories(timewarp_hb2_ui
+                PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>)
+            target_compile_features(timewarp_hb2_ui PUBLIC cxx_std_20)
+            target_link_libraries(timewarp_hb2_ui PUBLIC timewarp::ui timewarp::hb2)
+            set_target_properties(timewarp_hb2_ui PROPERTIES AUTOMOC ON)
+            timewarp_enable_warnings(timewarp_hb2_ui)
+
+            add_executable(time_warp_chip8 tools/time_warp_chip8.cpp)
+            target_link_libraries(time_warp_chip8 PRIVATE timewarp::chip8_ui)
+            timewarp_enable_warnings(time_warp_chip8)
+
+            add_executable(time_warp_hb1 tools/time_warp_hb1.cpp)
+            target_link_libraries(time_warp_hb1 PRIVATE timewarp::hb1_ui)
+            timewarp_enable_warnings(time_warp_hb1)
+
+            add_executable(time_warp_hb2 tools/time_warp_hb2.cpp)
+            target_link_libraries(time_warp_hb2 PRIVATE timewarp::hb2_ui)
+            timewarp_enable_warnings(time_warp_hb2)
+
+            if(TIME_WARP_EXPR_BUILD_TESTS)
+                if(TARGET Qt6::Network)
+                    add_executable(chip8_emulator_tests tests/chip8_emulator_tests.cpp)
+                    target_link_libraries(chip8_emulator_tests PRIVATE timewarp::chip8_ui)
+                    target_include_directories(chip8_emulator_tests
+                        PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/tests)
+                    target_compile_definitions(chip8_emulator_tests PRIVATE
+                        TIME_WARP_TEST_EXAMPLES="${CMAKE_CURRENT_SOURCE_DIR}/../Examples")
+                    timewarp_enable_warnings(chip8_emulator_tests)
+                    add_test(NAME chip8_emulator_tests COMMAND chip8_emulator_tests)
+                endif()
+
+                add_executable(retro_computer_tests
+                    tests/retro_computer_tests.cpp
+                    tests/retro_basic_tests.cpp
+                    tests/retro/example_tests.cpp
+                    tests/retro/paper_tests.cpp
+                    tests/retro/bbs_tests.cpp
+                    tests/retro_boot_tests.cpp
+                    tests/retro_config_tests.cpp
+                    tests/retro_dos_tests.cpp
+                    tests/retro_hardware_tests.cpp
+                    tests/retro_image_tests.cpp
+                    tests/retro_memory_tests.cpp
+                )
+                target_link_libraries(retro_computer_tests PRIVATE timewarp::hb1_ui)
+                target_include_directories(retro_computer_tests
+                    PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/tests)
+                target_compile_definitions(retro_computer_tests PRIVATE
+                    TIME_WARP_TEST_SOURCE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/..")
+                timewarp_enable_warnings(retro_computer_tests)
+                add_test(NAME retro_computer_tests COMMAND retro_computer_tests)
+            endif()
+        endif()
+
         # ---- the player, not the workshop ---------------------------------
         # One program, the canvas it draws on and the output it prints. It links
         # `timewarp::ui_core` rather than `timewarp::ui`, so an artifact compiled
@@ -695,6 +821,17 @@ if(TIME_WARP_QT_FOUND)
         set(TIME_WARP_SHARE_DIR "${CMAKE_INSTALL_DATADIR}")
         install(TARGETS time_warp_ide
                 RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
+        if(TARGET time_warp_chip8)
+            install(TARGETS time_warp_chip8 time_warp_hb1 time_warp_hb2
+                    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
+            install(
+                FILES
+                    ${CMAKE_CURRENT_SOURCE_DIR}/../packaging/linux/time-warp-chip8.desktop
+                    ${CMAKE_CURRENT_SOURCE_DIR}/../packaging/linux/time-warp-hb1.desktop
+                    ${CMAKE_CURRENT_SOURCE_DIR}/../packaging/linux/time-warp-hb2.desktop
+                DESTINATION ${CMAKE_INSTALL_DATADIR}/applications
+            )
+        endif()
         # The teacher's and the learner's commands, beside the IDE. A package that
         # shipped only the window would make "the panel and the tool agree" a
         # claim about a checkout.
@@ -742,6 +879,12 @@ if(TIME_WARP_QT_FOUND)
             FILES ${CMAKE_CURRENT_SOURCE_DIR}/share/command_rows.json
             DESTINATION ${TIME_WARP_SHARE_DIR}/time-warp-studio
         )
+        if(TARGET time_warp_chip8)
+            install(
+                FILES ${CMAKE_CURRENT_SOURCE_DIR}/share/chip8_archive.json
+                DESTINATION ${TIME_WARP_SHARE_DIR}/time-warp-studio
+            )
+        endif()
         # The documentation browser reads these. `docsRoot()` looks in
         # `share/doc/time-warp-studio` first, so a package and a checkout show the
         # same pages; without this rule an installed help window would explain
@@ -804,13 +947,14 @@ if(TIME_WARP_QT_FOUND)
                 tests/ui_layout_tests.cpp
                 tests/ui_layout_appearance_tests.cpp
                 tests/ui_layout_editor_tests.cpp
+                tests/ui_layout_hb2_tests.cpp
                 tests/ui_layout_menu_tests.cpp
                 tests/ui_layout_panel_tests.cpp
                 tests/ui_layout_run_tests.cpp
                 tests/ui_layout_shell_tests.cpp
                 tests/ui_layout_turtle_tests.cpp
             )
-            target_link_libraries(ui_layout_tests PRIVATE timewarp::ui)
+            target_link_libraries(ui_layout_tests PRIVATE timewarp::ui timewarp::hb2_ui)
             target_include_directories(ui_layout_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/tests)
             # The snippet picker's suite reads the checkout's catalogue. The
             # resolver walks up from the executable, which reaches the checkout

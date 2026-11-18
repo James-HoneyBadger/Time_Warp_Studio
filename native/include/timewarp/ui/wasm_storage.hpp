@@ -38,9 +38,9 @@ namespace timewarp::ui::wasm {
 
 /// Mounts IndexedDB over the home directory and loads what was there.
 ///
-/// Safe to call twice: a second mount is refused by Emscripten and reported on the
-/// console, leaving the in-memory filesystem working. A failure here is not fatal --
-/// the application runs, and the next save simply does not survive a reload.
+/// In the browser build, the call yields until population completes, before the window
+/// restores documents or projects. A failure is reported in the page status; the
+/// application still runs, but browser storage is unavailable.
 void mountProjectStorage();
 
 /// Starts the thirty-second flush and the `beforeunload` handler.
@@ -51,8 +51,9 @@ void startAutoSave();
 
 /// Flushes now: the volume is written to IndexedDB.
 ///
-/// Called when a document is saved and when the page unloads. Cheap enough to call on
-/// every save -- it is a write of the changed files, not a copy of the volume.
-void saveNow();
+/// Called when a document is saved and by the automatic timer. The browser build yields
+/// until IndexedDB confirms the write; false means the save did not become durable.
+/// A desktop build has no browser storage and returns true.
+bool saveNow();
 
 }  // namespace timewarp::ui::wasm

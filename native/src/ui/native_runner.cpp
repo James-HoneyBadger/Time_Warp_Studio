@@ -867,6 +867,7 @@ void NativeRunner::run() {
     engine->set_sql_callback(sql_callback_);
     engine->set_profiling(profiling_);
     engine->set_tracing(tracing_);
+    engine->set_machine_bus(machine_bus_);
     engine->set_file_base(file_base_.toStdString());
 
     engine->load_program(source_.toStdString());
