@@ -47,6 +47,25 @@ endif()
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 option(TIME_WARP_EXPR_WERROR "Treat compiler warnings as errors" ON)
+
+# Binary hardening for a shipped build. Ubuntu's toolchain gives PIE by default
+# and nothing else, so a release without these is a release whose only protection
+# against a memory bug in an interpreter is that nobody wrote one. `_FORTIFY_SOURCE`
+# needs an optimising build, which is why the block skips Debug rather than applying
+# to every configuration; `-Wl,-z,now` resolves every symbol at load, which is what makes
+# a RELRO segment actually read-only. The browser build's wasm toolchain knows
+# none of these flags, which is what the `TW_BUILD_WASM` guard excludes, and
+# `release.yml` verifies the result with `readelf`, so this block and that gate
+# are one decision in two places.
+if(NOT TW_BUILD_WASM AND NOT CMAKE_BUILD_TYPE STREQUAL "Debug")
+    add_compile_options(
+        -fstack-protector-strong
+        -fPIE
+        -D_FORTIFY_SOURCE=3
+        -fno-plt
+    )
+    add_link_options(-pie -Wl,-z,relro,-z,now)
+endif()
 option(TIME_WARP_EXPR_BUILD_TESTS "Build the test suites" ON)
 
 # `-Wnull-dereference` is dropped for GCC before 14: GCC 13 reports a false

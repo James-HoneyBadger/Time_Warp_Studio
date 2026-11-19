@@ -147,6 +147,40 @@ jobs:
           find stage -type f | sort | sed 's|^stage||' > staged-files.txt
           cat staged-files.txt
 
+      - name: Verify the binaries are hardened
+        run: |
+          # Every binary in the install tree must be a position-independent
+          # executable with a read-only RELRO segment and a non-executable stack.
+          # A build that dropped one of the flags in `native/CMakeLists.txt`
+          # would still pass every test above, so this reads the ELF files
+          # themselves rather than trusting the build to have applied them.
+          set -euo pipefail
+          if [ -z "$(find stage/usr/bin -maxdepth 1 -type f -print -quit)" ]; then
+            echo "::error::No staged binaries to verify."
+            exit 1
+          fi
+          for bin in stage/usr/bin/*; do
+            echo "== $(basename "$bin")"
+            header="$(readelf -h "$bin")"
+            dynamic="$(readelf -d "$bin")"
+            segments="$(readelf -lW "$bin")"
+            # `-pie` makes the linker report DYN, never EXEC.
+            grep -q 'Type:.*DYN' <<<"$header" \
+              || { echo "::error::$bin is not a position-independent executable"; exit 1; }
+            # `-z now` resolves every symbol at load, which the dynamic section
+            # records as BIND_NOW (or, on older linkers, as FLAGS_1: NOW).
+            grep -qE 'BIND_NOW|Flags:.*NOW' <<<"$dynamic" \
+              || { echo "::error::$bin was not linked with -z now"; exit 1; }
+            # Full RELRO is the read-only relocation segment that BIND_NOW buys.
+            relro="$(grep 'GNU_RELRO' <<<"$segments" || true)"
+            grep -q ' R ' <<<"$relro" \
+              || { echo "::error::$bin has a writable RELRO segment"; exit 1; }
+            # A non-executable stack carries RW, never RWE.
+            stack="$(grep 'GNU_STACK' <<<"$segments" || true)"
+            grep -q ' RW ' <<<"$stack" \
+              || { echo "::error::$bin has an executable stack"; exit 1; }
+          done
+
       - name: Package
         run: |
           version="${{ needs.verify.outputs.version }}"
