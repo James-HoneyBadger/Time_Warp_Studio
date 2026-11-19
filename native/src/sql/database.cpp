@@ -8,6 +8,7 @@
 #include <sqlite3.h>
 
 #include <algorithm>
+#include <string_view>
 #include <utility>
 
 namespace timewarp::sql {
@@ -16,6 +17,46 @@ namespace {
 
 QString fromUtf8(const char* text) {
     return text == nullptr ? QString{} : QString::fromUtf8(text);
+}
+
+/// What a program's `SQL` statement may do, asked of SQLite before the statement
+/// runs. Returning `SQLITE_DENY` makes the statement fail with "not authorized",
+/// which reaches the program as its language's own error rather than as a crash
+/// or a silent no-op.
+///
+/// Two actions are refused, and both are refusals of *reach* rather than of
+/// syntax. `ATTACH DATABASE '/etc/passwd' AS p` would let one line read a file the
+/// IDE never opened -- a learner's typo is not the danger, a pasted program is.
+/// `PRAGMA` reaches session settings including `writable_schema`, which can
+/// corrupt a database the next statement then trusts. Virtual tables and
+/// `load_extension` are refused for the same reason: they load code into the
+/// IDE's own process.
+int authorizer(void* /*user*/, int action, const char* detail1, const char* /*detail2*/,
+               const char* /*database*/, const char* /*trigger*/) {
+    switch (action) {
+        case SQLITE_ATTACH:
+        case SQLITE_DETACH:
+        case SQLITE_PRAGMA:
+        case SQLITE_CREATE_VTABLE:
+        case SQLITE_DROP_VTABLE:
+            return SQLITE_DENY;
+        case SQLITE_FUNCTION: {
+            // `detail1` is the function being called. The file-reading and
+            // file-writing functions come with SQLite's own shell and fileio
+            // extension, which a future build could link; the check costs
+            // nothing now and holds then.
+            if (detail1 == nullptr) {
+                return SQLITE_OK;
+            }
+            const std::string_view name{detail1};
+            if (name == "load_extension" || name == "readfile" || name == "writefile") {
+                return SQLITE_DENY;
+            }
+            return SQLITE_OK;
+        }
+        default:
+            return SQLITE_OK;
+    }
 }
 
 QString cellText(sqlite3_stmt* statement, int column) {
@@ -122,7 +163,10 @@ bool Database::open(const QString& path, QString* error) {
     // other rather than fail with SQLITE_BUSY. Three seconds is longer than any
     // statement the IDE issues and short enough that a stuck lock is reported.
     sqlite3_busy_timeout(handle, 3000);
+    // After the foreign_keys pragma, never before: `PRAGMA` is one of the actions
+    // the authorizer refuses, and the IDE's own setup would be the first casualty.
     sqlite3_exec(handle, "PRAGMA foreign_keys = ON", nullptr, nullptr, nullptr);
+    sqlite3_set_authorizer(handle, &authorizer, nullptr);
     if (impl_->handle != nullptr) {
         sqlite3_close(impl_->handle);
     }

@@ -147,6 +147,35 @@ void test_quoted_names_are_bound() {
     TW_CHECK_EQ(database.tables().size(), 1);
 }
 
+void test_a_statement_cannot_reach_outside_its_database() {
+    announce("attach, pragma and extension functions are refused");
+    Database database;
+    TW_CHECK(database.open(QStringLiteral(":memory:")));
+
+    // Reading a file with a statement is the one a pasted program reaches for.
+    const QueryResult attach = database.execute(
+        QStringLiteral("ATTACH DATABASE '/etc/hostname' AS elsewhere;"));
+    TW_CHECK(!attach.ok());
+    TW_CHECK(attach.error.contains(QStringLiteral("authorized"), Qt::CaseInsensitive));
+
+    // `writable_schema` can corrupt a database that the next statement trusts.
+    const QueryResult pragma = database.execute(QStringLiteral("PRAGMA writable_schema = ON;"));
+    TW_CHECK(!pragma.ok());
+    TW_CHECK(pragma.error.contains(QStringLiteral("authorized"), Qt::CaseInsensitive));
+
+    // `load_extension` loads a shared object into the IDE's own process.
+    const QueryResult extension =
+        database.execute(QStringLiteral("SELECT load_extension('/tmp/nothing.so');"));
+    TW_CHECK(!extension.ok());
+
+    // And the ordinary work a lesson does is untouched by all three refusals.
+    TW_CHECK(database.execute(QStringLiteral("CREATE TABLE t (x INTEGER);")).ok());
+    TW_CHECK(database.execute(QStringLiteral("INSERT INTO t VALUES (1), (2);")).ok());
+    const QueryResult rows = database.execute(QStringLiteral("SELECT sum(x) FROM t;"));
+    TW_CHECK(rows.ok());
+    TW_CHECK_EQ(rows.rows.size(), 1);
+}
+
 }  // namespace
 
 int main() {
@@ -155,5 +184,6 @@ int main() {
     test_output_for_languages();
     test_file_round_trip();
     test_quoted_names_are_bound();
+    test_a_statement_cannot_reach_outside_its_database();
     return tw::test::summary("sql_tests");
 }
