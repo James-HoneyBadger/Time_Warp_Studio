@@ -126,20 +126,28 @@ bool MainWindow::showPanel(const QString& name) {
     return false;
 }
 
-void MainWindow::openLessonCode(const QString& languageKey, const QString& source,
-                                const QString& name) {
+CodeEditor* MainWindow::openSourceDocument(const QString& languageKey,
+                                            const QString& source,
+                                            const QString& title) {
     if (source.isEmpty()) {
-        return;
+        return nullptr;
     }
     CodeEditor* editor = newFile();
     editor->setPlainText(source);
     // The language is recorded as an *override* rather than guessed from the name:
-    // a lesson document is called something like `basic_first_steps-1`, which has
-    // no extension for the language table to read.
+    // a lesson document is called something like `basic_first_steps-1`, and a
+    // shared deep link has no name at all, so neither has an extension for the
+    // language table to read.
     editor->setProperty(kLanguageOverrideProperty, languageKey);
     editor->setProperty(kUntitledLabelProperty,
-                        name.isEmpty() ? tr("lesson") : name);
+                        title.isEmpty() ? tr("shared program") : title);
     updateTabLabel(editor);
+    return editor;
+}
+
+void MainWindow::openLessonCode(const QString& languageKey, const QString& source,
+                                const QString& name) {
+    openSourceDocument(languageKey, source, name.isEmpty() ? tr("lesson") : name);
 }
 
 bool MainWindow::ensureLessons() {

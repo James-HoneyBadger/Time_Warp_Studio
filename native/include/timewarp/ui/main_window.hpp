@@ -509,6 +509,13 @@ public:
     /// pointer to a class that is only forward-declared here.
     CodeEditor* newFile();
 
+    /// Creates an editable tab holding `source` in the language named by the
+    /// protocol key (`basic`, `logo`, ...), labelled `title`. Used for a lesson's
+    /// starter and for a shared deep link, which is a document with no file name
+    /// to derive its language from. Returns null when `source` is empty.
+    CodeEditor* openSourceDocument(const QString& languageKey, const QString& source,
+                                   const QString& title);
+
     /// How a failed `openFile` reports the failure.
     enum class OpenFailure {
         /// A dialog. Right for a file the user just picked.

@@ -227,6 +227,15 @@ public:
     /// background. Two by default: a picture worth saving is worth the pixels.
     [[nodiscard]] QImage renderedDrawing(double factor = 2.0) const;
 
+    /// The first `primitives` primitives, as `renderedDrawing` renders the whole
+    /// list. Used for an animated export, where each frame is the drawing at one
+    /// point in its history; `primitives` is clamped to the total.
+    [[nodiscard]] QImage renderedFrame(int primitives, double factor = 2.0) const;
+
+    /// The drawing as SVG bytes. Empty (with `error` filled) when this build has
+    /// no SVG support; the vectors are what `exportDrawing` writes for `.svg`.
+    [[nodiscard]] QByteArray renderSvg(QString* error = nullptr) const;
+
     /// Writes `renderedDrawing(factor)` to `path`, the format taken from the
     /// extension. Returns false and fills `error` when the format is unknown or
     /// the file cannot be written.

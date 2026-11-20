@@ -23,7 +23,7 @@ is off.
 | The isolation worker | `wasm/coi-serviceworker.js` | Adds the two headers a threaded module needs, on a host that cannot set them |
 | The examples | `Examples/` | Copied into the module as a resource by `native/cmake/wasm.cmake` |
 | The storage | `native/src/ui/wasm_storage.cpp` | Mounts IndexedDB over the home directory and flushes it at the three points that matter |
-| The workflow | `.github/workflows/wasm.yml` | Validates pull requests, installs the threaded Qt, builds and uploads an artifact; a separate tag job deploys it through GitHub Pages |
+| The workflow | `.github/workflows/wasm-pages.yml` | Validates pull requests, installs the threaded Qt, builds and uploads an artifact; a separate tag job deploys it through GitHub Pages |
 
 `wasm/index.html` and `wasm/coi-serviceworker.js` are copied beside the module by the
 build, so `wasm/dist` is the site. <!-- doc-claims: ignore --> Qt's own generated `.html` is a debug wrapper with a
@@ -131,6 +131,43 @@ show nothing, and the browser build would open on an empty editor. `examplesDir(
 filesystem otherwise, so the desktop build is unchanged. The list is a glob at configure
 time -- the corpus is data, and a new program should not need a second edit to be
 listed -- so a fresh configure picks up a new file.
+
+---
+
+## Sharing a link and embedding
+
+A browser page has no command line, so the query string is the startup argument a
+shareable link carries. The window reads it at startup, the way it reads `[file...]` on
+the desktop:
+
+| Parameter | Meaning |
+| --- | --- |
+| `example=<path>` | Opens an example, relative to the gallery: `?example=logo/mandala.logo` |
+| `lang=<key>&code=<base64>` | Opens a shared program. `lang` is a protocol key (`basic`, `logo`, `apl`, ...) and `code` is the source, base64 with the URL-safe alphabet and no padding |
+| `notebook=<url>` | Opens a `.twnb` notebook fetched from `url`. The host must allow the page's origin (CORS), which is the browser's rule for any embedded fetch |
+| `run=1` | Runs whatever the link opened, once the window is up |
+
+`code` uses URL-safe base64 (`-` and `_` instead of `+` and `/`, padding dropped) so the
+link survives a paste into an email or a message without escaping. The parser accepts the
+standard alphabet too.
+
+A link that names a bad example or an unknown language reports the reason on the console
+and leaves the application open, the way a mistyped file argument does.
+
+For a blog or a lesson, `?embed=1` drops the page's own chrome -- the status strip --
+so the application sits in an `<iframe>` beside the prose. The strip reappears on error,
+because an embedded program that fails silently is worse than one that was never
+embedded:
+
+```html
+<iframe
+  src="https://NAME.github.io/Time_Warp_Studio/?embed=1&lang=logo&code=…&run=1"
+  width="640" height="480" title="A Logo program, running"
+  style="border:0"></iframe>
+```
+
+The example, program and notebook links all combine with `embed`, so a lesson can point
+an iframe at the exact cell it is explaining.
 
 ---
 
@@ -243,7 +280,7 @@ The bar is one line. Every failure is also written to the browser console with t
 
 ## The workflow
 
-`.github/workflows/wasm.yml` builds inside `stateoftheartio/qt6:6.8-wasm-aqt`, which
+`.github/workflows/wasm-pages.yml` builds inside `stateoftheartio/qt6:6.8-wasm-aqt`, which
 carries emsdk and a host Qt at the version Qt for WebAssembly needs, and installs the
 threaded WebAssembly Qt into it with aqt. Pull requests into `main` and branch pushes that
 touch the native application, browser target, examples, version or workflow build and upload

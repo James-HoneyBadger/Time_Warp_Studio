@@ -12,6 +12,7 @@
 #include <cmath>
 #include <iterator>
 
+#include <QBuffer>
 #include <QFont>
 #include <QImage>
 #include <QImageWriter>
@@ -68,11 +69,17 @@ void TurtleCanvas::paintEvent(QPaintEvent* /*event*/) {
 }
 
 QImage TurtleCanvas::renderedDrawing(double factor) const {
+    return renderedFrame(frameCount(), factor);
+}
+
+QImage TurtleCanvas::renderedFrame(int primitives, double factor) const {
     const double safe = factor > 0.0 ? factor : 1.0;
     if (framebufferActive()) {
         // The screen is already pixels: scaling it is a nearest-neighbour
         // multiplication, not a re-render, so the exported picture is the one
-        // the program drew and not an antialiased impression of it.
+        // the program drew and not an antialiased impression of it. A screen has
+        // no per-primitive history to replay, so every "frame" is the same
+        // picture.
         const QSize target{std::max(1, qRound(framebuffer_.width() * safe)),
                            std::max(1, qRound(framebuffer_.height() * safe))};
         return framebuffer_
@@ -91,10 +98,51 @@ QImage TurtleCanvas::renderedDrawing(double factor) const {
     // line stays 4 units wide in the exported picture.
     painter.setRenderHint(QPainter::Antialiasing, false);
     painter.scale(safe, safe);
-    // The whole list, never the visible count: scrubbing is a view, and an
-    // export after a scrub has to be the same picture as an export without one.
-    paintInk(painter, frameCount());
+    // The whole list when nothing narrower was asked: scrubbing is a view, and
+    // an export after a scrub has to be the same picture as an export without
+    // one.
+    paintInk(painter, qBound(0, primitives, frameCount()));
     return image;
+}
+
+QByteArray TurtleCanvas::renderSvg(QString* error) const {
+#ifdef TIME_WARP_HAVE_SVG
+    QBuffer buffer;
+    if (!buffer.open(QIODevice::WriteOnly)) {
+        if (error != nullptr) {
+            *error = buffer.errorString();
+        }
+        return {};
+    }
+    const QSize canvas{std::max(1, width()), std::max(1, height())};
+    {
+        QSvgGenerator generator;
+        generator.setOutputDevice(&buffer);
+        generator.setSize(canvas);
+        generator.setViewBox(QRect{QPoint{0, 0}, canvas});
+        generator.setTitle(tr("Time Warp Studio drawing"));
+        generator.setDescription(tr("Turtle graphics, exported as vectors"));
+
+        QPainter painter{&generator};
+        painter.setRenderHint(QPainter::Antialiasing, false);
+        painter.fillRect(QRect{QPoint{0, 0}, canvas}, background_);
+        if (framebufferActive()) {
+            // A screen exports as an image: there are no vectors to write, and
+            // an empty SVG would be the silent failure the export exists to
+            // prevent.
+            painter.drawImage(QRect{QPoint{0, 0}, canvas}, framebuffer_);
+        } else {
+            paintInk(painter, frameCount());
+        }
+    }
+    // The generator flushes on destruction, which is why it has its own scope.
+    return buffer.data();
+#else
+    if (error != nullptr) {
+        *error = tr("this build has no SVG support (Qt6::Svg was not found)");
+    }
+    return {};
+#endif
 }
 
 bool TurtleCanvas::exportDrawing(const QString& path, QString* error,
@@ -105,8 +153,13 @@ bool TurtleCanvas::exportDrawing(const QString& path, QString* error,
     // is the on-screen one (a vector file has no pixels to multiply), and the
     // view box makes one user unit one widget pixel.
     if (path.endsWith(QStringLiteral(".svg"), Qt::CaseInsensitive)) {
-#ifdef TIME_WARP_HAVE_SVG
-        const QSize canvas{std::max(1, width()), std::max(1, height())};
+        const QByteArray svg = renderSvg(error);
+        if (svg.isEmpty()) {
+            if (error != nullptr && error->isEmpty()) {
+                *error = tr("SVG export produced no data");
+            }
+            return false;
+        }
         // Through `QSaveFile` rather than a bare path: a failed write must not
         // leave a half-written file where a good drawing used to be.
         QSaveFile file{path};
@@ -116,41 +169,13 @@ bool TurtleCanvas::exportDrawing(const QString& path, QString* error,
             }
             return false;
         }
-        {
-            QSvgGenerator generator;
-            generator.setOutputDevice(&file);
-            generator.setSize(canvas);
-            generator.setViewBox(QRect{QPoint{0, 0}, canvas});
-            generator.setTitle(tr("Time Warp Studio drawing"));
-            generator.setDescription(tr("Turtle graphics, exported as vectors"));
-
-            QPainter painter{&generator};
-            painter.setRenderHint(QPainter::Antialiasing, false);
-            painter.fillRect(QRect{QPoint{0, 0}, canvas}, background_);
-            if (framebufferActive()) {
-                // A screen exports as an image: there are no vectors to write,
-                // and an empty SVG would be the silent failure the export
-                // exists to prevent.
-                painter.drawImage(QRect{QPoint{0, 0}, canvas}, framebuffer_);
-            } else {
-                paintInk(painter, frameCount());
-            }
-        }
-        // The generator flushes on destruction, which is why it has its own
-        // scope above and why the commit comes after it.
-        if (!file.commit()) {
+        if (file.write(svg) != svg.size() || !file.commit()) {
             if (error != nullptr) {
                 *error = file.errorString();
             }
             return false;
         }
         return true;
-#else
-        if (error != nullptr) {
-            *error = tr("this build has no SVG support (Qt6::Svg was not found)");
-        }
-        return false;
-#endif
     }
 
     // `QImageWriter` takes the format from the suffix, which is what makes

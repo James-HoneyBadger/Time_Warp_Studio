@@ -193,9 +193,9 @@ offers its source to the people using it.
   `docs/` are compiled in as resources, and their resolvers check the resource first, so
   the examples gallery, the lessons, the snippet catalogue, the command reference and
   **Help > Documentation** all work without a filesystem.
-- **`wasm.yml`.** A workflow that installs the threaded Qt beside the image's own,
+- **`wasm-pages.yml`.** A workflow that installs the threaded Qt beside the image's own,
   builds, checks that the site it assembled contains every file, uploads it as an
-  artifact, and publishes it to `gh-pages` from a tag.
+  artifact, and publishes it through the GitHub Pages deployment API from a tag.
 
 #### Changed
 

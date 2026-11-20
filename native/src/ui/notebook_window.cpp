@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 
 #include "timewarp/ui/design.hpp"
+#include "timewarp/ui/browser_bridge.hpp"
 #include "timewarp/ui/notebook_window.hpp"
 
 #include <QComboBox>
@@ -270,6 +271,21 @@ bool NotebookWindow::saveTo(const QString& path) {
 }
 
 void NotebookWindow::saveAs() {
+    // In a browser, "save" is a download: the notebook is already JSON in memory,
+    // and the browser's download manager is where a saved file goes.
+    if (timewarp::ui::browserDownloadAvailable()) {
+        const QString base = path_.isEmpty()
+                                 ? QStringLiteral("notebook")
+                                 : QFileInfo{path_}.completeBaseName();
+        const QString name = base + QStringLiteral(".") +
+                             QLatin1String{kNotebookExtension};
+        if (timewarp::ui::browserDownload(notebookToJson(notebook()).toUtf8(), name,
+                                          QStringLiteral("application/x-twnb"))) {
+            dirty_ = false;
+            emit statusMessage(tr("Downloaded %1").arg(name));
+        }
+        return;
+    }
     const QString path = QFileDialog::getSaveFileName(
         this, tr("Save notebook"), path_,
         tr("Time Warp notebook (*.%1)").arg(QLatin1String{kNotebookExtension}));

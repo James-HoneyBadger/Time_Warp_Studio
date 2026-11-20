@@ -39,7 +39,7 @@ else()
             "found. Pass\n"
             "  -DCMAKE_TOOLCHAIN_FILE=<wasm Qt>/lib/cmake/Qt6/qt.toolchain.cmake\n"
             "or set QT_WASM to that install, or QT_WASM_TOOLCHAIN to the file itself.\n"
-            "The wasm.yml workflow builds in an image that sets QT_WASM;\n"
+            "The wasm-pages.yml workflow builds in an image that sets QT_WASM;\n"
             "docs/maintainer/wasm.md has the commands for a local build.")
     endif()
 

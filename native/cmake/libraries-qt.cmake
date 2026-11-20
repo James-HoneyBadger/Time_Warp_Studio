@@ -480,11 +480,13 @@ if(TIME_WARP_QT_FOUND)
             src/ui/benchmark.cpp
             src/ui/autosave.cpp
             src/ui/breakpoints.cpp
+            src/ui/browser_bridge.cpp
             src/ui/classroom_marker.cpp
             src/ui/code_editor.cpp
             src/ui/console.cpp
             src/ui/command_palette.cpp
             src/ui/command_reference.cpp
+            src/ui/deeplink.cpp
             src/ui/diff.cpp
             src/ui/export.cpp
             src/ui/find_bar.cpp
@@ -529,6 +531,7 @@ if(TIME_WARP_QT_FOUND)
             src/ui/terminal_widget.cpp
             src/ui/tour.cpp
             src/ui/version_history.cpp
+            src/ui/wasm_deeplink.cpp
             src/ui/wasm_storage.cpp
             # Listed so AUTOMOC scans them: the Q_OBJECT classes live in headers
             # outside this target's source directory.
@@ -1043,6 +1046,22 @@ if(TIME_WARP_QT_FOUND)
                 TIME_WARP_TEST_DOCS="${CMAKE_CURRENT_SOURCE_DIR}/../docs")
             timewarp_enable_warnings(help_browser_tests)
             add_test(NAME help_browser_tests COMMAND help_browser_tests)
+
+            # The deep-link parser is QtCore-only, so it is tested without the
+            # widget UI: the meaning of a shareable link must not depend on a
+            # window existing. The parser source is compiled into both the UI
+            # library and this target; it is one small file, and a dedicated
+            # library for it would be a second thing to name.
+            add_executable(deeplink_tests
+                tests/deeplink_tests.cpp
+                src/ui/deeplink.cpp
+            )
+            target_link_libraries(deeplink_tests PRIVATE ${TIME_WARP_QT}::Core)
+            target_include_directories(deeplink_tests PRIVATE
+                ${CMAKE_CURRENT_SOURCE_DIR}/tests
+                ${CMAKE_CURRENT_SOURCE_DIR}/include)
+            timewarp_enable_warnings(deeplink_tests)
+            add_test(NAME deeplink_tests COMMAND deeplink_tests)
 
         endif()
     else()

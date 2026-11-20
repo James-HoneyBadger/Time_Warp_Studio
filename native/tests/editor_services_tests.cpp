@@ -67,6 +67,7 @@ using timewarp::ui::exporter::writeLessonSessionPdf;
 using timewarp::ui::exporter::writeSessionHtml;
 using timewarp::ui::gif::Frame;
 using timewarp::ui::gif::writeGif;
+using timewarp::ui::gif::gifBytes;
 using timewarp::ui::formatSource;
 using timewarp::ui::FormatOutcome;
 using timewarp::ui::Language;
@@ -1137,6 +1138,56 @@ void test_gif_encoder_writes_a_decodable_animation() {
     TW_CHECK(!error.isEmpty());
 }
 
+void test_gif_bytes_matches_the_file() {
+    announce("export: animated GIF bytes");
+    const auto solid = [](QColor colour) {
+        QImage image{6, 6, QImage::Format_ARGB32};
+        image.fill(colour);
+        return image;
+    };
+    QVector<Frame> frames;
+    frames.append(Frame{solid(QColor(255, 0, 0)), 100});
+    frames.append(Frame{solid(QColor(0, 153, 0)), 100});
+
+    // The browser path hands the bytes to a download rather than a file, so the
+    // byte writer has to produce exactly what the file writer writes.
+    QString bytesError;
+    const QByteArray bytes = gifBytes(frames, &bytesError);
+    TW_CHECK(bytesError.isEmpty());
+    TW_CHECK(bytes.startsWith(QByteArrayLiteral("GIF89a")));
+    TW_CHECK_EQ(bytes.at(bytes.size() - 1), ';');
+
+    // Qt reads GIF from any QIODevice, so the bytes round-trip without touching
+    // the disk.
+    if (!QImageReader::supportedImageFormats().contains("gif")) {
+        std::printf("     (no GIF reader installed: skipping the byte decode check)\n");
+    } else {
+        QBuffer buffer;
+        TW_CHECK(buffer.open(QIODevice::ReadWrite));
+        buffer.write(bytes);
+        buffer.seek(0);
+        QImageReader reader{&buffer, "gif"};
+        TW_CHECK(reader.supportsAnimation());
+        TW_CHECK_EQ(reader.imageCount(), 2);
+        const QImage first = reader.read();
+        TW_CHECK(!first.isNull());
+        TW_CHECK_EQ(first.size(), QSize(6, 6));
+        TW_CHECK_EQ(first.pixelColor(3, 3), QColor(255, 0, 0));
+    }
+
+    // The same refusals as the file writer: no frames, mismatched sizes.
+    QString error;
+    TW_CHECK(gifBytes({}, &error).isEmpty());
+    TW_CHECK(!error.isEmpty());
+
+    QVector<Frame> mismatched;
+    mismatched.append(Frame{solid(QColor(255, 0, 0)), 100});
+    mismatched.append(Frame{QImage{4, 4, QImage::Format_ARGB32}, 100});
+    error.clear();
+    TW_CHECK(gifBytes(mismatched, &error).isEmpty());
+    TW_CHECK(!error.isEmpty());
+}
+
 void test_code_pdf_export() {
     announce("export: PDF of the code");
     const tw::test::TempDir dir;
@@ -1377,6 +1428,7 @@ int main(int argc, char** argv) {
     test_printing_reaches_a_paged_device();
     test_session_html_export();
     test_gif_encoder_writes_a_decodable_animation();
+    test_gif_bytes_matches_the_file();
     test_lesson_session_markdown_export();
     test_lesson_session_pdf_export();
     test_breakpoint_store();

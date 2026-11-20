@@ -73,6 +73,19 @@
     }
     #tw-status[data-state="error"] { background: var(--tw-error); }
     #tw-status-text { flex: 1 1 auto; }
+    /* Embed mode (`?embed=1`) is the application inside a blog's <iframe>: the
+       status strip is chrome the host page already has, so it collapses to
+       nothing -- except on error, when the reason has to be visible or an
+       embedded program fails the way this project treats as its characteristic
+       bug. */
+    body.tw-embed #tw-status { display: none; }
+    body.tw-embed #tw-status[data-state="error"] {
+      display: flex;
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: 0;
+    }
     /* The spinner. Its animation is the only motion on the page, and the reduced-motion
        rule keeps that motion from being a spin for anybody who asked for none. */
     #tw-spinner {
@@ -111,6 +124,14 @@
   <script>
     (async function () {
       "use strict";
+
+      // `?embed=1` asks for the application without the page's own chrome, so a
+      // blog or a lesson can carry it in an <iframe> next to the prose. The
+      // error strip above stays: a player that failed silently is worse than a
+      // player that was never embedded.
+      if (new URLSearchParams(location.search).get("embed") === "1") {
+        document.body.classList.add("tw-embed");
+      }
 
       var screen = document.getElementById("qt-screen");
       var statusBar = document.getElementById("tw-status");

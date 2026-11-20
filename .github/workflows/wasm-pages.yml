@@ -1,4 +1,4 @@
-name: WebAssembly
+name: WebAssembly Pages
 
 # The browser build of the same Qt application: `TW_BUILD_WASM=ON` against Qt for
 # WebAssembly, assembled into one directory with `wasm/index.html`, uploaded as an
@@ -29,7 +29,7 @@ on:
       # the artifact.
       - 'Examples/**'
       - 'VERSION'
-      - '.github/workflows/wasm.yml'
+      - '.github/workflows/wasm-pages.yml'
   pull_request:
     branches: [main]
     paths:
@@ -37,7 +37,7 @@ on:
       - 'wasm/**'
       - 'Examples/**'
       - 'VERSION'
-      - '.github/workflows/wasm.yml'
+      - '.github/workflows/wasm-pages.yml'
   workflow_dispatch:
 
 permissions:

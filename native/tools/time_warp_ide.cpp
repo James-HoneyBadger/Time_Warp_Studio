@@ -31,9 +31,11 @@
 #include <cstdio>
 
 #include "timewarp/ui/app.hpp"
+#include "timewarp/ui/deeplink.hpp"
 #include "timewarp/ui/main_window.hpp"
 #include "timewarp/ui/standalone.hpp"
 #include "timewarp/ui/turtle_canvas.hpp"
+#include "timewarp/ui/wasm_deeplink.hpp"
 #include "timewarp/ui/wasm_storage.hpp"
 
 namespace {
@@ -245,6 +247,14 @@ int main(int argc, char* argv[]) {
         return 2;
     }
 
+    // A browser page has no command line, so the query string is the startup
+    // argument a shareable link carries. It is parsed here, beside the command
+    // line, and applied after the window exists, the same way file arguments
+    // are. A desktop build reads an empty query and a default (empty) link.
+    const timewarp::ui::DeepLink deepLink =
+        timewarp::ui::parseDeepLink(timewarp::ui::wasm::browserQueryString());
+    const bool haveDeepLink = !deepLink.isEmpty();
+
     timewarp::ui::MainWindow window;
     // Always before `show()`: restoring onto a visible window lets Qt re-fit the
     // geometry to the screen, so the saved position is lost on a display smaller
@@ -295,26 +305,38 @@ int main(int argc, char* argv[]) {
 
     const QStringList arguments = parser.positionalArguments();
     if (arguments.isEmpty() && screenshotPath.isEmpty() && exportPath.isEmpty() &&
-        !player) {
-        // Only when nothing was named on the command line: a file argument is a
-        // request for that file, and a screenshot has to be reproducible from the
-        // command line rather than from somebody's last session.
+        !player && !haveDeepLink) {
+        // Only when nothing was named on the command line or in the link: a file
+        // argument or a deep link is a request for that program, and a screenshot
+        // has to be reproducible from the command line rather than from
+        // somebody's last session.
         window.restoreSession();
     }
     openArguments(&window, arguments);
+    bool deepLinkApplied = false;
+    if (haveDeepLink) {
+        QString error;
+        deepLinkApplied = timewarp::ui::wasm::applyDeepLink(&window, deepLink, &error);
+        if (!error.isEmpty()) {
+            std::fprintf(stderr, "time_warp_ide: %s\n", qPrintable(error));
+        }
+    }
     window.show();
 
     QWidget* screenshot_target = &window;
 
     // A first run only: the guide stores "seen" in QSettings and refuses a second
-    // time. A file argument, a screenshot, an export, a named panel or a player
-    // artifact is not somebody starting from scratch, so none of them show it.
+    // time. A file argument, a deep link, a screenshot, an export, a named panel
+    // or a player artifact is not somebody starting from scratch, so none of them
+    // show it.
     if (arguments.isEmpty() && screenshotPath.isEmpty() && exportPath.isEmpty() &&
-        !player && !parser.isSet(panelOption)) {
+        !player && !parser.isSet(panelOption) && !haveDeepLink) {
         window.showGuidedTourIfUnseen();
     }
 
-    const bool autorun = parser.isSet(runOption) || player;
+    const bool autorun =
+        parser.isSet(runOption) || player || (haveDeepLink && deepLink.run &&
+                                              deepLinkApplied);
     if (autorun) {
         // After `show()`, so the canvas has a real size to fit the drawing into:
         // a fit computed against a 0x0 widget would be recomputed on the first

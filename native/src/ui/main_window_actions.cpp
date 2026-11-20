@@ -6,11 +6,13 @@
 
 #include "timewarp/lang/executor.hpp"
 #include "timewarp/lang/watch.hpp"
+#include "timewarp/ui/browser_bridge.hpp"
 #include "timewarp/ui/native_runner.hpp"
 
 #include <QAction>
 #include <QActionGroup>
 #include <QApplication>
+#include <QBuffer>
 #include <QCloseEvent>
 #include <QClipboard>
 #include <QComboBox>
@@ -24,6 +26,7 @@
 #include <QFileInfo>
 #include <QFont>
 #include <QHBoxLayout>
+#include <QImageWriter>
 #include <QInputDialog>
 #include <QKeySequence>
 #include <QLabel>
@@ -791,6 +794,73 @@ void MainWindow::exportDrawingDialog() {
                           tr("Nothing to export yet \u2014 run a program that draws"));
         return;
     }
+
+    // In a browser there is no file to write, so the dialog is a format choice
+    // and the bytes go straight to the browser's download manager. The bytes are
+    // the same `renderedDrawing` the desktop writes to a path.
+    if (timewarp::ui::browserDownloadAvailable()) {
+        QStringList formats{QStringLiteral("PNG"), QStringLiteral("JPEG"),
+                            QStringLiteral("BMP")};
+#ifdef TIME_WARP_HAVE_SVG
+        formats << QStringLiteral("SVG");
+#endif
+        bool accepted = false;
+        const QString format = QInputDialog::getItem(
+            this, tr("Export drawing"), tr("Format:"), formats, 0, false, &accepted);
+        if (!accepted || format.isEmpty()) {
+            return;
+        }
+
+        if (format == QLatin1String("SVG")) {
+            QString error;
+            const QByteArray svg = turtle_canvas_->renderSvg(&error);
+            if (svg.isEmpty()) {
+                QMessageBox::warning(this, tr("Export failed"),
+                                     tr("Could not build the SVG.\n\n%1").arg(error));
+                return;
+            }
+            if (timewarp::ui::browserDownload(svg, QStringLiteral("drawing.svg"),
+                                              QStringLiteral("image/svg+xml"))) {
+                setExecutionState(tr("ready"), tr("Downloaded drawing.svg"));
+            }
+            return;
+        }
+
+        const QByteArray formatKey =
+            format == QLatin1String("JPEG")
+                ? QByteArrayLiteral("jpg")
+                : format.toLatin1().toLower();
+        QByteArray bytes;
+        QBuffer buffer{&bytes};
+        if (!buffer.open(QIODevice::WriteOnly)) {
+            QMessageBox::warning(this, tr("Export failed"),
+                                 tr("Could not prepare the image.\n\n%1")
+                                     .arg(buffer.errorString()));
+            return;
+        }
+        QImageWriter writer{&buffer, formatKey};
+        if (!writer.write(turtle_canvas_->renderedDrawing(2.0))) {
+            QMessageBox::warning(this, tr("Export failed"),
+                                 tr("Could not build the image.\n\n%1")
+                                     .arg(writer.errorString()));
+            return;
+        }
+        const QString extension = format == QLatin1String("JPEG")
+                                      ? QStringLiteral("jpg")
+                                      : format.toLower();
+        const QString mime = format == QLatin1String("PNG")
+                                 ? QStringLiteral("image/png")
+                                 : format == QLatin1String("JPEG")
+                                       ? QStringLiteral("image/jpeg")
+                                       : QStringLiteral("image/bmp");
+        if (timewarp::ui::browserDownload(
+                bytes, QStringLiteral("drawing.%1").arg(extension), mime)) {
+            setExecutionState(tr("ready"),
+                              tr("Downloaded drawing.%1").arg(extension));
+        }
+        return;
+    }
+
     // SVG is listed only in a build that can write it, so the dialog never
     // offers a format whose export would fail.
     QString filters = tr("PNG image (*.png);;JPEG image (*.jpg *.jpeg);;Windows bitmap (*.bmp)");
@@ -974,6 +1044,20 @@ void MainWindow::setGifRecording(bool on) {
         gif_timer_->stop();
         if (gif_frames_.isEmpty()) {
             setExecutionState(tr("ready"), tr("Nothing was drawn while recording"));
+        } else if (timewarp::ui::browserDownloadAvailable()) {
+            // In a browser the recording is handed to the download manager, not
+            // to a path the user cannot see.
+            QString error;
+            const QByteArray bytes = timewarp::ui::gif::gifBytes(gif_frames_, &error);
+            if (bytes.isEmpty()) {
+                QMessageBox::warning(this, tr("Export failed"),
+                                     tr("Could not build the GIF.\n\n%1").arg(error));
+            } else if (timewarp::ui::browserDownload(
+                           bytes, QStringLiteral("turtle_recording.gif"),
+                           QStringLiteral("image/gif"))) {
+                setExecutionState(tr("ready"),
+                                  tr("Downloaded turtle_recording.gif"));
+            }
         } else {
             QString target = QFileDialog::getSaveFileName(
                 this, tr("Save animated GIF"),

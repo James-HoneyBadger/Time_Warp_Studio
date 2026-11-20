@@ -167,20 +167,20 @@ void appendFrame(QVector<Frame>& frames, const QImage& image, int delayMs) {
     frames.append(frame);
 }
 
-bool writeGif(const QString& path, const QVector<Frame>& frames, QString* error) {
+QByteArray gifBytes(const QVector<Frame>& frames, QString* error) {
     if (frames.isEmpty()) {
         fail(error, QStringLiteral("there are no frames to write"));
-        return false;
+        return {};
     }
     const QSize size = frames.constFirst().image.size();
     if (size.width() <= 0 || size.height() <= 0) {
         fail(error, QStringLiteral("the first frame has no size"));
-        return false;
+        return {};
     }
     for (const Frame& frame : frames) {
         if (frame.image.size() != size) {
             fail(error, QStringLiteral("every frame must be the same size"));
-            return false;
+            return {};
         }
     }
 
@@ -232,6 +232,15 @@ bool writeGif(const QString& path, const QVector<Frame>& frames, QString* error)
         appendSubBlocks(out, lzwCompress(indices));
     }
     out.append('\x3B');  // trailer
+
+    return out;
+}
+
+bool writeGif(const QString& path, const QVector<Frame>& frames, QString* error) {
+    const QByteArray out = gifBytes(frames, error);
+    if (out.isEmpty()) {
+        return false;
+    }
 
     QSaveFile file{path};
     if (!file.open(QIODevice::WriteOnly)) {

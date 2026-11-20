@@ -45,4 +45,9 @@ void appendFrame(QVector<Frame>& frames, const QImage& image, int delayMs);
 [[nodiscard]] bool writeGif(const QString& path, const QVector<Frame>& frames,
                             QString* error);
 
+/// The bytes `writeGif` writes. Exposed for the browser, where the bytes are
+/// handed to a download instead of a file, and for a test that round-trips them
+/// through a decoder without touching the disk.
+[[nodiscard]] QByteArray gifBytes(const QVector<Frame>& frames, QString* error);
+
 }  // namespace timewarp::ui::gif
