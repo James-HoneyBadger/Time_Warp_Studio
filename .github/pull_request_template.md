@@ -25,8 +25,8 @@ a reader of the merged history scrolls to.
 
 | Gate | Command | Result |
 | --- | --- | --- |
-| C++ suites | `make test` | <!-- 27/27 --> |
-| Debug tree | `make test-debug` | <!-- 27/27, or "not run: no C++ changed" --> |
+| C++ suites | `make test` | <!-- 28/28 --> |
+| Debug tree | `make test-debug` | <!-- 28/28, or "not run: no C++ changed" --> |
 | Sanitizers | `make asan` | <!-- clean, or "not run: no C++ changed" --> |
 | Example corpus | `make smoke` | <!-- all 94, stroke counts unmoved --> |
 | Command coverage | `make command-matrix` | <!-- 534 rows, 0 failed, 0 gaps --> |

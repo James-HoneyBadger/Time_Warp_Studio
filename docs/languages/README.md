@@ -43,8 +43,9 @@ in BASIC, and the reference says so where it matters.
 - **One budget.** A run stops after two million statements or ten seconds, whichever comes
   first. It says which limit ended it.
 - **One SQL connection.** `SQL SELECT …` reaches the database the Database panel has open, in
-  nine of the ten. Forth is the exception. It has no statement form to extend, so a Forth
-  program reaches the database over the [API](../user/automation.md) or not at all.
+  eight of the ten. Scheme and Forth are the exceptions. Neither has a statement form to
+  extend, so a program in either reaches the database over the
+  [API](../user/automation.md) or not at all.
 - **One error convention.** An engine returns text. A failure begins with the error prefix
   instead of throwing out of the executor. The console, the Errors panel and the
   [API](../user/automation.md) all read the same string.
@@ -71,10 +72,11 @@ We do not document the languages and then leave them to hope. Three gates hold t
   `native/share/command_rows.json`. It reports any command the executors dispatch on that no
   row or waiver mentions.
 - **The parity corpus** compares the engines with the answers the deleted Python reference
-  gave for 444 programs, every drawing call in order.
+  gave: 444 language programs and 192 Scheme programs, 636 in all, every drawing call in
+  order.
 - **The example gate** runs the 77 programs in the ten languages and the eighteen CHIP-8
-  listings. It fails when a program that should draw produces no ink, and when a program
-  reports an error.
+  listings — 94, because `basic/star_patrol.bas` is run by `lang_tests` instead. It fails
+  when a program that should draw produces no ink, and when a program reports an error.
 
 [Testing](../maintainer/testing.md) says what each gate is worth. It also says where a
 recording is weaker than the differential it replaced.

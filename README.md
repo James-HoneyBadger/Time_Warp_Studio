@@ -1,6 +1,6 @@
 # Time Warp Studio
 
-Ten languages of the 1960s and 1970s -- BASIC, APL, Logo, PILOT, FOCAL, Forth, Scheme,
+Ten languages of 1964–1980 -- BASIC, APL, Logo, PILOT, FOCAL, Forth, Scheme,
 COMAL, REXX and Smalltalk -- in one C++20 and Qt 6 desktop environment, each with its own
 interpreter linked straight into the process rather than started as a separate program.
 Because the interpreters are libraries rather than processes, the editor, the debugger,
@@ -181,8 +181,9 @@ Studio is built from the same files as the manuals in the tree.
 
 ## What ships with it
 
-- **77 example programs** across the ten languages, plus eighteen CHIP-8 listings, nine
-  HB-2 assembly programs and nine HB-1 programs, each run by a gate. **File > Examples
+- **77 example programs** across the ten languages, plus eighteen CHIP-8 listings and nine
+  HB-2 assembly programs, each run by a gate. The nine HB-1 programs are among the 77, in
+  the machine's BASIC and Logo ROMs. **File > Examples
   Gallery…** lists them with the drawing each program makes; the picture is the program
   run headlessly, not a stored image. The catalogue is
   [Examples/CATALOG.md](Examples/CATALOG.md).

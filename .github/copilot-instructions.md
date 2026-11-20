@@ -27,8 +27,9 @@ native/                     the Qt application (the product)
                             registry, structure
     docs/                   time_warp_docs: links, claims, version, md (no Qt)
     icon/                   time_warp_icon: the packaged icons
-Examples/                   77 programs in the ten languages, 18 CHIP-8 listings,
-                            9 HB-2 assembly programs, 9 HB-1 programs and a disk
+Examples/                   77 programs in the ten languages (9 of them the HB-1's,
+                            8 in BASIC and 1 in Logo), 18 CHIP-8 listings,
+                            9 HB-2 assembly programs and a disk
 docs/                       the documentation set, by audience (see the table below)
 ```
 

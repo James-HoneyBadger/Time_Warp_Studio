@@ -48,9 +48,10 @@ interpreter loop, and step 5 is the first one that does.
       `native/share/command_rows.json` and the language's section of
       `docs/languages/reference.md`. Add a row for a command the engine already runs but
       the table does not name. *Verify:* `make command-matrix`.
-- [ ] **4. Fix or add one lesson starter.** Read `native/share/lessons.json` and the
-      format in `docs/lessons/`. Correct a starter whose solution fails, or add a starter
-      whose solution passes. *Verify:* `make teach-check` (and regenerate
+- [ ] **4. Fix or add one lesson checkpoint.** Read `native/share/lessons.json` and the
+      format in `docs/lessons/`. A checkpoint's *solution* must pass and its *starter*
+      must not — a starter that already passes has nothing left to teach — so correct
+      whichever side is wrong. *Verify:* `make teach-check` (and regenerate
       `docs/lessons/plans` if the lesson set changed).
 - [ ] **5. Implement one small interpreter feature.** Read the executor for your language
       under `native/src/lang/` and its reference section. Add a command or reporter with a

@@ -66,6 +66,15 @@
   </keywords>
 
   <releases>
+    <release version="30.0.0" date="2026-11-17">
+      <description>
+        <p>The three machines come back, each as its own application: the HB-1 of
+        1982, the HB-2 of 1992 and the CHIP-8 of 1977, started from the Tools menu
+        rather than embedded in the Studio's window. The Studio keeps its ten
+        languages. A program that reports an error now fails the run the gate reads,
+        and the browser release deploys through GitHub Pages.</p>
+      </description>
+    </release>
     <release version="29.0.0" date="2026-11-17">
       <description>
         <p>The Studio builds for the browser: the same application compiled to
