@@ -9,10 +9,10 @@ not.
 
 | What | Where |
 | --- | --- |
-| Something is broken | [Open a bug report](https://github.com/James-HoneyBadger/Time_Warp_Studio/issues/new?template=language-runtime-bug.md); the form asks for the interpreter, the smallest program and both answers |
-| How it installed and ran on your machine | [Send a smoke report](https://github.com/James-HoneyBadger/Time_Warp_Studio/issues/new?template=tester-smoke-report.md); the form asks for the distribution, the languages that ran and the debugger |
-| An idea for a change | [Open a feature request](https://github.com/James-HoneyBadger/Time_Warp_Studio/issues/new?template=feature_request.yml) |
-| A language you would like supported | [Open a language request](https://github.com/James-HoneyBadger/Time_Warp_Studio/issues/new?template=language_request.yml); the form explains what a language costs to add |
+| Something is broken | [Open a bug report](https://github.com/James-HoneyBadger/Time_Warp_Universe/issues/new?template=language-runtime-bug.md); the form asks for the interpreter, the smallest program and both answers |
+| How it installed and ran on your machine | [Send a smoke report](https://github.com/James-HoneyBadger/Time_Warp_Universe/issues/new?template=tester-smoke-report.md); the form asks for the distribution, the languages that ran and the debugger |
+| An idea for a change | [Open a feature request](https://github.com/James-HoneyBadger/Time_Warp_Universe/issues/new?template=feature_request.yml) |
+| A language you would like supported | [Open a language request](https://github.com/James-HoneyBadger/Time_Warp_Universe/issues/new?template=language_request.yml); the form explains what a language costs to add |
 | Contributing code or documentation | [CONTRIBUTING.md](../CONTRIBUTING.md) |
 | A security problem | [SECURITY.md](../SECURITY.md), and not a public issue |
 | Everything else | <james@honey-badger.org> |

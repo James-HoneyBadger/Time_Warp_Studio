@@ -10,7 +10,7 @@
 # the same commit, exactly like unbuilt.txt.
 #
 # One row: label | value | page:phrase, `;`-separated, `#` starts a comment.
-suites | 27 | docs/maintainer/roadmap.md:27 CTest suites; docs/maintainer/testing.md:There are 27 suites; docs/user/getting-started.md:the 27 suites; CONTRIBUTING.md:the 27 C++ suites; docs/maintainer/release.md:the 27 C++ suites
+suites | 28 | docs/maintainer/roadmap.md:28 CTest suites; docs/maintainer/testing.md:There are 28 suites; docs/user/getting-started.md:the 28 suites; CONTRIBUTING.md:the 28 C++ suites; docs/maintainer/release.md:the 28 C++ suites
 golden | 636 | docs/maintainer/roadmap.md:636 programs; docs/maintainer/release.md:636 programs; docs/maintainer/testing.md:636 programs; CONTRIBUTING.md:636 programs; .github/copilot-instructions.md:636 programs
 command-rows | 534 | docs/maintainer/roadmap.md:534 command rows
 smoke | 94 | docs/maintainer/roadmap.md:94 example programs; docs/user/getting-started.md:the 94 example programs; docs/maintainer/release.md:94 example programs

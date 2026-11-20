@@ -17,7 +17,7 @@ cmake --build native/build -j
 ctest --test-dir native/build --output-on-failure
 ```
 
-There are 27 suites, one binary each, named for what they cover:
+There are 28 suites, one binary each, named for what they cover:
 
 | Suite | Covers |
 | --- | --- |

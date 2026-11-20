@@ -31,10 +31,38 @@ gates are the review, and a change that runs them all has very little left to ar
 
 ---
 
+## A first contribution, in five steps
+
+Read the files each task names, not the architecture guide first. Every step gives its
+expected output and the gate that proves it; steps 1 and 2 need no understanding of the
+interpreter loop, and step 5 is the first one that does.
+
+- [ ] **1. Fix one documentation defect.** Read `docs/INDEX.md` and the one guide it
+      points to. Correct one relative link or anchor that `make doc-links` reports.
+      *Verify:* `make doc-links`.
+- [ ] **2. Add one example program.** Read a neighbouring file under `Examples/` for the
+      language you chose. Add one runnable program using a command already in the
+      reference. *Verify:* `make smoke`, or `./native/build/time_warp_check Examples/<lang>/<file>`
+      for just yours.
+- [ ] **3. Document one command row.** Read the row shape in
+      `native/share/command_rows.json` and the language's section of
+      `docs/languages/reference.md`. Add a row for a command the engine already runs but
+      the table does not name. *Verify:* `make command-matrix`.
+- [ ] **4. Fix or add one lesson starter.** Read `native/share/lessons.json` and the
+      format in `docs/lessons/`. Correct a starter whose solution fails, or add a starter
+      whose solution passes. *Verify:* `make teach-check` (and regenerate
+      `docs/lessons/plans` if the lesson set changed).
+- [ ] **5. Implement one small interpreter feature.** Read the executor for your language
+      under `native/src/lang/` and its reference section. Add a command or reporter with a
+      test, a reference row, and — where behaviour changed — a corpus note. *Verify:*
+      `ctest --test-dir native/build -R <suite>`, then `make test` and `make smoke`.
+
+---
+
 ## Setting up
 
 ```bash
-git clone https://github.com/James-HoneyBadger/Time_Warp_Studio.git
+git clone https://github.com/James-HoneyBadger/Time_Warp_Universe.git
 cd Time_Warp_Studio
 cmake -S native -B native/build -DCMAKE_BUILD_TYPE=Release
 cmake --build native/build -j
@@ -66,7 +94,7 @@ Everything is C++ built from this tree. There is no interpreter to install and n
 `make tree-check` fails if a `.py` file or a Python tool's configuration file reappears.
 
 ```bash
-make test              # the 27 C++ suites
+make test              # the 28 C++ suites
 make test-all          # test, smoke, both command matrices, the corpus, curriculum and docs
 make smoke             # every example program through the native engines
 make command-matrix    # every command-table row as a program

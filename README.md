@@ -10,7 +10,7 @@ and a breakpoint in Smalltalk are set, inspected and cleared in the same panel.
 [![Languages](https://img.shields.io/badge/languages-10-blue)](#the-ten-languages)
 [![Platform](https://img.shields.io/badge/platform-Linux-green)](docs/user/getting-started.md)
 [![License: AGPL v3](https://img.shields.io/badge/License-AGPL_v3-blue.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/Version-30.0.0-orange)](https://github.com/James-HoneyBadger/Time_Warp_Studio)
+[![Version](https://img.shields.io/badge/Version-30.0.0-orange)](https://github.com/James-HoneyBadger/Time_Warp_Universe)
 
 Each interpreter implements the dialect it is named for, including the parts that do not
 carry over from one language to the next. FOCAL is a formula calculator with line labels
@@ -21,7 +21,7 @@ the dialect of its period and behaves as it did on the machines it was written f
 
 ## Quick start (no compile)
 
-Each [release](https://github.com/James-HoneyBadger/Time_Warp_Studio/releases/latest)
+Each [release](https://github.com/James-HoneyBadger/Time_Warp_Universe/releases/latest)
 carries a built application for Linux with the Qt runtime inside it: no compiler, no
 package manager, and no Qt to fetch. The AppImage is the shortest path.
 

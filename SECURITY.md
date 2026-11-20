@@ -17,7 +17,7 @@ read by a command and executed by nothing.
 Do **not** open a public issue for a security problem.
 
 1. **GitHub private reporting** (preferred):
-   [report a vulnerability](https://github.com/James-HoneyBadger/Time_Warp_Studio/security/advisories/new).
+   [report a vulnerability](https://github.com/James-HoneyBadger/Time_Warp_Universe/security/advisories/new).
 2. **Email** <james@honey-badger.org> with the subject `[SECURITY] Time Warp Studio`.
 
 Include what the vulnerability is and what it affects, how to reproduce it, the version or

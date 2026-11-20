@@ -8,14 +8,14 @@
 blank_issues_enabled: true
 contact_links:
   - name: Read the documentation first
-    url: https://github.com/James-HoneyBadger/Time_Warp_Studio/blob/main/docs/INDEX.md
+    url: https://github.com/James-HoneyBadger/Time_Warp_Universe/blob/main/docs/INDEX.md
     about: "Index of every guide: installation, the language reference, tutorials, lessons and architecture."
   - name: Is it already known?
-    url: https://github.com/James-HoneyBadger/Time_Warp_Studio/blob/main/docs/maintainer/roadmap.md
+    url: https://github.com/James-HoneyBadger/Time_Warp_Universe/blob/main/docs/maintainer/roadmap.md
     about: What is deliberately not built, and the proposals that are still open -- a web build, Snap, an arm64 AppImage, calling one language from another.
   - name: Install, build and run
-    url: https://github.com/James-HoneyBadger/Time_Warp_Studio/blob/main/docs/user/getting-started.md
+    url: https://github.com/James-HoneyBadger/Time_Warp_Universe/blob/main/docs/user/getting-started.md
     about: Requirements, building from source, and what a troubleshooting failure usually means.
   - name: Questions and help
-    url: https://github.com/James-HoneyBadger/Time_Warp_Studio/blob/main/.github/SUPPORT.md
+    url: https://github.com/James-HoneyBadger/Time_Warp_Universe/blob/main/.github/SUPPORT.md
     about: Where to ask, and what the maintainer can and cannot help with.

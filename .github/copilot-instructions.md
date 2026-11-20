@@ -70,7 +70,7 @@ launches it.
 
 ```bash
 make -C native run         # build if needed, then launch
-make test                  # the 27 C++ suites
+make test                  # the 28 C++ suites
 make test-all              # every gate CI runs
 make smoke                 # every example program through the native engines
 make command-matrix        # one row per command, from native/share/command_rows.json

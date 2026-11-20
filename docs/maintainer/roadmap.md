@@ -43,11 +43,11 @@ it, so shipping one without correcting the documentation fails a gate.
 | Languages | Ten, with 77 example programs |
 | Engines | All ten native and in process: BASIC, FOCAL, PILOT, COMAL, APL and REXX line by line; Logo, Smalltalk, Scheme and Forth whole-program |
 | Debugging | Breakpoints, pause, continue, step, watch expressions and data breakpoints in all ten; rewind in eight — every language but Smalltalk, which has no checkpoint yet, and Scheme, whose state is an arena and a continuation chain |
-| Database | A SQLite Database panel, the shared `SQL` statement in nine languages, scripts, tables and schema; compiled programs link SQLite |
+| Database | A SQLite Database panel, the shared `SQL` statement in eight languages, scripts, tables and schema; compiled programs link SQLite |
 | Automation | JSON-RPC over stdin and stdout, and the `twc` terminal compiler |
 | Packaging | `make install`; tagged releases build `.deb`, `.rpm`, AppImage, tarball, Flatpak and a container image for Linux |
 | Browser | The same application built for WebAssembly: every language, the debugger, the REPL, the example corpus, and a project volume that survives a reload; see [WebAssembly](wasm.md) |
-| Quality gates | 27 CTest suites in four build configurations; the frozen-corpus gate over 636 programs; 534 command rows run as programs and through the REPL; 94 example programs through the smoke gate; the documentation gates |
+| Quality gates | 28 CTest suites in four build configurations; the frozen-corpus gate over 636 programs; 534 command rows run as programs and through the REPL; 94 example programs through the smoke gate; the documentation gates |
 
 ---
 

@@ -45,7 +45,7 @@ every validation gate are C++ compiled from this tree, and `make tree-check` fai
 ## Build
 
 ```bash
-git clone https://github.com/James-HoneyBadger/Time_Warp_Studio.git
+git clone https://github.com/James-HoneyBadger/Time_Warp_Universe.git
 cd Time_Warp_Studio
 cmake -S native -B native/build -DCMAKE_BUILD_TYPE=Release
 cmake --build native/build -j
@@ -135,10 +135,33 @@ it makes.
 
 ---
 
+## A classroom with no install
+
+The browser build is the same application compiled to WebAssembly: every language, the
+shared debugger, the REPL, the lessons and the example corpus run in a tab, with nothing
+installed and no admin rights. [The WebAssembly guide](../maintainer/wasm.md) says where
+the deployed build lives and how to serve it yourself.
+
+For a one-hour lesson on machines the students do not own:
+
+1. Put the page URL on the board, or share a link straight to the program, such as
+   `…/?example=logo/mandala.logo` — the guide lists the link forms.
+2. Each student opens the link and presses **F9**. The debugger, the scrubber and the
+   Variables panel behave exactly as the desktop build's do.
+3. The Lessons panel works in the browser, and a student's progress is kept in that
+   browser; on a shared lab machine it does not follow the student home.
+
+One gap is worth saying plainly: the browser keeps each student's files in the tab, and
+there is no path from that tab to the teacher's folder. To collect work, have students
+copy their program text out of the editor, or export the drawing; a button that downloads
+the program itself is not there yet.
+
+---
+
 ## Check the build
 
 ```bash
-ctest --test-dir native/build --output-on-failure   # the 27 suites
+ctest --test-dir native/build --output-on-failure   # the 28 suites
 make smoke                                          # the 94 example programs it runs
 make command-matrix                                 # one row per command
 make repl-matrix                                    # the same rows through the REPL
